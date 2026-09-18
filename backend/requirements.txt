@@ -1,0 +1,33 @@
+# --- Web framework ---
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+python-multipart==0.0.32
+pydantic==2.13.5
+pydantic-settings==2.15.0
+aiofiles==25.1.0
+
+# --- Imaging / classical CV ---
+numpy==2.4.6
+scipy==1.17.1
+opencv-python-headless==5.0.0.93
+scikit-image==0.26.0
+Pillow==12.3.0
+
+# --- Background removal (ONNX, CPU, real pretrained U^2-Net weights) ---
+rembg==2.0.84
+onnxruntime==1.30.0
+
+# --- 3D mesh processing ---
+trimesh==5.1.0
+pymeshfix==0.18.1
+fast-simplification==0.2.0
+rtree==1.4.1
+networkx==3.6.1
+shapely==2.1.2
+mapbox-earcut==2.1.0
+
+# --- Misc ---
+python-slugify==9.0.0
+
+# --- Test-only (FastAPI TestClient) ---
+httpx==0.28.1
