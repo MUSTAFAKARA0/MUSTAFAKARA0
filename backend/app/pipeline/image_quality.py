@@ -21,8 +21,18 @@ class QualityMetrics:
     warnings: list[str]
 
 
-def _sharpness(gray: np.ndarray) -> float:
-    lap_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+def _sharpness(gray: np.ndarray, mask: np.ndarray | None = None) -> float:
+    lap = cv2.Laplacian(gray, cv2.CV_64F)
+    if mask is not None and (mask > 127).sum() > 200:
+        # Restrict to the subject: a phone photo often has a smooth studio
+        # background or a shallow-DOF blurred backdrop, and averaging the
+        # Laplacian variance over the WHOLE frame lets that drag a sharp
+        # subject's score down (or a textured background prop a blurry
+        # subject's score up). What matters is whether the object itself is
+        # in focus.
+        lap_var = float(lap[mask > 127].var())
+    else:
+        lap_var = float(lap.var())
     # Empirically, in-focus phone photos land well above ~150; heavily blurred
     # ones sit under ~40. Map to 0-100 on a log-ish curve for stable UI display.
     score = 100.0 * (1.0 - np.exp(-lap_var / 250.0))
@@ -49,9 +59,9 @@ def _background_complexity(gray: np.ndarray) -> float:
     return float(np.clip(density * 400.0, 0, 100))  # scale for readability
 
 
-def analyze_image(bgr: np.ndarray) -> QualityMetrics:
+def analyze_image(bgr: np.ndarray, subject_mask: np.ndarray | None = None) -> QualityMetrics:
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-    sharpness = _sharpness(gray)
+    sharpness = _sharpness(gray, subject_mask)
     brightness = _brightness(gray)
     complexity = _background_complexity(gray)
 

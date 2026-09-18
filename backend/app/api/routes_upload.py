@@ -72,10 +72,10 @@ async def upload_photos(files: list[UploadFile], views: str | None = Form(defaul
         stored_name = f"{idx:02d}_{view}.jpg"
         cv2.imwrite(str(udir / stored_name), bgr, [cv2.IMWRITE_JPEG_QUALITY, 92])
 
-        metrics = analyze_image(bgr)
         seg = segment(bgr)
         alpha = clean_mask(seg.alpha)
         coverage = subject_coverage_ratio(alpha)
+        metrics = analyze_image(bgr, subject_mask=alpha)
 
         warnings = list(metrics.warnings)
         if coverage < 0.03:
