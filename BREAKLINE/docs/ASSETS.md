@@ -13,22 +13,35 @@ Everything visual in the vertical slice is procedural primitives + code
 generated materials (see ART_DIRECTION.md) — there is nothing to license
 because nothing was imported.
 
-Audio is **not present yet**. `AudioManager.play_sfx("glass_shatter")` /
-`play_music("glass_district_theme")` etc. look up
-`res://assets/audio/sfx/<name>.{ogg,wav,mp3}` and
+### Audio
+
+`AudioManager.play_sfx("glass_shatter")` / `play_music("glass_district_theme")`
+etc. look up `res://assets/audio/sfx/<name>.{ogg,wav,mp3}` and
 `res://assets/audio/music/<name>.{ogg,wav,mp3}` via `ResourceLoader.exists()`
-and silently no-op (with a one-time console log) if the file isn't there
-yet. This means:
+and silently no-op (with a one-time console log) if the file isn't there —
+so a missing clip never blocks gameplay or throws.
 
-- The game is fully playable, testable, and feels complete in every system
-  *except* sound, with zero missing-resource errors.
-- Dropping in real files at those paths with those exact names is the only
-  step needed to add audio — no script changes.
+**SFX are now populated** with original, procedurally-synthesized 16-bit
+WAV placeholders (`tools/audio/generate_sfx.py` — pure Python stdlib sine/
+noise synthesis, no samples, no licensing concerns of any kind). The 12
+clips: `projectile_fire`, `target_hit`, `glass_crack`, `glass_shatter`,
+`combo_up`, `perfect_hit`, `obstacle_warning`, `obstacle_collision`,
+`game_over`, `button_click`, `level_complete`, `reward`. All but the last
+two are wired into real gameplay triggers (see GAMEPLAY.md). `level_complete`
+and `reward` are generated and ready, but nothing in the current endless-
+runner vertical slice has a "level complete" or standalone "reward" moment
+yet to trigger them — they're reserved for Phase 3+ content.
 
-Expected SFX names (see GAMEPLAY.md / section 43 of the design brief):
-`projectile_fire`, `target_hit`, `glass_shatter`, `combo_break`,
-`obstacle_collision`, `button_click`. Expected music: `main_menu_theme`,
-`glass_district_theme`.
+Re-tune any clip by editing the synthesis functions in
+`tools/audio/generate_sfx.py` and re-running it; it overwrites the WAVs in
+place.
+
+**Music is still absent.** `main_menu_theme` and `glass_district_theme` are
+referenced but no file exists at those paths yet — `AudioManager` degrades
+gracefully exactly as it does for any missing clip. Synthesizing a
+convincing ambient loop from stdlib primitives is a much bigger job than
+short SFX blips; this is honestly left as a real remaining gap rather than
+shipped as a crude filler loop.
 
 ## Folder layout
 

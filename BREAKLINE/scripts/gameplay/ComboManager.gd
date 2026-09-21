@@ -35,6 +35,11 @@ func register_hit() -> void:
 	_timeout_timer.start(COMBO_TIMEOUT_SEC)
 	combo_changed.emit(combo, get_multiplier())
 
+	if combo >= 2:
+		AudioManager.play_sfx("combo_up")
+	if combo > 0 and combo % 5 == 0:
+		AudioManager.play_sfx("perfect_hit")
+
 func break_combo() -> void:
 	if combo == 0:
 		return

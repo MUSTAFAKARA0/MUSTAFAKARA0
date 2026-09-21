@@ -8,15 +8,24 @@ signal camera_shake_requested(strength: float, duration: float)
 signal hit_flash_requested(world_position: Vector3)
 
 const POOL_SIZE := 16
+const FLASH_POOL_SIZE := 6
 
 var _pool: Array[CPUParticles3D] = []
 var _pool_index: int = 0
+
+var _flash_pool: Array[OmniLight3D] = []
+var _flash_pool_index: int = 0
 
 func _ready() -> void:
 	for i in range(POOL_SIZE):
 		var particles := _build_particle_node()
 		add_child(particles)
 		_pool.append(particles)
+
+	for i in range(FLASH_POOL_SIZE):
+		var light := _build_flash_light()
+		add_child(light)
+		_flash_pool.append(light)
 
 func _build_particle_node() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
@@ -34,6 +43,27 @@ func _build_particle_node() -> CPUParticles3D:
 	p.scale_amount_max = 0.12
 	p.mesh = BoxMesh.new()
 	return p
+
+func _build_flash_light() -> OmniLight3D:
+	var light := OmniLight3D.new()
+	light.light_energy = 0.0
+	light.omni_range = 4.0
+	light.shadow_enabled = false
+	return light
+
+## Instant bright pop of light at the impact point that decays over
+## `duration` -- the "something just happened here" read that a particle
+## burst alone is too slow to sell. Pooled the same way as spawn_burst().
+func spawn_impact_flash(world_position: Vector3, color: Color, energy: float = 6.0, duration: float = 0.12) -> void:
+	var light := _flash_pool[_flash_pool_index]
+	_flash_pool_index = (_flash_pool_index + 1) % _flash_pool.size()
+
+	light.global_position = world_position
+	light.light_color = color
+	light.light_energy = energy
+
+	var tween := create_tween()
+	tween.tween_property(light, "light_energy", 0.0, duration)
 
 ## Spawns a one-shot particle burst at world_position using color.
 ## color_variance widens the hue slightly for more natural fragments.

@@ -72,6 +72,10 @@ func _spawn_at(z: float) -> void:
 	instance.spawn_reset(Vector3(lane_positions[lane_index], obstacle_height, z))
 	if not _active.has(instance):
 		_active.append(instance)
+	# A quiet telegraph cue at spawn time (the obstacle is already
+	# spawn_lead_distance ahead, not on top of the player) rather than a
+	# jump-scare right before impact.
+	AudioManager.play_sfx("obstacle_warning", 0.5)
 
 func _recycle(obstacle: Obstacle) -> void:
 	if _active.has(obstacle):

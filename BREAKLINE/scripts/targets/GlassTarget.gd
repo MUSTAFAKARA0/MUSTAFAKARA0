@@ -74,9 +74,11 @@ func take_hit(hit_position: Vector3, hit_normal: Vector3) -> void:
 		_collision.disabled = true
 
 	FragmentManager.shatter_at(hit_position, glass_color, hit_normal)
+	VFXManager.spawn_impact_flash(hit_position, glass_color)
 	VFXManager.spawn_burst(hit_position, glass_color)
 	VFXManager.request_camera_shake(0.18, 0.1)
 	VFXManager.trigger_haptic(0.5)
+	AudioManager.play_sfx("glass_crack")
 	AudioManager.play_sfx("glass_shatter")
 
 	if target_type == TargetType.FAKE:

@@ -17,6 +17,9 @@ var level_data: LevelData
 
 func _ready() -> void:
 	level_data = load(level_data_path)
+	if level_data == null:
+		push_error("LevelManager: failed to load LevelData at '%s', falling back to defaults." % level_data_path)
+		level_data = LevelData.new()
 
 	player.base_forward_speed = level_data.base_forward_speed
 	player.max_forward_speed = level_data.max_forward_speed

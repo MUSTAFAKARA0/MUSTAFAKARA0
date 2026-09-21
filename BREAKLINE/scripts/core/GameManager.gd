@@ -22,8 +22,32 @@ var distance_traveled: float = 0.0
 var coins_earned: int = 0
 var current_level_path: String = LEVEL_01_SCENE
 
+var _fade_layer: CanvasLayer
+var _fade_rect: ColorRect
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_build_fade_overlay()
+
+func _build_fade_overlay() -> void:
+	_fade_layer = CanvasLayer.new()
+	_fade_layer.layer = 100
+	add_child(_fade_layer)
+
+	_fade_rect = ColorRect.new()
+	_fade_rect.color = Color(0.0, 0.0, 0.0, 0.0)
+	_fade_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fade_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fade_layer.add_child(_fade_rect)
+
+## Fades the screen to/from black. While faded in (alpha > 0) the overlay
+## also blocks touch/mouse input, so it doubles as a scene-transition guard
+## against taps landing on whatever is loading underneath.
+func _fade_to(alpha: float, duration: float) -> void:
+	_fade_rect.mouse_filter = Control.MOUSE_FILTER_STOP if alpha > 0.0 else Control.MOUSE_FILTER_IGNORE
+	var tween := create_tween()
+	tween.tween_property(_fade_rect, "color:a", alpha, duration)
+	await tween.finished
 
 func start_run() -> void:
 	shots_fired = 0
@@ -32,6 +56,7 @@ func start_run() -> void:
 	coins_earned = 0
 	ScoreManager.reset()
 	ComboManager.reset()
+	InputManager.set_input_enabled(true)
 	_set_state(State.PLAYING)
 	run_started.emit()
 
@@ -53,6 +78,13 @@ func trigger_game_over() -> void:
 	if current_state != State.PLAYING:
 		return
 	_set_state(State.GAME_OVER)
+	# Locks out touch input immediately: without this, a finger already
+	# mid-drag when the run ends can leave InputManager's pointer-tracking
+	# stuck (see InputManager._active_pointer_id), silently eating the next
+	# tap after Retry even though the Game Over panel's Dim rect also
+	# blocks GUI input on top of it.
+	InputManager.set_input_enabled(false)
+	AudioManager.play_sfx("game_over")
 
 	var stats := {
 		"score": ScoreManager.score,
@@ -69,19 +101,39 @@ func trigger_game_over() -> void:
 ## Reloading/loading the level scene triggers that scene's own _ready(),
 ## which is responsible for calling start_run() once it has set itself up
 ## (see LevelManager.gd). GameManager only handles the transition itself.
+##
+## ProjectileManager/FragmentManager are autoloads, so their pooled
+## children (in-flight projectiles, still-falling glass shards) otherwise
+## survive reload_current_scene() and keep animating, disconnected, in the
+## freshly-reloaded level -- return_all_active() clears that before we
+## reload.
 func retry() -> void:
+	await _fade_to(1.0, 0.25)
+	ProjectileManager.return_all_active()
+	FragmentManager.return_all_active()
 	get_tree().paused = false
 	get_tree().reload_current_scene()
+	await get_tree().process_frame
+	await _fade_to(0.0, 0.25)
 
 func go_to_main_menu() -> void:
+	await _fade_to(1.0, 0.25)
+	InputManager.set_input_enabled(false)
+	ProjectileManager.return_all_active()
+	FragmentManager.return_all_active()
 	get_tree().paused = false
 	_set_state(State.MENU)
 	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
+	await get_tree().process_frame
+	await _fade_to(0.0, 0.25)
 
 func go_to_level(level_path: String = "") -> void:
+	await _fade_to(1.0, 0.25)
 	if level_path != "":
 		current_level_path = level_path
 	get_tree().change_scene_to_file(current_level_path)
+	await get_tree().process_frame
+	await _fade_to(0.0, 0.25)
 
 func set_paused(paused: bool) -> void:
 	if current_state != State.PLAYING and paused:

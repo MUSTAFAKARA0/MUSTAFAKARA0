@@ -51,3 +51,13 @@ func return_to_pool(instance: Node3D, key: String) -> void:
 	if not _pools.has(key):
 		_pools[key] = []
 	_pools[key].append(instance)
+
+## Forces every in-flight projectile back into its pool. ProjectileManager
+## is an autoload, so its pooled children otherwise survive a level scene
+## reload (GameManager.retry()) and would keep flying through the new
+## scene -- this is called right before that reload.
+func return_all_active() -> void:
+	for child in get_children():
+		var projectile := child as Projectile
+		if projectile and projectile.visible:
+			projectile.force_return_to_pool()

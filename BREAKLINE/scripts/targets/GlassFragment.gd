@@ -19,6 +19,7 @@ func _ready() -> void:
 func activate(world_position: Vector3, impulse: Vector3, color: Color) -> void:
 	global_position = world_position
 	rotation = Vector3(randf_range(0, TAU), randf_range(0, TAU), randf_range(0, TAU))
+	scale = Vector3.ONE * randf_range(0.6, 1.4)
 	linear_velocity = Vector3.ZERO
 	angular_velocity = Vector3.ZERO
 	freeze = false
@@ -51,3 +52,10 @@ func _deactivate() -> void:
 	freeze = true
 	visible = false
 	FragmentManager.return_to_pool(self)
+
+## Called by FragmentManager.return_all_active() when a run ends/retries,
+## since FragmentManager is an autoload and its pooled children otherwise
+## survive a level scene reload (GameManager.retry()).
+func force_deactivate() -> void:
+	if _active:
+		_deactivate()

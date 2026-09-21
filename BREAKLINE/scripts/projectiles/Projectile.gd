@@ -66,3 +66,10 @@ func _expire(hit: bool) -> void:
 	if not hit:
 		ComboManager.break_combo()
 	ProjectileManager.return_to_pool(self, _pool_key)
+
+## Called by ProjectileManager.return_all_active() when a run ends/retries.
+## Skips the "miss breaks combo" side effect since the run is already over.
+func force_return_to_pool() -> void:
+	if not visible:
+		return
+	_expire(true)
