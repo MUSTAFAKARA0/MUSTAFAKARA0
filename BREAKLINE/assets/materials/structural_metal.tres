@@ -1,0 +1,57 @@
+[gd_resource type="StandardMaterial3D" load_steps=5 format=3]
+
+; STRUCTURAL METAL -- beams, struts, catwalks, pipes. The near-field
+; "this facility is built out of something" material.
+;
+; Textures are engine-generated FastNoiseLite, not image files: zero
+; licensing risk, ~256px each, and they exist to break up flat colour
+; with roughness variation + a shallow normal so metal reads as metal
+; under the single directional light. Triplanar because these are
+; untextured box/cylinder primitives at wildly different scales -- UV
+; mapping would stretch visibly on a 20-unit beam.
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_metal"]
+noise_type = 3
+seed = 41
+frequency = 0.035
+fractal_octaves = 4
+fractal_gain = 0.45
+
+; A raw noise texture averages ~0.5 and MULTIPLIES the material's
+; roughness value, so it would quietly halve it. The ramp puts the real
+; roughness range in the texture itself (0.30 .. 0.62 for milled metal)
+; and `roughness` stays at 1.0. Only the roughness map is ramped -- the
+; normal map needs the unremapped height.
+[sub_resource type="Gradient" id="Gradient_metal_rough"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.3, 0.3, 0.3, 1, 0.62, 0.62, 0.62, 1)
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_metal_rough"]
+width = 256
+height = 256
+seamless = true
+generate_mipmaps = true
+color_ramp = SubResource("Gradient_metal_rough")
+noise = SubResource("FastNoiseLite_metal")
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_metal_normal"]
+width = 256
+height = 256
+seamless = true
+as_normal_map = true
+bump_strength = 1.6
+noise = SubResource("FastNoiseLite_metal")
+
+[resource]
+resource_name = "Structural Metal"
+albedo_color = Color(0.115, 0.125, 0.145, 1)
+metallic = 0.78
+metallic_specular = 0.42
+roughness = 1.0
+roughness_texture = SubResource("NoiseTexture2D_metal_rough")
+normal_enabled = true
+normal_scale = 0.55
+normal_texture = SubResource("NoiseTexture2D_metal_normal")
+uv1_scale = Vector3(0.22, 0.22, 0.22)
+uv1_triplanar = true
+texture_filter = 3

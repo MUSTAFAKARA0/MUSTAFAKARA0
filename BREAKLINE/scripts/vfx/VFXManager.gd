@@ -9,12 +9,27 @@ signal hit_flash_requested(world_position: Vector3)
 
 const POOL_SIZE := 16
 const FLASH_POOL_SIZE := 6
+## Small on purpose. The core flare is the single loudest beat in the
+## destruction sequence; if four can be on screen at once it stops being
+## a beat and becomes the background.
+const FLARE_POOL_SIZE := 4
+
+## Hard ceiling on impact-flash light energy. Materials ask for
+## core_emission_energy * 1.6 on a precision hit, and an uncapped value
+## there washes the facility's dark structural base out to grey -- which
+## breaks the whole lighting hierarchy for the sake of one frame.
+const MAX_FLASH_ENERGY := 3.2
 
 var _pool: Array[CPUParticles3D] = []
 var _pool_index: int = 0
 
 var _flash_pool: Array[OmniLight3D] = []
 var _flash_pool_index: int = 0
+
+var _flare_pool: Array[MeshInstance3D] = []
+var _flare_materials: Array[StandardMaterial3D] = []
+var _flare_tweens: Array[Tween] = []
+var _flare_index: int = 0
 
 var _hit_pause_active: bool = false
 
@@ -28,6 +43,33 @@ func _ready() -> void:
 		var light := _build_flash_light()
 		add_child(light)
 		_flash_pool.append(light)
+
+	# One shared low-poly sphere mesh, one material per slot (the material
+	# is what animates, so it cannot be shared).
+	var flare_mesh := SphereMesh.new()
+	flare_mesh.radius = 0.18
+	flare_mesh.height = 0.36
+	flare_mesh.radial_segments = 8
+	flare_mesh.rings = 4
+	for i in range(FLARE_POOL_SIZE):
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		mat.disable_receive_shadows = true
+		mat.albedo_color = Color(0.5, 0.9, 1.0, 0.0)
+
+		var flare := MeshInstance3D.new()
+		flare.mesh = flare_mesh
+		flare.material_override = mat
+		flare.visible = false
+		flare.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(flare)
+
+		_flare_pool.append(flare)
+		_flare_materials.append(mat)
+		_flare_tweens.append(null)
 
 func _build_particle_node() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
@@ -62,10 +104,51 @@ func spawn_impact_flash(world_position: Vector3, color: Color, energy: float = 6
 
 	light.global_position = world_position
 	light.light_color = color
-	light.light_energy = energy
+	light.light_energy = minf(energy, MAX_FLASH_ENERGY)
 
 	var tween := create_tween()
 	tween.tween_property(light, "light_energy", 0.0, duration)
+
+## CORE REACTION -- beat 3 of the destruction sequence (impact, fracture,
+## CORE REACTION, fragment response, inward pull, dissolve). The shard's
+## energy core is what the player was aiming at, so its release gets its
+## own read: a short additive bloom that expands out of the impact point
+## and is gone in ~0.22s, before the fragments have finished their outward
+## phase. Deliberately separate from spawn_impact_flash: that one lights
+## the SURROUNDINGS (so you see where the hit landed in the world), this
+## one is the object itself letting go.
+func spawn_core_flare(world_position: Vector3, color: Color, strength: float = 1.0) -> void:
+	if _flare_pool.is_empty():
+		return
+
+	var index := _flare_index
+	_flare_index = (_flare_index + 1) % _flare_pool.size()
+
+	var flare := _flare_pool[index]
+	var mat := _flare_materials[index]
+	var previous: Tween = _flare_tweens[index]
+	if previous and previous.is_valid():
+		previous.kill()
+
+	flare.global_position = world_position
+	flare.scale = Vector3.ONE * 0.45
+	flare.visible = true
+
+	# Additive, so alpha is effectively "how much light to add". 0.7 at
+	# strength 1.0 rather than a full 1.0: stacked on the impact flash and
+	# the burst this already reads as bright, and going higher clipped the
+	# shard's own rim out of the frame it matters most in.
+	var peak := clampf(0.7 * strength, 0.0, 0.95)
+	mat.albedo_color = Color(color.r, color.g, color.b, peak)
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(flare, "scale", Vector3.ONE * (2.6 * strength), 0.22) \
+		.set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_OUT)
+	tween.tween_property(mat, "albedo_color:a", 0.0, 0.22) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tween.chain().tween_callback(func() -> void: flare.visible = false)
+	_flare_tweens[index] = tween
 
 ## Spawns a one-shot particle burst at world_position using color.
 ## color_variance widens the hue slightly for more natural fragments.

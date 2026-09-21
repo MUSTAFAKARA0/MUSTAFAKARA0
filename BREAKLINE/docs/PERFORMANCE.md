@@ -41,8 +41,10 @@ growing is a safety net, not the expected behavior.
   — tuned for "looks premium" vs. "still 60fps on mid-range Android," not
   yet verified on real hardware.
 - World geometry (`EnvironmentBuilder`) is low-segment primitives (boxes,
-  8-sided cylinders) with flat materials — no textures to stream, no
-  high-poly meshes. The Fracture Protocol environment pass (asymmetric
+  8-sided cylinders). Near-field structure now carries engine-generated
+  noise textures (see *Material / shader cost* below); there are still no
+  image files to stream and no high-poly meshes. The Fracture Protocol
+  environment pass (asymmetric
   walls, pipes, catwalks, shafts, sparse anomaly accents) landed at
   roughly 140 static nodes total for the whole track, built once at level
   load and never touched again -- fewer nodes than the environment it
@@ -60,12 +62,13 @@ growing is a safety net, not the expected behavior.
 
 ## Garbage collection / allocation
 
-- Materials for glass fragments and target facets/cores are duplicated
-  per-activation (`GlassFragment.activate()`, `GlassTarget._apply_visuals()`)
-  rather than shared, because each shatter/spawn should be tinted per
-  the active `MaterialProfile`; this is a small, bounded allocation (≤60
-  fragments + ≤20 targets live at once) — if profiling shows this
-  matters, the fix is a small material-variant pool keyed by material_id.
+- **Per-activation material allocation is gone.** `GlassTarget`,
+  `GlassFragment` and `Obstacle` each duplicate their shared material
+  exactly once, in `_ready()`, and every later spawn only writes shader
+  uniforms onto that instance-owned copy. Previously every shatter
+  allocated up to 60 `StandardMaterial3D`s and every target spawn
+  allocated 2 more. Steady-state allocation from the visual layer is now
+  zero.
 - `VFXManager.request_hit_pause()`'s `Engine.time_scale` dip is global
   and affects every `_process`/`_physics_process` call in the game for
   its (real-time) ~60ms duration -- not a GC/allocation concern, but
@@ -73,6 +76,87 @@ growing is a safety net, not the expected behavior.
   re-entrancy guard (`_hit_pause_active`) is what keeps it bounded.
 - No `Array`/`Dictionary` allocation inside per-frame hot paths
   (`_process`/`_physics_process`) beyond what's shown above.
+
+## Material / shader cost (Visual Quality Gate pass)
+
+**Static estimate only. No device, no profiler, no frame counter has
+been run against any of this.** Treat every number below as a budget to
+verify, not a measurement.
+
+### Unique materials in a showcase frame
+
+| Material | Type | Instances | Notes |
+|---|---|---|---|
+| Structural Metal | `StandardMaterial3D`, 2 noise textures | 1 shared | all beams share it → batches |
+| Dark Composite | `StandardMaterial3D`, 2 noise textures | 2 (shared + ground duplicate) | |
+| Energy Surface | `ShaderMaterial` | 4 duplicates (trim / conduit / lane marker / anomaly) | one shader, four uniform sets |
+| Containment Crystal | `ShaderMaterial` | 1 per pooled target (10) | instance-owned, see above |
+| Crystal Fragment | `ShaderMaterial` | 1 per pooled fragment (60) | cheap variant |
+| Danger | `ShaderMaterial` | 1 per pooled obstacle (4) | |
+| Plain (pipes, catwalks, distant, dart shell/accents, VFX) | `StandardMaterial3D` | ~8 | untextured |
+
+Unique **shader programs**: 4 (`containment_crystal`,
+`crystal_fragment`, `energy_surface`, `hazard_stripe`) plus the engine's
+`StandardMaterial3D` variants. Material *instances* are high only
+because instance ownership is what buys zero-allocation spawning; they
+all share their program, which is what the GPU actually cares about.
+
+### Texture memory
+
+Four `NoiseTexture2D`, 256×256 each, generated at import. Uncompressed
+RGBA8 that is ~1 MB total; with mobile compression, less. There are no
+image files in the repository at all.
+
+### Transparency / overdraw
+
+This was audited specifically, because transparency is the main mobile
+GPU risk here:
+
+- **Containment Crystal** uses `depth_prepass_alpha` — two geometry
+  passes for 5 small facets × at most ~8 on-screen targets. Accepted:
+  without it, overlapping facets of a single shard sort incorrectly,
+  which is the exact readability the shard depends on.
+- **Crystal Fragment** deliberately does *not* prepass, and writes no
+  depth. 60 fragments × a second geometry pass would be the single
+  worst thing in the frame, for artefacts nobody can see on a 0.2m shard
+  moving at speed.
+- **Background structures were switched from alpha-blended to opaque.**
+  A dozen large overlapping transparent boxes behind everything else
+  was the worst overdraw source in the scene, for a haze that a flat
+  dark colour sells just as well against the fog.
+- Remaining transparency: dart trail quads (12, billboarded), VFX core
+  flare (≤4 small additive spheres), particle bursts.
+
+### Mesh / draw-call estimate for `ShowcaseSection.tscn`
+
+| Source | Visible mesh instances |
+|---|---|
+| Environment (200m track) | ~36 |
+| Placed targets (7 × 6 meshes) | 42 |
+| Placed obstacle | 1 |
+| Kinetic Dart in flight (each) | 7 + trail + light |
+| Fragments during a shatter | up to `fragment_count` (default 8), 60 hard ceiling |
+
+Quiet frame: roughly **80–120 draw calls** before culling and batching.
+Frustum culling should remove most of the environment at any moment,
+since the track is 200m long and fog density 0.014 limits useful view
+distance. This is a reasonable mid-range Android budget on the mobile
+renderer — *if the estimate is right*, which is exactly what has not
+been checked.
+
+### Lights
+
+One `DirectionalLight3D` with shadows, plus transient point lights: up
+to 6 pooled impact flashes and 1 `OmniLight3D` per in-flight dart, all
+`shadow_enabled = false`. Dart light range was widened (1.6 → 2.4) and
+energy lowered (2.0 → 1.6): a wider, dimmer light interacts with the
+structure more and blows out less.
+
+### What would be cut first on a low-end device
+
+In order: (1) dart `OmniLight3D`, (2) impact-flash light pool, (3)
+`depth_prepass_alpha` on the crystal shader, (4) noise textures on
+`dark_composite`, (5) `DirectionalLight3D` shadows.
 
 ## Not yet implemented
 

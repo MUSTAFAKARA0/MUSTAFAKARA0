@@ -15,6 +15,8 @@ class_name ObstacleManager
 @export var max_spawn_interval: float = 9.0
 @export var min_spawn_interval: float = 4.0
 @export var start_delay: float = 12.0
+## Mirrors TargetManager.auto_spawn -- see the note there.
+@export var auto_spawn: bool = true
 
 var player: Node3D
 var _pool: Array[Obstacle] = []
@@ -43,13 +45,14 @@ func update(difficulty: float) -> void:
 	if player == null:
 		return
 
-	var interval := lerp(max_spawn_interval, min_spawn_interval, clamp(difficulty, 0.0, 1.0))
-	var lead := player.global_position.z - spawn_lead_distance
-	var guard := 0
-	while _next_spawn_z > lead and guard < 8:
-		_spawn_at(_next_spawn_z)
-		_next_spawn_z -= interval
-		guard += 1
+	if auto_spawn:
+		var interval := lerp(max_spawn_interval, min_spawn_interval, clamp(difficulty, 0.0, 1.0))
+		var lead := player.global_position.z - spawn_lead_distance
+		var guard := 0
+		while _next_spawn_z > lead and guard < 8:
+			_spawn_at(_next_spawn_z)
+			_next_spawn_z -= interval
+			guard += 1
 
 	var behind_z := player.global_position.z + despawn_behind_margin
 	var i := _active.size() - 1
@@ -76,6 +79,17 @@ func _spawn_at(z: float) -> void:
 	# spawn_lead_distance ahead, not on top of the player) rather than a
 	# jump-scare right before impact.
 	AudioManager.play_sfx("obstacle_warning", 0.5)
+
+## Deterministic placement for authored sections. Deliberately silent --
+## _spawn_at()'s telegraph SFX fires when a hazard appears out of the
+## procedural stream; an authored section plays its cue when the player
+## actually approaches, not when the scene is built.
+func spawn_obstacle(lane_x: float, z: float) -> Obstacle:
+	var instance: Obstacle = _pool.pop_back() if not _pool.is_empty() else _create_instance()
+	instance.spawn_reset(Vector3(lane_x, obstacle_height, z))
+	if not _active.has(instance):
+		_active.append(instance)
+	return instance
 
 func _recycle(obstacle: Obstacle) -> void:
 	if _active.has(obstacle):

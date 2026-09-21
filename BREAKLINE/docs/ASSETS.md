@@ -9,14 +9,20 @@ code.
 
 ## Current state
 
-Everything visual in the vertical slice is built from Godot primitives
-(BoxMesh/CylinderMesh/PrismMesh/SphereMesh) + code-generated materials —
-see docs/ART_DIRECTION.md for the FRACTURE PROTOCOL identity this now
-implements, and docs/VISUAL_QUALITY.md for an honest read on where that
-still falls short of "premium" (short version: real geometry and
-materials, genuinely differentiated shapes, but no textures anywhere yet
-— see "Where real asset work would help most" below). There is nothing
-to license because nothing was imported.
+Everything visual is built from Godot primitives
+(BoxMesh/CylinderMesh/PrismMesh/SphereMesh) plus a five-material quality
+set: two `StandardMaterial3D`s carrying **engine-generated**
+`FastNoiseLite` roughness/normal maps, and three custom `.gdshader`
+spatial shaders (containment crystal, energy surface, hazard stripe).
+See docs/MATERIALS.md for what each is and why it is built the way it
+is, docs/ART_DIRECTION.md for the FRACTURE PROTOCOL identity, and
+docs/VISUAL_QUALITY.md for an honest read on where it still falls short.
+
+**There are still no image files in the repository.** The noise maps are
+generated at import time from a few lines of `.tres`. There is nothing
+to license because nothing was imported — that remains true after the
+texture pass, which is the main reason the noise route was chosen over
+sourcing CC0 texture sets.
 
 ### Audio
 
@@ -54,14 +60,18 @@ shipped as a crude filler loop.
 This is not "Claude yaptı yeter" — it's a real recommendation of where
 procedural geometry stops being enough:
 
-1. **Textures for structural materials** (metal/concrete in
-   `EnvironmentBuilder`) — the single biggest ceiling on "premium" per
-   docs/VISUAL_QUALITY.md. A small tileable noise/grime/scratch texture
-   set (CC0 or self-generated) would fix the "flat plastic" look more
-   than any further procedural cleverness. Keep resolution modest
-   (256-512px) for mobile texture memory.
+1. **Authored grime/wear maps for structural materials** — procedural
+   noise now gives the beams and floor *surface variation*, which was
+   the flat-plastic problem. What noise cannot give is **intent**: rust
+   running down from a bolt, scorching around a conduit, wear
+   concentrated where a catwalk meets a beam. A small tileable set
+   (CC0 or self-made, 256-512px, 3-4 maps) is where the next real jump
+   is — but only after someone has looked at the noise version on a
+   screen and confirmed it is the limiting factor.
 2. **A real font pairing + small icon set for UI** — cheap, very visible,
-   not done yet (still the engine default theme).
+   and now the single most obvious remaining "this is a prototype"
+   signal. See docs/UI_DIRECTION.md for the selection criteria and the
+   full list of what the theme pass must deliver.
 3. **A small modeled environment trim kit** (beam profiles, pipe joints,
    catwalk railings) if the procedural composition in
    `EnvironmentBuilder` still reads as primitive after the texture pass
@@ -84,9 +94,10 @@ emissive-driven lighting is the correct, cheaper choice (docs/PERFORMANCE.md).
 
 ```
 assets/
- ├── models/        (empty — no imported meshes yet)
- ├── materials/      (empty — materials are built in code today)
- ├── textures/
+ ├── models/         (empty — no imported meshes yet)
+ ├── materials/      5 quality-set materials + crystal_fragment
+ │   └── shaders/    4 .gdshader files
+ ├── textures/       (empty — noise maps are generated in-engine)
  ├── environments/
  ├── targets/
  ├── obstacles/

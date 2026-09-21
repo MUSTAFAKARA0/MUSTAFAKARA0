@@ -1,5 +1,58 @@
 # BREAKLINE — Material System
 
+> **Two different things are called "material" in this project.** This
+> document covers both, and they must not be confused:
+>
+> - **`MaterialProfile`** (§ *The abstraction* onward) — a gameplay data
+>   resource under `data/materials/`. Decides how a target *breaks*,
+>   *scores* and *sounds*. Has nothing to do with rendering.
+> - **Render materials** (§ *The render material set*) — the actual
+>   `Material` resources under `assets/materials/`. Decide how surfaces
+>   *look*.
+>
+> `MaterialProfile` drives render materials (its colours are pushed into
+> shader uniforms at spawn), never the other way round.
+
+---
+
+## The render material set
+
+Five materials carry the whole look. The rule applied when choosing how
+to build each one was **visual quality first, implementation convenience
+second** — which is why they are not all built the same way.
+
+| # | Material | File | Built as | Why this technique |
+|---|---|---|---|---|
+| 1 | **Structural Metal** | `assets/materials/structural_metal.tres` | `StandardMaterial3D` + engine-generated noise (roughness + normal), triplanar | Beams are large, close, and lit. They need surface *variation* under the directional light, and a roughness/normal break is what stops a 20m beam reading as one flat extrusion. Triplanar because every beam is a procedurally-sized `BoxMesh` with no authored UVs. |
+| 2 | **Dark Concrete / Composite** | `assets/materials/dark_composite.tres` | `StandardMaterial3D` + cellular noise, triplanar | Same reasoning, opposite substance: non-metallic, rougher, cast rather than milled. Alternating 1 and 2 across the wall is what gives the corridor material variety without a second art pipeline. The floor is a darker duplicate with tighter tiling. |
+| 3 | **Energy Surface** | `assets/materials/energy_surface.tres` (+ `shaders/energy_surface.gdshader`) | Custom shader, unshaded, scrolling bands | Conduits and trim need *motion*, which no static texture provides. A 20-line shader gives scrolling energy bands at effectively zero memory cost, and one shader serves trim, conduits, lane markers and the magenta anomaly through four sets of uniforms. |
+| 4 | **Containment Crystal** | `assets/materials/containment_crystal.tres` (+ `shaders/containment_crystal.gdshader`) | Custom shader, fresnel rim, `depth_prepass_alpha` | The target's substance. A `StandardMaterial3D` cannot do view-dependent rim lighting, and rim lighting is what makes a translucent shard hold a readable silhouette against a dark corridor. `depth_prepass_alpha` is required specifically because a shard is five *overlapping* transparent facets, which otherwise sort wrongly against each other. A fragment-only variant (`crystal_fragment.tres`) drops the prepass — see the note in that shader. |
+| 5 | **Danger** | `assets/materials/danger_material.tres` (+ `shaders/hazard_stripe.gdshader`) | Custom shader, procedural diagonal stripes | Caution stripes as geometry meant two extra meshes per obstacle sitting 0.01 in front of the body. In-shader they follow the surface, cannot z-fight, and the pulse becomes one uniform. |
+
+**No texture *files* exist in the project.** Materials 1 and 2 generate
+their maps in-engine via `FastNoiseLite` → `NoiseTexture2D` at import
+time. There is therefore nothing to license, nothing to attribute, and
+nothing in version control but a few lines of `.tres`.
+
+### Where textured materials are and are not used
+
+Textured/triplanar materials are applied to **near-field structure
+only** — beams, floor, vertical shafts. Pipes, catwalks, background
+silhouettes, the Kinetic Dart and every VFX surface stay on plain
+untextured materials. A texture the player never gets close enough to
+resolve is pure cost.
+
+### Instance ownership
+
+Anything whose material animates per instance duplicates the shared
+resource **once**, in `_ready()`, and thereafter only writes uniforms:
+`GlassTarget`, `GlassFragment`, `Obstacle`. This matters twice over —
+it removes all per-spawn material allocation, and it fixes a real bug
+where every pooled obstacle shared one stripe material and pulsed in
+lockstep.
+
+---
+
 ## The abstraction
 
 `scripts/materials/MaterialProfile.gd` is a flat data `Resource` (no

@@ -1,0 +1,15 @@
+[gd_resource type="ShaderMaterial" load_steps=2 format=3]
+
+[ext_resource type="Shader" path="res://assets/materials/shaders/containment_crystal.gdshader" id="1_shader"]
+
+[resource]
+resource_name = "Containment Crystal"
+render_priority = 0
+shader = ExtResource("1_shader")
+shader_parameter/tint_color = Color(0.32, 0.74, 1, 0.4)
+shader_parameter/rim_color = Color(0.62, 0.95, 1, 1)
+shader_parameter/rim_power = 3.0
+shader_parameter/rim_strength = 2.2
+shader_parameter/emission_strength = 0.5
+shader_parameter/surface_roughness = 0.12
+shader_parameter/fade = 1.0

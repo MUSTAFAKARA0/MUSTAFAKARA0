@@ -14,8 +14,15 @@ class_name Obstacle
 
 const SPAWN_TELEGRAPH_TIME := 0.3
 
+## The DANGER material. Warm orange is reserved in the colour system for
+## "this will end your run" -- see docs/ART_DIRECTION.md -- so nothing but
+## an obstacle is allowed to use it.
+const DANGER_MATERIAL := preload("res://assets/materials/danger_material.tres")
+
 @onready var _collision: CollisionShape3D = $Collision
-@onready var _warning_stripe: MeshInstance3D = $WarningStripe if has_node("WarningStripe") else null
+@onready var _mesh: MeshInstance3D = $Mesh if has_node("Mesh") else null
+
+var _danger_material: ShaderMaterial
 
 var _telegraph_elapsed: float = 0.0
 var _pulse_time: float = 0.0
@@ -25,6 +32,12 @@ func _ready() -> void:
 	add_to_group("obstacle")
 	collision_layer = 8
 	monitorable = false
+	# One duplicate per pooled obstacle. Without this every obstacle writes
+	# the same shared material and they all pulse in lockstep, which is
+	# exactly the "these are copies" read a hazard must not have.
+	if _mesh:
+		_danger_material = DANGER_MATERIAL.duplicate() as ShaderMaterial
+		_mesh.material_override = _danger_material
 
 func spawn_reset(local_position: Vector3) -> void:
 	position = local_position
@@ -53,11 +66,10 @@ func _process(delta: float) -> void:
 		var t := clamp(_telegraph_elapsed / SPAWN_TELEGRAPH_TIME, 0.0, 1.0)
 		scale = Vector3(1.0, lerp(0.1, 1.0, t), 1.0)
 
-	if _warning_stripe:
+	# Stripe pulse. Range is deliberately narrow (0.75 .. 1.45 on top of the
+	# material's own 1.6 emission): a hazard has to stay legible without
+	# strobing, and it shares the screen with the impact flashes.
+	if _danger_material:
 		_pulse_time += delta
-		var pulse := 0.6 + 0.4 * sin(_pulse_time * 5.0)
-		# The stripe's material is set via surface_material_override/0 in
-		# the scene, not material_override -- read it back the same way.
-		var mat := _warning_stripe.get_surface_override_material(0) as StandardMaterial3D
-		if mat:
-			mat.emission_energy_multiplier = 1.4 + pulse * 1.6
+		var pulse := 1.1 + 0.35 * sin(_pulse_time * 5.0)
+		_danger_material.set_shader_parameter("pulse", pulse)

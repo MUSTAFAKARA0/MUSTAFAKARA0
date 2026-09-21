@@ -20,18 +20,10 @@ var _life_elapsed: float = 0.0
 var _has_hit: bool = false
 
 @onready var _trail: CPUParticles3D = $Trail if has_node("Trail") else null
-@onready var _body: MeshInstance3D = $Body if has_node("Body") else null
-@onready var _fins: Array[MeshInstance3D] = _collect_fins()
+@onready var _core_band: MeshInstance3D = $CoreBand if has_node("CoreBand") else null
+@onready var _fins_root: Node3D = $Fins if has_node("Fins") else null
 
-func _collect_fins() -> Array[MeshInstance3D]:
-	var out: Array[MeshInstance3D] = []
-	if not has_node("Fins"):
-		return out
-	for child in get_node("Fins").get_children():
-		var fin := child as MeshInstance3D
-		if fin:
-			out.append(fin)
-	return out
+var _fin_tween: Tween
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
@@ -52,24 +44,40 @@ func launch(direction: Vector3, speed: float) -> void:
 		_trail.emitting = true
 	_unfold_fins()
 
-## Fins snap to folded (scale 0 on their outward axis) then spring open
-## over ~60ms -- a launch "tell" distinct from the old orb, which had no
-## equivalent moment at all.
+## Fins snap tucked against the body then spring open over ~70ms -- a
+## launch "tell" the old orb had no equivalent of. Scaling the Fins PARENT
+## pulls the fins inward AND shortens them in one property, so this is a
+## single tween per shot instead of one per fin, and the fold reads as the
+## fins retracting into the shell rather than four blades shrinking in
+## place. Roll is reset here so every dart starts from the same clean
+## cross before _spin_fins takes over.
 func _unfold_fins() -> void:
-	for fin in _fins:
-		fin.scale = Vector3(0.15, 0.15, 1.0)
-		var tween := create_tween()
-		tween.tween_property(fin, "scale", Vector3.ONE, 0.06).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	if _fins_root == null:
+		return
+	if _fin_tween and _fin_tween.is_valid():
+		_fin_tween.kill()
+	_fins_root.rotation.z = 0.0
+	_fins_root.scale = Vector3(0.22, 0.22, 1.0)
+	_fin_tween = create_tween()
+	_fin_tween.tween_property(_fins_root, "scale", Vector3.ONE, 0.07) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _physics_process(delta: float) -> void:
 	_life_elapsed += delta
 	global_position += _direction * _speed * delta
 
-	# Subtle energy-core pulse -- purely cosmetic, keeps the dart from
-	# reading as a static prop while it's mid-flight.
-	if _body:
-		var pulse := 1.0 + sin(_life_elapsed * 18.0) * 0.06
-		_body.scale = Vector3(pulse, pulse, 1.0)
+	# Two mid-flight tells, both on the lit parts only so the dark shell's
+	# silhouette stays constant:
+	#   - the energy band breathes in radius (NOT along the dart's length --
+	#     the band mesh is rotated -90 on X, so its local Y is the length
+	#     axis and must stay at 1.0),
+	#   - the fin cross rolls slowly, which reads as spin stabilisation and
+	#     makes the four-blade shape unmistakable in flight.
+	if _core_band:
+		var pulse := 1.0 + sin(_life_elapsed * 16.0) * 0.07
+		_core_band.scale = Vector3(pulse, 1.0, pulse)
+	if _fins_root:
+		_fins_root.rotation.z += delta * 5.5
 
 	if _life_elapsed >= lifetime:
 		_expire(false)
@@ -95,6 +103,11 @@ func _expire(hit: bool) -> void:
 	monitoring = false
 	if _trail:
 		_trail.emitting = false
+	# Must not outlive the shot: a pooled dart re-launched mid-tween would
+	# otherwise unfold from a half-finished scale.
+	if _fin_tween and _fin_tween.is_valid():
+		_fin_tween.kill()
+	_fin_tween = null
 	if not hit:
 		ComboManager.break_combo()
 	ProjectileManager.return_to_pool(self, _pool_key)

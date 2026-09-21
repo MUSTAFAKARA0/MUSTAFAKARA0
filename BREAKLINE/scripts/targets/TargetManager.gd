@@ -22,6 +22,12 @@ const SIGNAL_MATERIAL: MaterialProfile = preload("res://data/materials/unstable_
 @export var despawn_behind_margin: float = 10.0
 @export var max_spawn_interval: float = 6.0
 @export var min_spawn_interval: float = 2.4
+## Turn OFF for an authored/handplaced section (ShowcaseSection.tscn, and
+## later the authored level system): recycling and pooling keep working
+## exactly as before, only the RNG spawner stops. This is the single hook
+## that lets a scene decide "I place my own targets" without a second
+## target system existing alongside this one.
+@export var auto_spawn: bool = true
 
 var player: Node3D
 var _pool: Array[GlassTarget] = []
@@ -55,13 +61,14 @@ func update(difficulty: float) -> void:
 	if player == null:
 		return
 
-	var interval := lerp(max_spawn_interval, min_spawn_interval, clamp(difficulty, 0.0, 1.0))
-	var lead := player.global_position.z - spawn_lead_distance
-	var guard := 0
-	while _next_spawn_z > lead and guard < 8:
-		_spawn_at(_next_spawn_z, difficulty)
-		_next_spawn_z -= interval
-		guard += 1
+	if auto_spawn:
+		var interval := lerp(max_spawn_interval, min_spawn_interval, clamp(difficulty, 0.0, 1.0))
+		var lead := player.global_position.z - spawn_lead_distance
+		var guard := 0
+		while _next_spawn_z > lead and guard < 8:
+			_spawn_at(_next_spawn_z, difficulty)
+			_next_spawn_z -= interval
+			guard += 1
 
 	var behind_z := player.global_position.z + despawn_behind_margin
 	var i := _active.size() - 1
@@ -97,6 +104,36 @@ func _spawn_at(z: float, difficulty: float) -> void:
 
 	if not _active.has(instance):
 		_active.append(instance)
+
+## Deterministic placement. Same pool, same recycling, same
+## behavior/material objects the RNG spawner uses -- an authored section
+## is not a special case of target, only a special case of WHERE.
+##
+## behavior_id: "normal" | "fake" | "moving"
+## material_id: "glass" | "signal"
+func spawn_target(lane_x: float, z: float, behavior_id: String = "normal", material_id: String = "glass", points: int = 100) -> GlassTarget:
+	var instance: GlassTarget = _pool.pop_back() if not _pool.is_empty() else _create_instance()
+	instance.configure(_behavior_for_id(behavior_id), _material_for_id(material_id), points)
+	instance.spawn_reset(Vector3(lane_x, target_height, z))
+	if not _active.has(instance):
+		_active.append(instance)
+	return instance
+
+func _behavior_for_id(behavior_id: String) -> TargetBehavior:
+	match behavior_id:
+		"fake":
+			return _behavior_fake
+		"moving":
+			return _behavior_moving
+		_:
+			return _behavior_normal
+
+func _material_for_id(material_id: String) -> MaterialProfile:
+	match material_id:
+		"signal":
+			return SIGNAL_MATERIAL
+		_:
+			return GLASS_MATERIAL
 
 func _on_target_shattered(target: Node) -> void:
 	_recycle(target)

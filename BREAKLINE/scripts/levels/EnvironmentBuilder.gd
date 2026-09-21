@@ -24,16 +24,36 @@ extends Node3D
 @export var track_length: float = 900.0
 @export var segment_length: float = 20.0
 @export var lane_span: float = 8.0
+## 0 = derive the anomaly count from track_length (see
+## _build_anomaly_accents). Set explicitly only when a section needs a
+## guaranteed number of them -- the showcase does, because "is the magenta
+## accent readable and is it rare" is one of the things being looked at.
+@export var anomaly_count: int = 0
+
+## The two textured members of the quality material set. Both generate
+## their noise maps in-engine (no image files, no licence question) and
+## both are triplanar, which matters here: every structural piece is a
+## procedurally-sized BoxMesh/CylinderMesh with no authored UVs, so
+## non-triplanar textures would stretch badly on the taller beams.
+##
+## They are applied to NEAR-FIELD structure only -- beams, ground,
+## vertical shafts. Pipes, catwalks and background silhouettes stay on
+## plain untextured materials, because a texture the player never gets
+## close enough to resolve is pure cost. See docs/PERFORMANCE.md.
+const STRUCTURAL_METAL := preload("res://assets/materials/structural_metal.tres")
+const DARK_COMPOSITE := preload("res://assets/materials/dark_composite.tres")
+const ENERGY_SURFACE := preload("res://assets/materials/energy_surface.tres")
 
 var _structural_material: StandardMaterial3D
 var _structural_variant_material: StandardMaterial3D
-var _trim_material: StandardMaterial3D
+var _trim_material: ShaderMaterial
 var _pipe_material: StandardMaterial3D
-var _conduit_material: StandardMaterial3D
-var _anomaly_material: StandardMaterial3D
+var _conduit_material: ShaderMaterial
+var _anomaly_material: ShaderMaterial
 var _distant_material: StandardMaterial3D
-var _lane_marker_material: StandardMaterial3D
+var _lane_marker_material: ShaderMaterial
 var _catwalk_material: StandardMaterial3D
+var _ground_material: StandardMaterial3D
 
 func _ready() -> void:
 	_build_material_cache()
@@ -45,76 +65,102 @@ func _ready() -> void:
 	_build_distant_structures()
 	_build_anomaly_accents()
 
+## Nine cached materials for the whole environment, shared by every
+## instance that uses them. Three are the quality set (structural metal,
+## dark composite, energy surface); the rest are cheap plain materials for
+## geometry the player never gets near.
 func _build_material_cache() -> void:
-	_structural_material = StandardMaterial3D.new()
-	_structural_material.albedo_color = Color(0.09, 0.1, 0.13)
-	_structural_material.metallic = 0.3
-	_structural_material.roughness = 0.75
+	# STRUCTURAL METAL -- the milled, panelled surface of the facility.
+	# Used as-is (shared, not duplicated) so all beams hit the same
+	# material and batch together.
+	_structural_material = STRUCTURAL_METAL as StandardMaterial3D
 
-	_structural_variant_material = StandardMaterial3D.new()
-	_structural_variant_material.albedo_color = Color(0.12, 0.11, 0.1)
-	_structural_variant_material.metallic = 0.35
-	_structural_variant_material.roughness = 0.7
+	# DARK CONCRETE / COMPOSITE -- the cast, non-metallic counterpart.
+	# Alternating the two across beams is what keeps a 45-beam wall from
+	# reading as one extruded shape.
+	_structural_variant_material = DARK_COMPOSITE as StandardMaterial3D
 
-	# Decoration emission is deliberately dimmer than any gameplay element
-	# (target core ~3.0, obstacle ~2.0, projectile ~5.0) -- glow here reads
-	# as atmosphere, never competes with what the player needs to read.
-	_trim_material = StandardMaterial3D.new()
-	_trim_material.albedo_color = Color(0.55, 0.92, 1.0)
-	_trim_material.emission_enabled = true
-	_trim_material.emission = Color(0.5, 0.9, 1.0)
-	_trim_material.emission_energy_multiplier = 1.0
+	# Ground is composite too, but darker and with the noise tiled tighter,
+	# so the floor doesn't read as the same slab as the walls.
+	_ground_material = DARK_COMPOSITE.duplicate() as StandardMaterial3D
+	_ground_material.albedo_color = Color(0.042, 0.046, 0.058)
+	_ground_material.roughness = 0.68
+	_ground_material.metallic = 0.18
+	_ground_material.uv1_scale = Vector3(0.3, 0.3, 0.3)
 
+	# ENERGY SURFACE -- four tunings of one shader. The shader is unshaded,
+	# so `emission_strength` scales ALBEDO directly and 1.0 is neutral.
+	# Every decoration colour below is already a DARK, saturated blue --
+	# peak output lands around 0.55-0.95 against the target core's ~1.65
+	# near-white, which is the gap that keeps atmosphere from competing
+	# with what has to be read and shot. Each gets its own duplicate so
+	# the scroll/colour can differ without one write bleeding into the
+	# others.
+	_trim_material = ENERGY_SURFACE.duplicate() as ShaderMaterial
+	_trim_material.set_shader_parameter("base_color", Color(0.26, 0.66, 0.9))
+	_trim_material.set_shader_parameter("pulse_color", Color(0.55, 0.88, 1.0))
+	_trim_material.set_shader_parameter("band_frequency", 3.0)
+	_trim_material.set_shader_parameter("scroll_speed", 0.12)
+	_trim_material.set_shader_parameter("emission_strength", 0.75)
+
+	_conduit_material = ENERGY_SURFACE.duplicate() as ShaderMaterial
+	_conduit_material.set_shader_parameter("base_color", Color(0.22, 0.62, 0.86))
+	_conduit_material.set_shader_parameter("pulse_color", Color(0.62, 0.95, 1.0))
+	_conduit_material.set_shader_parameter("band_frequency", 22.0)
+	_conduit_material.set_shader_parameter("scroll_speed", 0.55)
+	_conduit_material.set_shader_parameter("band_sharpness", 0.3)
+	_conduit_material.set_shader_parameter("emission_strength", 0.95)
+
+	# The magenta anomaly accent. Same shader, one of only two places in
+	# the game allowed to use magenta at all (the other is VFXManager's
+	# anomaly feedback) -- see docs/ART_DIRECTION.md's colour contract.
+	_anomaly_material = ENERGY_SURFACE.duplicate() as ShaderMaterial
+	_anomaly_material.set_shader_parameter("base_color", Color(0.72, 0.22, 0.92))
+	_anomaly_material.set_shader_parameter("pulse_color", Color(1.0, 0.55, 1.0))
+	_anomaly_material.set_shader_parameter("band_frequency", 9.0)
+	_anomaly_material.set_shader_parameter("scroll_speed", 0.9)
+	_anomaly_material.set_shader_parameter("band_sharpness", 0.7)
+	_anomaly_material.set_shader_parameter("emission_strength", 1.0)
+
+	# Lane markers are a readability aid, not decoration, so they get a
+	# steady band rather than a scrolling one -- a moving marker under the
+	# player's feet is exactly the kind of motion that reads as gameplay.
+	_lane_marker_material = ENERGY_SURFACE.duplicate() as ShaderMaterial
+	_lane_marker_material.set_shader_parameter("base_color", Color(0.24, 0.6, 0.78))
+	_lane_marker_material.set_shader_parameter("pulse_color", Color(0.45, 0.82, 1.0))
+	_lane_marker_material.set_shader_parameter("band_frequency", 1.0)
+	_lane_marker_material.set_shader_parameter("scroll_speed", 0.0)
+	_lane_marker_material.set_shader_parameter("emission_strength", 0.7)
+
+	# Plain, untextured, cheap: pipes and catwalks are read as silhouettes
+	# against the walls, never as surfaces.
 	_pipe_material = StandardMaterial3D.new()
 	_pipe_material.albedo_color = Color(0.14, 0.15, 0.17)
 	_pipe_material.metallic = 0.6
 	_pipe_material.roughness = 0.4
-
-	_conduit_material = StandardMaterial3D.new()
-	_conduit_material.albedo_color = Color(0.4, 0.9, 1.0)
-	_conduit_material.emission_enabled = true
-	_conduit_material.emission = Color(0.4, 0.9, 1.0)
-	_conduit_material.emission_energy_multiplier = 0.9
-
-	_anomaly_material = StandardMaterial3D.new()
-	_anomaly_material.albedo_color = Color(0.85, 0.3, 0.95)
-	_anomaly_material.emission_enabled = true
-	_anomaly_material.emission = Color(0.85, 0.25, 1.0)
-	_anomaly_material.emission_energy_multiplier = 1.3
-
-	_distant_material = StandardMaterial3D.new()
-	_distant_material.albedo_color = Color(0.1, 0.11, 0.15, 0.55)
-	_distant_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_distant_material.emission_enabled = true
-	_distant_material.emission = Color(0.12, 0.2, 0.3)
-	_distant_material.emission_energy_multiplier = 0.3
-
-	_lane_marker_material = StandardMaterial3D.new()
-	_lane_marker_material.albedo_color = Color(0.4, 0.9, 1.0)
-	_lane_marker_material.emission_enabled = true
-	_lane_marker_material.emission = Color(0.4, 0.9, 1.0)
-	_lane_marker_material.emission_energy_multiplier = 1.0
 
 	_catwalk_material = StandardMaterial3D.new()
 	_catwalk_material.albedo_color = Color(0.1, 0.11, 0.13)
 	_catwalk_material.metallic = 0.5
 	_catwalk_material.roughness = 0.55
 
+	# Background silhouettes. Opaque on purpose now: they used to be alpha
+	# blended, which put a dozen large overlapping transparent boxes behind
+	# everything else -- the single worst overdraw source in the scene on a
+	# tile-based mobile GPU, for a "haze" a flat dark colour sells just as
+	# well against the fog.
+	_distant_material = StandardMaterial3D.new()
+	_distant_material.albedo_color = Color(0.075, 0.085, 0.115)
+	_distant_material.metallic = 0.0
+	_distant_material.roughness = 1.0
+
 func _build_ground() -> void:
 	var mesh := PlaneMesh.new()
 	mesh.size = Vector2(14.0, track_length + 60.0)
 
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.045, 0.05, 0.07)
-	mat.metallic = 0.5
-	mat.roughness = 0.35
-	mat.emission_enabled = true
-	mat.emission = Color(0.04, 0.22, 0.3)
-	mat.emission_energy_multiplier = 0.1
-
 	var mesh_instance := MeshInstance3D.new()
 	mesh_instance.mesh = mesh
-	mesh_instance.material_override = mat
+	mesh_instance.material_override = _ground_material
 	mesh_instance.position = Vector3(0, 0, -track_length * 0.5 + 10.0)
 	add_child(mesh_instance)
 
@@ -283,7 +329,10 @@ func _build_distant_structures() -> void:
 func _build_anomaly_accents() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 9001
-	var count := 6
+	# Density, not a fixed number: 6 anomalies were tuned for a 900m track,
+	# and reusing that count on a 200m section would turn a rare event into
+	# wallpaper. Roughly one per 150m, never fewer than two.
+	var count := anomaly_count if anomaly_count > 0 else maxi(2, int(track_length / 150.0))
 
 	for i in range(count):
 		var z := -rng.randf_range(0.0, track_length)

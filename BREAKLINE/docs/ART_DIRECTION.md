@@ -82,16 +82,47 @@ audit finding that everything glowed the same cyan):
 
 | Accent | Meaning | Where |
 |---|---|---|
-| Cyan (~200°) | "safe / normal interaction" | targets' base glass, projectile, HUD score/combo, lane markers, structural trim |
-| Warm orange | "danger" | obstacle warning stripes |
+| Cyan (~200°) | "safe / normal interaction" | targets' base glass, projectile, HUD score, crosshair, lane markers, structural trim |
+| Warm orange | "danger" | obstacle hazard stripes |
 | Magenta | "anomaly / unusual" | rare environment cracks, the Unstable Signal (fake target) material |
-| Gold | "reward" only | coins, nothing else |
+| Gold | "reward" only | coins, **combo** |
 
-Gameplay-critical emissive brightness (target core ~3.0, obstacle stripe
-pulses up to ~3.0, projectile ~5.0) is always higher than decorative
-emissive brightness (trim/conduit/anomaly cracks ~0.9-1.3) — a player
-should never have to work out whether a glow is a hazard, a target, or
-wallpaper.
+Two corrections were made to this table during the Visual Quality Gate,
+because the implementation had drifted from it:
+
+- **Combo moved from cyan to gold.** Combo is a reward read; giving it
+  the gameplay accent made it compete with the shard the player is
+  aiming at.
+- **The crosshair was pure white.** White is not in this palette at all,
+  and the crosshair occupies the one pixel the player looks at most. It
+  is now palette cyan at 0.62 alpha over a dark backing arm.
+
+### Brightness hierarchy (the part that is easy to break)
+
+Four tiers, strictly ordered. Anything that violates this ordering is a
+bug, not a style choice:
+
+| Tier | What | Rough emissive level |
+|---|---|---|
+| 1. Feedback | impact flash, core flare | capped: flash ≤ 3.2, flare ≤ 0.7 additive alpha |
+| 2. Gameplay | target core (~1.65), dart band/fins (~1.0), hazard stripes | ~1.0–1.65 |
+| 3. Readability aids | lane markers | ~0.55 peak |
+| 4. Decoration | trim, conduits, anomaly cracks | ~0.68–0.95 peak |
+
+The whole tier set was turned **down** during the Visual Quality Gate,
+not up. The previous values (core up to 3.0, projectile 5.0, uncapped
+impact flash up to ~4.8) meant everything was at feedback brightness, so
+nothing read as feedback. A player should never have to work out whether
+a glow is a hazard, a target, or wallpaper.
+
+### The structural world stays dark
+
+Beams, floor, pipes, catwalks and background structures carry **no
+emission at all**. Their surface interest comes from noise-driven
+roughness and normal detail under the one directional light (see
+docs/MATERIALS.md), not from glow. This is the rule that keeps the
+facility reading as a *place* the gameplay happens in, rather than as a
+neon tunnel.
 
 ## VFX language
 
@@ -103,10 +134,12 @@ hit does not — see docs/GAMEPLAY.md's game-feel section.
 ## UI language
 
 Not redesigned with custom typography/iconography yet (still the engine's
-default theme) — see docs/VISUAL_QUALITY.md and docs/ASSETS.md for why
-that's an honest, called-out gap rather than something claimed as done.
-Colors were updated to the three-accent system (HUD score/combo now read
-cyan, coins stay gold).
+default theme) — see **docs/UI_DIRECTION.md**, which records the
+foundation decisions (colour contract, 4px spacing scale, panel and icon
+language, score/combo/warning treatment, font selection criteria) and
+lists exactly where the default Godot theme currently shows through.
+docs/VISUAL_QUALITY.md and docs/ASSETS.md cover why this is an honest,
+called-out gap rather than something claimed as done.
 
 ## Target design language
 

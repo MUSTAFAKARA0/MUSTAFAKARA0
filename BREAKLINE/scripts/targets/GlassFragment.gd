@@ -14,7 +14,15 @@ class_name GlassFragment
 ## misconfigured MaterialProfile can never leave a shard stuck active.
 @export var lifetime_cap: float = 2.0
 
+## Cheap fragment variant of the Containment Crystal shader. Duplicated
+## once per pooled fragment in _ready(); after that a shatter only writes
+## uniforms, so spawning 40 shards allocates nothing.
+const FRAGMENT_MATERIAL := preload("res://assets/materials/crystal_fragment.tres")
+
 @onready var _mesh: MeshInstance3D = $Mesh
+
+var _fragment_material: ShaderMaterial
+var _fade_tween: Tween
 
 var _active: bool = false
 var _phase: int = 0 # 0 = outward (physics-driven), 1 = pull + dissolve
@@ -27,6 +35,9 @@ var _pull_target: Vector3 = Vector3.ZERO
 func _ready() -> void:
 	freeze = true
 	contact_monitor = false
+	if _mesh:
+		_fragment_material = FRAGMENT_MATERIAL.duplicate() as ShaderMaterial
+		_mesh.material_override = _fragment_material
 
 func activate(
 	world_position: Vector3,
@@ -56,15 +67,18 @@ func activate(
 	apply_central_impulse(impulse)
 	apply_torque_impulse(Vector3(randf_range(-2.0, 2.0), randf_range(-2.0, 2.0), randf_range(-2.0, 2.0)))
 
-	if _mesh:
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = color
-		mat.emission_enabled = true
-		mat.emission = color
-		mat.emission_energy_multiplier = 1.6
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.albedo_color.a = 0.9
-		_mesh.material_override = mat
+	# A previous shatter's dissolve tween must not keep running on a
+	# fragment that has already been recycled -- it would fade the new
+	# shard out from whatever alpha it happened to reach.
+	if _fade_tween and _fade_tween.is_valid():
+		_fade_tween.kill()
+	_fade_tween = null
+
+	if _fragment_material:
+		var body := color
+		body.a = 0.9
+		_fragment_material.set_shader_parameter("body_color", body)
+		_fragment_material.set_shader_parameter("fade", 1.0)
 
 func _physics_process(delta: float) -> void:
 	if not _active:
@@ -90,20 +104,30 @@ func _physics_process(delta: float) -> void:
 		if _phase_elapsed >= _dissolve_time:
 			_deactivate()
 
+## One uniform carries the whole dissolve: body alpha and emitted light go
+## down together, so a shard does not survive as a glowing outline after
+## its surface is gone. Eased OUT so most of the fade happens early and the
+## last, dimmest part lingers -- reads as draining, not as a hard cut.
 func _start_dissolve_fade() -> void:
-	if not _mesh:
+	if _fragment_material == null:
 		return
-	var mat := _mesh.material_override as StandardMaterial3D
-	if mat == null:
-		return
-	var tween := create_tween()
-	tween.tween_property(mat, "albedo_color:a", 0.0, _dissolve_time)
-	tween.parallel().tween_property(mat, "emission_energy_multiplier", 0.0, _dissolve_time)
+	if _fade_tween and _fade_tween.is_valid():
+		_fade_tween.kill()
+	_fade_tween = create_tween()
+	_fade_tween.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_SINE)
+	_fade_tween.tween_method(_set_fade, 1.0, 0.0, _dissolve_time)
+
+func _set_fade(value: float) -> void:
+	if _fragment_material:
+		_fragment_material.set_shader_parameter("fade", value)
 
 func _deactivate() -> void:
 	_active = false
 	freeze = true
 	visible = false
+	if _fade_tween and _fade_tween.is_valid():
+		_fade_tween.kill()
+	_fade_tween = null
 	FragmentManager.return_to_pool(self)
 
 ## Called by FragmentManager.return_all_active() when a run ends/retries,

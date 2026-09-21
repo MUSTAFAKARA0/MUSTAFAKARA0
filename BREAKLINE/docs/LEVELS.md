@@ -48,6 +48,43 @@ thing a player ever sees if the RNG lines up past the 0.35 threshold. This
 is flagged honestly rather than described as "good enough" — see
 docs/ROADMAP.md for when authored pacing is scheduled.
 
+## Deterministic placement (built; the piece meant to survive)
+
+Both managers now expose a public placement API alongside the RNG
+spawner, and an `auto_spawn` export that switches the RNG spawner off
+without disabling pooling or recycling:
+
+```gdscript
+TargetManager.spawn_target(lane_x, z, behavior_id, material_id, points)
+ObstacleManager.spawn_obstacle(lane_x, z)
+```
+
+`behavior_id` is `"normal" | "fake" | "moving"`, `material_id` is
+`"glass" | "signal"`. Both resolve through small lookup functions that
+hand back the *same shared* behavior/material objects the RNG path uses
+— an authored section is not a special case of *target*, only a special
+case of *where*.
+
+This is the hook the authored level system will build on. It exists now
+because the visual showcase needed it, not as a down-payment on pacing.
+
+## The showcase section (NOT the authored level system)
+
+`scenes/levels/ShowcaseSection.tscn` + `scripts/levels/ShowcaseDirector.gd`
+(`extends LevelManager`) + `data/levels/showcase.tres`.
+
+A real, playable ~200m stretch running the real player, spawners, pools,
+materials and destruction, with seven hand-placed beats and a flat
+6 m/s speed so a Containment Shard can actually be read as it
+approaches. Its only purpose is letting a human look at the FRACTURE
+PROTOCOL visual identity in the engine — see docs/VISUAL_QUALITY.md for
+the seven questions it is built to answer.
+
+It is explicitly **not** the authored level system: no pacing model, no
+section vocabulary, no difficulty contract, no ending. It is one
+hardcoded list in `ShowcaseDirector.LAYOUT`, which the authored level
+system replaces wholesale.
+
 ## Procedural pattern system (the natural extension point for the above)
 
 Not implemented yet. `TargetManager._spawn_at()` / `ObstacleManager

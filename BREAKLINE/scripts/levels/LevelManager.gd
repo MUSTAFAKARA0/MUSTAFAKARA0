@@ -1,6 +1,8 @@
 extends Node3D
+class_name LevelManager
 ## LevelManager
-## Root script for a playable level scene (Level01.tscn). Loads LevelData,
+## Root script for a playable level scene (Level01.tscn, and subclassed by
+## ShowcaseDirector for ShowcaseSection.tscn). Loads LevelData,
 ## pushes its values into the player and spawners, drives the difficulty
 ## curve every frame, and reacts to GameManager's run lifecycle. Reloading
 ## the scene (GameManager.retry()) re-runs all of this from scratch.
