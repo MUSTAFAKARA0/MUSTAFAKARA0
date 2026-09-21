@@ -1,0 +1,29 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/player/PlayerController.gd" id="1_controller"]
+[ext_resource type="Script" path="res://scripts/player/CameraController.gd" id="2_camera"]
+
+[sub_resource type="BoxShape3D" id="Shape_hazard"]
+size = Vector3(1.6, 2.0, 1.0)
+
+[node name="Player" type="Node3D"]
+script = ExtResource("1_controller")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+current = true
+fov = 75.0
+script = ExtResource("2_camera")
+
+[node name="MuzzlePoint" type="Marker3D" parent="Camera3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.28, -0.18, -0.4)
+
+[node name="HitDetector" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+collision_layer = 2
+collision_mask = 8
+monitoring = true
+monitorable = false
+
+[node name="HitShape" type="CollisionShape3D" parent="HitDetector"]
+shape = SubResource("Shape_hazard")

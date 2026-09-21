@@ -1,0 +1,62 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/LevelManager.gd" id="1_levelmanager"]
+[ext_resource type="PackedScene" path="res://scenes/player/Player.tscn" id="2_player"]
+[ext_resource type="Script" path="res://scripts/targets/TargetManager.gd" id="3_targetmanager"]
+[ext_resource type="Script" path="res://scripts/obstacles/ObstacleManager.gd" id="4_obstaclemanager"]
+[ext_resource type="Script" path="res://scripts/levels/EnvironmentBuilder.gd" id="5_envbuilder"]
+[ext_resource type="PackedScene" path="res://scenes/ui/HUD.tscn" id="6_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/GameOverScreen.tscn" id="7_gameover"]
+
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_glass"]
+sky_top_color = Color(0.02, 0.03, 0.08, 1)
+sky_horizon_color = Color(0.1, 0.14, 0.25, 1)
+ground_bottom_color = Color(0.01, 0.01, 0.03, 1)
+ground_horizon_color = Color(0.08, 0.1, 0.18, 1)
+sun_angle_max = 4.0
+
+[sub_resource type="Sky" id="Sky_glass"]
+sky_material = SubResource("SkyMaterial_glass")
+
+[sub_resource type="Environment" id="Environment_glass"]
+background_mode = 2
+sky = SubResource("Sky_glass")
+ambient_light_source = 2
+ambient_light_color = Color(0.25, 0.4, 0.55, 1)
+ambient_light_energy = 0.5
+fog_enabled = true
+fog_light_color = Color(0.08, 0.12, 0.22, 1)
+fog_density = 0.012
+glow_enabled = true
+glow_intensity = 0.6
+glow_bloom = 0.15
+
+[node name="Level01" type="Node3D"]
+script = ExtResource("1_levelmanager")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_glass")
+
+[node name="MoonLight" type="DirectionalLight3D" parent="."]
+position = Vector3(0, 20, 0)
+rotation_degrees = Vector3(-55, -35, 0)
+light_color = Color(0.65, 0.78, 1, 1)
+light_energy = 0.9
+shadow_enabled = true
+
+[node name="CityGeometry" type="Node3D" parent="."]
+script = ExtResource("5_envbuilder")
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+
+[node name="TargetManager" type="Node3D" parent="."]
+script = ExtResource("3_targetmanager")
+
+[node name="ObstacleManager" type="Node3D" parent="."]
+script = ExtResource("4_obstaclemanager")
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+
+[node name="HUD" parent="UILayer" instance=ExtResource("6_hud")]
+
+[node name="GameOverScreen" parent="UILayer" instance=ExtResource("7_gameover")]

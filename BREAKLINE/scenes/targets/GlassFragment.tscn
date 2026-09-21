@@ -1,0 +1,30 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/targets/GlassFragment.gd" id="1_script"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_frag"]
+size = Vector3(0.18, 0.18, 0.04)
+
+[sub_resource type="StandardMaterial3D" id="Material_frag"]
+albedo_color = Color(0.6, 0.9, 1, 0.85)
+transparency = 1
+emission_enabled = true
+emission = Color(0.4, 0.8, 1, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="BoxShape3D" id="Shape_frag"]
+size = Vector3(0.18, 0.18, 0.04)
+
+[node name="GlassFragment" type="RigidBody3D"]
+collision_layer = 32
+collision_mask = 1
+freeze = true
+gravity_scale = 1.2
+script = ExtResource("1_script")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_frag")
+surface_material_override/0 = SubResource("Material_frag")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("Shape_frag")
