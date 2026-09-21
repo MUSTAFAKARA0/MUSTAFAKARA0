@@ -17,6 +17,7 @@ class_name PlayerController
 var forward_speed: float = 0.0
 var _reticle_norm: Vector2 = Vector2.ZERO
 var _target_x: float = 0.0
+var _lateral_velocity: float = 0.0
 
 @onready var camera: CameraController = $Camera3D
 @onready var muzzle: Marker3D = $Camera3D/MuzzlePoint
@@ -38,7 +39,15 @@ func _process(delta: float) -> void:
 	GameManager.distance_traveled += forward_speed * delta
 
 	_target_x = clamp(_reticle_norm.x, -1.0, 1.0) * lane_half_width
+	var prev_x := global_position.x
 	global_position.x = lerp(global_position.x, _target_x, delta * steer_smoothing)
+	if delta > 0.0:
+		_lateral_velocity = (global_position.x - prev_x) / delta
+
+## Used by CameraController to bank the camera slightly into a turn --
+## purely cosmetic, doesn't affect the actual steering above.
+func get_lateral_velocity() -> float:
+	return _lateral_velocity
 
 func _update_reticle_norm(screen_pos: Vector2) -> void:
 	var viewport_size := get_viewport().get_visible_rect().size

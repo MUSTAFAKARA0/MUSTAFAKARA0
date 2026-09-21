@@ -16,6 +16,7 @@ signal home_requested
 @onready var coins_value: Label = $Panel/VBox/CoinsRow/CoinsValue
 @onready var retry_button: Button = $Panel/VBox/Buttons/RetryButton
 @onready var home_button: Button = $Panel/VBox/Buttons/HomeButton
+@onready var panel: PanelContainer = $Panel
 
 func _ready() -> void:
 	retry_button.pressed.connect(_on_retry_pressed)
@@ -29,10 +30,33 @@ func display_stats(stats: Dictionary) -> void:
 	combo_value.text = "x%d" % int(stats.get("max_combo", 0))
 	coins_value.text = "+%d" % int(stats.get("coins", 0))
 
+## Shows the panel and fills it with `stats` in one call, with a short
+## fade + scale-in reveal instead of an instant appear.
+func reveal(stats: Dictionary) -> void:
+	display_stats(stats)
+	visible = true
+	modulate.a = 0.0
+	panel.pivot_offset = panel.size / 2.0
+	panel.scale = Vector2(0.85, 0.85)
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(self, "modulate:a", 1.0, 0.25)
+	tween.tween_property(panel, "scale", Vector2(1.0, 1.0), 0.3) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _punch_button(button: Button) -> void:
+	button.pivot_offset = button.size / 2.0
+	button.scale = Vector2(0.9, 0.9)
+	var tween := create_tween()
+	tween.tween_property(button, "scale", Vector2(1.0, 1.0), 0.15).set_trans(Tween.TRANS_BACK)
+
 func _on_retry_pressed() -> void:
 	AudioManager.play_sfx("button_click")
+	_punch_button(retry_button)
 	retry_requested.emit()
 
 func _on_home_pressed() -> void:
 	AudioManager.play_sfx("button_click")
+	_punch_button(home_button)
 	home_requested.emit()

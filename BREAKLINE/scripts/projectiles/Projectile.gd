@@ -16,6 +16,7 @@ var _life_elapsed: float = 0.0
 var _has_hit: bool = false
 
 @onready var _trail: CPUParticles3D = $Trail if has_node("Trail") else null
+@onready var _mesh: MeshInstance3D = $Mesh if has_node("Mesh") else null
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
@@ -38,6 +39,12 @@ func launch(direction: Vector3, speed: float) -> void:
 func _physics_process(delta: float) -> void:
 	_life_elapsed += delta
 	global_position += _direction * _speed * delta
+
+	# Subtle energy-core pulse -- purely cosmetic, keeps the ball from
+	# reading as a static prop while it's mid-flight.
+	if _mesh:
+		var pulse := 1.0 + sin(_life_elapsed * 18.0) * 0.08
+		_mesh.scale = Vector3.ONE * pulse
 
 	if _life_elapsed >= lifetime:
 		_expire(false)

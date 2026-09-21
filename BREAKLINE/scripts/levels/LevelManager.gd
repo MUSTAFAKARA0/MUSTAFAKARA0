@@ -52,6 +52,5 @@ func _process(_delta: float) -> void:
 
 func _on_run_ended(stats: Dictionary) -> void:
 	hud.visible = false
-	game_over_screen.visible = true
-	game_over_screen.display_stats(stats)
+	game_over_screen.reveal(stats)
 	AudioManager.stop_music()

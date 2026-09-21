@@ -10,9 +10,12 @@ class_name CameraController
 @export var max_fov_bonus: float = 8.0
 @export var bob_amplitude: float = 0.035
 @export var bob_frequency: float = 1.8
+@export var max_bank_degrees: float = 4.0
 
 var _rest_position: Vector3
+var _rest_rotation_degrees: Vector3
 var _time: float = 0.0
+var _bank_degrees: float = 0.0
 
 var _shake_strength: float = 0.0
 var _shake_duration: float = 0.0
@@ -25,6 +28,7 @@ var _recoil_velocity: Vector3 = Vector3.ZERO
 
 func _ready() -> void:
 	_rest_position = position
+	_rest_rotation_degrees = rotation_degrees
 	fov = base_fov
 	VFXManager.camera_shake_requested.connect(_on_shake_requested)
 
@@ -57,6 +61,14 @@ func _process(delta: float) -> void:
 	_recoil_offset = _recoil_offset.lerp(Vector3.ZERO, delta * 10.0)
 
 	position = _rest_position + bob + shake_offset + _recoil_offset
+
+	# Bank gently into the direction of lateral movement -- a subtle
+	# "leaning into the turn" read, not an arcade-racer barrel roll.
+	var target_bank := 0.0
+	if _player:
+		target_bank = clamp(-_player.get_lateral_velocity() * 0.6, -max_bank_degrees, max_bank_degrees)
+	_bank_degrees = lerp(_bank_degrees, target_bank, delta * 5.0)
+	rotation_degrees = _rest_rotation_degrees + Vector3(0.0, 0.0, _bank_degrees)
 
 func apply_recoil(strength: float = 0.06) -> void:
 	_recoil_offset += Vector3(0, 0, strength)
