@@ -12,15 +12,35 @@ detection, glass destruction, combo, score, obstacles, collision, game
 over, retry. This is the "vertical slice acceptance chain" in TESTING.md.
 
 ## Phase 2 — Vertical Slice Quality — in progress
-Done: procedural Glass District environment, emissive glass materials,
-particle bursts, camera shake/recoil/FOV feel, haptics, minimal polished
-UI. **Not done:** real audio (see ASSETS.md), animation polish, loading
-transitions.
 
-## Phase 3 — Level System — partially done
+Being executed as its own sub-cycle (architecture → visual prototype →
+validation → authored level system → real asset quality → self-QA — see
+each doc referenced below for the corresponding stage):
+
+**Done:** original-audio SFX (docs/ASSETS.md), UI/transition polish, and
+— this pass — a full art-direction adoption (**FRACTURE PROTOCOL**, see
+docs/ART_DIRECTION.md) replacing the earlier too-Smash-Hit-adjacent
+version: behavior/material architecture (docs/TARGETS.md,
+docs/MATERIALS.md), a real asymmetric industrial environment
+(docs/ART_DIRECTION.md, docs/PERFORMANCE.md), a redesigned target
+("Containment Shard"), projectile ("Kinetic Dart"), destruction
+("fracture-and-dissolve," docs/PHYSICS.md), obstacle presentation, and
+precision-hit game feel (hit-pause, docs/GAMEPLAY.md).
+
+**Not done:** real textures/fonts/icons (docs/ASSETS.md's priority list),
+music, a Low/Medium/High graphics preset, and any of this validated on a
+real Godot runtime or Android device — see docs/VISUAL_QUALITY.md's
+explicit self-check.
+
+## Phase 3 — Level System — partially done, pacing still not authored
 `LevelData` resource + data-driven `LevelManager` exist (see LEVELS.md).
-Only one level (`level_01.tres`). Procedural pattern system (beyond random
-lane picking) is designed but not implemented.
+Only one level (`level_01.tres`). Target/obstacle spawning is a
+difficulty-gated random roll, not the authored **Introduction → Learning
+→ Combination → Pressure → Mastery → Climax** pacing product direction
+calls for — see LEVELS.md's "Level design philosophy" section for the
+honest gap and where the pattern system would plug in. This is the next
+scheduled piece of Phase 2/3 work, after the art-direction adoption above
+is validated on a real device.
 
 ## Phase 4 — World System — not started
 Industrial Core, Neon Void, Gravity Sector, Collapse. Each needs its own

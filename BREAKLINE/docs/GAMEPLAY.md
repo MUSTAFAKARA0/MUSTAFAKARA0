@@ -18,34 +18,60 @@
    touch point and uses `Camera3D.project_ray_normal(screen_pos)` at fire
    time to get a true world-space aim direction — this is what makes "hits
    where you actually tapped" work, independent of FOV/aspect ratio.
-3. `ProjectileManager.fire("energy_ball", muzzle_pos, direction, speed)`
+3. `ProjectileManager.fire("kinetic_dart", muzzle_pos, direction, speed)`
    pulls a pooled `Projectile` and launches it.
 
-## Projectile (`scripts/projectiles/Projectile.gd`)
+## Projectile — "Kinetic Dart" (`scripts/projectiles/Projectile.gd`)
 
 `Area3D`, moves by direct position update (not physics-simulated), checks
 overlap each `_physics_process`. On target hit: calls `take_hit()` on the
-target and returns to pool. On timeout with no hit: counts as a miss and
-breaks combo (`ComboManager.break_combo()`). Only the "energy ball" exists
-today; `PROJECTILE_SCENES` in `ProjectileManager` is where bomb/chain/
-freeze/pierce variants would register later — do not build those before the
-base projectile feels perfect.
+target (passing hit position, hit normal, *and* its own travel direction
+— see docs/PHYSICS.md) and returns to pool. On timeout with no hit: counts
+as a miss and breaks combo (`ComboManager.break_combo()`). An oriented,
+finned dart rather than a glowing orb (see docs/ART_DIRECTION.md) — fins
+visibly unfold on launch (`_unfold_fins`), and the body has a subtle
+in-flight pulse. Only the "kinetic dart" exists today; `PROJECTILE_SCENES`
+in `ProjectileManager` is where future variants would register — do not
+build those before the base projectile feels perfect.
 
-## Glass destruction (`scripts/targets/GlassTarget.gd`)
+## Destruction — "Fracture-and-dissolve" (`scripts/targets/GlassTarget.gd`, `FragmentManager.gd`, `GlassFragment.gd`)
 
-Pre-fractured-in-spirit approach for mobile: the panel itself is a single
-mesh that instantly hides on hit, and `FragmentManager` spawns a handful of
-small pooled `RigidBody3D` shards with an outward impulse — no real-time
-mesh fracture. Sequence on hit: hide panel → spawn fragments → particle
-burst → camera shake → haptic → SFX → score/combo update. See
-PERFORMANCE.md for why this is pooled rather than instantiated per hit.
+Replaces an earlier "explode into cubes and fall" version. Sequence on
+hit: hide the target's cluster → impact flash + directional particle burst
+→ pooled shard fragments burst outward under a real physics impulse
+(hit-normal + projectile-momentum + material-scaled randomness — see
+docs/PHYSICS.md) → after a brief outward phase, shards get pulled back
+toward the impact point while fading to nothing, rather than settling on
+the ground → camera shake (bigger + a brief hit-pause on a precision hit)
+→ haptic → SFX → score/combo update. Every number in this pipeline (how
+many shards, how long each phase lasts, how strong the impulse is, which
+sounds play) comes from the target's `MaterialProfile`
+(docs/MATERIALS.md), not hardcoded per-target — this is what lets a
+future material (metal, energy crystal, ...) break differently without
+touching this pipeline.
+
+## Precision hits
+
+Every target has a visible glowing core — its actual weak point, not just
+decoration. A hit within `GlassTarget.PRECISION_RADIUS` of the core
+counts as a precision hit: brighter flash, stronger shake, a brief
+hit-pause, the `perfect_hit` SFX, and `ScoreManager.add_target_hit`'s
+`perfect` bonus (previously an unused parameter, now wired up). This is
+the skill-expression layer a flat panel with no "center" never had room
+for. See docs/TARGETS.md.
 
 ## Targets (`scripts/targets/TargetManager.gd`)
 
 Three lanes (`x = -2.2, 0, 2.2`). Spawns are distance-based (tracked against
 `player.global_position.z`), not timer-based, so spawn density is stable
 regardless of frame rate. `difficulty` (0..1, from `LevelManager`) shortens
-the spawn interval and unlocks MOVING/FAKE variants past thresholds.
+the spawn interval and unlocks MOVING/FAKE variants past thresholds. Each
+spawn picks a `(TargetBehavior, MaterialProfile)` pair — see
+docs/TARGETS.md — rather than a single enum, so new archetypes are
+additive. **Honest gap:** this is still a random roll gated by a
+difficulty threshold, not the authored Introduction → Learning →
+Combination → Pressure → Mastery → Climax pacing described in
+docs/LEVELS.md — that's real future work, not implemented this pass.
 
 ## Obstacles (`scripts/obstacles/ObstacleManager.gd`)
 
@@ -60,9 +86,27 @@ least one safe lane. Player collision is detected by the player's own
 - `ComboManager`: combo count doubles as multiplier (1 hit = x1 ... capped
   at x10), resets after `COMBO_TIMEOUT_SEC` with no hit, or immediately on a
   miss / FAKE target / obstacle collision.
-- `ScoreManager.add_target_hit(base_points)` multiplies by the current combo
-  multiplier; a `perfect` flag (unused yet) is wired for a future
-  "hit dead-center" bonus.
+- `ScoreManager.add_target_hit(points, is_precision)` multiplies by the
+  current combo multiplier and, when `is_precision` is true (see
+  "Precision hits" above), adds `PERFECT_HIT_BONUS`.
+
+## Game feel: normal hit vs. precision hit
+
+Deliberately two tiers, not a graduated pile of effects (see
+docs/ART_DIRECTION.md's "every feedback needs a gameplay purpose" rule):
+
+| | Normal hit | Precision hit (within core radius) |
+|---|---|---|
+| Impact flash | base energy | ×1.6 |
+| Camera shake | base strength | ×1.4 |
+| Hit-pause | none | brief (`VFXManager.request_hit_pause`, ~60ms real time) |
+| Audio | crack + shatter + target_hit | + `perfect_hit` |
+| Score | `base_points × combo × material.score_multiplier` | + `PERFECT_HIT_BONUS` |
+
+Hit-pause is reserved for precision hits specifically because applying it
+to every hit would turn a fast combo chain into a stutter — see
+docs/PHYSICS.md for the re-entrancy guard that keeps overlapping
+precision hits from stacking dips into a longer freeze.
 
 ## Game over
 

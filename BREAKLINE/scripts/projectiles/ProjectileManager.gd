@@ -1,14 +1,14 @@
 extends Node3D
 ## ProjectileManager
 ## Object pool for projectiles (see docs/ARCHITECTURE.md - Performance).
-## Only the "energy ball" projectile exists in the vertical slice; bomb /
-## chain / freeze / pierce variants can be added later by expanding
-## PROJECTILE_SCENES and passing a different key to fire().
+## Only the "kinetic dart" projectile exists in the vertical slice; other
+## variants can be added later by expanding PROJECTILE_SCENES and passing
+## a different key to fire().
 
 const POOL_SIZE := 24
 
 const PROJECTILE_SCENES := {
-	"energy_ball": preload("res://scenes/projectiles/EnergyBall.tscn"),
+	"kinetic_dart": preload("res://scenes/projectiles/KineticDart.tscn"),
 }
 
 var _pools: Dictionary = {}

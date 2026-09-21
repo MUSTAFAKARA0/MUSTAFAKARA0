@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="MaterialProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/materials/MaterialProfile.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+material_id = "containment_glass"
+display_name = "Containment Glass"
+albedo_color = Color(0.45, 0.85, 1, 0.55)
+emission_color = Color(0.45, 0.85, 1, 1)
+emission_energy = 1.2
+core_color = Color(0.75, 0.97, 1, 1)
+core_emission_energy = 3.0
+fragment_count = 8
+fragment_outward_time = 0.16
+fragment_dissolve_time = 0.32
+fragment_gravity_scale = 0.4
+impulse_strength = 3.0
+impulse_random_spread = 1.2
+score_multiplier = 1.0
+sfx_crack = "glass_crack"
+sfx_shatter = "glass_shatter"
+camera_shake_strength = 0.18
+camera_shake_duration = 0.1
+haptic_strength = 0.5

@@ -16,6 +16,8 @@ var _pool_index: int = 0
 var _flash_pool: Array[OmniLight3D] = []
 var _flash_pool_index: int = 0
 
+var _hit_pause_active: bool = false
+
 func _ready() -> void:
 	for i in range(POOL_SIZE):
 		var particles := _build_particle_node()
@@ -81,6 +83,22 @@ func spawn_burst(world_position: Vector3, color: Color, amount: int = 24) -> voi
 
 func request_camera_shake(strength: float = 0.3, duration: float = 0.15) -> void:
 	camera_shake_requested.emit(strength, duration)
+
+## A brief, safe global time-scale dip -- the "micro-freeze" on a
+## precision hit. Reserved for precision hits only (see GlassTarget.
+## take_hit); using it on every hit would turn combo chains into a
+## stutter. `duration` is real (wall-clock) time regardless of the scale
+## dip, via SceneTree's ignore_time_scale timer, so it always feels like
+## the same short punch no matter the scale factor. Re-entrancy-guarded
+## so overlapping precision hits can't stack dips into a longer freeze.
+func request_hit_pause(scale: float = 0.25, duration: float = 0.06) -> void:
+	if _hit_pause_active:
+		return
+	_hit_pause_active = true
+	Engine.time_scale = scale
+	await get_tree().create_timer(duration, true, false, true).timeout
+	Engine.time_scale = 1.0
+	_hit_pause_active = false
 
 func trigger_haptic(strength: float = 0.5) -> void:
 	if not SettingsManager.haptics_enabled:

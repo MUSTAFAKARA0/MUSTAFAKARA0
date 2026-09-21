@@ -22,8 +22,15 @@ since `AudioManager` is built to degrade gracefully.
 - **Projectile** — tapping fires toward the exact tap position (verify by
   tapping directly on a target from a few different screen positions).
 - **Hit** — a hit target disappears and cannot be hit twice.
-- **Glass** — shatter spawns fragments, particles, camera shake, haptic (on
-  Android), and increments score/coins.
+- **Fracture** — shatter spawns fragments that burst outward then visibly
+  pull back toward the impact point and fade out (not fall and freeze),
+  plus impact flash, particles, camera shake, haptic (on Android), and
+  increments score/coins. See docs/PHYSICS.md.
+- **Precision hit** — tapping near a target's glowing core (vs. its outer
+  facets) produces a visibly bigger flash/shake, a brief hit-pause, and a
+  score bonus; tapping off-center does not. See docs/TARGETS.md.
+- **Fake target** — an Unstable Signal (warm-red, flickering-core,
+  jittered-silhouette) target breaks combo and scores nothing when hit.
 - **Combo** — consecutive hits raise the multiplier shown in the HUD; a
   miss/FAKE-hit/obstacle collision resets it to 0.
 - **Score** — HUD score matches `base_points * multiplier` for each hit.

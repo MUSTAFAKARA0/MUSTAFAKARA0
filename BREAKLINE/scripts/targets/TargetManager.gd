@@ -5,6 +5,14 @@ class_name TargetManager
 ## them once shattered or once they fall behind. Difficulty (0..1, driven
 ## by LevelManager) shortens the spawn interval and unlocks MOVING / FAKE
 ## target variants -- see docs/LEVELS.md for the intended curve.
+##
+## Picks a (TargetBehavior, MaterialProfile) pair per spawn rather than a
+## single enum -- adding a new archetype later (e.g. "armored" behavior
+## paired with the Metal material once it exists) means adding one more
+## weighted entry below, never touching GlassTarget. See docs/TARGETS.md.
+
+const GLASS_MATERIAL: MaterialProfile = preload("res://data/materials/containment_glass.tres")
+const SIGNAL_MATERIAL: MaterialProfile = preload("res://data/materials/unstable_signal.tres")
 
 @export var target_scene: PackedScene = preload("res://scenes/targets/GlassTarget.tscn")
 @export var lane_positions: Array[float] = [-2.2, 0.0, 2.2]
@@ -21,6 +29,10 @@ var _active: Array[GlassTarget] = []
 var _next_spawn_z: float = 0.0
 var _last_lane_index: int = -1
 var _rng := RandomNumberGenerator.new()
+
+var _behavior_normal := NormalTargetBehavior.new()
+var _behavior_fake := FakeTargetBehavior.new()
+var _behavior_moving := MovingTargetBehavior.new()
 
 func _ready() -> void:
 	_rng.randomize()
@@ -71,15 +83,16 @@ func _spawn_at(z: float, difficulty: float) -> void:
 	var lane_index := _pick_lane()
 	var local_pos := Vector3(lane_positions[lane_index], target_height, z)
 
-	var target_type := GlassTarget.TargetType.NORMAL
+	var behavior: TargetBehavior = _behavior_normal
+	var material: MaterialProfile = GLASS_MATERIAL
 	var roll := _rng.randf()
 	if difficulty > 0.35 and roll < 0.20:
-		target_type = GlassTarget.TargetType.MOVING
+		behavior = _behavior_moving
 	elif difficulty > 0.15 and roll > 0.90:
-		target_type = GlassTarget.TargetType.FAKE
+		behavior = _behavior_fake
+		material = SIGNAL_MATERIAL
 
-	var color := Color(0.45, 0.85, 1.0, 0.55)
-	instance.configure(target_type, 100, color)
+	instance.configure(behavior, material, 100)
 	instance.spawn_reset(local_pos)
 
 	if not _active.has(instance):

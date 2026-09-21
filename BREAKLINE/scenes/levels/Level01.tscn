@@ -9,11 +9,11 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/GameOverScreen.tscn" id="7_gameover"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_glass"]
-sky_top_color = Color(0.02, 0.03, 0.08, 1)
-sky_horizon_color = Color(0.1, 0.14, 0.25, 1)
-ground_bottom_color = Color(0.01, 0.01, 0.03, 1)
-ground_horizon_color = Color(0.08, 0.1, 0.18, 1)
-sun_angle_max = 4.0
+sky_top_color = Color(0.015, 0.017, 0.03, 1)
+sky_horizon_color = Color(0.05, 0.06, 0.1, 1)
+ground_bottom_color = Color(0.008, 0.008, 0.015, 1)
+ground_horizon_color = Color(0.04, 0.045, 0.07, 1)
+sun_angle_max = 3.0
 
 [sub_resource type="Sky" id="Sky_glass"]
 sky_material = SubResource("SkyMaterial_glass")
@@ -22,14 +22,14 @@ sky_material = SubResource("SkyMaterial_glass")
 background_mode = 2
 sky = SubResource("Sky_glass")
 ambient_light_source = 2
-ambient_light_color = Color(0.25, 0.4, 0.55, 1)
-ambient_light_energy = 0.5
+ambient_light_color = Color(0.16, 0.2, 0.28, 1)
+ambient_light_energy = 0.35
 fog_enabled = true
-fog_light_color = Color(0.08, 0.12, 0.22, 1)
-fog_density = 0.012
+fog_light_color = Color(0.06, 0.07, 0.11, 1)
+fog_density = 0.014
 glow_enabled = true
-glow_intensity = 0.6
-glow_bloom = 0.15
+glow_intensity = 0.55
+glow_bloom = 0.12
 
 [node name="Level01" type="Node3D"]
 script = ExtResource("1_levelmanager")
@@ -37,14 +37,14 @@ script = ExtResource("1_levelmanager")
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_glass")
 
-[node name="MoonLight" type="DirectionalLight3D" parent="."]
+[node name="FacilityLight" type="DirectionalLight3D" parent="."]
 position = Vector3(0, 20, 0)
 rotation_degrees = Vector3(-55, -35, 0)
-light_color = Color(0.65, 0.78, 1, 1)
-light_energy = 0.9
+light_color = Color(0.6, 0.72, 0.95, 1)
+light_energy = 0.55
 shadow_enabled = true
 
-[node name="CityGeometry" type="Node3D" parent="."]
+[node name="FacilityGeometry" type="Node3D" parent="."]
 script = ExtResource("5_envbuilder")
 
 [node name="Player" parent="." instance=ExtResource("2_player")]

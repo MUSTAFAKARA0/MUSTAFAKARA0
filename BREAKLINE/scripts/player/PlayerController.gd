@@ -70,7 +70,7 @@ func _on_shoot_requested(screen_pos: Vector2) -> void:
 	_update_reticle_norm(screen_pos)
 
 	var direction := camera.project_ray_normal(screen_pos)
-	ProjectileManager.fire("energy_ball", muzzle.global_position, direction, muzzle_projectile_speed)
+	ProjectileManager.fire("kinetic_dart", muzzle.global_position, direction, muzzle_projectile_speed)
 	camera.apply_recoil(0.05)
 	AudioManager.play_sfx("projectile_fire")
 	GameManager.register_shot_fired()

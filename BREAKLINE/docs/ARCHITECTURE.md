@@ -25,6 +25,19 @@ Per-level nodes (`TargetManager`, `ObstacleManager`, `LevelManager`,
 reloads (this is also how `GameManager.retry()` resets a run — it just
 reloads the scene).
 
+## Target composition: behavior × material
+
+`GlassTarget` (a "Containment Shard") doesn't hardcode what kind of
+target it is or what it's made of — it holds one `TargetBehavior`
+(scripts/targets/behaviors/, docs/TARGETS.md) and one `MaterialProfile`
+(scripts/materials/, docs/MATERIALS.md) and asks each its own question
+(`behavior.on_hit()` for scoring, `material.*` for appearance/fracture/
+audio). Behaviors are stateless and shared (`TargetManager` builds three
+instances total, not one per pooled target); materials are `.tres` data
+resources. This split exists so a new target archetype and a new
+substance are independent, additive changes that never touch each other
+or `GlassTarget`'s own code.
+
 ## Scene flow
 
 ```
@@ -60,16 +73,19 @@ capped (see PERFORMANCE.md).
 
 ```
 InputManager (tap) -> PlayerController._on_shoot_requested
-                    -> ProjectileManager.fire("energy_ball", ...)
+                    -> ProjectileManager.fire("kinetic_dart", ...)
 Projectile (physics_process) -> Area3D overlap -> GlassTarget.take_hit()
-GlassTarget.take_hit() -> FragmentManager.shatter_at()
-                        -> VFXManager.spawn_burst() / request_camera_shake() / trigger_haptic()
-                        -> ComboManager.register_hit() -> ScoreManager.add_target_hit()
+GlassTarget.take_hit() -> FragmentManager.shatter_at()  [reads target.material]
+                        -> VFXManager.spawn_impact_flash() / spawn_burst()
+                        -> VFXManager.request_camera_shake() / request_hit_pause() [precision only]
+                        -> target.behavior.on_hit() -> ComboManager.register_hit() -> ScoreManager.add_target_hit()
                         -> GameManager.add_coins()
 Player.HitDetector overlaps Obstacle -> GameManager.trigger_game_over()
-GameManager.trigger_game_over() -> SaveManager.register_run_result()
+GameManager.trigger_game_over() -> ProjectileManager.return_all_active() [see PHYSICS.md]
+                                 -> SaveManager.register_run_result()
                                  -> run_ended signal -> LevelManager shows GameOverScreen
 ```
 
-See GAMEPLAY.md, LEVELS.md, SAVE_SYSTEM.md, PERFORMANCE.md for the details
-behind each of these systems.
+See GAMEPLAY.md, TARGETS.md, MATERIALS.md, PHYSICS.md, LEVELS.md,
+SAVE_SYSTEM.md, PERFORMANCE.md for the details behind each of these
+systems.

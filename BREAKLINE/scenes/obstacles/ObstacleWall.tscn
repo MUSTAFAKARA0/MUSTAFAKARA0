@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/obstacles/Obstacle.gd" id="1_script"]
 
@@ -6,12 +6,18 @@
 size = Vector3(1.9, 2.6, 0.4)
 
 [sub_resource type="StandardMaterial3D" id="Material_wall"]
-albedo_color = Color(1, 0.28, 0.28, 1)
+albedo_color = Color(0.13, 0.12, 0.11, 1)
+metallic = 0.55
+roughness = 0.45
+
+[sub_resource type="BoxMesh" id="BoxMesh_stripe"]
+size = Vector3(2.3, 0.32, 0.44)
+
+[sub_resource type="StandardMaterial3D" id="Material_stripe"]
+albedo_color = Color(1, 0.55, 0.15, 1)
 emission_enabled = true
-emission = Color(1, 0.2, 0.2, 1)
+emission = Color(1, 0.5, 0.1, 1)
 emission_energy_multiplier = 2.0
-metallic = 0.6
-roughness = 0.3
 
 [sub_resource type="BoxShape3D" id="Shape_wall"]
 size = Vector3(1.9, 2.6, 0.4)
@@ -26,6 +32,18 @@ script = ExtResource("1_script")
 [node name="Mesh" type="MeshInstance3D" parent="."]
 mesh = SubResource("BoxMesh_wall")
 surface_material_override/0 = SubResource("Material_wall")
+
+[node name="WarningStripe" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0.01)
+rotation_degrees = Vector3(0, 0, 28)
+mesh = SubResource("BoxMesh_stripe")
+surface_material_override/0 = SubResource("Material_stripe")
+
+[node name="WarningStripeLower" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.55, 0.01)
+rotation_degrees = Vector3(0, 0, 28)
+mesh = SubResource("BoxMesh_stripe")
+surface_material_override/0 = SubResource("Material_stripe")
 
 [node name="Collision" type="CollisionShape3D" parent="."]
 shape = SubResource("Shape_wall")

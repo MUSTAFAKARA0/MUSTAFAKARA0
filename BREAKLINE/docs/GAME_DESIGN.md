@@ -23,20 +23,27 @@ hit or run ends → Game Over screen with stats → Retry or Home.
 No visible avatar. First-person only. The player *feels* like the shooter
 through camera bob/shake/recoil/FOV, not through a character model.
 
-## World 1 — Glass District
+## World 1 — Glass District (art direction: FRACTURE PROTOCOL)
 
-Fütüristik cam şehir: translucent emissive skyscraper slabs lining a long
-corridor, dark sky, cool blue/neon palette. This is the only world built for
-the vertical slice; Worlds 2–5 (Industrial Core, Neon Void, Gravity Sector,
-Collapse) are documented as future scope in ROADMAP.md and are not stubbed
-out with placeholder scenes.
+A failing, quarantined industrial containment facility, not a decorative
+glass city — see docs/ART_DIRECTION.md for why this replaced an earlier,
+too-Smash-Hit-adjacent "glowing skyscraper corridor" version. Asymmetric
+structural walls, pipes, catwalks, and vertical shafts on a dark
+desaturated base, with sparse cyan/magenta energy accents. This is the
+only world built for the vertical slice; Worlds 2+ are documented as
+future scope in ROADMAP.md, to be evaluated against the same identity
+rather than a re-texture of World 1.
 
-## Target types (docs/GAMEPLAY.md has the technical contract)
+## Target types (docs/TARGETS.md has the technical contract)
 
-Implemented now: **NORMAL** (score), **FAKE** (breaks combo, no score),
-**MOVING** (slides side to side). ENERGY/MULTI/TIME/GOLD/SHIELD/COMBO cores
-are designed to slot into the same `GlassTarget.take_hit()` contract without
-touching `TargetManager`, but are not needed for the vertical slice to be fun.
+Destructible objects are "Containment Shards" — asymmetric faceted
+clusters with a glowing weak-point core (docs/ART_DIRECTION.md), not flat
+glass panels. Implemented now: **Normal** (score), **Fake** (an Unstable
+Signal decoy — breaks combo, no score, told apart by color + silhouette +
+flickering core, never color alone), **Moving** (drifts side to side).
+Behavior (what kind of target) and material (what it's made of,
+docs/MATERIALS.md) are independent axes — new archetypes are additive,
+see docs/TARGETS.md.
 
 ## Non-goals for the vertical slice
 

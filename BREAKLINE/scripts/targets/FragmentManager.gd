@@ -10,7 +10,6 @@ extends Node3D
 
 const FRAGMENT_SCENE := preload("res://scenes/targets/GlassFragment.tscn")
 const POOL_SIZE := 60
-const FRAGMENTS_PER_SHATTER := 8
 
 var _pool: Array[GlassFragment] = []
 
@@ -25,14 +24,34 @@ func _spawn_instance() -> GlassFragment:
 	instance.freeze = true
 	return instance
 
-func shatter_at(position: Vector3, base_color: Color, forward: Vector3, count: int = FRAGMENTS_PER_SHATTER) -> void:
-	for i in range(count):
+## Impulse = outward (the surface normal at the hit -- physically, "back
+## toward whoever shot it") + a small forward-carry (the projectile's own
+## momentum continuing through) + bounded randomness, all scaled by the
+## material. This replaces the old "impulse just continues the
+## projectile's travel direction" version, which made fragments fly the
+## wrong way. See docs/PHYSICS.md.
+func shatter_at(hit_position: Vector3, hit_normal: Vector3, projectile_direction: Vector3, material: MaterialProfile) -> void:
+	var outward := hit_normal.normalized()
+	var forward_carry := projectile_direction.normalized() * 0.35
+
+	for i in range(material.fragment_count):
 		if _pool.is_empty():
 			break # hit the device-performance ceiling; fewer shards this time, never more instances
 		var instance: GlassFragment = _pool.pop_back()
-		var offset := Vector3(randf_range(-0.3, 0.3), randf_range(-0.3, 0.3), randf_range(-0.1, 0.1))
-		var impulse := (-forward * randf_range(1.5, 3.0)) + Vector3(randf_range(-2.0, 2.0), randf_range(0.5, 3.0), randf_range(-2.0, 2.0))
-		instance.activate(position + offset, impulse, base_color)
+
+		var offset := Vector3(randf_range(-0.2, 0.2), randf_range(-0.2, 0.2), randf_range(-0.08, 0.08))
+		var random_dir := Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)).normalized()
+		var impulse := (outward + forward_carry) * material.impulse_strength + random_dir * material.impulse_random_spread
+
+		instance.activate(
+			hit_position + offset,
+			hit_position,
+			impulse,
+			material.emission_color,
+			material.fragment_outward_time,
+			material.fragment_dissolve_time,
+			material.fragment_gravity_scale
+		)
 
 func return_to_pool(instance: GlassFragment) -> void:
 	_pool.append(instance)

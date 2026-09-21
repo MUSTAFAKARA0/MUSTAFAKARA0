@@ -1,19 +1,40 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/targets/GlassTarget.gd" id="1_script"]
 
-[sub_resource type="BoxMesh" id="BoxMesh_panel"]
-size = Vector3(1.8, 1.8, 0.12)
+[sub_resource type="PrismMesh" id="PrismMesh_a"]
+left_to_right = 0.25
+size = Vector3(0.7, 0.9, 0.45)
 
-[sub_resource type="StandardMaterial3D" id="Material_panel"]
+[sub_resource type="BoxMesh" id="BoxMesh_b"]
+size = Vector3(0.5, 0.55, 0.35)
+
+[sub_resource type="PrismMesh" id="PrismMesh_c"]
+left_to_right = 0.75
+size = Vector3(0.42, 0.62, 0.3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_d"]
+size = Vector3(0.32, 0.4, 0.26)
+
+[sub_resource type="PrismMesh" id="PrismMesh_e"]
+left_to_right = 0.15
+size = Vector3(0.26, 0.34, 0.2)
+
+[sub_resource type="SphereMesh" id="SphereMesh_core"]
+radius = 0.16
+height = 0.32
+radial_segments = 12
+rings = 8
+
+[sub_resource type="StandardMaterial3D" id="Material_placeholder"]
 transparency = 1
 albedo_color = Color(0.45, 0.85, 1, 0.55)
 emission_enabled = true
 emission = Color(0.45, 0.85, 1, 1)
 emission_energy_multiplier = 1.2
 
-[sub_resource type="BoxShape3D" id="Shape_panel"]
-size = Vector3(1.8, 1.8, 0.3)
+[sub_resource type="SphereShape3D" id="Shape_bounds"]
+radius = 0.85
 
 [node name="GlassTarget" type="Area3D"]
 collision_layer = 4
@@ -22,9 +43,41 @@ monitorable = false
 monitoring = false
 script = ExtResource("1_script")
 
-[node name="Mesh" type="MeshInstance3D" parent="."]
-mesh = SubResource("BoxMesh_panel")
-surface_material_override/0 = SubResource("Material_panel")
+[node name="Facets" type="Node3D" parent="."]
+
+[node name="FacetA" type="MeshInstance3D" parent="Facets"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 0.05, 0)
+rotation_degrees = Vector3(8, 15, -6)
+mesh = SubResource("PrismMesh_a")
+surface_material_override/0 = SubResource("Material_placeholder")
+
+[node name="FacetB" type="MeshInstance3D" parent="Facets"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.32, 0.22, 0.05)
+rotation_degrees = Vector3(-18, 42, 10)
+mesh = SubResource("BoxMesh_b")
+surface_material_override/0 = SubResource("Material_placeholder")
+
+[node name="FacetC" type="MeshInstance3D" parent="Facets"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.28, -0.18, -0.04)
+rotation_degrees = Vector3(22, -35, 5)
+mesh = SubResource("PrismMesh_c")
+surface_material_override/0 = SubResource("Material_placeholder")
+
+[node name="FacetD" type="MeshInstance3D" parent="Facets"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, -0.34, 0.1)
+rotation_degrees = Vector3(14, 58, -18)
+mesh = SubResource("BoxMesh_d")
+surface_material_override/0 = SubResource("Material_placeholder")
+
+[node name="FacetE" type="MeshInstance3D" parent="Facets"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.18, 0.3, -0.08)
+rotation_degrees = Vector3(-12, -48, 26)
+mesh = SubResource("PrismMesh_e")
+surface_material_override/0 = SubResource("Material_placeholder")
+
+[node name="Core" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_core")
+surface_material_override/0 = SubResource("Material_placeholder")
 
 [node name="Collision" type="CollisionShape3D" parent="."]
-shape = SubResource("Shape_panel")
+shape = SubResource("Shape_bounds")
