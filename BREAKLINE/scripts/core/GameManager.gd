@@ -86,6 +86,15 @@ func trigger_game_over() -> void:
 	InputManager.set_input_enabled(false)
 	AudioManager.play_sfx("game_over")
 
+	# Projectile._physics_process() has no PLAYING-state guard (it only
+	# checks its own lifetime), so a projectile still mid-flight at the
+	# instant of death would otherwise keep flying behind the Game Over
+	# panel and could still register a target hit -- mutating score/combo
+	# after the stats snapshot below has already been taken and shown.
+	# Fragments are left alone: they're purely cosmetic and can't mutate
+	# game state, so letting them keep settling during the reveal is fine.
+	ProjectileManager.return_all_active()
+
 	var stats := {
 		"score": ScoreManager.score,
 		"best_score": max(ScoreManager.score, SaveManager.data.get("best_score", 0)),

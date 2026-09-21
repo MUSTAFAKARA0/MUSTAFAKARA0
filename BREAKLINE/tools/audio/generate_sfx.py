@@ -136,6 +136,15 @@ write_wav(
     ),
 )
 
+# --- combo_break: short descending "wrong" buzz -----------------------------
+write_wav(
+    "combo_break",
+    mix(
+        sweep(420, 220, 0.14, amp=0.3, fade_in=0.002, fade_out=0.08),
+        noise_burst(0.08, amp=0.15, decay=25.0),
+    ),
+)
+
 # --- perfect_hit: bright bell (fundamental + harmonic) ----------------------
 write_wav(
     "perfect_hit",
