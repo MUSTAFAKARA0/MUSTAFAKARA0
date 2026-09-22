@@ -16,3 +16,14 @@ frontend/tsconfig.tsbuildinfo
 # OS / editor
 .DS_Store
 *.pyc
+
+# BREAKLINE (Godot)
+BREAKLINE/.godot/
+BREAKLINE/.import/
+BREAKLINE/export.cfg
+BREAKLINE/export_credentials.cfg
+BREAKLINE/android/build/
+BREAKLINE/*.apk
+BREAKLINE/*.aab
+BREAKLINE/*.pck
+

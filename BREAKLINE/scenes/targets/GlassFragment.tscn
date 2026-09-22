@@ -1,0 +1,25 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/targets/GlassFragment.gd" id="1_script"]
+[ext_resource type="ShaderMaterial" path="res://assets/materials/crystal_fragment.tres" id="2_fragment"]
+
+[sub_resource type="PrismMesh" id="PrismMesh_frag"]
+left_to_right = 0.15
+size = Vector3(0.16, 0.2, 0.1)
+
+[sub_resource type="BoxShape3D" id="Shape_frag"]
+size = Vector3(0.16, 0.2, 0.1)
+
+[node name="GlassFragment" type="RigidBody3D"]
+collision_layer = 32
+collision_mask = 1
+freeze = true
+gravity_scale = 1.2
+script = ExtResource("1_script")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("PrismMesh_frag")
+surface_material_override/0 = ExtResource("2_fragment")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("Shape_frag")

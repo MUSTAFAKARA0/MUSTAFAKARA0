@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="LevelData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/LevelData.gd" id="1_script"]
+
+; Showcase section tuning. Slower than Level01 on purpose and with no
+; speed ramp: this section exists to be LOOKED at, and at Level01's
+; 12 -> 26 m/s a shard is past the camera before its rim, facets and core
+; have had a chance to read. Everything else -- systems, pooling,
+; materials, destruction -- is identical to a real run.
+
+[resource]
+script = ExtResource("1_script")
+level_id = "showcase"
+display_name = "Visual Showcase"
+base_forward_speed = 6.0
+max_forward_speed = 6.0
+speed_ramp_per_second = 0.0
+difficulty_ramp_distance = 800.0
+music_track = ""

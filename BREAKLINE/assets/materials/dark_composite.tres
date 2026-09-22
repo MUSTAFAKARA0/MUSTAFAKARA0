@@ -1,0 +1,51 @@
+[gd_resource type="StandardMaterial3D" load_steps=5 format=3]
+
+; DARK CONCRETE / COMPOSITE -- floor and heavy structural mass. Rougher,
+; non-metallic counterpart to structural_metal, with cellular noise so it
+; reads as a cast/poured surface rather than milled metal. Same
+; engine-generated (no image file) approach, same triplanar reasoning.
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_composite"]
+noise_type = 2
+seed = 907
+frequency = 0.06
+fractal_octaves = 3
+cellular_jitter = 0.9
+cellular_return_type = 3
+
+; See the note in structural_metal.tres -- same reason, rougher range
+; (0.62 .. 0.95), because cast composite scatters far more than milled
+; metal does.
+[sub_resource type="Gradient" id="Gradient_composite_rough"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.62, 0.62, 0.62, 1, 0.95, 0.95, 0.95, 1)
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_composite_rough"]
+width = 256
+height = 256
+seamless = true
+generate_mipmaps = true
+color_ramp = SubResource("Gradient_composite_rough")
+noise = SubResource("FastNoiseLite_composite")
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_composite_normal"]
+width = 256
+height = 256
+seamless = true
+as_normal_map = true
+bump_strength = 1.1
+noise = SubResource("FastNoiseLite_composite")
+
+[resource]
+resource_name = "Dark Composite"
+albedo_color = Color(0.062, 0.066, 0.082, 1)
+metallic = 0.08
+metallic_specular = 0.25
+roughness = 1.0
+roughness_texture = SubResource("NoiseTexture2D_composite_rough")
+normal_enabled = true
+normal_scale = 0.4
+normal_texture = SubResource("NoiseTexture2D_composite_normal")
+uv1_scale = Vector3(0.12, 0.12, 0.12)
+uv1_triplanar = true
+texture_filter = 3

@@ -1,0 +1,62 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/obstacles/Obstacle.gd" id="1_script"]
+[ext_resource type="ShaderMaterial" path="res://assets/materials/danger_material.tres" id="2_danger"]
+
+; RAIL BLOCKER
+;
+; Narrow on purpose. The player rides a fixed line, so this only has to
+; cover the rail -- it does NOT have to span a lane the player might be
+; anywhere in. That let the body come down from 1.9 x 2.6 to 1.5 x 2.2,
+; which directly answers the device-test complaint that hazards filled the
+; screen. It still cannot be slipped past: the player's HitDetector is
+; 1.6 wide on the same line.
+;
+; The WeakPoint is the exposed actuator -- the only part of a hazard a
+; Kinetic Dart can act on. It is a VISUAL node with no collision of its
+; own; Projectile resolves a hit against it by distance (see
+; Obstacle.is_weak_point_hit). A second Area3D here would race the body's
+; own area_entered in the same physics frame with no ordering guarantee.
+;
+; It sits at z = +0.45, i.e. on the face the oncoming player actually
+; sees. (It was briefly at -0.45 -- the back -- which made every hazard
+; unclearable; the runtime caught it, reading the code did not.)
+;
+; Cyan inside the orange housing: cyan always means "a dart can act on
+; this", orange always means "this ends your run". A weak point is
+; honestly both, so it shows both rather than inventing a fifth colour.
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall"]
+size = Vector3(1.5, 2.2, 0.4)
+
+[sub_resource type="BoxShape3D" id="Shape_wall"]
+size = Vector3(1.5, 2.2, 0.4)
+
+[sub_resource type="SphereMesh" id="SphereMesh_node"]
+radius = 0.19
+height = 0.38
+radial_segments = 10
+rings = 6
+
+[sub_resource type="StandardMaterial3D" id="Material_node"]
+shading_mode = 0
+albedo_color = Color(0.62, 0.97, 1, 1)
+
+[node name="ObstacleWall" type="Area3D"]
+collision_layer = 72
+collision_mask = 0
+monitorable = false
+monitoring = false
+script = ExtResource("1_script")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_wall")
+surface_material_override/0 = ExtResource("2_danger")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("Shape_wall")
+
+[node name="WeakPoint" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.45)
+mesh = SubResource("SphereMesh_node")
+surface_material_override/0 = SubResource("Material_node")

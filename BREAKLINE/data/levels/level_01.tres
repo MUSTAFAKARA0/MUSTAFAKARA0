@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LevelData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/levels/LevelData.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+level_id = "level_01"
+display_name = "Glass District"
+base_forward_speed = 12.0
+max_forward_speed = 26.0
+speed_ramp_per_second = 0.15
+difficulty_ramp_distance = 800.0
+music_track = "glass_district_theme"
