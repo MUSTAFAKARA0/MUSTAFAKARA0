@@ -1,0 +1,20 @@
+# Godot 4 — engine-generated import cache. Rebuilt from the .import files
+# (which ARE committed) on first open, so committing it only creates
+# conflicts.
+.godot/
+
+# Local export output (APK / AAB). Binaries never go in the repo — see
+# docs/ANDROID.md for how to produce one.
+build/
+*.apk
+*.aab
+*.idsig
+
+# Never commit signing material.
+*.keystore
+*.jks
+
+# Editor / OS noise
+.DS_Store
+Thumbs.db
+*~

@@ -46,7 +46,7 @@ func update(difficulty: float) -> void:
 		return
 
 	if auto_spawn:
-		var interval := lerp(max_spawn_interval, min_spawn_interval, clamp(difficulty, 0.0, 1.0))
+		var interval := lerpf(max_spawn_interval, min_spawn_interval, clampf(difficulty, 0.0, 1.0))
 		var lead := player.global_position.z - spawn_lead_distance
 		var guard := 0
 		while _next_spawn_z > lead and guard < 8:

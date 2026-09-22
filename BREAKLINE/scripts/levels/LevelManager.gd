@@ -45,8 +45,10 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if GameManager.current_state != GameManager.State.PLAYING:
 		return
-	var difficulty := clamp(
-		GameManager.distance_traveled / max(level_data.difficulty_ramp_distance, 1.0),
+	# clampf/maxf, not clamp/max: the untyped variants return Variant, and
+	# Godot 4.3 treats inferring a type from Variant as a hard error.
+	var difficulty := clampf(
+		GameManager.distance_traveled / maxf(level_data.difficulty_ramp_distance, 1.0),
 		0.0, 1.0
 	)
 	target_manager.update(difficulty)

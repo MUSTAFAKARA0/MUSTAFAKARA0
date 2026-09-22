@@ -63,8 +63,8 @@ func _process(delta: float) -> void:
 
 	if _telegraph_elapsed < SPAWN_TELEGRAPH_TIME:
 		_telegraph_elapsed += delta
-		var t := clamp(_telegraph_elapsed / SPAWN_TELEGRAPH_TIME, 0.0, 1.0)
-		scale = Vector3(1.0, lerp(0.1, 1.0, t), 1.0)
+		var t := clampf(_telegraph_elapsed / SPAWN_TELEGRAPH_TIME, 0.0, 1.0)
+		scale = Vector3(1.0, lerpf(0.1, 1.0, t), 1.0)
 
 	# Stripe pulse. Range is deliberately narrow (0.75 .. 1.45 on top of the
 	# material's own 1.6 emission): a hazard has to stay legible without
