@@ -164,6 +164,48 @@ func spawn_reset(local_position: Vector3) -> void:
 
 	_apply_visuals()
 
+## Both shatter paths are reached from INSIDE a physics signal
+## (Projectile's area_entered, or the player HitDetector's). Godot will not
+## let `monitorable` or a CollisionShape3D's `disabled` change while it is
+## flushing queries -- it logs "Function blocked during in/out signal" and
+## silently drops the change, which would leave a shattered, invisible
+## shard still able to register hits. Deferring is mandatory, not tidiness.
+func _disable_physics_deferred() -> void:
+	set_deferred("monitorable", false)
+	if _collision:
+		_collision.set_deferred("disabled", true)
+
+## CORE LOOP CONTRACT (see docs/GAMEPLAY.md).
+## A real, unshot shard is a SOFT obstacle: ramming it costs speed and the
+## combo, but never the run -- that is what makes shooting worth doing
+## instead of optional. A FAKE shard is intentionally harmless to ram,
+## which keeps the two tells from collapsing into one: "shoot this" and
+## "avoid this" must never be the same signal.
+func blocks_player() -> bool:
+	if _is_shattered or _behavior == null:
+		return false
+	return _behavior.get_id() != "fake"
+
+## The player rammed this shard. It breaks with the full visual sequence
+## -- ignoring it should never feel like the shard was never there -- but
+## awards no score and no coins, and does NOT count as a hit.
+func collapse_on_impact(impact_position: Vector3) -> void:
+	if _is_shattered or _material == null:
+		return
+	_is_shattered = true
+	visible = false
+	_disable_physics_deferred()
+
+	# Fragments are driven outward from the player's travel direction, so
+	# a rammed shard sprays forward past the camera rather than back at it.
+	var forward := Vector3(0, 0, -1)
+	FragmentManager.shatter_at(impact_position, -forward, forward, _material)
+	VFXManager.spawn_impact_flash(impact_position, _material.core_color, _material.core_emission_energy * 0.7)
+	VFXManager.spawn_core_flare(core_world_position(), _material.core_color, 0.7)
+	AudioManager.play_sfx(_material.sfx_shatter)
+
+	shattered.emit(self)
+
 func core_world_position() -> Vector3:
 	return _core.global_position if _core else global_position
 
@@ -195,10 +237,8 @@ func take_hit(hit_position: Vector3, hit_normal: Vector3, projectile_direction: 
 	if _is_shattered or _material == null or _behavior == null:
 		return
 	_is_shattered = true
-	monitorable = false
 	visible = false
-	if _collision:
-		_collision.disabled = true
+	_disable_physics_deferred()
 
 	var is_precision := hit_position.distance_to(core_world_position()) <= PRECISION_RADIUS
 

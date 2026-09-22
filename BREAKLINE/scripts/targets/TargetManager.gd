@@ -142,6 +142,9 @@ func _recycle(target: GlassTarget) -> void:
 	if _active.has(target):
 		_active.erase(target)
 	target.visible = false
-	target.monitorable = false
+	# Reached from _on_target_shattered, which fires inside the physics
+	# signal that broke the shard -- so this write has to be deferred for
+	# the same reason GlassTarget._disable_physics_deferred() exists.
+	target.set_deferred("monitorable", false)
 	if not _pool.has(target):
 		_pool.append(target)

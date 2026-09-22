@@ -10,8 +10,11 @@ extends Control
 @onready var coins_label: Label = $CoinsLabel
 @onready var crosshair_h: ColorRect = $CrosshairH
 @onready var crosshair_v: ColorRect = $CrosshairV
+@onready var crosshair_h_back: ColorRect = $CrosshairHBack if has_node("CrosshairHBack") else null
+@onready var crosshair_v_back: ColorRect = $CrosshairVBack if has_node("CrosshairVBack") else null
 
 var _displayed_score: int = 0
+var _player: PlayerController
 
 func _ready() -> void:
 	ScoreManager.score_changed.connect(_on_score_changed)
@@ -20,9 +23,40 @@ func _ready() -> void:
 	_displayed_score = ScoreManager.score
 	score_label.text = str(_displayed_score)
 	_on_combo_changed(ComboManager.combo, ComboManager.get_multiplier())
+	# The crosshair used to sit locked at screen centre while shots went to
+	# wherever the finger was -- it was actively lying about where the dart
+	# would go. It now tracks the reticle.
+	var level := get_tree().current_scene
+	if level and level.has_node("Player"):
+		_player = level.get_node("Player") as PlayerController
+	# Remember where each arm sits at rest so the offset is always applied
+	# to the resting layout, never accumulated onto last frame's position.
+	for rect in _crosshair_parts():
+		rect.set_meta("home", rect.position)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	coins_label.text = "◆ %d" % GameManager.coins_earned
+	_follow_reticle(delta)
+
+func _crosshair_parts() -> Array[ColorRect]:
+	var parts: Array[ColorRect] = []
+	for rect in [crosshair_h_back, crosshair_v_back, crosshair_h, crosshair_v]:
+		if rect:
+			parts.append(rect)
+	return parts
+
+## Snappy but not instant (18/s ~= caught up in 3 frames). Fully instant
+## reads as a cursor jump; slower than this and the crosshair lags behind
+## the finger, which is worse than it being centred.
+func _follow_reticle(delta: float) -> void:
+	if _player == null:
+		return
+	var aim := _player.get_aim_norm()
+	var half := size * 0.5
+	var goal := Vector2(aim.x * half.x, aim.y * half.y)
+	for rect in _crosshair_parts():
+		var home: Vector2 = rect.get_meta("home", Vector2.ZERO)
+		rect.position = rect.position.lerp(home + goal, delta * 18.0)
 
 func _on_score_changed(new_score: int, _delta: int) -> void:
 	# Counts up over 0.35s instead of snapping -- makes big-multiplier hits

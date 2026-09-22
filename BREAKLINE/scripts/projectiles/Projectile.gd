@@ -98,6 +98,21 @@ func _handle_collision(other: Node) -> void:
 		target.take_hit(global_position, -_direction, _direction)
 		GameManager.register_shot_hit()
 		_expire(true)
+		return
+
+	# A MECHANICAL obstacle is matter, so the dart stops on it. This is what
+	# makes a blast door worth routing around instead of shooting through:
+	# the shard behind it cannot be hit until the player has the angle.
+	# ENERGY obstacles are not on the solid layer at all, so they never
+	# reach this branch -- a dart passes through a containment field.
+	var obstacle := other as Obstacle
+	if obstacle:
+		_has_hit = true
+		VFXManager.spawn_impact_flash(global_position, Color(1.0, 0.55, 0.2), 1.4, 0.1)
+		VFXManager.spawn_burst(global_position, Color(1.0, 0.6, 0.25), 10)
+		AudioManager.play_sfx("glass_crack", 0.5)
+		# Still a miss: it cost a shot and hit nothing scoreable.
+		_expire(false)
 
 func _expire(hit: bool) -> void:
 	monitoring = false

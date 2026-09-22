@@ -14,6 +14,22 @@ class_name Obstacle
 
 const SPAWN_TELEGRAPH_TIME := 0.3
 
+## Physics layer bits (named in project.godot).
+const LAYER_HAZARD := 8
+const LAYER_SOLID := 64
+
+## What this hazard is made of. MECHANICAL is matter -- a blast door, a
+## support beam -- so it stops a Kinetic Dart. ENERGY is a field: it ends
+## the player's run but a dart passes straight through it.
+##
+## This is a gameplay rule the player has to be able to read off the
+## OBJECT, which is why it lives next to the visuals rather than in a
+## spawn table: anything using ENERGY must look like a field, and anything
+## using MECHANICAL must look solid.
+enum Kind { MECHANICAL, ENERGY }
+
+@export var kind: Kind = Kind.MECHANICAL
+
 ## The DANGER material. Warm orange is reserved in the colour system for
 ## "this will end your run" -- see docs/ART_DIRECTION.md -- so nothing but
 ## an obstacle is allowed to use it.
@@ -30,7 +46,9 @@ var _is_active: bool = false
 
 func _ready() -> void:
 	add_to_group("obstacle")
-	collision_layer = 8
+	# Always a hazard to the player; only MECHANICAL kinds also occupy the
+	# solid layer the Kinetic Dart collides with.
+	collision_layer = LAYER_HAZARD | (LAYER_SOLID if kind == Kind.MECHANICAL else 0)
 	monitorable = false
 	# One duplicate per pooled obstacle. Without this every obstacle writes
 	# the same shared material and they all pulse in lockstep, which is
