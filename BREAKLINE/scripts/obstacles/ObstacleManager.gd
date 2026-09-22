@@ -7,7 +7,7 @@ class_name ObstacleManager
 ## (0..1) shortens the spawn interval, same curve contract as TargetManager.
 
 @export var obstacle_scene: PackedScene = preload("res://scenes/obstacles/ObstacleWall.tscn")
-@export var lane_positions: Array[float] = [-2.2, 0.0, 2.2]
+@export var lane_positions: Array[float] = [0.0]
 @export var obstacle_height: float = 1.3
 @export var pool_size: int = 10
 @export var spawn_lead_distance: float = 55.0

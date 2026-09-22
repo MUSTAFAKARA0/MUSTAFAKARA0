@@ -115,3 +115,61 @@ precision hits from stacking dips into a longer freeze.
 and emits `run_ended`. `LevelManager` shows `GameOverScreen` and wires its
 `retry_requested`/`home_requested` signals to `GameManager.retry()` /
 `go_to_main_menu()`.
+
+---
+
+## Control model — SINGLE RAIL (current)
+
+The player travels a **fixed line** and cannot move sideways at all.
+
+| Input | Does |
+|---|---|
+| Drag | Aim. Moves the reticle, leans the camera 4 deg yaw / 3 deg pitch. |
+| Tap | Fire a Kinetic Dart at the reticle. |
+
+Lateral movement was removed outright. It had been mapped from the same
+variable as the aim reticle, so aiming right and flying right were
+literally inseparable; a deadzoned lean version was built and measured
+(peak 3.2 m/s, down from 19.2 m/s) and still left one finger owning two
+jobs. On a phone, "aim precisely at a shard 40 m away" and "dodge now"
+cannot share a thumb.
+
+### What that forces
+
+With no dodge, **a hazard can no longer be something you steer around**,
+so every hazard must have an answer that aiming can provide:
+
+- A hazard carries an exposed **actuator node** (`WeakPoint`). A dart
+  within 0.46 m of it cuts the actuator and the hazard retracts.
+- Shooting the hazard's **body** does nothing — it sparks, and the shot
+  is wasted.
+- Ramming an active hazard still ends the run.
+
+This is the originality line against Smash Hit, and it is deliberate:
+that game is about *breaking through* the thing in front of you. BREAKLINE
+is about **operating the facility against itself** — you are not smashing
+a door down, you are killing the motor that holds it shut. Different verb,
+different skill (single precise shot vs. volume of throws), different
+fiction.
+
+### Core loop contract
+
+| Thing | Shot by a dart | Rammed by the player |
+|---|---|---|
+| Containment Shard (real) | Shatters, scores, combo +1 | Shatters, **no score**, −2.6 m/s, combo break |
+| Containment Shard (fake) | Shatters, **no score**, combo break | Nothing — harmless |
+| Hazard actuator | Hazard retracts, scores 60, combo +1 | — |
+| Hazard body (MECHANICAL) | Sparks, shot wasted, miss | **Run over** |
+| Hazard body (ENERGY) | Dart passes through | **Run over** |
+
+Shooting is no longer optional. A hazard sits on the rail, and the rail is
+the only place the player can be.
+
+### Known consequence, not yet fixed
+
+Spawn pacing was tuned for a game with dodging. Measured on the current
+build: the first hazard lands at z = −12, which at 12 m/s the player
+reaches in **1.0 s** — before a first shot can realistically be aimed.
+With no dodge that is an unavoidable death one second into the run. Phase
+B (opening 60 seconds + speed curve) is what fixes it; until then Level01
+is not fairly playable.

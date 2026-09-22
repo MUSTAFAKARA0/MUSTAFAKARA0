@@ -1,47 +1,32 @@
 extends Node3D
 class_name PlayerController
 ## PlayerController
-## Drives the endless-runner half of gameplay: forward motion, lateral
-## repositioning, and wiring InputManager's tap/drag signals into aiming
-## and firing. The player is never a visible 3D model -- everything is
+## Drives the endless-runner half of gameplay: forward motion along a
+## fixed rail, and wiring InputManager's tap/drag signals into aiming and
+## firing. The player is never a visible 3D model -- everything is
 ## felt through the camera (see CameraController.gd).
 ##
-## CONTROL MODEL (docs/GAMEPLAY.md)
-##   DRAG  -> aim. Moves the reticle and leans the camera.
-##   DRAG past a deadzone -> ALSO leans the player sideways, slowly.
-##   TAP   -> fire a Kinetic Dart at the reticle.
+## CONTROL MODEL (docs/GAMEPLAY.md) -- SINGLE RAIL
+##   DRAG -> aim. Moves the reticle and leans the camera. Nothing else.
+##   TAP  -> fire a Kinetic Dart at the reticle.
 ##
-## The deadzone is the whole point. Aiming anywhere in the middle ~70% of
-## the screen moves the player NOT AT ALL, so the shot and the dodge are
-## separate actions that happen to share one finger. The previous version
-## mapped absolute reticle position straight onto world X, which meant
-## aiming right and flying right were literally the same variable -- and
-## produced a measured 19.2 m/s lateral snap (1.6x the forward speed) from
-## a single touch. PRECISION > FREEDOM.
+## The player travels a FIXED LINE and cannot move sideways at all. This
+## is the whole control model, and it is deliberate: one finger cannot
+## serve both "aim precisely at a small shard 40 m away" and "dodge now"
+## without the two fighting each other. Earlier versions tried a
+## deadzoned lean; even then the same finger still owned both jobs.
+##
+## The consequence is load-bearing: with no dodge, a hazard can no longer
+## be something you steer around, so every hazard must be SHOOTABLE.
+## See Obstacle.gd -- hazards carry an exposed actuator node, and
+## destroying it retracts the hazard. That is what makes aiming the only
+## verb the game needs, and why shooting is now mandatory rather than
+## optional scoring.
 
 ## ---- forward motion -------------------------------------------------
 @export var base_forward_speed: float = 12.0
 @export var max_forward_speed: float = 26.0
 @export var speed_ramp_per_second: float = 0.15
-
-## ---- lateral motion -------------------------------------------------
-## Half-width of the space the player may occupy. Lanes sit at +/-2.2, so
-## this leaves a little room to overshoot a lane without leaving the
-## corridor.
-@export var lane_half_width: float = 3.2
-## Hard ceiling on sideways speed. Nothing may exceed this -- not a flick,
-## not a corner case, not a frame spike.
-@export var max_lateral_speed: float = 3.2
-## Asymmetric on purpose: stopping is quicker than starting. That is what
-## makes small corrections land where the player aimed them instead of
-## drifting past.
-@export var lateral_acceleration: float = 9.0
-@export var lateral_deceleration: float = 14.0
-## Fraction of half-screen within which aiming does not steer at all.
-@export var steer_deadzone: float = 0.35
-## Distance from the wall over which steering authority fades to zero, so
-## the corridor edge absorbs the player instead of stopping them dead.
-@export var edge_softening: float = 0.6
 
 @export var muzzle_projectile_speed: float = 46.0
 
@@ -57,7 +42,6 @@ var forward_speed: float = 0.0
 var _cruise_speed: float = 0.0
 var _speed_penalty: float = 0.0
 var _aim_norm: Vector2 = Vector2.ZERO
-var _lateral_velocity: float = 0.0
 
 @onready var camera: CameraController = $Camera3D
 @onready var muzzle: Marker3D = $Camera3D/MuzzlePoint
@@ -76,7 +60,6 @@ func _process(delta: float) -> void:
 	if GameManager.current_state != GameManager.State.PLAYING:
 		return
 	_advance_forward(delta)
-	_advance_lateral(delta)
 
 ## Cruise speed ramps up over the run; the penalty from a shard impact
 ## sits on top of it and decays independently. Keeping them separate means
@@ -90,50 +73,6 @@ func _advance_forward(delta: float) -> void:
 
 	global_position.z -= forward_speed * delta
 	GameManager.distance_traveled += forward_speed * delta
-
-func _advance_lateral(delta: float) -> void:
-	var desired := _steer_input() * max_lateral_speed
-
-	# Accelerate only when pushing further in the direction already
-	# travelling; anything else (releasing, reversing) decelerates.
-	var rate := lateral_deceleration
-	var pushing_onward := not is_zero_approx(desired) and (
-		is_zero_approx(_lateral_velocity) or signf(desired) == signf(_lateral_velocity)
-	)
-	if pushing_onward:
-		rate = lateral_acceleration
-	_lateral_velocity = move_toward(_lateral_velocity, desired, rate * delta)
-
-	# Soft edge: authority fades across the last `edge_softening` metres,
-	# but only against the wall being approached.
-	var overshoot := absf(global_position.x) - (lane_half_width - edge_softening)
-	if overshoot > 0.0 and signf(_lateral_velocity) == signf(global_position.x):
-		_lateral_velocity *= clampf(1.0 - overshoot / edge_softening, 0.0, 1.0)
-
-	global_position.x = clampf(
-		global_position.x + _lateral_velocity * delta,
-		-lane_half_width,
-		lane_half_width
-	)
-
-## Deadzoned, squared steering response.
-##
-## Squared rather than linear so the first third past the deadzone barely
-## moves at all: that band is where small aiming corrections live, and they
-## must not cost lateral position. Full speed is only available at the very
-## edge of the screen, which reads as a deliberate commitment.
-func _steer_input() -> float:
-	var raw := clampf(_aim_norm.x, -1.0, 1.0)
-	var magnitude := absf(raw)
-	if magnitude <= steer_deadzone:
-		return 0.0
-	var t := (magnitude - steer_deadzone) / (1.0 - steer_deadzone)
-	return signf(raw) * t * t
-
-## Read by CameraController for the lean-into-the-turn bank. Never used to
-## move the player -- this is the RESULT of steering, not its input.
-func get_lateral_velocity() -> float:
-	return _lateral_velocity
 
 ## Normalised reticle position (-1..1 on both axes). CameraController uses
 ## it for the aim lean; HUD uses it to put the crosshair where the shot

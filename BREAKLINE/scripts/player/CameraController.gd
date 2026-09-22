@@ -10,7 +10,6 @@ class_name CameraController
 @export var max_fov_bonus: float = 8.0
 @export var bob_amplitude: float = 0.035
 @export var bob_frequency: float = 1.8
-@export var max_bank_degrees: float = 4.0
 ## How far the view leans toward the reticle. Deliberately small: this is
 ## the view ACKNOWLEDGING the aim, not the aim itself -- the shot goes
 ## through the reticle regardless. Anything larger and the horizon starts
@@ -21,7 +20,6 @@ class_name CameraController
 var _rest_position: Vector3
 var _rest_rotation_degrees: Vector3
 var _time: float = 0.0
-var _bank_degrees: float = 0.0
 var _aim_lean: Vector2 = Vector2.ZERO
 
 var _shake_strength: float = 0.0
@@ -69,19 +67,18 @@ func _process(delta: float) -> void:
 
 	position = _rest_position + bob + shake_offset + _recoil_offset
 
-	# Bank gently into the direction of lateral movement -- a subtle
-	# "leaning into the turn" read, not an arcade-racer barrel roll.
-	var target_bank := 0.0
+	# Lean toward the reticle. The bank-into-the-turn roll that used to
+	# live here is gone with lateral movement -- on a fixed rail there is
+	# no turn to lean into, and faking one would be motion the player did
+	# not cause.
 	var target_lean := Vector2.ZERO
 	if _player:
-		target_bank = clampf(-_player.get_lateral_velocity() * 0.6, -max_bank_degrees, max_bank_degrees)
 		# Reticle right (+x) -> view turns right, which is NEGATIVE yaw in
 		# Godot. Reticle down (+y) -> view pitches down, negative on X.
 		var aim := _player.get_aim_norm()
 		target_lean = Vector2(-aim.x * aim_yaw_degrees, -aim.y * aim_pitch_degrees)
-	_bank_degrees = lerpf(_bank_degrees, target_bank, delta * 5.0)
 	_aim_lean = _aim_lean.lerp(target_lean, delta * 7.0)
-	rotation_degrees = _rest_rotation_degrees + Vector3(_aim_lean.y, _aim_lean.x, _bank_degrees)
+	rotation_degrees = _rest_rotation_degrees + Vector3(_aim_lean.y, _aim_lean.x, 0.0)
 
 func apply_recoil(strength: float = 0.06) -> void:
 	_recoil_offset += Vector3(0, 0, strength)

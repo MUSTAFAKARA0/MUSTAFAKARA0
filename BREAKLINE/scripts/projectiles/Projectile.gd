@@ -100,14 +100,27 @@ func _handle_collision(other: Node) -> void:
 		_expire(true)
 		return
 
-	# A MECHANICAL obstacle is matter, so the dart stops on it. This is what
-	# makes a blast door worth routing around instead of shooting through:
-	# the shard behind it cannot be hit until the player has the angle.
-	# ENERGY obstacles are not on the solid layer at all, so they never
-	# reach this branch -- a dart passes through a containment field.
 	var obstacle := other as Obstacle
 	if obstacle:
 		_has_hit = true
+		# Same-frame ambiguity, resolved by GEOMETRY rather than by signal
+		# order. At 46 m/s a dart covers ~0.77 m per physics tick, so it
+		# can enter the actuator's volume and the hazard body in the same
+		# frame -- and Godot gives no ordering guarantee between two
+		# overlapping areas. Asking the obstacle "was this close enough to
+		# the actuator?" is deterministic; listening for which area_entered
+		# fired first is not.
+		if obstacle.is_weak_point_hit(global_position):
+			obstacle.clear_by_weak_point(global_position)
+			GameManager.register_shot_hit()
+			_expire(true)
+			return
+
+		# The hazard's BODY. Shooting mass does nothing -- it sparks and
+		# the shot is wasted. Only the actuator clears a hazard, which is
+		# what makes it an aiming problem rather than a spray problem.
+		# ENERGY obstacles are not on the solid layer at all, so they never
+		# reach this branch -- a dart passes through a containment field.
 		VFXManager.spawn_impact_flash(global_position, Color(1.0, 0.55, 0.2), 1.4, 0.1)
 		VFXManager.spawn_burst(global_position, Color(1.0, 0.6, 0.25), 10)
 		AudioManager.play_sfx("glass_crack", 0.5)
@@ -115,7 +128,11 @@ func _handle_collision(other: Node) -> void:
 		_expire(false)
 
 func _expire(hit: bool) -> void:
-	monitoring = false
+	# Deferred: _expire is reached from inside area_entered, and Godot
+	# refuses to flip `monitoring` mid-query-flush -- it logs "Function
+	# blocked during in/out signal" and drops the write. This fired on
+	# EVERY shot in the build that was tested on device.
+	set_deferred("monitoring", false)
 	if _trail:
 		_trail.emitting = false
 	# Must not outlive the shot: a pooled dart re-launched mid-tween would
