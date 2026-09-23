@@ -1,3 +1,7 @@
+> **Bu depoda iki proje bulunur:**
+> - [`elvankent-gayrimenkul/`](./elvankent-gayrimenkul) — Elvankent Gayrimenkul emlak ilan platformu (Next.js + Supabase). Kurulum ve teslim raporu: [`elvankent-gayrimenkul/TESLIM_RAPORU.md`](./elvankent-gayrimenkul/TESLIM_RAPORU.md)
+> - Aşağıda açıklanan **Photo to STL** uygulaması (`backend/`, `frontend/`)
+
 # Photo to STL
 
 Fotoğraftan 3D baskıya hazır **binary STL** üreten uçtan uca bir web uygulaması.
