@@ -57,6 +57,8 @@ jobs:
         run: npm run lint
       - name: Birim testleri
         run: npm run test:unit
+      - name: Demo SQL dosyaları migration'larla güncel mi
+        run: npm run demo:sql -- --check
       - name: Production build
         run: npm run build
       - name: Bağımlılık güvenlik taraması (production bağımlılıkları, yüksek/kritik)

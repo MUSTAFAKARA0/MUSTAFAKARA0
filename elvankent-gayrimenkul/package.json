@@ -19,7 +19,8 @@
     "prelaunch": "node --env-file-if-exists=.env.local scripts/prelaunch-check.mjs",
     "backup:storage": "node --env-file-if-exists=.env.local scripts/backup-storage.mjs",
     "restore:storage": "node --env-file-if-exists=.env.local scripts/restore-storage.mjs",
-    "import:locations": "node --env-file-if-exists=.env.local scripts/import-locations.mjs"
+    "import:locations": "node --env-file-if-exists=.env.local scripts/import-locations.mjs",
+    "demo:sql": "node scripts/build-demo-sql.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
