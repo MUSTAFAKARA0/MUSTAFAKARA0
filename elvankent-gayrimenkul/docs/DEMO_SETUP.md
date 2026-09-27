@@ -138,6 +138,8 @@ Bu hesap demo ofisinin **sahibi** olur ve `/platform` (süper admin) ekranına d
 Vercel bu projenin ana adresine "Production" der. Bu yalnızca Vercel'in kullandığı terimdir: proje yalnızca demo veritabanına bağlıdır, `SITE_ENV=demo` ile arama motorlarına kapalıdır ve gerçek alan adınızla ilgisi yoktur.
 
 ### 3.1 Projeyi içe aktarma
+> **Kurulumda karşılaşılan durumlar:** Vercel içe aktarırken deponun **varsayılan dalını** okur. Varsayılan dal başka bir projeyse içe aktarma ekranında o proje görünür ya da "404: NOT_FOUND" sayfası yayınlanır. Çözüm: projeyi oluşturduktan sonra Settings › **Build and Deployment**'da Framework Preset = **Next.js**, Root Directory = `elvankent-gayrimenkul`, Node.js = **22.x**; Settings › **Environments › Production › Branch Tracking** = `claude/elvankent-real-estate-platform-vxq9dj`; ardından dala yapılan ilk gönderim doğru yayını başlatır. Daha kalıcı çözüm: GitHub › Settings › Default branch'i bu dal yapmak.
+
 [vercel.com/new](https://vercel.com/new) › **Import Git Repository**:
 - `MUSTAFAKARA0/MUSTAFAKARA0` › **Import**.
 - Depo listede görünmüyorsa **Adjust GitHub App Permissions** ile bu depoya erişim verin.
