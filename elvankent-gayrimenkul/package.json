@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "npm run test:unit && npm run test:rls",
     "test:unit": "node --test tests/unit/*.test.mjs",
     "test:rls": "node --env-file-if-exists=.env.local --test tests/security/rls.test.mjs",
