@@ -21,7 +21,7 @@ export function FeaturedPropertyCard({ property: p }: { property: PropertyCard }
     .slice(0, 4);
 
   return (
-    <article className="group relative grid overflow-hidden rounded-[1.5rem] border border-border bg-surface lg:grid-cols-[1.45fr_1fr]">
+    <article className="card-lift group relative grid overflow-hidden rounded-[1.5rem] lg:grid-cols-[1.45fr_1fr]">
       <div className="relative aspect-[4/3] overflow-hidden bg-surface-muted lg:aspect-auto lg:min-h-[440px]">
         {p.cover && (
           <MediaImage
@@ -41,7 +41,7 @@ export function FeaturedPropertyCard({ property: p }: { property: PropertyCard }
         )}
       </div>
       <div className="flex flex-col p-6 sm:p-8">
-        <p className="eyebrow">
+        <p className="eyebrow eyebrow-line">
           {LISTING_TYPE_LABELS[p.listingType]} · {p.typeName}
         </p>
         <h3 className="mt-3 font-display text-[1.6rem] leading-tight text-foreground sm:text-[1.85rem]">
@@ -52,7 +52,7 @@ export function FeaturedPropertyCard({ property: p }: { property: PropertyCard }
         <p className="mt-3 flex items-center gap-1.5 text-[14.5px] text-muted-foreground">
           <MapPin className="size-4 shrink-0" aria-hidden /> {propertyLocation(p)}
         </p>
-        <p className="numeric mt-6 text-price font-bold tracking-tight text-foreground">
+        <p className="numeric mt-6 text-price font-bold tracking-tight text-primary-ink">
           {formatListingPrice(p.price, p.currency, p.listingType)}
         </p>
         {facts.length > 0 && (

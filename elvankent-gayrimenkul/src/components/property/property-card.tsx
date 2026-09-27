@@ -45,8 +45,8 @@ export function PropertyCard({
   const href = `/ilan/${p.slug}`;
   const inactive = p.status !== 'published';
   return (
-    <article className={cn('group relative flex flex-col', className)}>
-      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-surface-muted">
+    <article className={cn('card-lift group relative flex flex-col rounded-[1.25rem] p-2', className)}>
+      <div className="relative aspect-[4/3] overflow-hidden rounded-[0.875rem] bg-surface-muted">
         {p.cover ? (
           <MediaImage
             media={p.cover}
@@ -56,7 +56,7 @@ export function PropertyCard({
             fetchPriority={priority ? 'high' : undefined}
             loading={priority ? 'eager' : 'lazy'}
             className={cn(
-              'object-cover transition-transform duration-700 ease-premium group-hover:scale-[1.035]',
+              'object-cover transition-transform duration-700 ease-premium group-hover:scale-[1.06]',
               inactive && 'grayscale-[35%]',
             )}
           />
@@ -76,9 +76,9 @@ export function PropertyCard({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col pt-4">
+      <div className="flex flex-1 flex-col px-2 pt-3.5 pb-1">
         <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
-          <p className="numeric text-[1.3rem] leading-tight font-bold tracking-tight text-foreground">
+          <p className="numeric text-[1.3rem] leading-tight font-bold tracking-tight text-primary-ink">
             {formatListingPrice(p.price, p.currency, p.listingType)}
           </p>
           {p.hasPriceDrop && p.pricePrevious && (
@@ -88,7 +88,7 @@ export function PropertyCard({
           )}
         </div>
         <h3 className="mt-1.5 line-clamp-2 text-[15px] leading-snug font-semibold text-foreground">
-          <Link href={href} className="rounded-sm after:absolute after:inset-0 after:z-[1] after:rounded-2xl after:content-['']">
+          <Link href={href} className="rounded-sm after:absolute after:inset-0 after:z-[1] after:rounded-[1.25rem] after:content-['']">
             {p.title}
             <LinkPendingOverlay />
           </Link>
@@ -107,7 +107,7 @@ export function PropertyCard({
             ))}
           </ul>
         )}
-        <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+        <div className="mt-auto flex items-center justify-between gap-2 pt-2.5">
           <p className="line-clamp-1 text-[12.5px] text-muted-foreground">{p.highlights.join(' · ')}</p>
           <CompareToggle propertyId={p.id} variant="text" className="-mr-2 shrink-0" />
         </div>

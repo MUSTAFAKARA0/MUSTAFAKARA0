@@ -45,7 +45,7 @@ export function CategorySection({ tiles }: { tiles: CategoryTile[] }) {
   const visible = tiles.filter((t) => t.count > 0);
   if (visible.length < 2) return null;
   return (
-    <section aria-labelledby="kategoriler" className="bg-surface py-16 sm:py-24">
+    <section aria-labelledby="kategoriler" className="bg-glow py-16 sm:py-24">
       <div className="container-page">
         <SectionHeading id="kategoriler" eyebrow="Keşfedin" title="Ne tür bir gayrimenkul arıyorsunuz?" />
         <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -53,7 +53,7 @@ export function CategorySection({ tiles }: { tiles: CategoryTile[] }) {
             <li key={t.href}>
               <Link
                 href={t.href}
-                className="group relative flex aspect-[4/5] items-end overflow-hidden rounded-2xl bg-surface-inverse p-5 sm:aspect-[3/4]"
+                className="group relative flex aspect-[4/5] items-end overflow-hidden rounded-2xl bg-surface-inverse p-5 shadow-md ring-1 ring-black/5 transition-shadow duration-500 hover:shadow-lg sm:aspect-[3/4]"
               >
                 {t.image && (
                   <MediaImage
@@ -70,7 +70,7 @@ export function CategorySection({ tiles }: { tiles: CategoryTile[] }) {
                     <span className="block font-display text-[1.6rem] leading-tight text-white">{t.title}</span>
                     <span className="numeric mt-1 block text-sm font-medium text-white/80">{t.count} ilan</span>
                   </span>
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/90 text-foreground transition group-hover:bg-white">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-white/90 text-foreground transition duration-300 group-hover:rotate-45 group-hover:bg-white">
                     <ArrowUpRight className="size-5" aria-hidden />
                   </span>
                 </span>
@@ -96,7 +96,7 @@ export function LatestSection({ items }: { items: PropertyCard[] }) {
 export function RegionsSection({ regions, counts }: { regions: RegionPage[]; counts: Map<string, number> }) {
   if (!regions.length) return null;
   return (
-    <section aria-labelledby="bolgeler" className="border-y border-border bg-surface py-16 sm:py-20">
+    <section aria-labelledby="bolgeler" className="border-y border-border bg-glow py-16 sm:py-20">
       <div className="container-page grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
         <SectionHeading
           id="bolgeler"
@@ -105,10 +105,10 @@ export function RegionsSection({ regions, counts }: { regions: RegionPage[]; cou
           description="Bölge sayfalarında güncel ilanları ve yayındaki ilanlara göre hesaplanan fiyat aralıklarını bulabilirsiniz."
           action={{ href: '/bolgeler', label: 'Tüm bölgeler' }}
         />
-        <ul className="divide-y divide-border border-y border-border">
+        <ul className="grid gap-3">
           {regions.slice(0, 6).map((r) => (
             <li key={r.slug}>
-              <Link href={`/bolgeler/${r.slug}`} className="group flex items-center justify-between gap-4 py-5">
+              <Link href={`/bolgeler/${r.slug}`} className="card-lift group flex items-center justify-between gap-4 rounded-2xl px-5 py-4">
                 <span>
                   <span className="block font-display text-[1.4rem] text-foreground">{r.name}</span>
                   <span className="mt-0.5 block text-sm text-muted-foreground">
@@ -116,8 +116,8 @@ export function RegionsSection({ regions, counts }: { regions: RegionPage[]; cou
                   </span>
                 </span>
                 <span className="flex items-center gap-4">
-                  <span className="numeric text-sm font-semibold text-muted-foreground">{counts.get(r.slug) ?? 0} ilan</span>
-                  <ArrowRight className="size-5 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-foreground" aria-hidden />
+                  <span className="numeric rounded-full bg-primary-soft px-2.5 py-1 text-[13px] font-semibold whitespace-nowrap text-primary-ink">{counts.get(r.slug) ?? 0} ilan</span>
+                  <ArrowRight className="size-5 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary-ink" aria-hidden />
                 </span>
               </Link>
             </li>
@@ -139,11 +139,14 @@ export function ProcessSection() {
   return (
     <section aria-labelledby="surec" className="container-page py-16 sm:py-24">
       <SectionHeading id="surec" eyebrow="Çalışma şeklimiz" title="Gayrimenkul arayışınızda adım adım yanınızdayız" />
-      <ol className="mt-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+      <ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
         {STEPS.map((s, i) => (
-          <li key={s.title} className="border-t-2 border-foreground pt-6">
-            <span className="numeric font-display text-[2.25rem] leading-none text-accent-ink">0{i + 1}</span>
-            <h3 className="mt-4 text-[17px] font-bold text-foreground">{s.title}</h3>
+          <li key={s.title} className="relative overflow-hidden rounded-2xl border border-border bg-surface p-6 shadow-sm">
+            <span className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-primary to-accent" aria-hidden />
+            <span className="numeric inline-flex size-12 items-center justify-center rounded-xl bg-accent-soft font-display text-[1.5rem] leading-none text-accent-ink">
+              0{i + 1}
+            </span>
+            <h3 className="mt-5 text-[17px] font-bold text-foreground">{s.title}</h3>
             <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{s.text}</p>
           </li>
         ))}
@@ -156,10 +159,11 @@ export function OwnerCtaSection({ tenant }: { tenant: Tenant }) {
   const wa = whatsappHref(tenant.settings.whatsapp ?? tenant.settings.phone, 'Merhaba, gayrimenkulümü satmak/kiraya vermek istiyorum.');
   return (
     <section aria-labelledby="mulk-sahibi" className="container-page pb-16 sm:pb-24">
-      <div className="relative overflow-hidden rounded-[1.75rem] bg-surface-inverse px-6 py-12 text-inverse-foreground sm:px-12 sm:py-16 lg:px-16">
+      <div className="glow-inverse relative isolate overflow-hidden rounded-[1.75rem] px-6 py-12 text-inverse-foreground shadow-lg sm:px-12 sm:py-16 lg:px-16">
+        <div className="dots-inverse pointer-events-none absolute inset-0 -z-10" aria-hidden />
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.4fr_1fr]">
           <div>
-            <p className="eyebrow text-accent">Mülk sahipleri için</p>
+            <p className="eyebrow eyebrow-line text-accent">Mülk sahipleri için</p>
             <h2 id="mulk-sahibi" className="mt-3 font-display text-display-lg text-white">
               Gayrimenkulünüzü satmak veya kiraya vermek mi istiyorsunuz?
             </h2>
@@ -197,7 +201,7 @@ export function BlogSection({ posts }: { posts: PostSummary[] }) {
         {posts.slice(0, 3).map((p) => (
           <li key={p.id}>
             <Link href={`/blog/${p.slug}`} className="group block">
-              <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-surface-muted">
+              <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-surface-muted shadow-sm transition-shadow duration-500 group-hover:shadow-md">
                 {p.cover && (
                   <MediaImage media={p.cover} alt="" fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover transition duration-700 group-hover:scale-[1.03]" />
                 )}
@@ -227,10 +231,10 @@ export function ContactBand({ tenant }: { tenant: Tenant }) {
         : null;
   if (!phone && !wa && !address && !s.email) return null;
   return (
-    <section aria-labelledby="iletisim-ozet" className="border-t border-border bg-surface">
+    <section aria-labelledby="iletisim-ozet" className="border-t border-border bg-glow">
       <div className="container-page grid gap-10 py-16 sm:py-20 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
         <div>
-          <p className="eyebrow">İletişim</p>
+          <p className="eyebrow eyebrow-line">İletişim</p>
           <h2 id="iletisim-ozet" className="mt-3 font-display text-display-lg text-foreground">
             Sorularınız için buradayız
           </h2>
@@ -257,27 +261,27 @@ export function ContactBand({ tenant }: { tenant: Tenant }) {
             </Button>
           </div>
         </div>
-        <dl className="grid gap-6 sm:grid-cols-2">
+        <dl className="grid gap-4 sm:grid-cols-2">
           {s.phone && (
-            <div className="rounded-2xl bg-surface-muted p-5">
-              <dt className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                <Phone className="size-4" aria-hidden /> Telefon
+            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+              <dt className="flex items-center gap-2.5 text-sm font-semibold text-muted-foreground">
+                <span className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-primary-ink"><Phone className="size-4" aria-hidden /></span> Telefon
               </dt>
               <dd className="numeric mt-2 text-[17px] font-semibold">{formatPhoneDisplay(s.phone)}</dd>
             </div>
           )}
           {s.email && (
-            <div className="rounded-2xl bg-surface-muted p-5">
-              <dt className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                <Mail className="size-4" aria-hidden /> E-posta
+            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
+              <dt className="flex items-center gap-2.5 text-sm font-semibold text-muted-foreground">
+                <span className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-primary-ink"><Mail className="size-4" aria-hidden /></span> E-posta
               </dt>
               <dd className="mt-2 text-[16px] font-semibold break-all">{s.email}</dd>
             </div>
           )}
           {address && (
-            <div className="rounded-2xl bg-surface-muted p-5 sm:col-span-2">
-              <dt className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                <MapPin className="size-4" aria-hidden /> Ofis adresi
+            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:col-span-2">
+              <dt className="flex items-center gap-2.5 text-sm font-semibold text-muted-foreground">
+                <span className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-primary-ink"><MapPin className="size-4" aria-hidden /></span> Ofis adresi
               </dt>
               <dd className="mt-2 text-[16px] font-semibold">{address}</dd>
               {directions && (
@@ -288,9 +292,9 @@ export function ContactBand({ tenant }: { tenant: Tenant }) {
             </div>
           )}
           {(hours.length > 0 || s.working_hours_note) && (
-            <div className="rounded-2xl bg-surface-muted p-5 sm:col-span-2">
-              <dt className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                <Clock className="size-4" aria-hidden /> Çalışma saatleri
+            <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm sm:col-span-2">
+              <dt className="flex items-center gap-2.5 text-sm font-semibold text-muted-foreground">
+                <span className="flex size-8 items-center justify-center rounded-full bg-primary-soft text-primary-ink"><Clock className="size-4" aria-hidden /></span> Çalışma saatleri
               </dt>
               <dd className="mt-2 space-y-0.5 text-[15.5px] font-medium">
                 {hours.map((h) => (

@@ -236,6 +236,67 @@
     color: var(--accent-ink);
   }
 
+  /* Etiketin önünde ince marka çizgisi (dekoratif) */
+  .eyebrow-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .eyebrow-line::before {
+    content: '';
+    width: 1.75rem;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), color-mix(in oklab, var(--accent) 30%, transparent));
+  }
+
+  /*
+   * Bölüm arka planları: marka renginden türetilen çok hafif ışıma.
+   * Renkler kiracının --primary / --accent değerinden gelir (white-label).
+   */
+  .bg-glow {
+    background:
+      radial-gradient(60rem 28rem at 100% 0%, color-mix(in oklab, var(--primary) 7%, transparent), transparent 70%),
+      radial-gradient(48rem 24rem at 0% 100%, color-mix(in oklab, var(--accent) 8%, transparent), transparent 70%),
+      var(--surface);
+  }
+  .bg-glow-soft {
+    background:
+      radial-gradient(50rem 26rem at 0% 0%, color-mix(in oklab, var(--accent) 7%, transparent), transparent 70%),
+      var(--background);
+  }
+  /* Koyu blok içinde renkli ışıma */
+  .glow-inverse {
+    background:
+      radial-gradient(36rem 22rem at 100% 0%, color-mix(in oklab, var(--primary) 55%, transparent), transparent 70%),
+      radial-gradient(30rem 20rem at 0% 100%, color-mix(in oklab, var(--accent) 28%, transparent), transparent 70%),
+      var(--surface-inverse);
+  }
+  /* İnce nokta deseni (dekoratif, koyu zemin) */
+  .dots-inverse {
+    background-image: radial-gradient(rgb(255 255 255 / 0.09) 1px, transparent 1px);
+    background-size: 18px 18px;
+    mask-image: linear-gradient(to left, #000, transparent 70%);
+  }
+
+  /* Kart: yumuşak gölge, hover'da hafif yükselme (yalnızca işaretçili cihazlar) */
+  .card-lift {
+    background: var(--surface);
+    border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+    box-shadow: 0 1px 2px rgb(20 26 24 / 0.04), 0 2px 8px -2px rgb(20 26 24 / 0.07);
+    transition:
+      transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.3s ease;
+  }
+  @media (hover: hover) {
+    .card-lift:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 8px rgb(20 26 24 / 0.04), 0 28px 56px -20px rgb(20 26 24 / 0.28);
+      border-color: color-mix(in oklab, var(--primary) 22%, var(--border));
+    }
+  }
+
   .numeric {
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum';

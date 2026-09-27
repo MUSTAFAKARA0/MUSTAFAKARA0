@@ -20,7 +20,7 @@ export function SectionHeading({
   return (
     <div className={cn('flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between', className)}>
       <div className="max-w-2xl">
-        {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+        {eyebrow && <p className="eyebrow eyebrow-line">{eyebrow}</p>}
         <h2 id={id} className={cn('font-display text-display-lg text-foreground', eyebrow && 'mt-3')}>
           {title}
         </h2>
