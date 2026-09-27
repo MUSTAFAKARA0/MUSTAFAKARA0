@@ -6,10 +6,10 @@ import 'server-only';
  * dahil edilmesi durumunda build'i hata ile durdurur.
  */
 export const serverEnv = {
-  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
-  ipHashSalt: process.env.IP_HASH_SALT ?? '',
+  supabaseServiceRoleKey: (process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').trim(),
+  ipHashSalt: (process.env.IP_HASH_SALT ?? '').trim(),
   /** Zamanlanmış görevlerin (cron) yetkilendirme sırrı */
-  cronSecret: process.env.CRON_SECRET ?? '',
+  cronSecret: (process.env.CRON_SECRET ?? '').trim(),
   /** Bilinmeyen alan adlarında ve yerel geliştirmede gösterilecek kiracı */
   defaultTenantSlug: process.env.DEFAULT_TENANT_SLUG || 'elvankent',
   /** SaaS alt alan adları için kök alan (ör. platform.com → ofis1.platform.com) */

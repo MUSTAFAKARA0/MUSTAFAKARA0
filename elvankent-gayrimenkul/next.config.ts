@@ -1,8 +1,57 @@
 import type { NextConfig } from 'next';
 import { isIndexable } from './src/lib/site-env';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL) : null;
-const storageUrl = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_STORAGE_URL) : null;
+/** Değişken değeri (baştaki/sondaki boşluk ve satır sonları atılır) */
+function envValue(name: string): string {
+  return (process.env[name] ?? '').trim();
+}
+
+/** Adres değişkenini okur; geçersizse hangi değişken olduğunu açıkça söyler */
+function envUrl(name: string): URL | null {
+  const raw = envValue(name);
+  if (!raw) return null;
+  try {
+    return new URL(raw);
+  } catch {
+    const preview = raw.length > 30 ? `${raw.slice(0, 30)}…` : raw;
+    throw new Error(
+      `Ortam değişkeni ${name} geçerli bir adres değil (şu an: "${preview}"). ` +
+        'Değer https:// ile başlamalıdır; değişkenin adını değer kutusuna yazmayın.',
+    );
+  }
+}
+
+/**
+ * Vercel'de derleme başlamadan yaygın kurulum hatalarını tek seferde ve açıkça bildirir
+ * (eksik değer, değer kutusuna değişken adının yazılması, anon ve service_role
+ * anahtarlarının karıştırılması). Gizli değerlerin kendisi yazdırılmaz.
+ */
+function checkDeploymentEnv(): void {
+  if (process.env.VERCEL !== '1') return;
+  const problems: string[] = [];
+  const looksLikeName = (v: string) => /^[A-Z][A-Z0-9_]+$/.test(v);
+  const required = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'NEXT_PUBLIC_SITE_URL', 'IP_HASH_SALT', 'CRON_SECRET'];
+  for (const name of required) {
+    const v = envValue(name);
+    if (!v) problems.push(`${name} tanımlı değil veya boş.`);
+    else if (looksLikeName(v)) problems.push(`${name}: değer kutusuna bir değişken adı yazılmış ("${v}"). Gerçek değeri yazın.`);
+  }
+  for (const name of ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SITE_URL']) {
+    const v = envValue(name);
+    if (v && !looksLikeName(v) && !/^https?:\/\/[^\s/]+/.test(v)) problems.push(`${name} https:// ile başlayan bir adres olmalı.`);
+  }
+  const anon = envValue('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  const service = envValue('SUPABASE_SERVICE_ROLE_KEY');
+  if (anon && service && anon === service) problems.push('SUPABASE_SERVICE_ROLE_KEY, anon anahtarıyla aynı. Supabase\'deki service_role (secret) anahtarını girin.');
+  if (anon.startsWith('sb_secret_')) problems.push('NEXT_PUBLIC_SUPABASE_ANON_KEY alanına gizli (sb_secret_) anahtar girilmiş. Buraya anon / publishable anahtar yazılır.');
+  if (problems.length) {
+    throw new Error(`Ortam değişkenlerinde ${problems.length} sorun var:\n  - ${problems.join('\n  - ')}\n`);
+  }
+}
+
+checkDeploymentEnv();
+const supabaseUrl = envUrl('NEXT_PUBLIC_SUPABASE_URL');
+const storageUrl = envUrl('NEXT_PUBLIC_SUPABASE_STORAGE_URL');
 
 const remotePatterns: NonNullable<NonNullable<NextConfig['images']>['remotePatterns']> = [
   { protocol: 'https', hostname: '*.supabase.co', pathname: '/storage/v1/object/public/**' },
