@@ -59,7 +59,8 @@ const ICONS: Record<AdminIconKey, LucideIcon> = {
 
 export interface ShellProps {
   nav: AdminNavSection[];
-  org: { id: string; name: string };
+  /** logoUrl: ofisin yüklediği logo (Şirket ayarları); yoksa ad baş harfleri gösterilir */
+  org: { id: string; name: string; logoUrl?: string | null };
   orgs: { id: string; name: string; roleLabel: string }[];
   user: { name: string; email: string; roleLabel: string };
   siteUrl: string | null;
@@ -155,11 +156,23 @@ function OrgSwitcher({ org, orgs }: Pick<ShellProps, 'org' | 'orgs'>) {
   const [pending, startTransition] = useTransition();
   const trigger = (
     <span className="flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left">
-      <Monogram name={org.name} className="size-9 text-[0.95rem]" />
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[14px] font-bold text-foreground">{org.name}</span>
-        <span className="block text-[12px] text-muted-foreground">Yönetim paneli</span>
-      </span>
+      {org.logoUrl ? (
+        // Yatay logolar geniş olduğundan logo varken ad yazısı yerine logo gösterilir (ad ekran okuyucuya verilir)
+        <span className="min-w-0 flex-1">
+          {/* eslint-disable-next-line @next/next/no-img-element -- marka görseli Storage'dan, sabit küçük boyut */}
+          <img src={org.logoUrl} alt="" width={200} height={36} className="block h-9 w-full max-w-[200px] object-contain object-left" />
+          <span className="sr-only">{org.name}</span>
+          <span className="mt-1 block text-[12px] text-muted-foreground">Yönetim paneli</span>
+        </span>
+      ) : (
+        <>
+          <Monogram name={org.name} className="size-9 text-[0.95rem]" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[14px] font-bold text-foreground">{org.name}</span>
+            <span className="block text-[12px] text-muted-foreground">Yönetim paneli</span>
+          </span>
+        </>
+      )}
       {orgs.length > 1 && <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
     </span>
   );

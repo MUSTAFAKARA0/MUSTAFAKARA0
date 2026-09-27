@@ -17,7 +17,7 @@ V1 şeması + V1 demo verisi + gerçekçi canlı kayıtlar (yönetici, gerçek i
 | Stage 3 dosyalarını ikinci kez çalıştırma | sorunsuz (tekrar çalıştırılabilir) |
 | Yedekten yeni veritabanına geri yükleme | V1 sayıları birebir aynı |
 
-Prova Supabase'e benzeyen yerel bir PostgreSQL 16 üzerinde yapıldı; gerçek Supabase'deki farklılıkları yakalamak için demo projesinde (`supabase db push`) aynı sıra tekrar denenmelidir.
+Prova Supabase'e benzeyen yerel bir PostgreSQL 16 üzerinde yapıldı. Ayrıca aynı migration'lar gerçek Supabase'te **boş** demo projesine (`elvankent-demo`, SQL Editor, `supabase/demo/01–04`) sorunsuz uygulandı. Henüz yapılmayan: gerçek Supabase'te **V1 verisi bulunan** bir veritabanında yükseltme provası → aşağıdaki "Canlıdan önce son prova" adımı.
 
 ## Uygulanacak dosyalar ve sıra
 
@@ -40,7 +40,17 @@ V1'de `20260922000001…04` zaten uygulanmıştır — **tekrar çalıştırmay�
 ```
 
 - `supabase db push` hangi dosyaların uygulandığını `supabase_migrations.schema_migrations` tablosundan takip eder. V1 SQL Editor ile uygulandıysa bu tabloda kayıt yoktur ve CLI V1 dosyalarını da çalıştırmaya çalışır — bu durumda **SQL Editor ile dosya dosya** ilerleyin veya önce V1 sürümlerini `supabase migration repair --status applied 20260922000001 20260922000002 20260922000003 20260922000004` ile işaretleyin.
-- SQL Editor'de her dosyanın tamamını tek seferde çalıştırın; hata verirse **sonraki dosyaya geçmeyin** (her dosya kendi içinde bütündür).
+- SQL Editor'de her dosyanın tamamını **ayrı bir sorgu** olarak tek seferde çalıştırın; hata verirse **sonraki dosyaya geçmeyin** (her dosya kendi içinde bütündür). `v2_enums` dosyası mutlaka tek başına çalıştırılmalıdır (yeni enum değerleri ancak o sorgu bittikten sonra kullanılabilir).
+- SQL Editor "Potential issue detected … without enabling Row Level Security" uyarısı gösterirse **Run without RLS** seçin: migration'lar her public tabloda RLS'i kendileri açar (son kontrol bunu doğrular); "Run and enable RLS" sorguyu değiştirir.
+- SQL Editor'de metin **seçili** iken Run yalnızca seçili kısmı çalıştırır; çalıştırmadan önce seçimi kaldırın.
+
+## Canlıdan önce son prova (zorunlu önerilir)
+
+Canlı veritabanının bir kopyası üzerinde, canlıya dokunmadan tam prova:
+1. Supabase › **canlı proje** › Database › **Backups** › son yedeğin yanında **Restore to a new project** (Pro planı gerekir). Pro yoksa: bilgisayarınızda `pg_dump` ile yedek alın (aşağıda 2. adım) ve Supabase'te yeni boş bir proje açıp `pg_restore --no-owner` ile yükleyin.
+2. Yeni (kopya) projede aşağıdaki "Adım adım" 3–5'i uygulayın (ön kontrol, 13 dosya, son kontrol).
+3. Demo Vercel projesinin ortam değişkenlerini geçici olarak bu kopya projeye çevirip siteyi ve paneli kontrol edin; sonra demo değerlerine geri alın.
+4. Her şey TAMAM ise kopya projeyi silin ve canlı geçiş için bakım penceresi belirleyin.
 
 ## Adım adım
 

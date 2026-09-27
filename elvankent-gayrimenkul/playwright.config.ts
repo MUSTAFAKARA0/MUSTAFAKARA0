@@ -34,11 +34,17 @@ export default defineConfig({
     launchOptions: { executablePath },
   },
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'], userAgent, launchOptions: { executablePath } } },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'], userAgent, launchOptions: { executablePath } }, testIgnore: /acceptance\.spec\.ts/ },
     {
       name: 'mobile',
       use: { ...devices['Pixel 7'], userAgent: `${devices['Pixel 7'].userAgent} E2E`, launchOptions: { executablePath } },
-      testMatch: /visitor\.spec\.ts|responsive\.spec\.ts/,
+      testMatch: /visitor\.spec\.ts|responsive\.spec\.ts|acceptance\.spec\.ts/,
+    },
+    {
+      // iPhone ekran ölçüsü ve dokunmatik davranışı (Chromium ile; gerçek Safari değildir)
+      name: 'iphone',
+      use: { ...devices['iPhone 13'], browserName: 'chromium', userAgent: `${devices['iPhone 13'].userAgent} E2E`, launchOptions: { executablePath } },
+      testMatch: /acceptance\.spec\.ts/,
     },
   ],
 });

@@ -36,9 +36,17 @@ interface LogoProps {
 export function Logo({ name, logoUrl, tone = 'dark', className, href = '/' }: LogoProps) {
   const [first, ...rest] = name.trim().split(/\s+/);
   const content = logoUrl ? (
-    // Yüklenen logonun en-boy oranı bilinmediğinden sabit yükseklikli img kullanılır
+    // Yüklenen logonun en-boy oranı bilinmediğinden sabit bir kutu ayrılır ve logo kutuya orantılı
+    // sığdırılır (object-contain). Kutu önceden ayrılmazsa logo geç yüklenince sayfa kayıyordu (CLS).
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={logoUrl} alt={name} className="h-9 w-auto max-w-[190px] object-contain sm:h-10" />
+    <img
+      src={logoUrl}
+      alt={name}
+      width={190}
+      height={40}
+      decoding="async"
+      className="h-9 w-[168px] object-contain object-left sm:h-10 sm:w-[190px]"
+    />
   ) : (
     <span className="flex items-center gap-2.5">
       <Monogram name={name} />

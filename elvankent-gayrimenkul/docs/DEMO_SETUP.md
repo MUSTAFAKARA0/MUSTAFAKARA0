@@ -233,6 +233,8 @@ Save.
 
 ## Telefon kabul testi
 
+> Otomatik testler bu listenin otomatikleştirilebilen kısmını Android ve iPhone ekran profilinde çalıştırır (`tests/e2e/acceptance.spec.ts`). Gerçek cihazda yapılacak kısa liste ve MFA kurulumu: [TELEFON_KABUL_TESTI.md](./TELEFON_KABUL_TESTI.md).
+
 Adres: `https://DEMO-ADRESI` · Panel: `https://DEMO-ADRESI/admin/giris`
 
 Formlarda **gerçek kişi bilgisi kullanmayın**. Örnek: "Test Kişi", `0555 000 00 00`, `test@example.com`.

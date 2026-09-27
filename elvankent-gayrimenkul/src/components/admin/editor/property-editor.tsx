@@ -56,6 +56,8 @@ export function PropertyEditor({ data, taxonomy, perms, map, initialStep, siteHo
   const inFlight = useRef(false);
   // Kayıt sırasında yeniden kirlenen alanlar için bir sonraki kaydı planlamak üzere güncel flush
   const flushRef = useRef<() => Promise<boolean>>(async () => true);
+  // Süren otomatik kayıt isteği (durum değişikliği önce bunun bitmesini bekler)
+  const savePromise = useRef<Promise<unknown> | null>(null);
 
   useEffect(() => {
     valuesRef.current = values;
@@ -89,40 +91,50 @@ export function PropertyEditor({ data, taxonomy, perms, map, initialStep, siteHo
     const sent = { values: { ...valuesRef.current }, location: locationRef.current, features: featuresRef.current };
     inFlight.current = true;
     setSave({ kind: 'saving' });
-    const res = await saveProperty(values.id, {
-      patch: parsed.data as PropertyPatch,
-      location: sendLocation ? sent.location : undefined,
-      featureIds: sendFeatures ? sent.features : undefined,
-      expectedUpdatedAt: updatedAtRef.current,
-    });
-    inFlight.current = false;
+    // Kaydın tamamı (istek + sonuç işleme) tek bir söz olarak izlenir; durum değişikliği bunu bekler
+    const run = (async (): Promise<boolean> => {
+      const res = await saveProperty(values.id, {
+        patch: parsed.data as PropertyPatch,
+        location: sendLocation ? sent.location : undefined,
+        featureIds: sendFeatures ? sent.features : undefined,
+        expectedUpdatedAt: updatedAtRef.current,
+      }).finally(() => {
+        inFlight.current = false;
+      });
 
-    if (!res.ok) {
-      if (res.code === 'conflict') {
-        setConflict(true);
-        setSave({ kind: 'error', message: 'Çakışma' });
+      if (!res.ok) {
+        if (res.code === 'conflict') {
+          setConflict(true);
+          setSave({ kind: 'error', message: 'Çakışma' });
+          return false;
+        }
+        if (res.fieldErrors) {
+          const next: Record<string, string> = {};
+          for (const [k, v] of Object.entries(res.fieldErrors)) next[k] = v[0];
+          setErrors(next);
+        }
+        setSave({ kind: 'error', message: res.error });
         return false;
       }
-      if (res.fieldErrors) {
-        const next: Record<string, string> = {};
-        for (const [k, v] of Object.entries(res.fieldErrors)) next[k] = v[0];
-        setErrors(next);
-      }
-      setSave({ kind: 'error', message: res.error });
-      return false;
+
+      updatedAtRef.current = res.data.updatedAt;
+      // Kayıt sırasında yeniden değişen alanlar kirli kalır
+      for (const key of keys) if (Object.is(valuesRef.current[key], sent.values[key])) dirty.current.delete(key);
+      if (sendLocation && locationRef.current === sent.location) locationDirty.current = false;
+      if (sendFeatures && featuresRef.current === sent.features) featuresDirty.current = false;
+      setValues((v) => ({ ...v, updated_at: res.data.updatedAt, slug: res.data.slug }));
+
+      const stillDirty = dirty.current.size > 0 || locationDirty.current || featuresDirty.current;
+      setSave(stillDirty ? { kind: 'dirty' } : { kind: 'saved', at: new Date() });
+      if (stillDirty) timer.current = setTimeout(() => void flushRef.current(), AUTOSAVE_MS);
+      return !stillDirty;
+    })();
+    savePromise.current = run;
+    try {
+      return await run;
+    } finally {
+      if (savePromise.current === run) savePromise.current = null;
     }
-
-    updatedAtRef.current = res.data.updatedAt;
-    // Kayıt sırasında yeniden değişen alanlar kirli kalır
-    for (const key of keys) if (Object.is(valuesRef.current[key], sent.values[key])) dirty.current.delete(key);
-    if (sendLocation && locationRef.current === sent.location) locationDirty.current = false;
-    if (sendFeatures && featuresRef.current === sent.features) featuresDirty.current = false;
-    setValues((v) => ({ ...v, updated_at: res.data.updatedAt, slug: res.data.slug }));
-
-    const stillDirty = dirty.current.size > 0 || locationDirty.current || featuresDirty.current;
-    setSave(stillDirty ? { kind: 'dirty' } : { kind: 'saved', at: new Date() });
-    if (stillDirty) timer.current = setTimeout(() => void flushRef.current(), AUTOSAVE_MS);
-    return !stillDirty;
   }, [values.id]);
 
   useEffect(() => {
@@ -181,14 +193,19 @@ export function PropertyEditor({ data, taxonomy, perms, map, initialStep, siteHo
 
   function goTo(next: EditorStepId) {
     setStep(next);
-    const url = new URL(window.location.href);
-    url.searchParams.set('adim', next);
-    window.history.replaceState(null, '', url);
+    // Adres çubuğu değiştirilmez: ?adim= değişince Next.js sayfayı başka bir sayfa sayıyor, süren
+    // otomatik kayıttan sonraki yenilemede düzenleyici sıfırdan kurulup henüz kaydedilmemiş
+    // yazılar (ör. açıklama) kayboluyordu. ?adim= yalnızca bağlantıyla ilk açılışta okunur.
     window.scrollTo({ top: 0, behavior: 'smooth' });
     void flush();
   }
 
   async function changeStatus(status: ListingStatus) {
+    // Yazdıktan hemen sonra basılırsa süren otomatik kaydın bitmesi beklenir; aksi halde
+    // kayıt "kaydedilmemiş değişiklik" sayılıp işlem yapılmıyordu
+    setStatusPending(status);
+    for (let i = 0; i < 10 && savePromise.current; i++) await savePromise.current.catch(() => false);
+    setStatusPending(null);
     const saved = await flush();
     if (!saved && (dirty.current.size || locationDirty.current || featuresDirty.current)) {
       toast.error('Önce kaydedilmemiş değişiklikleri düzeltin.');

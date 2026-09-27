@@ -10,7 +10,10 @@ import './globals.css';
  * arayüz için Manrope (okunaklı, geniş rakam seti). Başka bir marka için
  * yalnızca bu iki tanım değiştirilir; bileşenler font-display / font-sans kullanır.
  */
-const sans = Manrope({ subsets: ['latin', 'latin-ext'], variable: '--font-sans-face', display: 'swap' });
+// Gövde yazı tipi de "optional": yavaş bağlantıda font sonradan gelince ilan sayfasındaki konum/tarih
+// satırlarının kırılımı değişip galeriyi aşağı itiyordu (CLS ≈ 0,12). Font önbelleğe alınır ve
+// sonraki sayfalarda kullanılır; yedek yazı tipinin ölçüleri next/font tarafından Manrope'a uyarlanır.
+const sans = Manrope({ subsets: ['latin', 'latin-ext'], variable: '--font-sans-face', display: 'optional' });
 const display = Fraunces({
   subsets: ['latin', 'latin-ext'],
   variable: '--font-display-face',

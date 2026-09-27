@@ -6,13 +6,16 @@
 
 - V2 kodu V1 şemasıyla **çalışmaz**; V1 kodu V2 şemasıyla **çalışmaz**. Bu yüzden sıra: yedek → migration → kontrol → **hemen** V2 dağıtımı.
 - V2 build'i önceden hazırlanır (Vercel'de production dağıtımı "Promote" beklemeye alınır), migration biter bitmez tek tıkla yayına alınır. Aradaki süre birkaç dakikadır; bu sürede site hata verebilir → düşük trafik saati seçin.
-- Vercel › Settings › Git: production dalı olarak V2'nin birleştirileceği dal (ör. `main`) seçilir; bu dala birleştirme yapılana kadar production değişmez. Otomatik production dağıtımını istemiyorsanız "Auto-assign custom domains" yerine elle **Promote** kullanın.
+- Vercel › proje › **Settings › Environments › Production › Branch Tracking**: production dalı (ör. `main`) seçilir; bu dala birleştirme yapılana kadar production değişmez. Otomatik production dağıtımını istemiyorsanız aynı sayfada otomatik alan adı atamasını kapatıp elle **Promote** kullanın.
+- Vercel › Settings › **Build and Deployment**: Framework Preset **Next.js**, Root Directory **`elvankent-gayrimenkul`**, Node.js **22.x** (demo kurulumunda bu üçünün yanlış olması 404 ve derleme hatasına yol açtı).
+- Vercel içe aktarma ekranı deponun **varsayılan dalını** okur; GitHub › Settings › General › Default branch doğru dal olmalıdır.
 - CI: GitHub › Settings › Branches › production dalı için `quality` işi **required status check** yapılır (başarısız build birleşemez).
 
 ## Sıra
 
 | # | Adım | Nasıl | Kontrol |
 | --- | --- | --- | --- |
+| 0 | Prova | docs/PRODUCTION_MIGRATION.md › "Canlıdan önce son prova" (canlı yedeğin kopyasında) | kopya projede postflight TAMAM, site çalışıyor |
 | 1 | Yedek | Supabase Backups/PITR + `pg_dump -Fc` + `npm run backup:storage` | dosyalar oluştu |
 | 2 | Yedek doğrulama | `pg_restore --list`, `manifest.json` dosya sayısı | hata yok, sayılar mantıklı |
 | 3 | Veritabanı migration | docs/PRODUCTION_MIGRATION.md (13 dosya, sırayla) | `postflight_v2.sql` 13/13 TAMAM |
@@ -49,6 +52,8 @@ Sunucu fonksiyonları veritabanıyla aynı bölgede çalışmalıdır: her panel
 | `NEXT_IMAGE_ALLOW_LOCAL_IP` | **TANIMLAMAYIN** | yalnızca yerel |
 
 `NEXT_PUBLIC_` önekiyle hiçbir gizli değer tanımlanmaz (`npm run prelaunch` bunu denetler).
+
+Vercel'de değişken türü: `NEXT_PUBLIC_…` değişkenleri **Config** (tarayıcıya zaten gider); `SUPABASE_SERVICE_ROLE_KEY`, `IP_HASH_SALT`, `CRON_SECRET`, `RESEND_API_KEY`, `MAP_API_KEY` **Secret/Sensitive**. Değer kutusuna yalnızca değer yazılır (değişken adı değil), sonunda satır sonu bırakılmaz. Derleme, bu tür hataları Türkçe olarak listeleyip durur (`next.config.ts` › ortam değişkeni kontrolü).
 
 ## Yayın sonrası ilk 24 saat
 
