@@ -122,8 +122,8 @@ Supabase › **Authentication › Users** › **Add user** › **Create new user
 
 ### 2.3 Yönetici yetkisi verme
 1. [05_demo_admin.sql](https://raw.githubusercontent.com/MUSTAFAKARA0/MUSTAFAKARA0/claude/elvankent-real-estate-platform-vxq9dj/elvankent-gayrimenkul/supabase/demo/05_demo_admin.sql) içeriğini SQL Editor'de yeni bir sorguya yapıştırın.
-2. Yalnızca `v_email text := 'DEMO-YONETICI-EPOSTASI@ornek.com';` satırındaki adresi 2.2'deki e-postayla değiştirin.
-3. **Run**. Sonuç satırında `Tamam: … sahibi + süper admin` görünmeli.
+2. Hiçbir satırı değiştirmeyin; dosya demo veritabanındaki tek kullanıcıyı kendisi bulur. Metnin sonuna bir kez tıklayın (seçili bir yer kalmasın) → **Run**.
+3. Sonuç tablosunda `e-postanız | owner | true` görünmeli.
 
 Bu hesap demo ofisinin **sahibi** olur ve `/platform` (süper admin) ekranına da erişir.
 
