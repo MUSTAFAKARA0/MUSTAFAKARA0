@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useTransition } from 'react';
 import {
   BarChart3,
   Building,
@@ -149,7 +149,10 @@ function NavList({ nav, badges, onNavigate }: { nav: AdminNavSection[]; badges?:
   );
 }
 
+// Menü öğeleri sunucu eylemini doğrudan çağırır: menü seçimde kapanıp içeriğini
+// kaldırdığı için içindeki bir <form> gönderilmeden DOM'dan çıkar ("form is not connected").
 function OrgSwitcher({ org, orgs }: Pick<ShellProps, 'org' | 'orgs'>) {
+  const [pending, startTransition] = useTransition();
   const trigger = (
     <span className="flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left">
       <Monogram name={org.name} className="size-9 text-[0.95rem]" />
@@ -169,18 +172,23 @@ function OrgSwitcher({ org, orgs }: Pick<ShellProps, 'org' | 'orgs'>) {
       <DropdownMenuContent align="start" className="w-64">
         <DropdownMenuLabel>Ofisleriniz</DropdownMenuLabel>
         {orgs.map((o) => (
-          <form key={o.id} action={switchOrganization}>
-            <input type="hidden" name="orgId" value={o.id} />
-            <DropdownMenuItem asChild>
-              <button type="submit" className="w-full text-left">
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{o.name}</span>
-                  <span className="block text-[12px] text-muted-foreground">{o.roleLabel}</span>
-                </span>
-                {o.id === org.id && <Check className="!text-primary" aria-hidden />}
-              </button>
-            </DropdownMenuItem>
-          </form>
+          <DropdownMenuItem
+            key={o.id}
+            disabled={pending}
+            onSelect={() =>
+              startTransition(async () => {
+                const data = new FormData();
+                data.set('orgId', o.id);
+                await switchOrganization(data);
+              })
+            }
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-medium">{o.name}</span>
+              <span className="block text-[12px] text-muted-foreground">{o.roleLabel}</span>
+            </span>
+            {o.id === org.id && <Check className="!text-primary" aria-hidden />}
+          </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
@@ -188,6 +196,7 @@ function OrgSwitcher({ org, orgs }: Pick<ShellProps, 'org' | 'orgs'>) {
 }
 
 function UserMenu({ user, siteUrl }: Pick<ShellProps, 'user' | 'siteUrl'>) {
+  const [pending, startTransition] = useTransition();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left transition hover:bg-surface/70" aria-label="Hesap menüsü">
@@ -222,13 +231,9 @@ function UserMenu({ user, siteUrl }: Pick<ShellProps, 'user' | 'siteUrl'>) {
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
-        <form action={signOut}>
-          <DropdownMenuItem asChild destructive>
-            <button type="submit" className="w-full">
-              <LogOut /> Çıkış yap
-            </button>
-          </DropdownMenuItem>
-        </form>
+        <DropdownMenuItem destructive disabled={pending} onSelect={() => startTransition(() => signOut())}>
+          <LogOut /> {pending ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
