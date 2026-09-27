@@ -1,291 +1,286 @@
 'use server';
 
-import { requireAdmin, UnauthorizedError } from '@/lib/auth';
-import { revalidatePublic } from '@/lib/admin/revalidate';
-import { CACHE_TAGS } from '@/lib/data/cache';
-import { LISTING_TYPE_LABELS, STORAGE_BUCKETS } from '@/lib/constants';
-import { isLocalImage } from '@/lib/images';
-import { slugify } from '@/lib/slug';
-import { toFieldErrors, type FieldErrors } from '@/lib/validation/common';
-import { propertySchema, type PropertyInput } from '@/lib/validation/property';
-import type { PropertyStatus } from '@/types/database';
+import { redirect } from 'next/navigation';
+import { updateTag } from 'next/cache';
+import { z } from 'zod';
+import { cacheTags } from '@/lib/cache-tags';
+import { isUuid } from '@/lib/utils';
+import {
+  featureIdsSchema,
+  locationSchema,
+  propertyPatchSchema,
+  type PrivateLocation,
+  type PropertyPatch,
+} from '@/modules/properties/admin';
+import type { ListingStatus } from '@/modules/properties/constants';
+import { ActionError, assertNoDbError, mapDbError, NotFoundError, runAction, toActionFailure, type ActionResult } from '@/platform/actions';
+import { requirePermission, type OrgContext } from '@/platform/auth/session';
+import type { TablesInsert } from '@/types/supabase';
 
-export type ActionResult<T = undefined> =
-  | ({ ok: true } & (T extends undefined ? object : { data: T }))
-  | { ok: false; error: string; fieldErrors?: FieldErrors };
-
-const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function fail(error: unknown, fallback: string): { ok: false; error: string } {
-  if (error instanceof UnauthorizedError) return { ok: false, error: error.message };
-  return { ok: false, error: fallback };
+function invalidate(orgId: string) {
+  updateTag(cacheTags.properties(orgId));
+  updateTag(cacheTags.redirects(orgId));
 }
 
-/** İlan başlığından SEO uyumlu slug tabanı (ilan no'yu veritabanı ekler) */
-function buildSlugBase(title: string, listingType: 'sale' | 'rent'): string {
-  const base = slugify(title.replace(/^demo\s*[–-]\s*/i, ''), 100);
-  const prefix = slugify(LISTING_TYPE_LABELS[listingType]);
-  return base.startsWith(prefix) ? base : slugify(`${prefix} ${base}`, 110);
+async function loadOwned(ctx: OrgContext, id: string) {
+  if (!isUuid(id)) throw new NotFoundError('İlan bulunamadı.');
+  const { data, error } = await ctx.supabase
+    .from('properties')
+    .select('id, organization_id, updated_at, deleted_at, status, listing_type, title')
+    .eq('id', id)
+    .maybeSingle();
+  assertNoDbError(error);
+  // Kullanıcının aktif organizasyonu dışındaki ilanlar (RLS izin verse bile) işlenmez
+  if (!data || data.organization_id !== ctx.org.id) throw new NotFoundError('İlan bulunamadı veya erişim yetkiniz yok.');
+  return data;
 }
 
-/** Yeni ilan oluşturur veya mevcut ilanı günceller */
-export async function saveProperty(
-  id: string | null,
-  input: PropertyInput,
-): Promise<ActionResult<{ id: string; slug: string; listingNo: number }>> {
-  try {
-    const { supabase, user } = await requireAdmin();
-    const parsed = propertySchema.safeParse(input);
-    if (!parsed.success) {
-      return { ok: false, error: 'Lütfen işaretli alanları kontrol edin.', fieldErrors: toFieldErrors(parsed.error) };
-    }
-    if (id && !uuidRe.test(id)) return { ok: false, error: 'Geçersiz ilan.' };
-    const d = parsed.data;
+export interface CreatePropertyState {
+  error?: string;
+  fieldErrors?: Record<string, string>;
+}
 
-    const row = {
-      slug: buildSlugBase(d.title, d.listing_type),
-      title: d.title,
-      description: d.description,
-      listing_type: d.listing_type,
-      property_type_id: d.property_type_id,
-      status: d.status,
-      is_featured: d.is_featured,
-      price: d.price,
-      currency: d.currency,
-      price_negotiable: d.price_negotiable,
-      dues: d.dues,
-      deposit: d.listing_type === 'rent' ? d.deposit : null,
-      city_id: d.city_id,
-      district_id: d.district_id,
-      neighborhood_id: d.neighborhood_id,
-      gross_m2: d.gross_m2,
-      net_m2: d.net_m2,
-      room_count: d.room_count,
-      living_room_count: d.living_room_count,
-      building_age: d.building_age,
-      floor: d.floor,
-      total_floors: d.total_floors,
-      bathroom_count: d.bathroom_count,
-      balcony_count: d.balcony_count,
-      heating: d.heating,
-      has_elevator: d.has_elevator,
-      parking: d.parking,
-      is_furnished: d.is_furnished,
-      in_complex: d.in_complex,
-      complex_name: d.in_complex ? d.complex_name : null,
-      has_air_conditioning: d.has_air_conditioning,
-      credit_eligible: d.credit_eligible,
-      deed_status: d.deed_status,
-      usage_status: d.usage_status,
-      facades: d.facades,
-      views: d.views,
-      swap_available: d.swap_available,
-      zoning_status: d.zoning_status,
-      block_no: d.block_no,
-      parcel_no: d.parcel_no,
-      floor_area_ratio: d.floor_area_ratio,
-      height_limit: d.height_limit,
-      meta_description: d.meta_description,
-    };
+const createSchema = z.object({
+  title: z.string().trim().min(3, { error: 'Başlık en az 3 karakter olmalıdır.' }).max(120, { error: 'Başlık en fazla 120 karakter olabilir.' }),
+  listing_type: z.enum(['sale', 'rent'], { error: 'İlan türünü seçin.' }),
+  property_type_id: z.coerce.number({ error: 'Emlak tipini seçin.' }).int().positive({ error: 'Emlak tipini seçin.' }),
+});
 
-    const query = id
-      ? supabase.from('properties').update(row).eq('id', id)
-      : supabase.from('properties').insert({ ...row, created_by: user.id });
-    const { data: saved, error } = await query.select('id, slug, listing_no').single();
-    if (error || !saved) {
-      if (error?.code === '23514') return { ok: false, error: 'Konum bilgileri tutarsız. İl, ilçe ve mahalle seçimini kontrol edin.' };
-      return { ok: false, error: 'İlan kaydedilemedi. Lütfen bilgileri kontrol edip tekrar deneyin.' };
-    }
-
-    const { error: locError } = await supabase.from('property_locations').upsert({
-      property_id: saved.id,
-      address: d.address,
-      latitude: d.latitude,
-      longitude: d.longitude,
-      precision: d.location_precision,
-    });
-    if (locError) return { ok: false, error: 'İlan kaydedildi ancak konum bilgisi kaydedilemedi. Lütfen tekrar kaydedin.' };
-
-    const { error: delError } = await supabase.from('property_features').delete().eq('property_id', saved.id);
-    const featureIds = Array.from(new Set(d.feature_ids));
-    const { error: featError } = featureIds.length
-      ? await supabase.from('property_features').insert(featureIds.map((feature_id) => ({ property_id: saved.id, feature_id })))
-      : { error: null };
-    if (delError || featError) return { ok: false, error: 'İlan kaydedildi ancak özellikler kaydedilemedi. Lütfen tekrar kaydedin.' };
-
-    revalidatePublic(CACHE_TAGS.properties);
-    return { ok: true, data: { id: saved.id, slug: saved.slug, listingNo: saved.listing_no } };
-  } catch (e) {
-    return fail(e, 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.');
+/** Yeni ilan: taslak oluşturulur ve sihirbaza yönlendirilir (sonraki adımlar otomatik kaydedilir) */
+export async function createProperty(_prev: CreatePropertyState, formData: FormData): Promise<CreatePropertyState> {
+  const parsed = createSchema.safeParse({
+    title: formData.get('title'),
+    listing_type: formData.get('listing_type'),
+    property_type_id: formData.get('property_type_id'),
+  });
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) fieldErrors[String(issue.path[0])] ??= issue.message;
+    return { error: 'Lütfen işaretli alanları kontrol edin.', fieldErrors };
   }
-}
-
-export async function setPropertyStatus(id: string, status: PropertyStatus): Promise<ActionResult> {
+  let id: string;
   try {
-    const { supabase } = await requireAdmin();
-    if (!uuidRe.test(id) || !['draft', 'active', 'passive', 'sold', 'rented'].includes(status)) {
-      return { ok: false, error: 'Geçersiz işlem.' };
-    }
-    const { error } = await supabase.from('properties').update({ status }).eq('id', id);
-    if (error) return { ok: false, error: 'İlan durumu güncellenemedi.' };
-    revalidatePublic(CACHE_TAGS.properties);
-    return { ok: true };
-  } catch (e) {
-    return fail(e, 'İlan durumu güncellenemedi.');
-  }
-}
-
-export async function setPropertyFeatured(id: string, featured: boolean): Promise<ActionResult> {
-  try {
-    const { supabase } = await requireAdmin();
-    if (!uuidRe.test(id)) return { ok: false, error: 'Geçersiz ilan.' };
-    const { error } = await supabase.from('properties').update({ is_featured: featured }).eq('id', id);
-    if (error) return { ok: false, error: 'Öne çıkarma durumu güncellenemedi.' };
-    revalidatePublic(CACHE_TAGS.properties);
-    return { ok: true };
-  } catch (e) {
-    return fail(e, 'Öne çıkarma durumu güncellenemedi.');
-  }
-}
-
-/** Fiyatı hızlıca günceller (ilan tablosundan) */
-export async function updatePropertyPrice(id: string, price: number): Promise<ActionResult> {
-  try {
-    const { supabase } = await requireAdmin();
-    if (!uuidRe.test(id) || !Number.isFinite(price) || price <= 0 || price > 999_999_999_999) {
-      return { ok: false, error: 'Geçerli bir fiyat girin.' };
-    }
-    const { error } = await supabase.from('properties').update({ price }).eq('id', id);
-    if (error) return { ok: false, error: 'Fiyat güncellenemedi.' };
-    revalidatePublic(CACHE_TAGS.properties);
-    return { ok: true };
-  } catch (e) {
-    return fail(e, 'Fiyat güncellenemedi.');
-  }
-}
-
-async function removeStorageFiles(supabase: Awaited<ReturnType<typeof requireAdmin>>['supabase'], paths: string[]) {
-  const remote = paths.filter((p) => !isLocalImage(p));
-  if (remote.length) await supabase.storage.from(STORAGE_BUCKETS.propertyImages).remove(remote);
-}
-
-/** İlanı ve tüm fotoğraflarını kalıcı olarak siler (adres 301 ile kategoriye yönlenir) */
-export async function deleteProperty(id: string): Promise<ActionResult> {
-  try {
-    const { supabase } = await requireAdmin();
-    if (!uuidRe.test(id)) return { ok: false, error: 'Geçersiz ilan.' };
-    const { data: images } = await supabase.from('property_images').select('storage_path').eq('property_id', id);
-    const { error } = await supabase.from('properties').delete().eq('id', id);
-    if (error) return { ok: false, error: 'İlan silinemedi.' };
-    await removeStorageFiles(supabase, (images ?? []).map((i) => i.storage_path));
-    revalidatePublic(CACHE_TAGS.properties, CACHE_TAGS.redirects);
-    return { ok: true };
-  } catch (e) {
-    return fail(e, 'İlan silinemedi.');
-  }
-}
-
-/** Fotoğraf sırasını kaydeder */
-export async function reorderImages(propertyId: string, orderedIds: string[]): Promise<ActionResult> {
-  try {
-    const { supabase } = await requireAdmin();
-    if (!uuidRe.test(propertyId) || orderedIds.length > 100 || !orderedIds.every((x) => uuidRe.test(x))) {
-      return { ok: false, error: 'Geçersiz işlem.' };
-    }
-    const results = await Promise.all(
-      orderedIds.map((imageId, index) =>
-        supabase.from('property_images').update({ sort_order: index }).eq('id', imageId).eq('property_id', propertyId),
-      ),
-    );
-    if (results.some((r) => r.error)) return { ok: false, error: 'Fotoğraf sırası kaydedilemedi.' };
-    revalidatePublic(CACHE_TAGS.properties);
-    return { ok: true };
-  } catch (e) {
-    return fail(e, 'Fotoğraf sırası kaydedilemedi.');
-  }
-}
-
-export async function setCoverImage(propertyId: string, imageId: string): Promise<ActionResult> {
-  try {
-    const { supabase } = await requireAdmin();
-    if (!uuidRe.test(propertyId) || !uuidRe.test(imageId)) return { ok: false, error: 'Geçersiz işlem.' };
-    const { error: e1 } = await supabase
-      .from('property_images')
-      .update({ is_cover: false })
-      .eq('property_id', propertyId)
-      .eq('is_cover', true);
-    const { error: e2 } = await supabase
-      .from('property_images')
-      .update({ is_cover: true })
-      .eq('id', imageId)
-      .eq('property_id', propertyId);
-    if (e1 || e2) return { ok: false, error: 'Kapak fotoğrafı değiştirilemedi.' };
-    revalidatePublic(CACHE_TAGS.properties);
-    return { ok: true };
-  } catch (e) {
-    return fail(e, 'Kapak fotoğrafı değiştirilemedi.');
-  }
-}
-
-export async function deleteImage(propertyId: string, imageId: string): Promise<ActionResult> {
-  try {
-    const { supabase } = await requireAdmin();
-    if (!uuidRe.test(propertyId) || !uuidRe.test(imageId)) return { ok: false, error: 'Geçersiz işlem.' };
-    const { data: img } = await supabase
-      .from('property_images')
-      .select('storage_path, is_cover')
-      .eq('id', imageId)
-      .eq('property_id', propertyId)
-      .maybeSingle();
-    if (!img) return { ok: false, error: 'Fotoğraf bulunamadı.' };
-    const { error } = await supabase.from('property_images').delete().eq('id', imageId);
-    if (error) return { ok: false, error: 'Fotoğraf silinemedi.' };
-    await removeStorageFiles(supabase, [img.storage_path]);
-    if (img.is_cover) {
-      const { data: next } = await supabase
-        .from('property_images')
-        .select('id')
-        .eq('property_id', propertyId)
-        .order('sort_order')
-        .limit(1)
-        .maybeSingle();
-      if (next) await supabase.from('property_images').update({ is_cover: true }).eq('id', next.id);
-    }
-    revalidatePublic(CACHE_TAGS.properties);
-    return { ok: true };
-  } catch (e) {
-    return fail(e, 'Fotoğraf silinemedi.');
-  }
-}
-
-/** İlan formundan hızlıca yeni mahalle/ilçe ekleme */
-export async function addLocation(
-  kind: 'district' | 'neighborhood',
-  parentId: number,
-  name: string,
-): Promise<ActionResult<{ id: number; name: string; slug: string }>> {
-  try {
-    const { supabase } = await requireAdmin();
-    const clean = name.trim().replace(/\s+/g, ' ');
-    if (clean.length < 2 || clean.length > 80 || !Number.isInteger(parentId) || parentId <= 0) {
-      return { ok: false, error: 'Geçerli bir ad girin (2-80 karakter).' };
-    }
-    const slug = slugify(clean, 60);
-    if (!slug) return { ok: false, error: 'Geçerli bir ad girin.' };
-    const table = kind === 'district' ? 'districts' : 'neighborhoods';
-    const parentKey = kind === 'district' ? 'city_id' : 'district_id';
-    const { data, error } = await supabase
-      .from(table)
-      .insert({ [parentKey]: parentId, name: clean, slug })
-      .select('id, name, slug')
+    const ctx = await requirePermission('properties.create');
+    const [{ data: type }, { data: settings }] = await Promise.all([
+      ctx.supabase.from('property_types').select('category').eq('id', parsed.data.property_type_id).maybeSingle(),
+      ctx.supabase.from('organization_settings').select('default_location_precision').eq('organization_id', ctx.org.id).maybeSingle(),
+    ]);
+    if (!type) return { fieldErrors: { property_type_id: 'Geçersiz emlak tipi.' } };
+    const { data, error } = await ctx.supabase
+      .from('properties')
+      .insert({
+        organization_id: ctx.org.id,
+        title: parsed.data.title.replace(/[<>]/g, ''),
+        listing_type: parsed.data.listing_type,
+        property_type_id: parsed.data.property_type_id,
+        category: type.category,
+        // Şirket ayarlarındaki varsayılan konum gösterimi (Ayarlar › İlan varsayılanları)
+        location_precision: settings?.default_location_precision ?? 'approximate',
+        // Veritabanı tetikleyicisi üretir (benzersiz adres ve EKG-2026-0001 biçiminde ilan no)
+        slug: '',
+        reference_no: '',
+        status: 'draft',
+        created_by: ctx.user.id,
+      })
+      .select('id')
       .single();
-    if (error) {
-      if (error.code === '23505') return { ok: false, error: 'Bu ad zaten listede mevcut.' };
-      return { ok: false, error: 'Konum eklenemedi.' };
-    }
-    revalidatePublic(CACHE_TAGS.taxonomy);
-    return { ok: true, data };
-  } catch (e) {
-    return fail(e, 'Konum eklenemedi.');
+    if (error) return { error: mapDbError(error) };
+    id = data.id;
+    invalidate(ctx.org.id);
+  } catch (error) {
+    return { error: toActionFailure(error).error };
   }
+  redirect(`/admin/ilanlar/${id}?adim=konum`);
+}
+
+export interface SaveInput {
+  patch?: PropertyPatch;
+  location?: PrivateLocation;
+  featureIds?: number[];
+  /** Düzenlemeye başlanan sürüm: başkası arada kaydetmişse üzerine yazılmaz */
+  expectedUpdatedAt: string;
+}
+
+export interface SaveResult {
+  updatedAt: string;
+  slug: string;
+}
+
+/**
+ * Otomatik kaydetme. İyimser eşzamanlılık: `updated_at` değişmişse (başka bir
+ * kullanıcı/sekme kaydetmiş) kayıt yapılmaz ve "conflict" döner.
+ */
+export async function saveProperty(id: string, input: SaveInput): Promise<ActionResult<SaveResult>> {
+  return runAction(async () => {
+    const ctx = await requirePermission('properties.update');
+    const current = await loadOwned(ctx, id);
+    if (current.deleted_at) throw new ActionError('Bu ilan çöp kutusunda. Düzenlemek için önce geri yükleyin.', 'deleted');
+    if (current.updated_at !== input.expectedUpdatedAt) {
+      throw new ActionError('Bu ilan siz düzenlerken başka bir oturumda değiştirildi. Son hali yüklenecek.', 'conflict');
+    }
+
+    const patch = input.patch ? propertyPatchSchema.parse(input.patch) : {};
+    if ('is_featured' in patch || 'show_on_homepage' in patch) {
+      if (!ctx.can('properties.publish')) throw new ActionError('Öne çıkarma ve ana sayfa vitrini için yayın yetkisi gerekir.', 'forbidden');
+    }
+    if (patch.og_media_id) {
+      const { data: media } = await ctx.supabase.from('media_assets').select('property_id, status').eq('id', patch.og_media_id).maybeSingle();
+      if (!media || media.property_id !== id || media.status !== 'ready') throw new ActionError('Paylaşım görseli bu ilana ait olmalıdır.');
+    }
+
+    if (Object.keys(patch).length > 0) {
+      const { data, error } = await ctx.supabase
+        .from('properties')
+        .update({ ...patch, updated_by: ctx.user.id })
+        .eq('id', id)
+        .eq('updated_at', input.expectedUpdatedAt)
+        .select('id');
+      assertNoDbError(error);
+      if (!data?.length) throw new ActionError('Bu ilan siz düzenlerken başka bir oturumda değiştirildi. Son hali yüklenecek.', 'conflict');
+    }
+
+    if (input.location) {
+      const location = locationSchema.parse(input.location);
+      const { data: prop } = await ctx.supabase.from('properties').select('location_precision').eq('id', id).single();
+      const { error } = await ctx.supabase.from('property_locations').upsert(
+        {
+          property_id: id,
+          organization_id: ctx.org.id,
+          address: location.address,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          precision: prop?.location_precision ?? 'approximate',
+        },
+        { onConflict: 'property_id' },
+      );
+      assertNoDbError(error);
+    }
+
+    if (input.featureIds) {
+      const ids = [...new Set(featureIdsSchema.parse(input.featureIds))];
+      const { error: delError } = await ctx.supabase.from('property_features').delete().eq('property_id', id);
+      assertNoDbError(delError);
+      if (ids.length) {
+        const { error } = await ctx.supabase
+          .from('property_features')
+          .insert(ids.map((feature_id) => ({ property_id: id, feature_id, organization_id: ctx.org.id })));
+        assertNoDbError(error);
+      }
+    }
+
+    const { data: fresh, error: freshError } = await ctx.supabase.from('properties').select('updated_at, slug').eq('id', id).single();
+    assertNoDbError(freshError);
+    if (!fresh) throw new NotFoundError();
+    invalidate(ctx.org.id);
+    return { updatedAt: fresh.updated_at, slug: fresh.slug };
+  });
+}
+
+const statusSchema = z.enum(['draft', 'pending', 'published', 'sold', 'rented', 'archived']);
+
+/** Durum değişikliği (yayınla, onaya gönder, satıldı...). Kurallar veritabanında da uygulanır. */
+export async function setPropertyStatus(id: string, status: ListingStatus, expectedUpdatedAt: string): Promise<ActionResult<SaveResult>> {
+  return runAction(async () => {
+    const next = statusSchema.parse(status);
+    const needsPublish = ['published', 'sold', 'rented'].includes(next);
+    const ctx = await requirePermission(needsPublish ? 'properties.publish' : 'properties.update');
+    const current = await loadOwned(ctx, id);
+    if (current.deleted_at) throw new ActionError('Çöp kutusundaki ilanın durumu değiştirilemez.');
+    if (current.updated_at !== expectedUpdatedAt) {
+      throw new ActionError('Bu ilan siz düzenlerken başka bir oturumda değiştirildi. Son hali yüklenecek.', 'conflict');
+    }
+    if (['published', 'sold', 'rented'].includes(current.status) && !ctx.can('properties.publish')) {
+      throw new ActionError('Yayındaki ilanların durumunu değiştirme yetkiniz yok.', 'forbidden');
+    }
+    const { data, error } = await ctx.supabase
+      .from('properties')
+      .update({ status: next, updated_by: ctx.user.id })
+      .eq('id', id)
+      .eq('updated_at', expectedUpdatedAt)
+      .select('updated_at, slug');
+    assertNoDbError(error);
+    if (!data?.length) throw new ActionError('Bu ilan siz düzenlerken başka bir oturumda değiştirildi.', 'conflict');
+    invalidate(ctx.org.id);
+    return { updatedAt: data[0].updated_at, slug: data[0].slug };
+  });
+}
+
+const BULK_ACTIONS = ['publish', 'archive', 'delete', 'restore', 'feature', 'unfeature', 'purge'] as const;
+export type BulkAction = (typeof BULK_ACTIONS)[number];
+
+const BULK_PERMISSION: Record<BulkAction, 'properties.publish' | 'properties.delete' | 'properties.update'> = {
+  publish: 'properties.publish',
+  archive: 'properties.publish',
+  feature: 'properties.publish',
+  unfeature: 'properties.publish',
+  delete: 'properties.delete',
+  restore: 'properties.delete',
+  purge: 'properties.delete',
+};
+
+export interface BulkResult {
+  done: number;
+  failed: { id: string; error: string }[];
+}
+
+/** Toplu işlem: her ilan ayrı alt işlemde; başarısız olanlar gerekçesiyle raporlanır */
+export async function bulkPropertyAction(ids: string[], action: BulkAction): Promise<ActionResult<BulkResult>> {
+  return runAction(async () => {
+    const act = z.enum(BULK_ACTIONS).parse(action);
+    const list = z.array(z.uuid()).min(1, { error: 'İlan seçilmedi.' }).max(100, { error: 'Tek seferde en fazla 100 ilan seçilebilir.' }).parse(ids);
+    const ctx = await requirePermission(BULK_PERMISSION[act]);
+    // Yalnızca aktif organizasyonun ilanları işlenir
+    const { data: owned, error: ownedError } = await ctx.supabase.from('properties').select('id').eq('organization_id', ctx.org.id).in('id', list);
+    assertNoDbError(ownedError);
+    const ownedIds = (owned ?? []).map((r) => r.id);
+    const { data, error } = await ctx.supabase.rpc('bulk_property_action', { p_ids: ownedIds, p_action: act });
+    assertNoDbError(error);
+    const result = data as unknown as { ok: string[]; failed: { id: string; error: string; detail?: string; hint?: string }[] };
+    invalidate(ctx.org.id);
+    return {
+      done: result.ok.length,
+      failed: [
+        ...list.filter((i) => !ownedIds.includes(i)).map((i) => ({ id: i, error: 'İlan bulunamadı.' })),
+        ...result.failed.map((f) => ({
+          id: f.id,
+          error:
+            f.error === 'not_found_or_forbidden'
+              ? 'İşlem bu ilana uygulanamadı.'
+              : mapDbError({ message: f.error, details: f.detail ?? null, hint: f.hint ?? null }),
+        })),
+      ],
+    };
+  });
+}
+
+/** İlanı kopyala: fotoğraflar hariç tüm bilgilerle yeni taslak */
+export async function duplicateProperty(id: string): Promise<ActionResult<{ id: string }>> {
+  return runAction(async () => {
+    const ctx = await requirePermission('properties.create');
+    await loadOwned(ctx, id);
+    const { data: source, error } = await ctx.supabase.from('properties').select('*').eq('id', id).single();
+    assertNoDbError(error);
+    if (!source) throw new NotFoundError();
+    const omit = new Set([
+      'id', 'slug', 'reference_no', 'status', 'published_at', 'created_at', 'updated_at', 'deleted_at', 'deleted_by', 'updated_by',
+      'status_changed_at', 'price_previous', 'price_changed_at', 'price_dropped_at', 'og_media_id', 'is_featured', 'show_on_homepage',
+      'is_demo', 'floor_position', 'rooms_label', 'public_latitude', 'public_longitude', 'created_by',
+    ]);
+    const copy = Object.fromEntries(Object.entries(source).filter(([k]) => !omit.has(k)));
+    const title = `${source.title} (kopya)`.slice(0, 120);
+    const insert = { ...copy, title, slug: '', reference_no: '', status: 'draft', created_by: ctx.user.id } as TablesInsert<'properties'>;
+    const { data: created, error: insertError } = await ctx.supabase.from('properties').insert(insert).select('id').single();
+    assertNoDbError(insertError);
+    if (!created) throw new ActionError('İlan kopyalanamadı.');
+    const [{ data: features }, { data: location }] = await Promise.all([
+      ctx.supabase.from('property_features').select('feature_id').eq('property_id', id),
+      ctx.supabase.from('property_locations').select('address, latitude, longitude, precision').eq('property_id', id).maybeSingle(),
+    ]);
+    if (features?.length) {
+      await ctx.supabase.from('property_features').insert(features.map((f) => ({ property_id: created.id, feature_id: f.feature_id, organization_id: ctx.org.id })));
+    }
+    if (location) await ctx.supabase.from('property_locations').insert({ ...location, property_id: created.id, organization_id: ctx.org.id });
+    invalidate(ctx.org.id);
+    return { id: created.id };
+  }, 'İlan kopyalandı. Fotoğrafları yeni taslağa ekleyebilirsiniz.');
 }

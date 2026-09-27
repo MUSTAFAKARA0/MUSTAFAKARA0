@@ -1,28 +1,29 @@
-import { Breadcrumbs } from './breadcrumbs';
+import { Breadcrumbs, type Crumb } from '@/components/common/breadcrumbs';
+import type { Tenant } from '@/platform/tenant/tenant';
 
 export function PageHeader({
+  tenant,
   title,
   description,
-  path,
+  crumbs,
   eyebrow,
+  children,
 }: {
+  tenant: Tenant;
   title: string;
-  description?: string;
-  path: string;
+  description?: React.ReactNode;
+  crumbs: Crumb[];
   eyebrow?: string;
+  children?: React.ReactNode;
 }) {
   return (
-    <div className="border-b border-line bg-surface">
-      <div className="container-page py-8 sm:py-12">
-        <Breadcrumbs
-          items={[
-            { name: 'Ana Sayfa', path: '/' },
-            { name: title, path },
-          ]}
-        />
-        {eyebrow && <p className="mt-6 text-xs font-bold tracking-[0.2em] text-accent-700 uppercase">{eyebrow}</p>}
-        <h1 className="mt-3 font-display text-[2rem] leading-tight text-ink sm:text-[2.6rem]">{title}</h1>
-        {description && <p className="mt-3 max-w-2xl text-[15px] leading-relaxed text-sand-600 sm:text-base">{description}</p>}
+    <div className="border-b border-border bg-surface">
+      <div className="container-page pt-7 pb-10 sm:pt-9 sm:pb-14">
+        <Breadcrumbs tenant={tenant} items={[{ name: 'Ana sayfa', path: '/' }, ...crumbs]} />
+        {eyebrow && <p className="eyebrow mt-8">{eyebrow}</p>}
+        <h1 className={`${eyebrow ? 'mt-3' : 'mt-8'} max-w-4xl font-display text-display-xl text-foreground`}>{title}</h1>
+        {description && <div className="mt-4 max-w-2xl text-[16px] leading-relaxed text-muted-foreground sm:text-[17px]">{description}</div>}
+        {children}
       </div>
     </div>
   );

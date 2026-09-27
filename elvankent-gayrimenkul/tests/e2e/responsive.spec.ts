@@ -2,15 +2,15 @@ import { expect, test } from '@playwright/test';
 
 /** Tüm hedef genişliklerde taşma / yatay kaydırma kontrolü */
 const WIDTHS = [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920];
-const PAGES = ['/', '/satilik', '/iletisim', '/hakkimizda', '/favoriler'];
+const PAGES = ['/', '/satilik', '/kiralik', '/iletisim', '/hakkimizda', '/favoriler', '/blog', '/bolgeler', '/karsilastir', '/degerleme'];
 
 test.describe('Responsive', () => {
   test('hedef genişliklerde yatay taşma yok', async ({ page, isMobile }) => {
     test.skip(isMobile, 'Genişlikler bu testte tek tek ayarlanır');
     test.setTimeout(240_000);
     // İlk ilanın detay sayfasını da kontrol listesine ekle
-    await page.goto('/ilanlar');
-    const detail = await page.locator('#sonuclar article h3 a').first().getAttribute('href');
+    await page.goto('/satilik');
+    const detail = await page.getByRole('region', { name: 'Arama sonuçları' }).locator('article h3 a').first().getAttribute('href');
     const paths = detail ? [...PAGES, detail] : PAGES;
 
     for (const width of WIDTHS) {

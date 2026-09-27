@@ -4,35 +4,34 @@ import sharp from 'sharp';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * Yönetici senaryoları: giriş, ilan oluşturma, fotoğraf yönetimi, yayın
- * durumu, fiyat değişikliği, silme ve iletişim taleplerinin görüntülenmesi.
- * Gerekli: E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD
+ * Yönetici senaryoları (V2): giriş ve yetki, ilan sihirbazı (konum, fotoğraf
+ * yükleme ve işleme, fiyat, açıklama, yayın), sitede görünme, fiyat
+ * değişikliği, çöp kutusu, talepler, blog yazısı ve yönetim sayfaları.
+ *
+ * Gerekli: E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD (organizasyonda owner/admin rolü)
+ * Not: Test, sonunda çöp kutusuna taşıdığı bir test ilanı ve kalıcı sildiği bir
+ * test yazısı oluşturur.
  */
 const email = process.env.E2E_ADMIN_EMAIL;
 const password = process.env.E2E_ADMIN_PASSWORD;
 const fixtureDir = path.join(__dirname, '.fixtures');
-const images = ['bir', 'iki', 'uc'].map((n) => path.join(fixtureDir, `foto-${n}.jpg`));
+const images = ['bir', 'iki'].map((n) => path.join(fixtureDir, `foto-${n}.jpg`));
 
 test.describe.configure({ mode: 'serial' });
 test.skip(!email || !password, 'E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD tanımlı değil');
 
-let propertyUrl = '';
-let adminEditUrl = '';
-const title = `E2E Test İlanı ${Date.now().toString().slice(-6)} Elvankent 3+1`;
+const stamp = Date.now().toString(36);
+const title = `E2E test ilanı ${stamp} – Elvankent 3+1 daire`;
+let editorUrl = '';
+let publicPath = '';
 
 test.beforeAll(async () => {
   mkdirSync(fixtureDir, { recursive: true });
-  const colors = ['#2f7c6e', '#c08a3e', '#45423d'];
+  const colors = ['#2f7c6e', '#c08a3e'];
   await Promise.all(
     images.map((file, i) =>
       sharp({ create: { width: 1600, height: 1067, channels: 3, background: colors[i] } })
-        .composite([
-          {
-            input: Buffer.from(
-              `<svg width="1600" height="1067"><text x="800" y="560" font-size="200" text-anchor="middle" fill="#fff" font-family="sans-serif">${i + 1}</text></svg>`,
-            ),
-          },
-        ])
+        .composite([{ input: Buffer.from(`<svg width="1600" height="1067"><text x="800" y="560" font-size="200" text-anchor="middle" fill="#fff" font-family="sans-serif">${i + 1}</text></svg>`) }])
         .jpeg({ quality: 85 })
         .toFile(file),
     ),
@@ -44,10 +43,16 @@ async function login(page: Page) {
   await page.getByLabel('E-posta').fill(email!);
   await page.getByLabel('Şifre', { exact: true }).fill(password!);
   await page.getByRole('button', { name: 'Giriş yap' }).click();
-  await expect(page.getByRole('heading', { name: 'Hoş geldiniz' })).toBeVisible();
+  await expect(page).toHaveURL(/\/admin(\?|$)/);
 }
 
-test('Yetkisiz erişim giriş sayfasına yönlenir, hatalı şifre reddedilir', async ({ page }) => {
+test.beforeEach(async ({ page }) => {
+  page.on('pageerror', (e) => {
+    throw new Error(`Sayfa hatası: ${e.message}`);
+  });
+});
+
+test('Yetkisiz erişim girişe yönlenir, hatalı şifre reddedilir', async ({ page }) => {
   await page.goto('/admin/ilanlar');
   await expect(page).toHaveURL(/\/admin\/giris\?next=%2Fadmin%2Filanlar/);
   await page.getByLabel('E-posta').fill(email!);
@@ -56,134 +61,120 @@ test('Yetkisiz erişim giriş sayfasına yönlenir, hatalı şifre reddedilir', 
   await expect(page.getByText('E-posta veya şifre hatalı.')).toBeVisible();
 });
 
-test('1. Giriş ve işletme ayarları (telefon/WhatsApp)', async ({ page }) => {
+test('İlan sihirbazı: taslak, konum, fotoğraflar, fiyat, açıklama ve yayın', async ({ page }) => {
+  test.setTimeout(240_000);
   await login(page);
-  await page.goto('/admin/ayarlar');
-  await page.getByLabel('Telefon').fill('0532 123 45 67');
-  await page.getByLabel('WhatsApp numarası').fill('0532 123 45 67');
-  await page.getByLabel('E-posta').fill('info@ornek-emlak.test');
-  await page.getByRole('button', { name: 'Ayarları kaydet' }).click();
-  await expect(page.getByText('Ayarlar kaydedildi')).toBeVisible();
-});
+  await page.goto('/admin/ilanlar/yeni');
+  await page.locator('#property_type_id').selectOption({ label: 'Daire' });
+  await page.locator('#title').fill(title);
+  await page.getByRole('button', { name: /Taslağı oluştur/ }).click();
+  await expect(page).toHaveURL(/\/admin\/ilanlar\/[0-9a-f-]{36}/, { timeout: 60_000 });
+  editorUrl = page.url().split('?')[0];
 
-test('2-6. Yeni ilan: bilgiler, 3 fotoğraf, sıralama ve yayınlama', async ({ page }) => {
-  await login(page);
-  await page.getByRole('link', { name: 'Yeni İlan Ekle' }).first().click();
-  await expect(page.getByRole('heading', { name: 'Yeni İlan Ekle' })).toBeVisible();
+  // Konum (otomatik kaydedilir)
+  await page.getByLabel(/^İl\*?$/).selectOption({ label: 'Ankara' });
+  await page.getByLabel(/^İlçe\*?$/).selectOption({ label: 'Etimesgut' });
+  await page.getByLabel(/^Mahalle$/).selectOption({ label: 'Elvankent' });
+  await expect(page.getByText(/Kaydedildi/).first()).toBeVisible({ timeout: 30_000 });
 
-  // Önce eksik bilgiyle yayınlamayı dene → doğrulama hataları
-  await page.getByRole('button', { name: 'Yayınla' }).click();
-  await expect(page.getByText('Lütfen işaretli alanları kontrol edin.')).toBeVisible();
+  // Fotoğraflar: doğrudan depolamaya yükleme + sunucuda WebP boyutları
+  await page.getByRole('button', { name: /Fotoğraflar/ }).first().click();
+  await page.locator('input[type=file][multiple]').setInputFiles(images);
+  await page.waitForFunction(() => document.querySelectorAll('li[draggable="true"]').length >= 2, null, { timeout: 120_000 });
+  await expect(page.getByText('Kapak').first()).toBeVisible();
 
-  await page.getByLabel('İlan başlığı').fill(title);
-  await page.getByLabel('Emlak tipi').selectOption({ label: 'Daire' });
+  // Fiyat, özellikler, açıklama
+  await page.getByRole('button', { name: /Temel bilgiler/ }).first().click();
+  await page.getByLabel('Satış fiyatı').fill('4500000');
+  await page.getByRole('button', { name: /Özellikler/ }).first().click();
+  await page.getByLabel('Brüt alan').fill('145');
+  await page.getByLabel('Oda sayısı').fill('3');
+  await page.getByLabel('Salon sayısı').fill('1');
+  await page.getByRole('button', { name: /Açıklama/ }).first().click();
   await page
-    .getByRole('textbox', { name: 'Açıklama', exact: true })
-    .fill('Uçtan uca test için oluşturulan ilan. Güney cepheli, site içinde, asansörlü ve otoparklı 3+1 daire.');
-  await page.getByRole('combobox', { name: 'İl', exact: true }).selectOption({ label: 'Ankara' });
-  await page.getByRole('combobox', { name: 'İlçe', exact: true }).selectOption({ label: 'Etimesgut' });
-  await page.getByRole('combobox', { name: 'Mahalle', exact: true }).selectOption({ label: 'Elvankent' });
-  await page.getByLabel('Enlem').fill('39.948100');
-  await page.getByLabel('Boylam').fill('32.624500');
-  await page.getByRole('textbox', { name: 'Fiyat', exact: true }).fill('3950000');
-  await page.getByLabel('Brüt m²').fill('140');
-  await page.getByLabel('Net m²').fill('120');
-  await page.getByLabel('Oda', { exact: true }).selectOption('3');
-  await page.getByLabel('Salon', { exact: true }).selectOption('1');
-  await page.getByLabel('Asansör').selectOption('true');
-  await page.getByLabel('Krediye uygun').selectOption('true');
-  await page.getByLabel('Ankastre mutfak').check();
+    .getByLabel('İlan açıklaması')
+    .fill('Güney cepheli, gün boyu güneş alan geniş salon. Site içinde kapalı otopark bulunmaktadır. Bu ilan otomatik uçtan uca test için oluşturulmuştur.');
+  await expect(page.getByText(/Kaydedildi/).first()).toBeVisible({ timeout: 30_000 });
 
-  await page.getByLabel('Fotoğraf seç').setInputFiles(images);
-  const tiles = page.locator('#fotograflar li');
-  await expect(tiles).toHaveCount(3);
-  // 3. fotoğrafı en başa taşı → kapak olur
-  await tiles.nth(2).getByRole('button', { name: 'Sola taşı' }).click();
-  await tiles.nth(1).getByRole('button', { name: 'Sola taşı' }).click();
-
-  await page.getByRole('button', { name: 'Yayınla' }).click();
-  await expect(page).toHaveURL(/\/admin\/ilan\/[0-9a-f-]{36}\?yeni=1/, { timeout: 60_000 });
-  adminEditUrl = page.url().split('?')[0];
-  await expect(page.getByRole('heading', { name: 'İlanı Düzenle' })).toBeVisible();
-  const saved = page.locator('#fotograflar ul').first().locator('li');
-  await expect(saved).toHaveCount(3);
-  await expect(saved.first().getByText('Kapak')).toBeVisible();
-  propertyUrl = (await page.getByRole('link', { name: 'Sitede görüntüle' }).getAttribute('href'))!;
-  expect(propertyUrl).toMatch(/^\/ilan\/satilik-.*-\d{6}$/);
+  // Yayın
+  await page.getByRole('button', { name: /Yayınlama/ }).first().click();
+  await page.getByRole('button', { name: 'Yayınla', exact: true }).click();
+  await expect(page.getByText('İlan yayınlandı.')).toBeVisible({ timeout: 30_000 });
+  publicPath = (await page.locator('a[href^="/ilan/"]').first().getAttribute('href')) ?? '';
+  expect(publicPath).toMatch(/^\/ilan\/[a-z0-9-]+$/);
 });
 
-test('4-5. Fotoğraf sıralaması ve kapak değişikliği kalıcıdır', async ({ page }) => {
-  await login(page);
-  await page.goto(adminEditUrl);
-  const list = page.locator('#fotograflar ul').first().locator('li');
-  await list.nth(1).getByRole('button', { name: 'Kapak yap' }).click();
-  await expect(page.getByText('Kapak fotoğrafı güncellendi')).toBeVisible();
-  await list.nth(2).getByRole('button', { name: 'Sola taşı' }).click();
-  await page.waitForTimeout(1000);
-  await page.reload();
-  const after = page.locator('#fotograflar ul').first().locator('li');
-  await expect(after).toHaveCount(3);
-  // Kapak işaretli fotoğraf (önceki 2. sıra) artık 3. sırada olmalı
-  await expect(after.nth(2).getByText('Kapak')).toBeVisible();
-});
-
-test('6-8. Yayındaki ilan sitede görünür; fiyat düzenlenir', async ({ page }) => {
-  await login(page);
-  await page.goto(adminEditUrl);
-  await page.getByRole('textbox', { name: 'Fiyat', exact: true }).fill('3875000');
-  await page.getByRole('button', { name: 'Kaydet' }).click();
-  await expect(page.getByText('Değişiklikler yayında')).toBeVisible();
-
-  await page.goto(propertyUrl);
+test('Yayındaki ilan sitede görünür; fiyat değişikliği yansır', async ({ page }) => {
+  test.skip(!publicPath, 'Önceki test ilanı yayınlamadı');
+  await page.goto(publicPath);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(title);
-  await expect(page.getByText('₺3.875.000').first()).toBeVisible();
-  const wa = page.locator('a[href^="https://wa.me/905321234567"]').first();
-  await expect(wa).toHaveAttribute('href', /text=/);
-});
-
-test('9-10. Pasife alınan ilan sitede görünmez, tekrar aktif edilince görünür', async ({ page, request }) => {
-  await login(page);
-  await page.goto(`/admin/ilanlar?q=${encodeURIComponent(title.split(' ').slice(0, 4).join(' '))}`);
-  const row = page.locator('tbody tr').filter({ hasText: title });
-  await row.getByRole('button', { name: 'Yayından kaldır' }).click();
-  await expect(page.getByText('İlan yayından kaldırıldı')).toBeVisible();
-  expect((await request.get(propertyUrl)).status()).toBe(404);
-
-  await row.getByRole('button', { name: 'Yayına al' }).click();
-  await expect(page.getByText('İlan yayına alındı')).toBeVisible();
-  expect((await request.get(propertyUrl)).status()).toBe(200);
-});
-
-test('12. İletişim talebi admin panelinde görünür', async ({ page, browser }) => {
-  const visitor = await browser.newPage();
-  await visitor.goto(propertyUrl);
-  const form = visitor.locator('form').filter({ has: visitor.getByRole('button', { name: 'Mesaj Gönder' }) }).last();
-  await visitor.waitForTimeout(3000);
-  await form.getByLabel('Ad Soyad').fill('E2E Alıcı Adayı');
-  await form.getByLabel('Telefon').fill('05329998877');
-  await form.getByRole('checkbox').check();
-  await form.getByRole('button', { name: 'Mesaj Gönder' }).click();
-  await expect(visitor.getByText('Mesajınız alındı.').first()).toBeVisible();
-  await visitor.close();
+  await expect(page.getByText(/4\.500\.000/).first()).toBeVisible();
 
   await login(page);
-  await page.goto('/admin/mesajlar');
-  const msg = page.locator('li').filter({ hasText: 'E2E Alıcı Adayı' }).first();
-  await expect(msg).toBeVisible();
-  await expect(msg).toContainText(title);
-  await msg.getByRole('button', { name: 'Yanıtlandı' }).click();
-  await expect(page.getByText('Yanıtlandı olarak işaretlendi')).toBeVisible();
+  await page.goto(`${editorUrl}?adim=temel`);
+  await page.getByLabel('Satış fiyatı').fill('4250000');
+  await expect(page.getByText(/Kaydedildi/).first()).toBeVisible({ timeout: 30_000 });
+  await expect(async () => {
+    await page.goto(publicPath);
+    await expect(page.getByText(/4\.250\.000/).first()).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
 });
 
-test('11. İlan silinir; eski adres kategoriye kalıcı yönlenir', async ({ page, request }) => {
+test('Talepler listesi ve yönetim sayfaları hatasız açılır', async ({ page }) => {
   await login(page);
-  await page.goto(`/admin/ilanlar?q=${encodeURIComponent(title.split(' ').slice(0, 4).join(' '))}`);
-  const row = page.locator('tbody tr').filter({ hasText: title });
-  await row.getByRole('button', { name: /diğer işlemler/ }).click();
-  await page.getByRole('menuitem', { name: 'İlanı sil' }).click();
-  await page.getByRole('button', { name: 'Kalıcı olarak sil' }).click();
-  await expect(page.getByText('İlan silindi')).toBeVisible();
-  const res = await request.get(propertyUrl, { maxRedirects: 0 });
-  expect([301, 308]).toContain(res.status());
-  expect(res.headers()['location']).toMatch(/\/satilik$/);
+  for (const [url, heading] of [
+    ['/admin', /Merhaba|Dashboard/],
+    ['/admin/ilanlar', 'İlanlar'],
+    ['/admin/talepler', 'Talepler'],
+    ['/admin/medya', 'Medya kütüphanesi'],
+    ['/admin/icerikler', 'Blog ve içerikler'],
+    ['/admin/bolgeler', 'Bölge sayfaları'],
+    ['/admin/seo', 'SEO'],
+    ['/admin/ayarlar', 'Ayarlar'],
+    ['/admin/sirket', 'Şirket ayarları'],
+    ['/admin/kullanicilar', 'Kullanıcılar'],
+    ['/admin/guvenlik', 'Güvenlik ve işlem kayıtları'],
+  ] as const) {
+    const res = await page.goto(url);
+    expect(res?.status(), url).toBeLessThan(400);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading);
+  }
+});
+
+test('Blog yazısı yayınlanır, sitede görünür ve kalıcı silinir', async ({ page, request }) => {
+  await login(page);
+  await page.goto('/admin/icerikler/yeni');
+  const postTitle = `E2E test yazısı ${stamp}`;
+  await page.getByRole('textbox', { name: /^Başlık/ }).fill(postTitle);
+  await page
+    .locator('textarea[id^="md-"]')
+    .fill(
+      '## Giriş\n\nBu yazı otomatik uçtan uca test için oluşturulmuştur. Kira sözleşmesinde tarafların bilgileri, kira bedeli, artış koşulları ve depozito açıkça yazılmalıdır.\n\n- Teslim tutanağı hazırlayın\n- Demirbaşları listeleyin\n\nTest sonunda bu yazı kalıcı olarak silinir.',
+    );
+  await page.getByRole('button', { name: 'Yayınla' }).click();
+  await expect(page.getByText('Yazı yayınlandı.')).toBeVisible({ timeout: 20_000 });
+  const slug = await page.locator('#post-slug').inputValue();
+  expect((await request.get(`/blog/${slug}`)).status()).toBe(200);
+
+  await page.getByRole('button', { name: 'Çöp kutusuna taşı' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Taşı' }).click();
+  await expect(page).toHaveURL(/\/admin\/icerikler$/);
+  await page.goto('/admin/icerikler?durum=cop');
+  await page.locator('li', { hasText: postTitle }).getByRole('button', { name: 'Kalıcı sil' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Kalıcı sil' }).click();
+  await expect(page.getByText(/kalıcı olarak silindi/)).toBeVisible({ timeout: 20_000 });
+});
+
+test('Test ilanı çöp kutusuna taşınır ve sitede artık görünmez', async ({ page, request }) => {
+  test.skip(!editorUrl, 'Test ilanı oluşturulmadı');
+  await login(page);
+  await page.goto('/admin/ilanlar');
+  await page.getByRole('button', { name: `${title} için işlemler` }).filter({ visible: true }).first().click();
+  await page.getByRole('menuitem', { name: 'Çöpe taşı' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Çöpe taşı' }).click();
+  await expect(page.getByText('1 ilan çöp kutusuna taşındı.')).toBeVisible({ timeout: 20_000 });
+  await expect(async () => {
+    const res = await request.get(publicPath, { maxRedirects: 0 });
+    expect(res.status()).toBe(404);
+  }).toPass({ timeout: 30_000 });
 });

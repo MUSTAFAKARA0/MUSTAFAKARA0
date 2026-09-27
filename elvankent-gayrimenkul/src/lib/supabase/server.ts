@@ -4,14 +4,17 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { publicEnv } from '@/lib/env';
 import { serverEnv } from '@/lib/server-env';
+import type { Database } from '@/types/supabase';
+
+export type DB = SupabaseClient<Database>;
 
 /**
  * Oturum çerezlerini kullanan sunucu istemcisi (yönetim paneli, server action).
  * Kullanıcının JWT'si ile çalışır → tüm sorgular RLS'e tabidir.
  */
-export async function createSessionClient(): Promise<SupabaseClient> {
+export async function createSessionClient(): Promise<DB> {
   const cookieStore = await cookies();
-  return createServerClient(publicEnv.supabaseUrl, publicEnv.supabaseAnonKey, {
+  return createServerClient<Database>(publicEnv.supabaseUrl, publicEnv.supabaseAnonKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -28,13 +31,39 @@ export async function createSessionClient(): Promise<SupabaseClient> {
 }
 
 /**
- * service_role istemcisi — RLS'i atlar. SADECE sunucuda, dar kapsamlı
- * işlemler için (iletişim formu kaydı, istatistik olayı) kullanılır.
- * Anahtar tanımlı değilse null döner.
+ * service_role istemcisi — RLS'i ATLAR. SADECE sunucuda, dar kapsamlı sistem
+ * işlemleri için kullanılır (form kaydı, olay kaydı, güvenlik logu, kullanıcı
+ * oluşturma, zamanlanmış temizlik). Anahtar tanımlı değilse null döner.
  */
-export function createServiceClient(): SupabaseClient | null {
+export function createServiceClient(): DB | null {
   if (!serverEnv.supabaseServiceRoleKey || !publicEnv.supabaseUrl) return null;
-  return createClient(publicEnv.supabaseUrl, serverEnv.supabaseServiceRoleKey, {
+  return createClient<Database>(publicEnv.supabaseUrl, serverEnv.supabaseServiceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
+/**
+ * Önbelleğe alınabilir anonim istemci (herkese açık sayfalar). İstekler Next.js
+ * veri önbelleğine verilen etiketlerle yazılır; yönetim işlemleri `revalidateTag`
+ * ile ilgili etiketleri anında geçersiz kılar. Çerez kullanmaz.
+ */
+export function createPublicClient(tags: string[], revalidateSeconds = 300): DB {
+  return createClient<Database>(publicEnv.supabaseUrl, publicEnv.supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: {
+      fetch: (input, init) => fetch(input, { ...init, next: { revalidate: revalidateSeconds, tags } }),
+    },
+  });
+}
+
+/**
+ * Önbelleğe ALINMAYAN anonim istemci: her istekte güncel sonuç gereken ve yan
+ * etkisi olan herkese açık çağrılar (ör. görüntülenme sayacını artıran özel
+ * koleksiyon bağlantısı). Çerez kullanmaz; RLS anonim rolle uygulanır.
+ */
+export function createAnonClient(): DB {
+  return createClient<Database>(publicEnv.supabaseUrl, publicEnv.supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }) },
   });
 }

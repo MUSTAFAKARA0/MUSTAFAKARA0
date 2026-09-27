@@ -3,38 +3,37 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Heart, Menu, Phone } from 'lucide-react';
-import { Dialog, DialogTrigger, SheetContent } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { ArrowRight, GitCompareArrows, Heart, Menu, MapPin, Phone } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/common/brand-icons';
-import { useFavorites } from '@/hooks/use-favorites';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogTrigger, SheetContent } from '@/components/ui/dialog';
+import { useCompare, useFavorites, useHydrated } from '@/hooks/use-local-list';
 import { cn } from '@/lib/utils';
-import { MAIN_NAV } from './nav-items';
+import type { NavItem } from '@/components/layout/nav';
 
-function isActive(pathname: string, href: string) {
-  if (href === '/satilik') return pathname === '/satilik' || pathname.startsWith('/satilik-');
-  if (href === '/kiralik') return pathname === '/kiralik' || pathname.startsWith('/kiralik-');
-  return pathname === href;
+function isActive(pathname: string, item: NavItem): boolean {
+  return (item.match ?? [item.href]).some((m) => pathname === m || pathname.startsWith(`${m}-`) || pathname.startsWith(`${m}/`));
 }
 
-export function DesktopNav() {
+export function DesktopNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Ana menü" className="hidden lg:block">
-      <ul className="flex items-center gap-0.5">
-        {MAIN_NAV.map((item) => {
-          const active = isActive(pathname, item.href);
+      <ul className="flex items-center gap-1">
+        {items.map((item) => {
+          const active = isActive(pathname, item);
           return (
-            <li key={item.href} className={cn(item.wideOnly && 'hidden xl:block')}>
+            <li key={item.href}>
               <Link
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'relative rounded-lg px-3 py-2 text-[14.5px] font-semibold text-sand-700 transition-colors hover:bg-sand-100 hover:text-ink',
-                  active && 'text-brand-800 after:absolute after:inset-x-3 after:-bottom-[13px] after:h-0.5 after:rounded-full after:bg-accent-500',
+                  'relative rounded-lg px-3 py-2 text-[14.5px] font-medium transition-colors',
+                  active ? 'text-foreground' : 'text-foreground/70 hover:text-foreground',
                 )}
               >
                 {item.label}
+                {active && <span className="absolute inset-x-3 -bottom-[17px] h-[2px] rounded-full bg-primary" aria-hidden />}
               </Link>
             </li>
           );
@@ -44,67 +43,113 @@ export function DesktopNav() {
   );
 }
 
-export function FavoritesLink() {
-  const { favorites } = useFavorites();
-  const count = favorites.length;
+function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
   return (
-    <Link
-      href="/favoriler"
-      className="relative inline-flex size-10 items-center justify-center rounded-xl text-sand-700 transition hover:bg-sand-100 hover:text-ink"
-      aria-label={count ? `Favorilerim (${count} ilan)` : 'Favorilerim'}
-    >
-      <Heart className="size-[21px]" />
-      {count > 0 && (
-        <span className="absolute top-1 right-1 flex min-w-[18px] items-center justify-center rounded-full bg-accent-500 px-1 text-[10.5px] leading-[18px] font-bold text-brand-950">
-          {count > 99 ? '99+' : count}
-        </span>
-      )}
-    </Link>
+    <span className="absolute -top-0.5 -right-0.5 flex min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-[10.5px] leading-[18px] font-bold text-accent-fg ring-2 ring-surface">
+      {count > 99 ? '99+' : count}
+    </span>
   );
 }
 
-export function MobileMenu({ tel, whatsapp, businessName }: { tel: string | null; whatsapp: string | null; businessName: string }) {
+export function HeaderActions({ phoneHref, phoneLabel }: { phoneHref: string | null; phoneLabel: string | null }) {
+  const { items: favorites } = useFavorites();
+  const { items: compare } = useCompare();
+  const hydrated = useHydrated();
+  const favCount = hydrated ? favorites.length : 0;
+  const compareCount = hydrated ? compare.length : 0;
+  return (
+    <>
+      {compareCount > 0 && (
+        <Link
+          href="/karsilastir"
+          className="relative hidden size-10 items-center justify-center rounded-xl text-foreground/80 transition hover:bg-surface-muted hover:text-foreground sm:inline-flex"
+          aria-label={`Karşılaştırma listesi (${compareCount} ilan)`}
+        >
+          <GitCompareArrows className="size-5" />
+          <CountBadge count={compareCount} />
+        </Link>
+      )}
+      <Link
+        href="/favoriler"
+        className="relative inline-flex size-10 items-center justify-center rounded-xl text-foreground/80 transition hover:bg-surface-muted hover:text-foreground"
+        aria-label={favCount > 0 ? `Favorilerim (${favCount} ilan)` : 'Favorilerim'}
+      >
+        <Heart className="size-5" />
+        <CountBadge count={favCount} />
+      </Link>
+      {phoneHref ? (
+        <Button asChild size="sm" className="ml-1 hidden h-10 rounded-xl px-4 md:inline-flex">
+          <a href={phoneHref}>
+            <Phone />
+            <span className="numeric">{phoneLabel}</span>
+          </a>
+        </Button>
+      ) : (
+        <Button asChild size="sm" className="ml-1 hidden h-10 rounded-xl px-4 md:inline-flex">
+          <Link href="/iletisim">Bize ulaşın</Link>
+        </Button>
+      )}
+    </>
+  );
+}
+
+export function MobileMenu({
+  items,
+  name,
+  phoneHref,
+  phoneLabel,
+  whatsappHref,
+  address,
+}: {
+  items: NavItem[];
+  name: string;
+  phoneHref: string | null;
+  phoneLabel: string | null;
+  whatsappHref: string | null;
+  address: string | null;
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-
+  const { items: compare } = useCompare();
+  const hydrated = useHydrated();
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button
           type="button"
-          className="inline-flex size-10 items-center justify-center rounded-xl text-ink transition hover:bg-sand-100 lg:hidden"
+          className="inline-flex size-10 items-center justify-center rounded-xl text-foreground transition hover:bg-surface-muted lg:hidden"
           aria-label="Menüyü aç"
         >
           <Menu className="size-6" />
         </button>
       </DialogTrigger>
       <SheetContent
-        title={businessName}
+        title={name}
+        description="Site menüsü"
         footer={
-          (tel || whatsapp) && (
-            <div className="grid grid-cols-2 gap-2 pb-1">
-              {tel && (
-                <Button asChild variant="outline">
-                  <a href={tel}>
-                    <Phone /> Ara
-                  </a>
-                </Button>
-              )}
-              {whatsapp && (
-                <Button asChild variant="whatsapp" className={cn(!tel && 'col-span-2')}>
-                  <a href={whatsapp} target="_blank" rel="noopener noreferrer">
-                    <WhatsAppIcon /> WhatsApp
-                  </a>
-                </Button>
-              )}
-            </div>
-          )
+          <div className="grid grid-cols-2 gap-2 pb-1">
+            {phoneHref && (
+              <Button asChild variant="outline">
+                <a href={phoneHref}>
+                  <Phone /> Arayın
+                </a>
+              </Button>
+            )}
+            {whatsappHref && (
+              <Button asChild variant="whatsapp" className={phoneHref ? '' : 'col-span-2'}>
+                <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
+                  <WhatsAppIcon className="size-5" /> WhatsApp
+                </a>
+              </Button>
+            )}
+          </div>
         }
       >
         <nav aria-label="Mobil menü">
-          <ul className="space-y-1">
-            {MAIN_NAV.map((item) => {
-              const active = isActive(pathname, item.href);
+          <ul className="-mx-2 space-y-0.5">
+            {items.map((item) => {
+              const active = isActive(pathname, item);
               return (
                 <li key={item.href}>
                   <Link
@@ -112,26 +157,40 @@ export function MobileMenu({ tel, whatsapp, businessName }: { tel: string | null
                     onClick={() => setOpen(false)}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'flex items-center rounded-xl px-3 py-3 text-[15px] font-semibold text-sand-800 transition hover:bg-sand-100',
-                      active && 'bg-brand-50 text-brand-800',
+                      'flex items-center justify-between rounded-xl px-3 py-3.5 font-display text-[1.35rem] transition-colors',
+                      active ? 'bg-primary-soft text-primary-ink' : 'text-foreground hover:bg-surface-muted',
                     )}
                   >
                     {item.label}
+                    <ArrowRight className="size-5 opacity-40" aria-hidden />
                   </Link>
                 </li>
               );
             })}
-            <li className="border-t border-line pt-2">
-              <Link
-                href="/favoriler"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2 rounded-xl px-3 py-3 text-[15px] font-semibold text-sand-800 transition hover:bg-sand-100"
-              >
-                <Heart className="size-[18px]" /> Favorilerim
-              </Link>
-            </li>
           </ul>
         </nav>
+        <div className="mt-6 grid grid-cols-2 gap-2 text-sm">
+          <Link href="/favoriler" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl border border-border px-3 py-3 font-medium">
+            <Heart className="size-4" /> Favorilerim
+          </Link>
+          <Link href="/karsilastir" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl border border-border px-3 py-3 font-medium">
+            <GitCompareArrows className="size-4" /> Karşılaştır{hydrated && compare.length > 0 ? ` (${compare.length})` : ''}
+          </Link>
+        </div>
+        {(phoneLabel || address) && (
+          <div className="mt-6 space-y-2 rounded-2xl bg-surface-muted p-4 text-sm text-muted-foreground">
+            {phoneLabel && (
+              <p className="flex items-center gap-2 text-foreground">
+                <Phone className="size-4" /> <span className="numeric">{phoneLabel}</span>
+              </p>
+            )}
+            {address && (
+              <p className="flex items-start gap-2">
+                <MapPin className="mt-0.5 size-4 shrink-0" /> {address}
+              </p>
+            )}
+          </div>
+        )}
       </SheetContent>
     </Dialog>
   );

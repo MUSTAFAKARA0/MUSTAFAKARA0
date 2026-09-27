@@ -1,0 +1,149 @@
+import 'server-only';
+import { cache } from 'react';
+import { headers } from 'next/headers';
+import { notFound } from 'next/navigation';
+import { cacheTags } from '@/lib/cache-tags';
+import { isSupabaseConfigured, publicEnv } from '@/lib/env';
+import { serverEnv } from '@/lib/server-env';
+import { createPublicClient } from '@/lib/supabase/server';
+import { isValidTenantKey, tenantKeyForHost } from '@/platform/tenant/host';
+import { tenantHostConfig } from '@/platform/tenant/config';
+import type { Tables } from '@/types/supabase';
+
+export type OrgSettings = Tables<'organization_settings'>;
+
+export interface TenantFeatures {
+  crm: boolean;
+  analytics: boolean;
+  pdf: boolean;
+  customDomain: boolean;
+}
+
+export interface Tenant {
+  /** URL'deki kiracı anahtarı (slug veya özel alan adı) */
+  key: string;
+  id: string;
+  slug: string;
+  name: string;
+  isDefault: boolean;
+  referencePrefix: string;
+  settings: OrgSettings;
+  /** Kanonik site kökü (sonunda / olmadan): SEO, sitemap, paylaşım bağlantıları */
+  baseUrl: string;
+  features: TenantFeatures;
+}
+
+const ORG_COLUMNS = 'id, slug, name, is_default, reference_prefix, status';
+
+function defaultSettings(orgId: string, name: string): OrgSettings {
+  return {
+    organization_id: orgId,
+    display_name: name,
+    legal_name: null,
+    tagline: null,
+    description: null,
+    service_area: null,
+    logo_url: null,
+    favicon_url: null,
+    primary_color: '#0e4d45',
+    accent_color: '#b5813a',
+    phone: null,
+    whatsapp: null,
+    email: null,
+    address_line: null,
+    address_district: null,
+    address_city: null,
+    postal_code: null,
+    office_latitude: null,
+    office_longitude: null,
+    opening_hours: [],
+    working_hours_note: null,
+    instagram_url: null,
+    facebook_url: null,
+    x_url: null,
+    youtube_url: null,
+    linkedin_url: null,
+    tiktok_url: null,
+    seo_title: null,
+    seo_description: null,
+    og_image_url: null,
+    google_site_verification: null,
+    hero_title: null,
+    hero_subtitle: null,
+    hero_image_url: null,
+    default_location_precision: 'approximate',
+    updated_by: null,
+    updated_at: new Date(0).toISOString(),
+  };
+}
+
+async function loadTenant(key: string): Promise<Tenant | null> {
+  if (!isSupabaseConfigured() || !isValidTenantKey(key)) return null;
+  const supabase = createPublicClient([cacheTags.tenants], 300);
+
+  let orgId: string | null = null;
+  if (key.includes('.')) {
+    const { data } = await supabase.from('organization_domains').select('organization_id').eq('hostname', key).maybeSingle();
+    orgId = data?.organization_id ?? null;
+    if (!orgId) return null;
+  }
+  const orgQuery = supabase.from('organizations').select(ORG_COLUMNS);
+  const { data: org, error } = await (orgId ? orgQuery.eq('id', orgId) : orgQuery.eq('slug', key)).maybeSingle();
+  if (error) throw new Error(`Site bilgisi yüklenemedi: ${error.message}`);
+  if (!org || org.status !== 'active') return null;
+
+  const orgClient = createPublicClient([cacheTags.tenants, cacheTags.org(org.id)], 300);
+  const [settingsRes, domainsRes, planRes] = await Promise.all([
+    orgClient.from('organization_settings').select('*').eq('organization_id', org.id).maybeSingle(),
+    orgClient.from('organization_domains').select('hostname, is_primary').eq('organization_id', org.id),
+    orgClient.rpc('org_plan', { p_org: org.id }, { get: true }),
+  ]);
+
+  const settings = settingsRes.data ?? defaultSettings(org.id, org.name);
+  const primaryDomain = domainsRes.data?.find((d) => d.is_primary)?.hostname;
+  const baseUrl = primaryDomain
+    ? `https://${primaryDomain}`
+    : org.is_default || !serverEnv.platformRootDomain
+      ? publicEnv.siteUrl
+      : `https://${org.slug}.${serverEnv.platformRootDomain}`;
+  const plan = planRes.data?.[0];
+
+  return {
+    key,
+    id: org.id,
+    slug: org.slug,
+    name: org.name,
+    isDefault: org.is_default,
+    referencePrefix: org.reference_prefix,
+    settings,
+    baseUrl,
+    features: {
+      crm: plan?.crm_enabled ?? false,
+      analytics: plan?.analytics_enabled ?? false,
+      pdf: plan?.pdf_enabled ?? false,
+      customDomain: plan?.custom_domain_enabled ?? false,
+    },
+  };
+}
+
+/** Kiracıyı anahtara göre getirir (istek başına tekilleştirilir, 5 dk önbellek). */
+export const getTenant = cache(loadTenant);
+
+/** Sayfalar için: kiracı yoksa / askıdaysa 404. */
+export async function requireTenant(rawKey: string): Promise<Tenant> {
+  const tenant = await getTenant(decodeURIComponent(rawKey));
+  if (!tenant) notFound();
+  return tenant;
+}
+
+/** Yeniden yazılmamış rotalar (yönetim paneli, not-found) için Host başlığından kiracı. */
+export async function getTenantFromRequest(): Promise<Tenant | null> {
+  const h = await headers();
+  const key = h.get('x-tenant-key') ?? tenantKeyForHost(h.get('x-forwarded-host') ?? h.get('host'), tenantHostConfig());
+  return getTenant(key);
+}
+
+/** Kiracı sitesinde mutlak adres üretir. */
+export function tenantUrl(tenant: Pick<Tenant, 'baseUrl'>, path = '/'): string {
+  return `${tenant.baseUrl}${path.startsWith('/') ? path : `/${path}`}`;
+}

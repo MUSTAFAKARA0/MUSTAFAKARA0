@@ -2,6 +2,8 @@
 
 Tarih: 22 Eylül 2026 · Sürüm: 1.0
 
+> **Not (V2):** Bu rapor ilk sürümü (V1) anlatır ve tarihsel kayıt olarak korunmaktadır. V2 ile veritabanı çok kiracılı yapıya taşındı (ör. `profiles.role` yerine organizasyon üyelikleri ve roller, `contact_requests` yerine CRM tabloları, `property_images` yerine `media_assets`). Güncel bilgiler için **[README.md](./README.md)**, **[SETUP.md](./SETUP.md)**, **[ARCHITECTURE.md](./ARCHITECTURE.md)** ve **[ADMIN_GUIDE.md](./ADMIN_GUIDE.md)** belgelerine bakın.
+
 Bu rapor; kullanılan teknolojileri, proje yapısını, veritabanını, kurulum ve yayına alma adımlarını, yapılan güvenlik kontrollerini ve testleri eksiksiz açıklar. Teknik olmayan bir kullanıcının da takip edebileceği şekilde adım adım yazılmıştır.
 
 ---

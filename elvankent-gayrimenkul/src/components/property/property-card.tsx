@@ -1,109 +1,115 @@
-import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, BedDouble, Building2, Camera, ImageOff, MapPin, Ruler, Star } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { FavoriteButton } from './favorite-button';
+import { Camera, MapPin } from 'lucide-react';
 import { LinkPendingOverlay } from '@/components/common/link-pending';
-import { LISTING_TYPE_LABELS } from '@/lib/constants';
-import { formatArea, formatFloor, formatListingPrice, formatRelativeDate } from '@/lib/format';
-import { imageUrl } from '@/lib/images';
+import { MediaImage } from '@/components/gallery/media-image';
+import { PropertyBadges } from '@/components/property/property-badges';
+import { CompareToggle, FavoriteButton } from '@/components/property/property-actions';
+import { formatArea, formatListingPrice, formatNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import type { PropertyCardData } from '@/types/database';
+import { floorLabel, LISTING_TYPE_LABELS } from '@/modules/properties/constants';
+import type { PropertyCard as PropertyCardData } from '@/modules/properties/types';
 
-interface PropertyCardProps {
-  property: PropertyCardData;
-  /** İlk ekrandaki kartlar için görseli önceden yükle (LCP) */
-  preload?: boolean;
-  className?: string;
+export function propertyLocation(p: Pick<PropertyCardData, 'neighborhoodName' | 'districtName' | 'cityName'>): string {
+  return [p.neighborhoodName, p.districtName].filter(Boolean).join(', ') || p.cityName;
 }
 
-export function PropertyCard({ property: p, preload, className }: PropertyCardProps) {
-  const href = `/ilan/${p.slug}`;
-  const location = [p.neighborhood_name, p.district_name].filter(Boolean).join(', ');
-  const specs = [
-    p.gross_m2 ? { icon: Ruler, label: formatArea(p.gross_m2), sr: 'Brüt alan' } : null,
-    p.rooms_label && p.category !== 'arsa' ? { icon: BedDouble, label: p.rooms_label, sr: 'Oda sayısı' } : null,
-    p.floor && p.category !== 'arsa' ? { icon: Building2, label: formatFloor(p.floor), sr: 'Kat' } : null,
-  ].filter(Boolean) as { icon: typeof Ruler; label: string; sr: string }[];
+function specs(p: PropertyCardData): string[] {
+  const list: string[] = [];
+  if (p.roomsLabel) list.push(p.roomsLabel);
+  const area = formatArea(p.netM2 ?? p.grossM2);
+  if (area) list.push(p.netM2 ? `${area} net` : area);
+  if (p.category === 'konut' || p.category === 'ticari') {
+    const floor = floorLabel(p.floor);
+    if (floor) list.push(floor);
+    if (p.buildingAge !== null) list.push(p.buildingAge === 0 ? 'Sıfır bina' : `${p.buildingAge} yaşında`);
+  }
+  return list.slice(0, 4);
+}
 
+/**
+ * İlan kartı. Tüm kart tıklanabilir (başlıktaki bağlantı kartı kaplar);
+ * favori ve karşılaştır butonları üstte kalır. Hover animasyonu yalnızca
+ * dekoratiftir; mobilde hiçbir işlev hover'a bağlı değildir.
+ */
+export function PropertyCard({
+  property: p,
+  priority,
+  sizes = '(min-width: 1280px) 400px, (min-width: 640px) 50vw, 100vw',
+  className,
+}: {
+  property: PropertyCardData;
+  priority?: boolean;
+  sizes?: string;
+  className?: string;
+}) {
+  const href = `/ilan/${p.slug}`;
+  const inactive = p.status !== 'published';
   return (
-    <article
-      className={cn(
-        'group relative flex flex-col overflow-hidden rounded-2xl bg-surface shadow-card ring-1 ring-line/70 transition duration-200 hover:-translate-y-0.5 hover:shadow-lift',
-        className,
-      )}
-    >
-      <div className="relative aspect-[4/3] overflow-hidden bg-sand-100">
+    <article className={cn('group relative flex flex-col', className)}>
+      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-surface-muted">
         {p.cover ? (
-          <Image
-            src={imageUrl(p.cover.storage_path)}
-            alt={p.cover.alt || p.title}
+          <MediaImage
+            media={p.cover}
+            alt={p.cover.alt_text ?? p.title}
             fill
-            sizes="(min-width: 1280px) 24rem, (min-width: 768px) 45vw, 100vw"
-            quality={60}
-            preload={preload}
-            placeholder={p.cover.blur_data_url ? 'blur' : 'empty'}
-            blurDataURL={p.cover.blur_data_url ?? undefined}
-            className="object-cover transition duration-500 group-hover:scale-[1.04]"
+            sizes={sizes}
+            fetchPriority={priority ? 'high' : undefined}
+            loading={priority ? 'eager' : 'lazy'}
+            className={cn(
+              'object-cover transition-transform duration-700 ease-premium group-hover:scale-[1.035]',
+              inactive && 'grayscale-[35%]',
+            )}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-sand-400">
-            <ImageOff className="size-10" aria-hidden />
-            <span className="sr-only">Fotoğraf yok</span>
-          </div>
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Fotoğraf yok</div>
         )}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/35 to-transparent" />
-        <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
-          <Badge variant={p.listing_type === 'sale' ? 'sale' : 'rent'}>{LISTING_TYPE_LABELS[p.listing_type]}</Badge>
-          {p.is_featured && (
-            <Badge variant="featured">
-              <Star className="size-3 fill-accent-500 text-accent-500" aria-hidden /> Öne Çıkan
-            </Badge>
-          )}
-          {p.is_demo && <Badge variant="demo">Demo</Badge>}
-        </div>
-        <FavoriteButton propertyId={p.id} title={p.title} className="absolute top-2.5 right-2.5" />
-        {p.image_count > 1 && (
-          <span className="absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-md bg-black/55 px-2 py-0.5 text-xs font-semibold text-white">
-            <Camera className="size-3.5" aria-hidden />
-            {p.image_count}
-            <span className="sr-only">fotoğraf</span>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 scrim-bottom opacity-80" aria-hidden />
+        <PropertyBadges property={p} className="absolute top-3 left-3 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-1.5" />
+        <FavoriteButton propertyId={p.id} title={p.title} className="absolute top-3 right-3" />
+        <span className="absolute bottom-3 left-3 rounded-full bg-white/92 px-2.5 py-1 text-[11.5px] font-bold text-foreground backdrop-blur">
+          {LISTING_TYPE_LABELS[p.listingType]} · {p.typeName}
+        </span>
+        {p.imageCount > 1 && (
+          <span className="numeric absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[11.5px] font-semibold text-white backdrop-blur">
+            <Camera className="size-3.5" aria-hidden /> {p.imageCount}
           </span>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-4 sm:p-5">
-        <p className="text-[1.3rem] leading-tight font-extrabold tracking-tight text-brand-800">
-          {formatListingPrice(p.price, p.currency, p.listing_type)}
-        </p>
-        <h3 className="mt-1.5 line-clamp-2 min-h-[2.75rem] text-[15px] leading-snug font-semibold text-ink">
-          <Link href={href} className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
+      <div className="flex flex-1 flex-col pt-4">
+        <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+          <p className="numeric text-[1.3rem] leading-tight font-bold tracking-tight text-foreground">
+            {formatListingPrice(p.price, p.currency, p.listingType)}
+          </p>
+          {p.hasPriceDrop && p.pricePrevious && (
+            <p className="numeric text-[13px] text-muted-foreground line-through" aria-label={`Önceki fiyat ${formatNumber(p.pricePrevious)}`}>
+              {formatNumber(p.pricePrevious)}
+            </p>
+          )}
+        </div>
+        <h3 className="mt-1.5 line-clamp-2 text-[15px] leading-snug font-semibold text-foreground">
+          <Link href={href} className="rounded-sm after:absolute after:inset-0 after:z-[1] after:rounded-2xl after:content-['']">
             {p.title}
             <LinkPendingOverlay />
           </Link>
         </h3>
-        <p className="mt-2 flex items-center gap-1.5 text-[13px] text-sand-600">
-          <MapPin className="size-3.5 shrink-0 text-accent-600" aria-hidden />
-          <span className="truncate">{location}</span>
+        <p className="mt-1.5 flex items-center gap-1 text-[13.5px] text-muted-foreground">
+          <MapPin className="size-3.5 shrink-0" aria-hidden />
+          <span className="line-clamp-1">{propertyLocation(p)}</span>
         </p>
-
-        {specs.length > 0 && (
-          <ul className="mt-3.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-line pt-3.5 text-[13px] font-semibold text-sand-700">
-            {specs.map(({ icon: Icon, label, sr }) => (
-              <li key={sr} className="inline-flex items-center gap-1.5">
-                <Icon className="size-4 text-sand-400" aria-hidden />
-                <span className="sr-only">{sr}: </span>
-                {label}
+        {specs(p).length > 0 && (
+          <ul className="mt-3.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 border-t border-border pt-3 text-[13px] font-medium text-foreground/80">
+            {specs(p).map((s, i) => (
+              <li key={s} className="flex items-center gap-2.5">
+                {i > 0 && <span className="size-1 rounded-full bg-border-strong" aria-hidden />}
+                <span className="numeric">{s}</span>
               </li>
             ))}
           </ul>
         )}
-
-        <div className="mt-auto flex items-center justify-between pt-4 text-[12.5px] text-sand-500">
-          <time dateTime={p.published_at ?? p.created_at}>{formatRelativeDate(p.published_at ?? p.created_at)}</time>
-          <span className="inline-flex items-center gap-1 font-semibold text-brand-700 transition group-hover:gap-1.5" aria-hidden>
-            Detaylar <ArrowRight className="size-3.5" />
-          </span>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+          <p className="line-clamp-1 text-[12.5px] text-muted-foreground">{p.highlights.join(' · ')}</p>
+          <CompareToggle propertyId={p.id} variant="text" className="-mr-2 shrink-0" />
         </div>
       </div>
     </article>

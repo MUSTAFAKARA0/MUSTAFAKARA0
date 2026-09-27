@@ -1,200 +1,140 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
-import { Building2, Eye, ImageOff, Search, Star } from 'lucide-react';
-import { AdminPageHeader } from '@/components/admin/admin-page-header';
-import { PropertyRowActions } from '@/components/admin/property-row-actions';
-import { StatusBadge } from '@/components/admin/status-badge';
-import { EmptyState } from '@/components/common/empty-state';
+import { Suspense } from 'react';
+import { Building2, Plus, Trash2 } from 'lucide-react';
+import { ListingsFilters } from '@/components/admin/listings/listings-filters';
+import { ListingsTable } from '@/components/admin/listings/listings-table';
+import { AdminPageHeader, EmptyPanel } from '@/components/admin/ui';
 import { Pagination } from '@/components/common/pagination';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/form-controls';
-import { requireAdminPage } from '@/lib/auth';
-import { LISTING_TYPE_LABELS, STATUS_LABELS } from '@/lib/constants';
-import { getStatusCounts, listAdminProperties, type AdminPropertyFilters } from '@/lib/data/admin';
-import { formatDate, formatListingPrice, formatNumber } from '@/lib/format';
-import { imageUrl } from '@/lib/images';
+import { formatNumber } from '@/lib/format';
 import { cn, firstParam, parsePositiveInt } from '@/lib/utils';
-import type { PropertyStatus } from '@/types/database';
+import { adminStatusCounts, listAdminProperties, type AdminListFilters, type AdminStatusFilter } from '@/modules/properties/admin-queries';
+import { STATUS_LABELS, type ListingType, type PropertyCategory } from '@/modules/properties/constants';
+import { requirePagePermission } from '@/platform/auth/session';
 
 export const metadata: Metadata = { title: 'İlanlar' };
 
-const STATUS_TABS: (PropertyStatus | 'all')[] = ['all', 'active', 'passive', 'draft', 'sold', 'rented'];
+const TABS: { value: AdminStatusFilter; label: string }[] = [
+  { value: 'all', label: 'Tümü' },
+  { value: 'draft', label: STATUS_LABELS.draft },
+  { value: 'pending', label: STATUS_LABELS.pending },
+  { value: 'published', label: STATUS_LABELS.published },
+  { value: 'sold', label: STATUS_LABELS.sold },
+  { value: 'rented', label: STATUS_LABELS.rented },
+  { value: 'archived', label: STATUS_LABELS.archived },
+  { value: 'cop', label: 'Çöp kutusu' },
+];
 
-export default async function AdminPropertiesPage({ searchParams }: PageProps<'/admin/ilanlar'>) {
-  const { supabase } = await requireAdminPage();
+const SORTS = ['guncel', 'yeni', 'eski', 'fiyat-artan', 'fiyat-azalan', 'baslik'] as const;
+
+export default async function ListingsPage({ searchParams }: PageProps<'/admin/ilanlar'>) {
+  const ctx = await requirePagePermission('properties.read');
   const sp = await searchParams;
-  const statusParam = firstParam(sp.durum) as PropertyStatus | 'all' | undefined;
-  const filters: AdminPropertyFilters = {
-    status: statusParam && STATUS_TABS.includes(statusParam) ? statusParam : 'all',
-    q: firstParam(sp.q)?.slice(0, 60),
-    page: parsePositiveInt(firstParam(sp.sayfa), 1000) || 1,
-    sort: (['yeni', 'eski', 'fiyat', 'goruntulenme'] as const).find((s) => s === firstParam(sp.sirala)) ?? 'yeni',
+  const status = (TABS.some((t) => t.value === firstParam(sp.durum)) ? firstParam(sp.durum) : 'all') as AdminStatusFilter;
+  const sort = (SORTS as readonly string[]).includes(firstParam(sp.sirala) ?? '') ? (firstParam(sp.sirala) as AdminListFilters['sort']) : 'guncel';
+  const listingType = ['sale', 'rent'].includes(firstParam(sp.tip) ?? '') ? (firstParam(sp.tip) as ListingType) : undefined;
+  const category = ['konut', 'ticari', 'arsa', 'diger'].includes(firstParam(sp.kategori) ?? '') ? (firstParam(sp.kategori) as PropertyCategory) : undefined;
+  const days = [7, 30, 90, 365].includes(Number(firstParam(sp.tarih))) ? Number(firstParam(sp.tarih)) : undefined;
+  const filters: AdminListFilters = {
+    q: firstParam(sp.q),
+    status,
+    listingType,
+    category,
+    sort,
+    days,
+    minPrice: parsePositiveInt(firstParam(sp.fiyat_min)),
+    maxPrice: parsePositiveInt(firstParam(sp.fiyat_max)),
+    page: Math.max(1, parsePositiveInt(firstParam(sp.sayfa), 10_000) ?? 1),
   };
-  const [{ rows, total, pageCount }, counts] = await Promise.all([listAdminProperties(supabase, filters), getStatusCounts(supabase)]);
 
-  const href = (over: Partial<{ durum: string; q: string; sayfa: number; sirala: string }>) => {
-    const p = new URLSearchParams();
-    const durum = over.durum ?? filters.status;
-    if (durum && durum !== 'all') p.set('durum', durum);
-    const q = over.q ?? filters.q;
-    if (q) p.set('q', q);
-    const sirala = over.sirala ?? filters.sort;
-    if (sirala && sirala !== 'yeni') p.set('sirala', sirala);
-    const sayfa = over.sayfa ?? 1;
-    if (sayfa > 1) p.set('sayfa', String(sayfa));
-    const qs = p.toString();
+  const [{ rows, total, pageCount }, counts] = await Promise.all([listAdminProperties(ctx, filters), adminStatusCounts(ctx)]);
+  const trash = status === 'cop';
+  const visibleTabs = TABS.filter((t) => t.value !== 'cop' || ctx.can('properties.delete') || counts.cop > 0);
+
+  const hrefFor = (page: number) => {
+    const params = new URLSearchParams();
+    for (const [k, v] of Object.entries(sp)) {
+      const value = firstParam(v);
+      if (value && k !== 'sayfa') params.set(k, value);
+    }
+    if (page > 1) params.set('sayfa', String(page));
+    const qs = params.toString();
     return qs ? `/admin/ilanlar?${qs}` : '/admin/ilanlar';
   };
 
   return (
     <>
-      <AdminPageHeader title="İlanlar" description={`${formatNumber(counts.all)} ilan`} showNewButton />
-
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <nav aria-label="Durum filtresi" className="scrollbar-none -mx-1 flex gap-1 overflow-x-auto px-1">
-          {STATUS_TABS.map((s) => (
-            <Link
-              key={s}
-              href={href({ durum: s })}
-              aria-current={filters.status === s ? 'page' : undefined}
-              className={cn(
-                'shrink-0 rounded-xl px-3.5 py-2 text-sm font-semibold transition',
-                filters.status === s ? 'bg-brand-700 text-white' : 'bg-surface text-sand-700 ring-1 ring-line hover:bg-sand-50',
-              )}
-            >
-              {s === 'all' ? 'Tümü' : STATUS_LABELS[s]} <span className="opacity-70">({counts[s]})</span>
-            </Link>
-          ))}
-        </nav>
-        <form action="/admin/ilanlar" className="flex w-full gap-2 sm:w-auto">
-          {filters.status !== 'all' && <input type="hidden" name="durum" value={filters.status} />}
-          <div className="relative flex-1 sm:w-64">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-sand-400" aria-hidden />
-            <Input name="q" defaultValue={filters.q} placeholder="Başlık veya ilan no" aria-label="İlan ara" className="h-10 pl-9" />
-          </div>
-          <select
-            name="sirala"
-            defaultValue={filters.sort}
-            aria-label="Sıralama"
-            className="h-10 rounded-xl border border-line bg-surface px-2 text-sm"
-          >
-            <option value="yeni">En yeni</option>
-            <option value="eski">En eski</option>
-            <option value="fiyat">Fiyat</option>
-            <option value="goruntulenme">Görüntülenme</option>
-          </select>
-          <Button type="submit" variant="outline" size="sm" className="h-10">
-            Ara
-          </Button>
-        </form>
-      </div>
-
-      {rows.length === 0 ? (
-        <EmptyState
-          icon={Building2}
-          title={counts.all === 0 ? 'Henüz ilan eklemediniz' : 'Bu kriterlere uygun ilan yok'}
-          description={counts.all === 0 ? 'İlk ilanınızı birkaç dakikada ekleyebilirsiniz.' : 'Filtreleri değiştirerek tekrar deneyin.'}
-          action={
+      <AdminPageHeader
+        title="İlanlar"
+        description={`${formatNumber(counts.all)} ilan · ${formatNumber(counts.published)} yayında`}
+        actions={
+          ctx.can('properties.create') && (
             <Button asChild>
-              <Link href={counts.all === 0 ? '/admin/ilan-ekle' : '/admin/ilanlar'}>
-                {counts.all === 0 ? 'Yeni ilan ekle' : 'Filtreleri temizle'}
+              <Link href="/admin/ilanlar/yeni">
+                <Plus /> Yeni ilan
               </Link>
             </Button>
-          }
-        />
-      ) : (
-        <div className="overflow-hidden rounded-2xl bg-surface shadow-card ring-1 ring-line/70">
-          <table className="w-full text-left text-sm">
-            <caption className="sr-only">İlan listesi, toplam {total} kayıt</caption>
-            <thead className="hidden border-b border-line bg-sand-50 text-[12px] font-bold tracking-wide text-sand-600 uppercase md:table-header-group">
-              <tr>
-                <th scope="col" className="px-4 py-3">
-                  İlan
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Fiyat
-                </th>
-                <th scope="col" className="hidden px-4 py-3 lg:table-cell">
-                  Tip
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Durum
-                </th>
-                <th scope="col" className="hidden px-4 py-3 xl:table-cell">
-                  Görüntülenme
-                </th>
-                <th scope="col" className="hidden px-4 py-3 lg:table-cell">
-                  Tarih
-                </th>
-                <th scope="col" className="px-4 py-3 text-right">
-                  İşlemler
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line">
-              {rows.map((p) => (
-                <tr key={p.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2.5 p-4 md:table-row md:p-0">
-                  <td className="col-span-3 md:min-w-[17rem] md:px-4 md:py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-sand-100">
-                        {p.cover_path ? (
-                          <Image src={imageUrl(p.cover_path)} alt="" fill sizes="56px" quality={60} className="object-cover" />
-                        ) : (
-                          <ImageOff className="absolute inset-0 m-auto size-5 text-sand-400" aria-hidden />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <Link href={`/admin/ilan/${p.id}`} className="line-clamp-2 font-semibold text-ink hover:text-brand-700">
-                          {p.title}
-                        </Link>
-                        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12.5px] text-sand-500">
-                          <span>No {p.listing_no}</span>
-                          {p.location && <span>· {p.location}</span>}
-                          {p.is_featured && (
-                            <span className="inline-flex items-center gap-0.5 font-semibold text-accent-700">
-                              <Star className="size-3 fill-accent-500 text-accent-500" aria-hidden /> Öne çıkan
-                            </span>
-                          )}
-                          {p.is_demo && <Badge variant="demo">Demo</Badge>}
-                          {p.image_count === 0 && <span className="font-semibold text-amber-700">· Fotoğraf yok</span>}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="font-bold whitespace-nowrap text-brand-800 md:px-4 md:py-3">
-                    {formatListingPrice(p.price, p.currency, p.listing_type)}
-                  </td>
-                  <td className="hidden text-sand-700 lg:table-cell lg:px-4 lg:py-3">
-                    {LISTING_TYPE_LABELS[p.listing_type]} · {p.type_name}
-                  </td>
-                  <td className="md:px-4 md:py-3">
-                    <StatusBadge status={p.status} />
-                  </td>
-                  <td className="hidden text-sand-700 xl:table-cell xl:px-4 xl:py-3">
-                    <span className="inline-flex items-center gap-1.5 tabular-nums">
-                      <Eye className="size-4 text-sand-400" aria-hidden /> {formatNumber(p.stats.view_count)}
-                    </span>
-                  </td>
-                  <td className="hidden whitespace-nowrap text-sand-600 lg:table-cell lg:px-4 lg:py-3">{formatDate(p.created_at)}</td>
-                  <td className="md:px-4 md:py-3">
-                    <PropertyRowActions
-                      id={p.id}
-                      slug={p.slug}
-                      title={p.title}
-                      status={p.status}
-                      isFeatured={p.is_featured}
-                      price={p.price}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          )
+        }
+      />
+
+      <nav aria-label="İlan durumu" className="scrollbar-none relative -mx-4 mb-5 flex gap-1 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+        {visibleTabs.map((tab) => {
+          const active = tab.value === status;
+          return (
+            <Link
+              key={tab.value}
+              href={tab.value === 'all' ? '/admin/ilanlar' : `/admin/ilanlar?durum=${tab.value}`}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-[13.5px] font-semibold transition',
+                active ? 'bg-surface-inverse text-white' : 'text-muted-foreground hover:bg-surface hover:text-foreground',
+              )}
+            >
+              {tab.value === 'cop' && <Trash2 className="size-3.5" aria-hidden />}
+              {tab.label}
+              <span className={cn('numeric rounded-full px-1.5 text-[11.5px]', active ? 'bg-white/15' : 'bg-surface-muted')}>{counts[tab.value] ?? 0}</span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="rounded-2xl border border-border bg-surface shadow-xs">
+        <div className="border-b border-border p-4 sm:p-5">
+          <Suspense fallback={<div className="h-11" />}>
+            <ListingsFilters />
+          </Suspense>
         </div>
-      )}
-      <Pagination page={filters.page} pageCount={pageCount} hrefFor={(sayfa) => href({ sayfa })} />
+        {trash && rows.length > 0 && (
+          <p className="border-b border-border bg-warning-soft px-5 py-2.5 text-[13px] text-warning">
+            Çöp kutusundaki ilanlar sitede görünmez. Geri yükleyebilir veya kalıcı olarak silebilirsiniz.
+          </p>
+        )}
+        {rows.length === 0 ? (
+          <EmptyPanel
+            icon={trash ? Trash2 : Building2}
+            title={trash ? 'Çöp kutusu boş' : total === 0 && status === 'all' && !filters.q ? 'Henüz ilan eklenmemiş' : 'Bu filtrelere uygun ilan yok'}
+            description={trash ? undefined : 'Filtreleri değiştirerek veya yeni ilan ekleyerek devam edebilirsiniz.'}
+            action={
+              !trash && ctx.can('properties.create') ? (
+                <Button asChild>
+                  <Link href="/admin/ilanlar/yeni">
+                    <Plus /> Yeni ilan
+                  </Link>
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <ListingsTable
+            rows={rows}
+            trash={trash}
+            perms={{ publish: ctx.can('properties.publish'), delete: ctx.can('properties.delete'), create: ctx.can('properties.create'), pdf: ctx.plan.features.pdf }}
+          />
+        )}
+      </div>
+      <Pagination page={filters.page} pageCount={pageCount} hrefFor={hrefFor} />
     </>
   );
 }

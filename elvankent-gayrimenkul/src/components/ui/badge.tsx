@@ -3,19 +3,22 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
-  'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11.5px] font-bold tracking-wide whitespace-nowrap',
+  'inline-flex items-center gap-1 rounded-full px-2.5 py-[3px] text-[11.5px] leading-4 font-semibold whitespace-nowrap [&_svg]:size-3',
   {
     variants: {
       variant: {
-        sale: 'bg-brand-700 text-white',
-        rent: 'bg-accent-500 text-brand-950',
-        featured: 'bg-white/95 text-accent-700 ring-1 ring-accent-200',
-        demo: 'bg-sand-800/85 text-white uppercase',
-        neutral: 'bg-sand-100 text-sand-700',
-        success: 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200',
-        warning: 'bg-amber-50 text-amber-800 ring-1 ring-amber-200',
-        danger: 'bg-red-50 text-red-800 ring-1 ring-red-200',
-        info: 'bg-brand-50 text-brand-800 ring-1 ring-brand-200',
+        neutral: 'bg-surface-muted text-foreground/80',
+        primary: 'bg-primary text-primary-fg',
+        'primary-soft': 'bg-primary-soft text-primary-ink',
+        accent: 'bg-accent text-accent-fg',
+        'accent-soft': 'bg-accent-soft text-accent-ink',
+        success: 'bg-success-soft text-success',
+        warning: 'bg-warning-soft text-warning',
+        danger: 'bg-danger-soft text-danger',
+        info: 'bg-info-soft text-info',
+        outline: 'border border-border bg-surface text-foreground/80',
+        inverse: 'bg-surface-inverse/85 text-white backdrop-blur-sm',
+        glass: 'bg-white/92 text-foreground shadow-xs backdrop-blur-sm',
       },
     },
     defaultVariants: { variant: 'neutral' },

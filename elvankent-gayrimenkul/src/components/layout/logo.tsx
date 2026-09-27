@@ -1,56 +1,53 @@
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
+function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  return (words.length > 1 ? words[0][0] + words[1][0] : (words[0] ?? '?').slice(0, 2)).toLocaleUpperCase('tr-TR');
+}
+
+/** Logo yüklenmemiş kiracılar için monogram işareti (şirket adının baş harfleri) */
+export function Monogram({ name, className }: { name: string; className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary font-display text-[1.05rem] font-semibold tracking-tight text-primary-fg',
+        className,
+      )}
+    >
+      {initials(name)}
+    </span>
+  );
+}
+
 interface LogoProps {
-  businessName: string;
+  name: string;
   logoUrl?: string | null;
   tone?: 'dark' | 'light';
   className?: string;
   href?: string;
 }
 
-/** Monogram işareti — favicon ile aynı tasarım (src/app/icon.svg) */
-export function LogoMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 64 64" className={cn('size-10 shrink-0', className)} aria-hidden>
-      <rect width="64" height="64" rx="14" fill="var(--brand-700)" />
-      <path d="M14 30 L32 16 L50 30" fill="none" stroke="var(--accent-400)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-      <path
-        d="M23 29 V48 H41 M23 38.5 H37 M23 29 H41"
-        fill="none"
-        stroke="#F7F5F0"
-        strokeWidth="4.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 /**
- * Marka logosu. Yönetim panelinden logo yüklenmişse o görsel, aksi halde
- * tipografik geçici logo gösterilir. Logo koda gömülü değildir.
+ * Marka logosu. Şirket ayarlarından logo yüklenmişse o görsel, aksi halde
+ * tipografik logo gösterilir. Şirket adı koda gömülü değildir (white-label).
  */
-export function Logo({ businessName, logoUrl, tone = 'dark', className, href = '/' }: LogoProps) {
-  const [first, ...rest] = businessName.trim().split(/\s+/);
+export function Logo({ name, logoUrl, tone = 'dark', className, href = '/' }: LogoProps) {
+  const [first, ...rest] = name.trim().split(/\s+/);
   const content = logoUrl ? (
-    // Yüklenen logo boyutu bilinmediğinden next/image yerine sabit yükseklikli img
+    // Yüklenen logonun en-boy oranı bilinmediğinden sabit yükseklikli img kullanılır
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={logoUrl} alt={businessName} className="h-10 w-auto max-w-[200px] object-contain" />
+    <img src={logoUrl} alt={name} className="h-9 w-auto max-w-[190px] object-contain sm:h-10" />
   ) : (
     <span className="flex items-center gap-2.5">
-      <LogoMark />
+      <Monogram name={name} />
       <span className="flex flex-col leading-none">
-        <span className={cn('font-display text-[1.3rem] font-semibold tracking-tight', tone === 'light' ? 'text-white' : 'text-brand-800')}>
+        <span className={cn('font-display text-[1.28rem] font-semibold tracking-tight', tone === 'light' ? 'text-white' : 'text-foreground')}>
           {first}
         </span>
         {rest.length > 0 && (
-          <span
-            className={cn(
-              'mt-1 text-[10px] font-bold tracking-[0.28em] uppercase',
-              tone === 'light' ? 'text-accent-300' : 'text-accent-700',
-            )}
-          >
+          <span className={cn('mt-[5px] text-[9.5px] font-bold tracking-[0.3em] uppercase', tone === 'light' ? 'text-white/70' : 'text-muted-foreground')}>
             {rest.join(' ').toLocaleUpperCase('tr-TR')}
           </span>
         )}

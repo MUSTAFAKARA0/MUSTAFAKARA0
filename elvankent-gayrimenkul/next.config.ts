@@ -1,33 +1,38 @@
 import type { NextConfig } from 'next';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL) : null;
+const storageUrl = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_STORAGE_URL) : null;
 
 const remotePatterns: NonNullable<NonNullable<NextConfig['images']>['remotePatterns']> = [
   { protocol: 'https', hostname: '*.supabase.co', pathname: '/storage/v1/object/public/**' },
 ];
-if (supabaseUrl && !supabaseUrl.hostname.endsWith('.supabase.co')) {
-  remotePatterns.push({
-    protocol: supabaseUrl.protocol.replace(':', '') as 'http' | 'https',
-    hostname: supabaseUrl.hostname,
-    port: supabaseUrl.port,
-    pathname: '/storage/v1/object/public/**',
-  });
+for (const origin of [supabaseUrl, storageUrl]) {
+  if (origin && !origin.hostname.endsWith('.supabase.co')) {
+    remotePatterns.push({
+      protocol: origin.protocol.replace(':', '') as 'http' | 'https',
+      hostname: origin.hostname,
+      port: origin.port,
+      pathname: '/storage/v1/object/public/**',
+    });
+  }
 }
 
-const supabaseOrigin = supabaseUrl ? supabaseUrl.origin : '';
+const supabaseOrigins = [supabaseUrl?.origin, storageUrl?.origin].filter(Boolean).join(' ');
 
 /**
  * Content Security Policy. Next.js hidrasyonu için satır içi script'lere
- * izin verilir; dış kaynaklar yalnızca Supabase ile sınırlıdır. Harita
- * döşemeleri /api/tiles üzerinden aynı kaynaktan (self) sunulur.
+ * izin verilir; dış kaynaklar yalnızca Supabase (veri, görseller ve büyük
+ * dosya yüklemeleri için doğrudan depolama adresi) ile sınırlıdır. Harita
+ * döşemeleri /api/tiles üzerinden aynı kaynaktan (self) sunulur; harita
+ * sağlayıcısı anahtarı tarayıcıya hiç gönderilmez.
  */
 const csp = [
   "default-src 'self'",
-  `img-src 'self' data: blob: https://*.supabase.co ${supabaseOrigin}`,
+  `img-src 'self' data: blob: https://*.supabase.co ${supabaseOrigins}`,
   "script-src 'self' 'unsafe-inline'" + (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''),
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self'",
-  `connect-src 'self' https://*.supabase.co ${supabaseOrigin}`,
+  `connect-src 'self' https://*.supabase.co ${supabaseOrigins}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -48,10 +53,18 @@ const nextConfig: NextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
     qualities: [60, 75, 85],
+    // srcset genişlikleri sunucuda üretilen varyantlarla (320…2880) hizalıdır
+    deviceSizes: [640, 960, 1440, 2048, 2880],
+    imageSizes: [160, 320, 480],
     remotePatterns,
-    localPatterns: [{ pathname: '/demo/**' }, { pathname: '/og-default.png' }],
+    localPatterns: [{ pathname: '/demo/**' }, { pathname: '/og-default.png' }, { pathname: '/placeholder-property.svg' }],
     // Yerel Supabase ile geliştirme/test için (canlıda kapalı kalmalı)
     dangerouslyAllowLocalIP: process.env.NEXT_IMAGE_ALLOW_LOCAL_IP === '1',
+  },
+  // OG görselleri için fontlar sunucu paketine dahil edilir
+  outputFileTracingIncludes: {
+    '/t/*/og': ['./assets/fonts/**/*'],
+    '/t/*/ilan/*/og': ['./assets/fonts/**/*'],
   },
   experimental: {
     optimizePackageImports: ['lucide-react'],
@@ -60,13 +73,21 @@ const nextConfig: NextConfig = {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
   async redirects() {
-    // Kalıcı (301) yönlendirmeler: eski site URL'leri buraya eklenebilir.
-    // Dinamik yönlendirmeler için veritabanındaki `redirects` tablosu kullanılır.
+    // Kalıcı (308) yönlendirmeler: eski site ve V1 adresleri.
+    // İlan/sayfa bazlı dinamik yönlendirmeler veritabanındaki `redirects` tablosundadır.
     return [
       { source: '/index.html', destination: '/', permanent: true },
       { source: '/index.php', destination: '/', permanent: true },
       { source: '/iletisim.html', destination: '/iletisim', permanent: true },
       { source: '/hakkimizda.html', destination: '/hakkimizda', permanent: true },
+      // V1 → V2: "işyeri" kategorisi "ticari" oldu
+      { source: '/isyeri', destination: '/ticari', permanent: true },
+      { source: '/satilik-isyeri', destination: '/satilik-ticari', permanent: true },
+      { source: '/kiralik-isyeri', destination: '/kiralik-ticari', permanent: true },
+      // V1 yönetim paneli adresleri
+      { source: '/admin/ilan-ekle', destination: '/admin/ilanlar/yeni', permanent: true },
+      { source: '/admin/ilan/:id', destination: '/admin/ilanlar/:id', permanent: true },
+      { source: '/admin/mesajlar', destination: '/admin/talepler', permanent: true },
     ];
   },
 };

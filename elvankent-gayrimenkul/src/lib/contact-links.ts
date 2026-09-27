@@ -1,29 +1,25 @@
-/**
- * Mobil uyumlu iletişim bağlantıları (tel: ve wa.me).
- */
-
-/** +90 ile başlayan uluslararası formatta sadece rakamlar: 905321234567 */
-function normalizeTrPhone(raw: string | null | undefined): string | null {
+/** Telefon numarasını uluslararası biçime çevirir (90XXXXXXXXXX). */
+export function normalizePhone(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  let digits = raw.replace(/\D/g, '');
-  if (digits.startsWith('00')) digits = digits.slice(2);
-  if (digits.startsWith('0')) digits = `90${digits.slice(1)}`;
-  if (digits.length === 10 && digits.startsWith('5')) digits = `90${digits}`;
-  if (digits.length < 10 || digits.length > 15) return null;
-  return digits;
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 10) return `90${digits}`;
+  if (digits.length === 11 && digits.startsWith('0')) return `90${digits.slice(1)}`;
+  if (digits.length === 12 && digits.startsWith('90')) return digits;
+  return digits.length >= 10 ? digits : null;
 }
 
 export function telHref(raw: string | null | undefined): string | null {
-  const n = normalizeTrPhone(raw);
+  const n = normalizePhone(raw);
   return n ? `tel:+${n}` : null;
 }
 
 export function whatsappHref(raw: string | null | undefined, message?: string): string | null {
-  const n = normalizeTrPhone(raw);
+  const n = normalizePhone(raw);
   if (!n) return null;
-  return message ? `https://wa.me/${n}?text=${encodeURIComponent(message)}` : `https://wa.me/${n}`;
+  return `https://wa.me/${n}${message ? `?text=${encodeURIComponent(message)}` : ''}`;
 }
 
-export function propertyWhatsappMessage(input: { title: string; listingNo: number; url: string }): string {
-  return `Merhaba, "${input.title}" ilanınız (İlan No: ${input.listingNo}) hakkında bilgi almak istiyorum.\n${input.url}`;
+/** "Merhaba, [İLAN BAŞLIĞI] ilanı hakkında bilgi almak istiyorum." + ilan no + adres */
+export function propertyWhatsappMessage(title: string, referenceNo: string, url: string): string {
+  return `Merhaba, "${title}" ilanı hakkında bilgi almak istiyorum.\nİlan no: ${referenceNo}\n${url}`;
 }

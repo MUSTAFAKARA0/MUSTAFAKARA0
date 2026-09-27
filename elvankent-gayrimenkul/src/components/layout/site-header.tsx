@@ -1,32 +1,31 @@
-import { Phone } from 'lucide-react';
-import { Logo } from './logo';
-import { DesktopNav, FavoritesLink, MobileMenu } from './header-client';
+import { Logo } from '@/components/layout/logo';
+import { HeaderActions, DesktopNav, MobileMenu } from '@/components/layout/header-client';
+import { mainNav } from '@/components/layout/nav';
 import { telHref, whatsappHref } from '@/lib/contact-links';
 import { formatPhoneDisplay } from '@/lib/format';
-import type { SiteSettings } from '@/types/database';
+import { brandingUrl } from '@/modules/media/variants';
+import type { Tenant } from '@/platform/tenant/tenant';
 
-export function SiteHeader({ settings }: { settings: SiteSettings }) {
-  const tel = telHref(settings.phone);
-  const wa = whatsappHref(settings.whatsapp ?? settings.phone, `Merhaba, ${settings.business_name} web sitesinden yazıyorum.`);
-
+export function SiteHeader({ tenant, hasBlog }: { tenant: Tenant; hasBlog: boolean }) {
+  const s = tenant.settings;
+  const nav = mainNav(hasBlog);
+  const phone = telHref(s.phone);
+  const whatsapp = whatsappHref(s.whatsapp ?? s.phone, 'Merhaba, bilgi almak istiyorum.');
   return (
-    <header className="sticky top-0 z-40 border-b border-line/80 bg-surface/92 backdrop-blur-md supports-[backdrop-filter]:bg-surface/85">
-      <div className="container-page flex h-16 items-center justify-between gap-4 lg:h-[72px]">
-        <Logo businessName={settings.business_name} logoUrl={settings.logo_url} />
-        <DesktopNav />
-        <div className="flex items-center gap-1">
-          <FavoritesLink />
-          {tel && (
-            <a
-              href={tel}
-              className="ml-1 hidden items-center gap-2 rounded-xl bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-800 md:inline-flex"
-            >
-              <Phone className="size-4" aria-hidden />
-              <span className="hidden xl:inline">{formatPhoneDisplay(settings.phone)}</span>
-              <span className="xl:hidden">Bizi Arayın</span>
-            </a>
-          )}
-          <MobileMenu tel={tel} whatsapp={wa} businessName={settings.business_name} />
+    <header className="sticky top-0 z-40 border-b border-border/80 bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85">
+      <div className="container-page flex h-16 items-center justify-between gap-4 lg:h-[76px]">
+        <Logo name={s.display_name} logoUrl={brandingUrl(s.logo_url)} />
+        <DesktopNav items={nav} />
+        <div className="flex items-center gap-1 sm:gap-2">
+          <HeaderActions phoneHref={phone} phoneLabel={s.phone ? formatPhoneDisplay(s.phone) : null} />
+          <MobileMenu
+            items={nav}
+            name={s.display_name}
+            phoneHref={phone}
+            phoneLabel={s.phone ? formatPhoneDisplay(s.phone) : null}
+            whatsappHref={whatsapp}
+            address={[s.address_line, s.address_district, s.address_city].filter(Boolean).join(', ') || null}
+          />
         </div>
       </div>
     </header>
