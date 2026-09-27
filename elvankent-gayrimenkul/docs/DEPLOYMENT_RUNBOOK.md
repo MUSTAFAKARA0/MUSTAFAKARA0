@@ -29,6 +29,10 @@
 | 14 | SEO | `/robots.txt` Sitemap satırı var; `/sitemap.xml`; sayfa kaynağında noindex YOK; Search Console'a site haritası | tamam |
 | 15 | Rollback planı hazır | docs/PRODUCTION_MIGRATION.md › Geri dönüş | sorumlu kişi ve yedek dosyası belli |
 
+## Bölge (hız için kritik)
+
+Sunucu fonksiyonları veritabanıyla aynı bölgede çalışmalıdır: her panel sayfası veritabanına 10–20 kez gidip gelir. `vercel.json` içinde `"regions": ["fra1"]` (Frankfurt) tanımlıdır; Supabase projesi de **Frankfurt (eu-central-1)** olmalıdır. Supabase başka bölgedeyse `regions` değerini ona en yakın Vercel bölgesiyle değiştirin.
+
 ## Production ortam değişkenleri (Vercel › Production)
 
 | Değişken | Zorunlu | Not |
