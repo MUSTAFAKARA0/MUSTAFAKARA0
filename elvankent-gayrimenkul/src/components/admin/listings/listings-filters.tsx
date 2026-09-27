@@ -65,7 +65,7 @@ export function ListingsFilters() {
           onChange={(e) => onSearch(e.target.value)}
           placeholder="Başlık veya ilan no (EKG-2026-0001)"
           maxLength={60}
-          className="h-11 w-full rounded-xl border border-border bg-surface pr-10 pl-10 text-sm placeholder:text-muted-foreground/70 focus:border-primary focus:ring-4 focus:ring-primary/12 focus:outline-none"
+          className="h-11 w-full rounded-xl border border-border bg-surface pr-10 pl-10 text-base sm:text-sm placeholder:text-muted-foreground/70 focus:border-primary focus:ring-4 focus:ring-primary/12 focus:outline-none"
         />
         {pending && <Loader2 className="absolute top-1/2 right-3.5 size-4 -translate-y-1/2 animate-spin text-muted-foreground" aria-label="Yükleniyor" />}
       </div>

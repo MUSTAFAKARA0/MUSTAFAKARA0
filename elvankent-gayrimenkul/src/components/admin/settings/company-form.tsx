@@ -142,7 +142,7 @@ export function CompanyForm({
       </Panel>
 
       <Panel title="Renkler" description="Yazı renkleri erişilebilirlik için otomatik ayarlanır (WCAG AA, en az 4,5:1).">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="grid gap-5 sm:grid-cols-2">
             {colorField('primary_color', 'Ana renk', 'Butonlar, bağlantılar ve vurgular.')}
             {colorField('accent_color', 'Vurgu rengi', 'Rozetler ve ikincil vurgular.')}

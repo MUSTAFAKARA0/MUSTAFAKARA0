@@ -88,7 +88,7 @@ export function PageEditor({
   const description = seoDescription || markdownToPlainText(fillPlaceholders(body, previewValues), 160);
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="min-w-0 space-y-6">
         {legal && (
           <div className="flex gap-3 rounded-2xl border border-warning/30 bg-warning-soft p-4 text-[13.5px] leading-relaxed text-warning sm:p-5">

@@ -71,7 +71,7 @@ export default async function PlatformOrgPage({ params }: PageProps<'/platform/o
           )
         }
       />
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="min-w-0 space-y-6">
           <Panel title="Plan ve abonelik" description="Plan değişikliği mevcut aboneliği kapatır ve yenisini başlatır; geçmiş korunur.">
             <p className="mb-4 flex flex-wrap items-center gap-2 text-[14px]">

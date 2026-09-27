@@ -157,7 +157,7 @@ export function OwnerCtaSection({ tenant }: { tenant: Tenant }) {
   return (
     <section aria-labelledby="mulk-sahibi" className="container-page pb-16 sm:pb-24">
       <div className="relative overflow-hidden rounded-[1.75rem] bg-surface-inverse px-6 py-12 text-inverse-foreground sm:px-12 sm:py-16 lg:px-16">
-        <div className="grid items-center gap-10 lg:grid-cols-[1.4fr_1fr]">
+        <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.4fr_1fr]">
           <div>
             <p className="eyebrow text-accent">Mülk sahipleri için</p>
             <h2 id="mulk-sahibi" className="mt-3 font-display text-display-lg text-white">

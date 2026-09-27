@@ -15,7 +15,7 @@ export default async function AccountPage({ searchParams }: PageProps<'/admin/he
   return (
     <>
       <AdminPageHeader title="Hesabım" description={ctx.user.email} />
-      <div className="grid gap-6 xl:grid-cols-[1fr_24rem]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_24rem]">
         <div className="space-y-6">
           {mustChange && (
             <p role="alert" className="rounded-2xl border border-warning/25 bg-warning-soft px-5 py-3.5 text-sm font-medium text-warning">

@@ -186,7 +186,7 @@ export function CompareBar() {
           type="button"
           onClick={clear}
           aria-label="Karşılaştırma listesini temizle"
-          className="rounded-lg p-1.5 text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+          className="rounded-lg p-2.5 text-muted-foreground hover:bg-surface-muted hover:text-foreground"
         >
           <X className="size-4" />
         </button>

@@ -27,7 +27,7 @@ function FieldShell({ label, htmlFor, children, className }: { label: string; ht
 }
 
 const selectClass =
-  'w-full cursor-pointer appearance-none truncate bg-transparent pr-2 text-[15px] font-semibold text-foreground outline-none';
+  'w-full cursor-pointer appearance-none truncate bg-transparent py-1.5 pr-2 text-base font-semibold sm:py-0 sm:text-[15px] text-foreground outline-none';
 
 /**
  * Ana sayfa arama kutusu: satılık/kiralık, konum, tip, oda ve bütçe.
@@ -79,7 +79,7 @@ export function HeroSearch({ options }: { options: SearchOptions }) {
         ]}
         className="mb-3"
       />
-      <div className="grid overflow-hidden rounded-2xl bg-surface shadow-lg sm:grid-cols-2 lg:grid-cols-[1.35fr_1.1fr_0.8fr_0.95fr_auto] lg:divide-x lg:divide-border">
+      <div className="grid grid-cols-1 overflow-hidden rounded-2xl bg-surface shadow-lg sm:grid-cols-2 lg:grid-cols-[1.35fr_1.1fr_0.8fr_0.95fr_auto] lg:divide-x lg:divide-border">
         <FieldShell label="Konum" htmlFor={`${id}-loc`} className="border-b border-border sm:border-r lg:border-0">
           <select id={`${id}-loc`} value={location} onChange={(e) => setLocation(e.target.value)} className={selectClass}>
             <option value="">Tüm bölgeler</option>

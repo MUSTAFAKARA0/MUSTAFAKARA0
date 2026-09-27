@@ -268,7 +268,7 @@ export function PropertyEditor({ data, taxonomy, perms, map, initialStep, siteHo
         <p className="mb-6 rounded-2xl bg-surface-muted px-5 py-3.5 text-sm text-muted-foreground">Bu ilanı görüntüleme yetkiniz var; düzenleme yetkiniz yok.</p>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[14rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[14rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)]">
         <nav aria-label="İlan adımları" className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <ol className="scrollbar-none relative -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
             {EDITOR_STEPS.map((s, i) => {

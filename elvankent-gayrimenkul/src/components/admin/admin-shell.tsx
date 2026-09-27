@@ -239,7 +239,7 @@ function SearchBox({ className }: { className?: string }) {
         type="search"
         placeholder="İlan no, başlık, müşteri, telefon…"
         maxLength={80}
-        className="h-10 w-full rounded-xl border border-border bg-surface pr-3 pl-9 text-sm placeholder:text-muted-foreground/70 focus:border-primary focus:ring-4 focus:ring-primary/12 focus:outline-none"
+        className="h-10 w-full rounded-xl border border-border bg-surface pr-3 pl-9 text-base sm:text-sm placeholder:text-muted-foreground/70 focus:border-primary focus:ring-4 focus:ring-primary/12 focus:outline-none"
       />
     </form>
   );

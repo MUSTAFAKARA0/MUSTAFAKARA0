@@ -43,7 +43,7 @@ export default async function SeoPage({ searchParams }: PageProps<'/admin/seo'>)
         title="SEO"
         description="Arama motorlarında ve sosyal medyada sitenizin nasıl görüneceği. İlan, blog ve bölge sayfalarının SEO alanları kendi düzenleyicilerindedir."
       />
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="min-w-0 space-y-6">
           <Panel title="Ana sayfa ve site geneli" description="Boş bırakılan alanlar şirket adından otomatik oluşturulur.">
             <SeoSettingsForm

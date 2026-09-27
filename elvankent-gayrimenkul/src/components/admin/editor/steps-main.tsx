@@ -76,7 +76,7 @@ export function StepBasics() {
       </StepSection>
 
       <StepSection title="Fiyat" description="Fiyat girilmezse sitede “Fiyat için arayın” yazar; yayınlamak için fiyat gerekir.">
-        <div className="grid gap-5 sm:grid-cols-[1fr_10rem]">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-[1fr_10rem]">
           <NumberField label={isRent ? 'Aylık kira' : 'Satış fiyatı'} name="price" value={values.price} onChange={(v) => set('price', v)} errors={errors} disabled={readOnly} />
           <SelectField
             label="Para birimi"

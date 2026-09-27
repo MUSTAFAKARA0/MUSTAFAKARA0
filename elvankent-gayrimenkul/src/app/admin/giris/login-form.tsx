@@ -31,7 +31,7 @@ export function LoginForm({ next }: { next?: string }) {
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:text-foreground"
+              className="absolute top-1/2 right-1 -translate-y-1/2 rounded-lg p-2.5 text-muted-foreground hover:text-foreground"
               aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
             >
               {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}

@@ -99,7 +99,7 @@ export default async function LeadsPage({ searchParams }: PageProps<'/admin/tale
               defaultValue={q}
               placeholder="Ad, telefon veya e-posta"
               maxLength={60}
-              className="h-11 w-full rounded-xl border border-border bg-surface pr-3 pl-10 text-sm focus:border-primary focus:ring-4 focus:ring-primary/12 focus:outline-none"
+              className="h-11 w-full rounded-xl border border-border bg-surface pr-3 pl-10 text-base sm:text-sm focus:border-primary focus:ring-4 focus:ring-primary/12 focus:outline-none"
             />
           </div>
           <Select name="kaynak" defaultValue={source ?? ''} aria-label="Kaynak" className="h-11 sm:w-44">
