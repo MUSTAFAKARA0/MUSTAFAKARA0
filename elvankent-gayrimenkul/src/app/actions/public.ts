@@ -1,10 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { after } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getRequestFingerprint } from '@/lib/request';
 import { getTenantFromRequest } from '@/platform/tenant/tenant';
 import { appointmentTimestamp, publicLeadSchema } from '@/modules/crm/validation';
+import { notifyNewLead } from '@/modules/notifications/lead';
 import { getPropertiesByIds, getPropertyDetailsByIds } from '@/modules/properties/queries';
 import type { PropertyCard, PropertyDetail } from '@/modules/properties/types';
 import type { Enums, Json } from '@/types/supabase';
@@ -103,7 +105,7 @@ export async function submitLead(_prev: LeadFormState, formData: FormData): Prom
   }
 
   const { ipHash, userAgent } = await getRequestFingerprint();
-  const { error } = await supabase.rpc('submit_lead', {
+  const { data: leadId, error } = await supabase.rpc('submit_lead', {
     p_org: tenant.id,
     p_full_name: d.fullName,
     p_phone: d.phone ?? '',
@@ -144,6 +146,8 @@ export async function submitLead(_prev: LeadFormState, formData: FormData): Prom
   }
 
   revalidatePath('/admin', 'layout');
+  // Ofise e-posta bildirimi yanıt gönderildikten sonra yapılır; ziyaretçiyi bekletmez
+  if (leadId) after(() => notifyNewLead(tenant, leadId));
   return { status: 'success', message: SUCCESS[d.kind] };
 }
 

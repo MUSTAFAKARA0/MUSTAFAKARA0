@@ -13,6 +13,14 @@
 | [SETUP.md](./SETUP.md) | Kurulum, V1 → V2 yükseltme, ortam değişkenleri, canlıya alma kontrol listesi |
 | [ADMIN_GUIDE.md](./ADMIN_GUIDE.md) | Yönetim paneli kullanım kılavuzu |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Mimari, çok kiracılı yapı, güvenlik katmanları, medya hattı, SEO |
+| [docs/DEMO_SETUP.md](./docs/DEMO_SETUP.md) | Ayrı demo/önizleme ortamı (Supabase demo projesi + Vercel Preview) ve telefon kabul testi |
+| [docs/PRODUCTION_MIGRATION.md](./docs/PRODUCTION_MIGRATION.md) | Canlı veritabanı yükseltmesi: yedek, sıra, kontroller, geri dönüş |
+| [docs/DEPLOYMENT_RUNBOOK.md](./docs/DEPLOYMENT_RUNBOOK.md) | 15 adımlık canlıya çıkış sırası |
+| [docs/OPERATIONS.md](./docs/OPERATIONS.md) | Bildirimler, hata izleme/uptime, MFA, harita sağlayıcısı, alan adları |
+| [docs/BACKUP_RESTORE.md](./docs/BACKUP_RESTORE.md) | Veritabanı + Storage yedekleme ve geri yükleme |
+| [docs/LOCATION_DATA.md](./docs/LOCATION_DATA.md) | Türkiye il/ilçe/mahalle verisi: kaynak, CSV biçimi, içe aktarma |
+| [docs/LEGAL_DATA_MAP.md](./docs/LEGAL_DATA_MAP.md) | Kişisel veri haritası (hukukçu incelemesi için; hukuki görüş değildir) |
+| [docs/GO_LIVE_CONTENT_CHECKLIST.md](./docs/GO_LIVE_CONTENT_CHECKLIST.md) | Gerçek içerik ve SEO geçiş listesi |
 | [TESLIM_RAPORU.md](./TESLIM_RAPORU.md) | V1 teknik teslim raporu (tarihsel) |
 
 ## Hızlı başlangıç
@@ -28,6 +36,7 @@ Veritabanı: `supabase/migrations/*.sql` dosyaları sırayla uygulanır (ayrınt
 Yönetici / süper admin hesabı:
 
 ```bash
+npm run create-admin -- eposta@ornek.com                                   # güçlü şifre üretir, bir kez gösterir
 npm run create-admin -- eposta@ornek.com 'Guclu-Sifre-123'                 # varsayılan ofiste owner
 npm run create-admin -- eposta@ornek.com 'Guclu-Sifre-123' --super-admin   # + platform yöneticisi
 ```
@@ -40,7 +49,10 @@ npm run create-admin -- eposta@ornek.com 'Guclu-Sifre-123' --super-admin   # + p
 | `npm run build` / `npm start` | Production build / sunucu |
 | `npm run typecheck` / `npm run lint` | TypeScript / ESLint |
 | `npm run check` | typecheck + lint + build |
-| `npm test` (`npm run test:rls`) | Güvenlik testleri: kiracı izolasyonu, roller, depolama, yetki yükseltme |
+| `npm test` | Birim testleri + güvenlik testleri (`test:unit`, `test:rls`: kiracı izolasyonu, roller, depolama, yetki yükseltme, MFA) |
+| `npm run prelaunch [-- --production]` | Canlıya çıkış kontrolü (ortam değişkenleri, demo veri, hukuk onayı, MFA…) |
+| `npm run backup:storage` / `npm run restore:storage` | Storage yedeği / geri yükleme (bkz. docs/BACKUP_RESTORE.md) |
+| `npm run import:locations -- --file=… [--apply]` | İl/ilçe/mahalle CSV içe aktarma (bkz. docs/LOCATION_DATA.md) |
 | `npm run test:e2e` | Playwright uçtan uca testler (ziyaretçi, yönetici, responsive) |
 | `npm run create-admin -- e-posta şifre [--org=] [--role=] [--super-admin]` | Hesap oluşturur, ofise üye yapar |
 | `npm run db:types` | Veritabanından TypeScript tipleri üretir (`DATABASE_URL`) |

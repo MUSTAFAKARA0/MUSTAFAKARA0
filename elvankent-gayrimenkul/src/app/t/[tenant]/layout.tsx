@@ -3,6 +3,7 @@ import { SiteFooter } from '@/components/layout/site-footer';
 import { SiteHeader } from '@/components/layout/site-header';
 import { CompareBar, CookieConsent, FloatingWhatsApp } from '@/components/layout/site-extras';
 import { whatsappHref } from '@/lib/contact-links';
+import { isIndexable } from '@/lib/site-env';
 import { getPublishedPosts, getRegionPages } from '@/modules/content/queries';
 import { brandingUrl } from '@/modules/media/variants';
 import { baseOpenGraph, siteOgImage } from '@/modules/seo/og';
@@ -27,6 +28,8 @@ export async function generateMetadata({ params }: LayoutProps<'/t/[tenant]'>): 
     openGraph: { type: 'website', ...baseOpenGraph(tenant), images: [og] },
     twitter: { card: 'summary_large_image', images: [og] },
     manifest: '/manifest.webmanifest',
+    // Demo / önizleme ortamı arama motorlarına kapalıdır (ayrıca X-Robots-Tag başlığı)
+    ...(isIndexable() ? {} : { robots: { index: false, follow: false } }),
     ...(favicon ? { icons: { icon: favicon, apple: favicon } } : {}),
     verification: {
       google: s.google_site_verification ?? process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? undefined,

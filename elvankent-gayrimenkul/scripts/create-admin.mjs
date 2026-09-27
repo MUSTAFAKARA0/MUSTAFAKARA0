@@ -4,6 +4,7 @@
  * organizasyona üye yapar. İsteğe bağlı olarak platform süper admin yetkisi verir.
  *
  * Kullanım:
+ *   npm run create-admin -- ornek@eposta.com                        (güçlü şifre üretir, bir kez gösterir)
  *   npm run create-admin -- ornek@eposta.com 'Güçlü-Bir-Şifre-123'
  *   npm run create-admin -- ornek@eposta.com 'Şifre' --org=elvankent --role=owner --name="Ad Soyad"
  *   npm run create-admin -- ornek@eposta.com 'Şifre' --super-admin          (platform yöneticisi)
@@ -21,8 +22,9 @@
  *
  * Not: Bu betik yalnızca kendi bilgisayarınızda / sunucuda çalıştırılmalıdır.
  * service_role anahtarı hiçbir zaman tarayıcıya veya git deposuna konmamalıdır.
- * Şifre ekrana veya loglara yazdırılmaz.
+ * Verilen şifre ekrana veya loglara yazdırılmaz; üretilen şifre yalnızca bir kez gösterilir.
  */
+import { randomInt } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
 const args = process.argv.slice(2);
@@ -35,7 +37,18 @@ const flags = Object.fromEntries(
       return [k, v.length ? v.join('=') : true];
     }),
 );
-const [email, password] = positional;
+const [email, givenPassword] = positional;
+
+/** Karıştırılması zor karakterlerden (0/O, 1/l/I yok) 4×5 gruplu şifre */
+function generatePassword() {
+  const alphabet = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const groups = Array.from({ length: 4 }, () => Array.from({ length: 5 }, () => alphabet[randomInt(alphabet.length)]).join(''));
+  // En az bir rakam garanti edilir
+  groups[3] = groups[3].slice(0, 4) + String(randomInt(2, 10));
+  return groups.join('-');
+}
+const generated = !givenPassword;
+const password = givenPassword ?? generatePassword();
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const ROLES = ['owner', 'admin', 'agent', 'editor', 'viewer'];
@@ -85,8 +98,9 @@ if (user) {
   console.info(`• Kullanıcı oluşturuldu: ${email}`);
 }
 
-// Şifreyi yönetici belirlediği için ilk girişte değiştirme zorunluluğu kaldırılır
-const profilePatch = { id: user.id, password_change_required: false };
+// Şifreyi yönetici kendisi belirlediyse ilk girişte değiştirme zorunluluğu kaldırılır;
+// üretilen şifre ise ilk girişte değiştirilmek zorundadır.
+const profilePatch = { id: user.id, password_change_required: generated };
 if (fullName) profilePatch.full_name = fullName;
 if (flags['super-admin']) profilePatch.is_super_admin = true;
 const { error: profileError } = await supabase.from('profiles').upsert(profilePatch);
@@ -104,4 +118,8 @@ if (!flags['no-org']) {
   console.info(`• "${org.name}" organizasyonuna ${role} rolüyle eklendi.`);
 }
 
+if (generated) {
+  console.info('\n  Geçici şifre (yalnızca şimdi gösterilir, ilk girişte değiştirmeniz istenir):');
+  console.info(`\n      ${password}\n`);
+}
 console.info('✓ Tamamlandı. /admin/giris adresinden giriş yapabilirsiniz.\n');

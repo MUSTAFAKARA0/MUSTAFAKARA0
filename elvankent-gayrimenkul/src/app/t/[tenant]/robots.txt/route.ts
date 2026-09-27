@@ -1,3 +1,4 @@
+import { isIndexable } from '@/lib/site-env';
 import { getTenant, tenantUrl } from '@/platform/tenant/tenant';
 
 /**
@@ -21,8 +22,9 @@ export async function GET(_request: Request, { params }: RouteContext<'/t/[tenan
     'Disallow: /favoriler',
     'Disallow: /karsilastir',
     '',
-    `Sitemap: ${tenantUrl(tenant, '/sitemap.xml')}`,
-    '',
+    // Demo/önizleme: site haritası duyurulmaz; tüm yanıtlar X-Robots-Tag: noindex taşır
+    // (taramayı engellemek yerine noindex kullanılır; engellenen sayfanın noindex'i görülemez)
+    ...(isIndexable() ? [`Sitemap: ${tenantUrl(tenant, '/sitemap.xml')}`, ''] : ['# Demo / önizleme ortamı: dizine eklenmez', '']),
   ].join('\n');
 
   return new Response(body, {

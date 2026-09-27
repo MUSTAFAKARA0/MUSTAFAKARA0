@@ -22,14 +22,29 @@ export interface Taxonomy {
 const EMPTY: Taxonomy = { cities: [], districts: [], neighborhoods: [], propertyTypes: [], features: [] };
 const collator = new Intl.Collator('tr');
 
+/**
+ * Tablonun TÜM satırları: Supabase API'si istek başına en fazla 1000 satır döndürür;
+ * Türkiye geneli mahalle verisi (~50 bin) yüklendiğinde listeler sessizce eksik
+ * kalmasın diye 1000'erlik sayfalarla okunur (her sayfa ayrı önbelleğe alınır).
+ */
+async function fetchAll<T>(build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<{ data: T[]; error: { message: string } | null }> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await build(from, from + 999);
+    if (error) return { data: rows, error };
+    rows.push(...(data ?? []));
+    if (!data || data.length < 1000) return { data: rows, error: null };
+  }
+}
+
 /** Platform geneli referans veriler: konum hiyerarşisi, emlak tipleri, özellikler (1 saat önbellek). */
 export const getTaxonomy = cache(async (): Promise<Taxonomy> => {
   if (!isSupabaseConfigured()) return EMPTY;
   const supabase = createPublicClient([cacheTags.taxonomy], 3600);
   const [cities, districts, neighborhoods, types, features] = await Promise.all([
-    supabase.from('cities').select('id, name, slug, latitude, longitude'),
-    supabase.from('districts').select('id, city_id, name, slug, latitude, longitude'),
-    supabase.from('neighborhoods').select('id, district_id, name, slug, latitude, longitude'),
+    fetchAll((a, b) => supabase.from('cities').select('id, name, slug, latitude, longitude').order('id').range(a, b)),
+    fetchAll((a, b) => supabase.from('districts').select('id, city_id, name, slug, latitude, longitude').order('id').range(a, b)),
+    fetchAll((a, b) => supabase.from('neighborhoods').select('id, district_id, name, slug, latitude, longitude').order('id').range(a, b)),
     supabase.from('property_types').select('id, category, name, slug, sort_order').order('sort_order'),
     supabase.from('features').select('id, key, label, feature_group, sort_order').order('sort_order'),
   ]);
@@ -45,6 +60,15 @@ export const getTaxonomy = cache(async (): Promise<Taxonomy> => {
     features: features.data ?? [],
   };
 });
+
+/** Bir ilçenin mahalleleri (yönetim paneli seçim kutuları; tüm liste tarayıcıya gönderilmez) */
+export async function neighborhoodsOfDistrict(districtId: number): Promise<Neighborhood[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = createPublicClient([cacheTags.taxonomy], 3600);
+  const { data, error } = await supabase.from('neighborhoods').select('id, district_id, name, slug, latitude, longitude').eq('district_id', districtId).limit(1000);
+  if (error) throw new Error(`Mahalleler yüklenemedi: ${error.message}`);
+  return (data ?? []).sort((a, b) => collator.compare(a.name, b.name));
+}
 
 export interface LocationLookup {
   city?: City;

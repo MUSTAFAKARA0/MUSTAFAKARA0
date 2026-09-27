@@ -6,6 +6,7 @@ import { AuditList } from '@/components/admin/audit-list';
 import { AdminPageHeader, EmptyPanel, Panel } from '@/components/admin/ui';
 import { DomainForm, PlanForm } from '@/components/platform/org-controls';
 import { Badge } from '@/components/ui/badge';
+import { vercelDnsRecords } from '@/modules/domains/provider';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { removeDomain, setOrganizationStatus } from '@/app/actions/platform';
@@ -103,6 +104,15 @@ export default async function PlatformOrgPage({ params }: PageProps<'/platform/o
                     >
                       <Trash2 /> Kaldır
                     </ActionButton>
+                    <p className="w-full text-[12.5px] text-muted-foreground">
+                      DNS:{' '}
+                      {vercelDnsRecords(d.hostname).map((r) => (
+                        <code key={r.type} className="numeric rounded bg-surface-muted px-1.5 py-0.5">
+                          {r.type} {r.name} → {r.value}
+                        </code>
+                      ))}{' '}
+                      (Vercel panelinde projeye özel değer gösterilirse o kullanılır.)
+                    </p>
                   </li>
                 ))}
               </ul>

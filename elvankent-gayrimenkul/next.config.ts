@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { isIndexable } from './src/lib/site-env';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL) : null;
 const storageUrl = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_STORAGE_URL) : null;
@@ -70,7 +71,9 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react'],
   },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    // Production dışındaki ortamlar (demo, önizleme, yerel) hiçbir yanıtta dizine eklenmez
+    const robots = isIndexable() ? [] : [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }];
+    return [{ source: '/:path*', headers: [...securityHeaders, ...robots] }];
   },
   async redirects() {
     // Kalıcı (308) yönlendirmeler: eski site ve V1 adresleri.

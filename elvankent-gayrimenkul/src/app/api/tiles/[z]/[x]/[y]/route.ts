@@ -1,3 +1,4 @@
+import { publicEnv } from '@/lib/env';
 import { getMapProvider } from '@/modules/maps/providers';
 
 /** Döşeme (x, y, z) → coğrafi sınırlar */
@@ -38,7 +39,8 @@ export async function GET(request: Request, ctx: RouteContext<'/api/tiles/[z]/[x
   const provider = getMapProvider();
   try {
     const res = await fetch(provider.tileUrl(zi, xi, yi), {
-      headers: { 'User-Agent': 'EmlakPlatform/2.0 (+tile-proxy)' },
+      // OSM kullanım politikası uygulamayı tanımlayan bir User-Agent ister
+      headers: { 'User-Agent': `EmlakPlatform/2.0 (+${publicEnv.siteUrl})` },
       next: { revalidate: 60 * 60 * 24 * 7 },
       signal: AbortSignal.timeout(8000),
     });

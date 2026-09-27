@@ -6,7 +6,19 @@ import { getTenantFromRequest } from '@/platform/tenant/tenant';
 
 export default async function PanelLayout({ children }: LayoutProps<'/admin'>) {
   const ctx = await requirePageContext();
-  const tenant = await getTenantFromRequest().catch(() => null);
+  const [tenant, newLeads] = await Promise.all([
+    getTenantFromRequest().catch(() => null),
+    // Menüde "yeni talep" rozeti: ofisin henüz ilgilenmediği talepler
+    ctx.can('leads.read')
+      ? ctx.supabase
+          .from('leads')
+          .select('id', { count: 'exact', head: true })
+          .eq('organization_id', ctx.org.id)
+          .eq('status', 'new')
+          .is('deleted_at', null)
+          .then((r) => r.count ?? 0)
+      : Promise.resolve(0),
+  ]);
   const nav = filterNav(ctx.can, ctx.plan.features, ctx.profile.isSuperAdmin);
   // Aktif organizasyonun sitesi: bulunulan alan adı aynı ofisse göreli kök, değilse yok
   const siteUrl = tenant?.id === ctx.org.id ? '/' : null;
@@ -19,6 +31,7 @@ export default async function PanelLayout({ children }: LayoutProps<'/admin'>) {
       siteUrl={siteUrl}
       canCreateListing={ctx.can('properties.create')}
       passwordChangeRequired={ctx.profile.passwordChangeRequired}
+      badges={{ '/admin/talepler': newLeads }}
     >
       {children}
     </AdminShell>

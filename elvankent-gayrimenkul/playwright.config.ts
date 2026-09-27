@@ -4,6 +4,13 @@ import { defineConfig, devices } from '@playwright/test';
  * Uçtan uca testler. Çalışan bir uygulamaya (varsayılan http://localhost:3000)
  * ve Supabase'e karşı çalışır. Ayrıntılar: TESLIM_RAPORU.md > Testler
  */
+// Yerel .env.local varsa yüklenir (izolasyon testi service_role ile geçici kiracı oluşturur)
+try {
+  process.loadEnvFile('.env.local');
+} catch {
+  // dosya yoksa ortam değişkenleri dışarıdan verilmiştir
+}
+
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
 // Headless tarayıcı kullanıcı ajanı istatistikte "bot" sayılmasın diye normal Chrome UA kullanılır
 const userAgent =

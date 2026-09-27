@@ -3,6 +3,7 @@
 import { randomInt } from 'node:crypto';
 import { revalidatePath, updateTag } from 'next/cache';
 import { z } from 'zod';
+import { getDomainProvider } from '@/modules/domains';
 import { cacheTags } from '@/lib/cache-tags';
 import { slugify } from '@/lib/slug';
 import { isUuid } from '@/lib/utils';
@@ -157,16 +158,23 @@ export async function addDomain(orgId: string, hostname: string, primary: boolea
     if (error?.code === '23505') throw new ActionError('Bu alan adı başka bir organizasyona bağlı.', 'validation', { hostname: ['Bu alan adı zaten kullanılıyor.'] });
     assertNoDbError(error);
     refreshTenants(orgId);
+    // Barındırma tarafı: manual → DNS talimatı sayfada gösterilir; vercel → projeye otomatik eklenir
+    const provider = getDomainProvider();
+    const hosted = await provider.add(host);
+    if (!hosted.ok) throw new ActionError(`Alan adı kaydedildi ancak barındırmaya eklenemedi: ${hosted.error} Vercel panelinden elle ekleyebilirsiniz.`);
     return null;
-  }, 'Alan adı eklendi. DNS kaydı ve barındırma (Vercel) tarafında da tanımlanmalıdır.');
+  }, 'Alan adı eklendi. Sayfadaki DNS kaydını alan adı sağlayıcınızda tanımlayın.');
 }
 
 export async function removeDomain(domainId: string, orgId: string): Promise<ActionResult<null>> {
   return runAction(async () => {
     const session = await requireSuperAdmin();
     if (!isUuid(domainId)) throw new ActionError('Alan adı bulunamadı.');
+    // Süper admin doğrulandıktan sonra alan adı adı hizmet istemcisiyle okunur (barındırmadan kaldırmak için)
+    const { data: domain } = (await createServiceClient()?.from('organization_domains').select('hostname').eq('id', domainId).maybeSingle()) ?? { data: null };
     const { error } = await session.supabase.rpc('platform_remove_domain', { p_id: domainId });
     assertNoDbError(error);
+    if (domain?.hostname) await getDomainProvider().remove(domain.hostname);
     refreshTenants(isUuid(orgId) ? orgId : undefined);
     return null;
   }, 'Alan adı kaldırıldı.');

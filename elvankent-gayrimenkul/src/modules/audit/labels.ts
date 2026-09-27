@@ -25,6 +25,9 @@ const MEMBER_STATUS: Record<string, string> = { active: 'aktif', disabled: 'devr
 
 const FIELD_LABELS: Record<string, string> = {
   title: 'başlık',
+  notify_new_lead: 'talep bildirimi (açık/kapalı)',
+  notify_emails: 'bildirim e-posta adresleri',
+  require_admin_mfa: 'yöneticiler için iki adımlı doğrulama zorunluluğu',
   description: 'açıklama',
   price: 'fiyat',
   status: 'durum',
@@ -91,6 +94,10 @@ export function describeAudit(row: AuditRow): { text: string; detail: string | n
       return { text: 'Şifresini değiştirdi', detail: null, tone: 'neutral' };
     case 'auth.password_reset_requested':
       return { text: 'Şifre sıfırlama bağlantısı istendi', detail: null, tone: 'neutral' };
+    case 'auth.mfa_failed':
+      return { text: 'Hatalı iki adımlı doğrulama kodu', detail: null, tone: 'danger' };
+    case 'auth.mfa_verified':
+      return { text: 'İki adımlı doğrulama ile oturumu onayladı', detail: null, tone: 'success' };
     case 'auth.forbidden':
       return { text: 'Yetkisiz işlem denemesi engellendi', detail: typeof m.permission === 'string' ? `Gerekli yetki: ${m.permission}` : null, tone: 'danger' };
     case 'property.created':
@@ -117,6 +124,12 @@ export function describeAudit(row: AuditRow): { text: string; detail: string | n
       return { text: `${target} kullanıcısının durumunu değiştirdi`, detail: `${MEMBER_STATUS[String(m.from)] ?? m.from} → ${MEMBER_STATUS[String(m.to)] ?? m.to}`, tone: 'warning' };
     case 'user.created':
       return { text: `${target} için yeni kullanıcı hesabı oluşturdu`, detail: m.role ? `Rol: ${role(m.role)}` : null, tone: 'neutral' };
+    case 'user.mfa_enabled':
+      return { text: 'İki adımlı doğrulamayı açtı', detail: null, tone: 'success' };
+    case 'user.mfa_disabled':
+      return { text: 'İki adımlı doğrulamayı kapattı', detail: null, tone: 'warning' };
+    case 'user.mfa_reset':
+      return { text: `${target} kullanıcısının iki adımlı doğrulamasını sıfırladı`, detail: null, tone: 'warning' };
     case 'user.password_reset':
       return { text: 'Bir kullanıcı için geçici şifre oluşturdu', detail: null, tone: 'warning' };
     case 'settings.updated':

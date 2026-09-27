@@ -30,7 +30,12 @@ V1'de ilk dört dosya (`20260922000001…04`) zaten uygulanmıştır. **Bunları
 20260926000008_v2_storage.sql
 20260926000009_v2_reference_data.sql
 20260927000001_v2_platform_fixes.sql
+20260928000001_stage3_notifications.sql
+20260928000002_stage3_mfa.sql
+20260928000003_stage3_location_codes.sql
 ```
+
+> Canlıda uygulamadan önce ayrıntılı prova, kontrol ve geri dönüş planı: [docs/PRODUCTION_MIGRATION.md](./docs/PRODUCTION_MIGRATION.md). Canlıya çıkış sırası: [docs/DEPLOYMENT_RUNBOOK.md](./docs/DEPLOYMENT_RUNBOOK.md).
 
 İki yöntem:
 
@@ -123,10 +128,12 @@ Yerel Supabase kullanıyorsanız (`supabase start`), `.env.local` içinde `NEXT_
 ```bash
 npm run typecheck    # TypeScript
 npm run lint         # ESLint (React Compiler kuralları dahil)
+npm run test:unit    # Birim testleri
 npm run test:rls     # Güvenlik testleri (kendi geçici test ofislerini oluşturup siler)
 npm run test:e2e     # Playwright (E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD gerekir)
 npm run build        # Production build
 npm run check        # typecheck + lint + build
+npm run prelaunch    # canlıya çıkış kontrolü (-- --production ile canlı değerlerde)
 npm run db:types     # Veritabanı şemasından TypeScript tipleri (DATABASE_URL gerekir)
 ```
 
@@ -135,5 +142,5 @@ npm run db:types     # Veritabanı şemasından TypeScript tipleri (DATABASE_URL
 ## F. Yedekleme ve veri dışa aktarma
 
 - Veritabanı: Supabase otomatik yedekleri + dönemsel `pg_dump`.
-- Depolama: `media-originals` kovası orijinal fotoğrafları içerir; Supabase Storage yedeğe dahil değildir, önemli ise dönemsel olarak dışa aktarın (ör. `supabase storage` CLI veya S3 uyumlu araçlar).
+- Depolama: Supabase veritabanı yedekleri Storage dosyalarını kapsamaz. Otomatik gece yedeği (GitHub Actions) ve elle yedek/geri yükleme: [docs/BACKUP_RESTORE.md](./docs/BACKUP_RESTORE.md).
 - Panelden: **Ayarlar › Veri dışa aktarma** ile ilanlar, müşteriler ve talepler CSV/JSON olarak indirilebilir (her dışa aktarma güvenlik kaydına yazılır).

@@ -7,7 +7,24 @@
 -- Yönetim paneli > Ayarlar > Demo ilanlar > "Demo ilanları kaldır" ile tek tıkla çöp
 -- kutusuna taşınabilir (İlanlar > Çöp kutusu üzerinden kalıcı silinebilir).
 -- Dosya tekrar çalıştırılabilir: demo ilan varsa hiçbir şey yapmaz.
+--
+-- PRODUCTION KORUMASI: Bu dosya yalnızca açık onayla çalışır ve veritabanında
+-- gerçek (demo olmayan) ilan varsa hata verip durur. Demo projesinde çalıştırmak için
+-- aynı oturumda önce şunu çalıştırın:
+--     select set_config('app.allow_demo_seed', 'on', false);
+-- (psql: PGOPTIONS='-c app.allow_demo_seed=on' psql ... -f supabase/seed.sql)
 -- =============================================================================
+
+do $$
+begin
+  if coalesce(current_setting('app.allow_demo_seed', true), '') <> 'on' then
+    raise exception 'Demo verisi yüklenmedi: app.allow_demo_seed=on ayarlanmadan seed.sql çalıştırılamaz (production koruması).';
+  end if;
+  if exists (select 1 from public.properties where not is_demo and deleted_at is null) then
+    raise exception 'Demo verisi yüklenmedi: bu veritabanında gerçek ilanlar var. seed.sql yalnızca demo/test projelerinde kullanılır.';
+  end if;
+end;
+$$;
 
 create or replace function pg_temp.demo_images(p_property uuid, p_images text[], p_alts text[])
 returns void

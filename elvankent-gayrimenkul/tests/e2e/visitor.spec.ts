@@ -177,9 +177,19 @@ test.describe('Ziyaretçi', () => {
     expect(ld.some((s) => s.includes('"RealEstateListing"'))).toBe(true);
     expect(ld.some((s) => s.includes('"BreadcrumbList"'))).toBe(true);
     expect(ld.some((s) => s.includes('aggregateRating'))).toBe(false);
-    const robots = await (await request.get('/robots.txt')).text();
+    const robotsRes = await request.get('/robots.txt');
+    const robots = await robotsRes.text();
     expect(robots).toContain('Disallow: /admin');
-    expect(robots).toMatch(/Sitemap: .*\/sitemap\.xml/);
+    // Demo / önizleme ortamı (SITE_ENV≠production): her yanıt noindex, robots.txt site haritası vermez
+    const indexable = !/noindex/.test(robotsRes.headers()['x-robots-tag'] ?? '');
+    if (indexable) {
+      expect(robots).toMatch(/Sitemap: .*\/sitemap\.xml/);
+      await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(0);
+    } else {
+      expect(robots).not.toMatch(/Sitemap:/);
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+      await expect(page.getByText('DEMO ORTAMI')).toBeVisible();
+    }
     const sitemap = await request.get('/sitemap.xml');
     expect(sitemap.status()).toBe(200);
     const xml = await sitemap.text();

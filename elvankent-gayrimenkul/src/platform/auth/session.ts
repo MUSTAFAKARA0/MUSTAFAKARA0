@@ -18,6 +18,16 @@ export interface Membership {
   name: string;
   status: Enums<'org_status'>;
   role: OrgRole;
+  /** Ofis, sahip ve yöneticiler için iki adımlı doğrulamayı zorunlu kılmış mı */
+  requireAdminMfa: boolean;
+}
+
+/** İki adımlı doğrulama (TOTP) durumu */
+export interface MfaState {
+  /** Oturumun doğrulama seviyesi: aal2 = kod girilmiş */
+  aal: 'aal1' | 'aal2';
+  /** Kurulumu tamamlanmış TOTP faktörü */
+  factorId: string | null;
 }
 
 export interface PlanInfo {
@@ -31,6 +41,7 @@ export interface SessionUser {
   supabase: DB;
   user: User;
   profile: { fullName: string | null; isSuperAdmin: boolean; passwordChangeRequired: boolean };
+  mfa: MfaState;
 }
 
 export interface OrgContext extends SessionUser {
@@ -47,11 +58,11 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const supabase = await createSessionClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) return null;
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name, is_super_admin, password_change_required')
-    .eq('id', data.user.id)
-    .maybeSingle();
+  const [{ data: profile }, { data: aal }] = await Promise.all([
+    supabase.from('profiles').select('full_name, is_super_admin, password_change_required').eq('id', data.user.id).maybeSingle(),
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+  ]);
+  const factor = (data.user.factors ?? []).find((f) => f.factor_type === 'totp' && f.status === 'verified');
   return {
     supabase,
     user: data.user,
@@ -60,6 +71,7 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
       isSuperAdmin: profile?.is_super_admin ?? false,
       passwordChangeRequired: profile?.password_change_required ?? false,
     },
+    mfa: { aal: aal?.currentLevel === 'aal2' ? 'aal2' : 'aal1', factorId: factor?.id ?? null },
   };
 });
 
@@ -69,16 +81,43 @@ export const getMemberships = cache(async (): Promise<Membership[]> => {
   if (!session) return [];
   const { data } = await session.supabase
     .from('organization_members')
-    .select('role, status, organization:organizations(id, slug, name, status)')
+    .select('role, status, organization:organizations(id, slug, name, status, require_admin_mfa)')
     .eq('user_id', session.user.id)
     .eq('status', 'active');
   return (data ?? [])
     .map((m) => {
       const org = Array.isArray(m.organization) ? m.organization[0] : m.organization;
-      return org ? { orgId: org.id, slug: org.slug, name: org.name, status: org.status, role: m.role } : null;
+      return org
+        ? { orgId: org.id, slug: org.slug, name: org.name, status: org.status, role: m.role, requireAdminMfa: org.require_admin_mfa }
+        : null;
     })
     .filter((m): m is Membership => m !== null);
 });
+
+/**
+ * İki adımlı doğrulama gereksinimi:
+ *   'challenge' → kullanıcının kurulu faktörü var, bu oturumda kod girilmedi
+ *   'enroll'    → ofis politikası (sahip/yönetici) veya platform politikası
+ *                 (süper admin) gereği kurulum yapılmalı
+ * Veritabanı (RLS) aynı kuralları ayrıca uygular; bu kontrol kullanıcıyı doğru
+ * sayfaya yönlendirmek içindir.
+ */
+export type MfaRequirement = 'challenge' | 'enroll' | null;
+
+export const getMfaRequirement = cache(async (): Promise<MfaRequirement> => {
+  const session = await getSessionUser();
+  if (!session) return null;
+  if (session.mfa.factorId) return session.mfa.aal === 'aal2' ? null : 'challenge';
+  const memberships = await getMemberships();
+  const orgRequires = memberships.some((m) => m.requireAdminMfa && (m.role === 'owner' || m.role === 'admin'));
+  const platformRequires = session.profile.isSuperAdmin && process.env.PLATFORM_ADMIN_MFA_REQUIRED === 'true';
+  return orgRequires || platformRequires ? 'enroll' : null;
+});
+
+/** Doğrulama sayfasının adresi (geri dönüş adresiyle) */
+export function mfaUrl(next?: string): string {
+  return next && next.startsWith('/') && !next.startsWith('//') ? `/admin/dogrulama?next=${encodeURIComponent(next)}` : '/admin/dogrulama';
+}
 
 /**
  * Aktif organizasyon bağlamı. Organizasyon, istemciden gelen bir değere göre
@@ -89,6 +128,8 @@ export const getMemberships = cache(async (): Promise<Membership[]> => {
 export const getOrgContext = cache(async (): Promise<OrgContext | null> => {
   const session = await getSessionUser();
   if (!session) return null;
+  // İki adımlı doğrulama tamamlanmadan organizasyon bağlamı verilmez
+  if (await getMfaRequirement()) return null;
   const memberships = await getMemberships();
   const active = memberships.filter((m) => m.status === 'active');
   if (active.length === 0) return null;
@@ -138,6 +179,7 @@ export async function requireOrgContext(): Promise<OrgContext> {
   const ctx = await getOrgContext();
   if (!ctx) {
     if (!(await getSessionUser())) throw new UnauthenticatedError();
+    if (await getMfaRequirement()) throw new ForbiddenError('Bu işlem için iki adımlı doğrulama gerekiyor. Sayfayı yenileyip doğrulama kodunu girin.');
     throw new ForbiddenError('Aktif bir organizasyon üyeliğiniz bulunmuyor.');
   }
   return ctx;
@@ -181,6 +223,7 @@ export async function requirePageContext(next?: string): Promise<OrgContext> {
   const ctx = await getOrgContext();
   if (ctx) return ctx;
   if (!(await getSessionUser())) redirect(next ? `/admin/giris?next=${encodeURIComponent(next)}` : '/admin/giris');
+  if (await getMfaRequirement()) redirect(mfaUrl(next));
   redirect('/admin/erisim-yok');
 }
 
@@ -195,6 +238,7 @@ export async function requirePagePermission(permission: Permission): Promise<Org
 export async function requireSuperAdmin(): Promise<SessionUser> {
   const session = await getSessionUser();
   if (!session) throw new UnauthenticatedError();
+  if (session.profile.isSuperAdmin && (await getMfaRequirement())) throw new ForbiddenError('Bu işlem için iki adımlı doğrulama gerekiyor.');
   if (!session.profile.isSuperAdmin) {
     await logSecurityEvent({ orgId: null, action: 'auth.forbidden', actorId: session.user.id, metadata: { area: 'platform' } });
     throw new ForbiddenError();
@@ -206,5 +250,6 @@ export async function requireSuperAdminPage(): Promise<SessionUser> {
   const session = await getSessionUser();
   if (!session) redirect('/admin/giris?next=/platform');
   if (!session.profile.isSuperAdmin) redirect('/admin/yetkisiz?izin=platform');
+  if (await getMfaRequirement()) redirect(mfaUrl('/platform'));
   return session;
 }

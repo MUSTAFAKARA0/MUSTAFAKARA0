@@ -5,6 +5,7 @@ import { Info, MapPin } from 'lucide-react';
 import { LazyMap } from '@/components/maps/lazy-map';
 import { SegmentedControl } from '@/components/ui/choice';
 import { Checkbox, Field, Input, Switch } from '@/components/ui/form-controls';
+import { useDistrictNeighborhoods } from '@/components/admin/use-neighborhoods';
 import { cn } from '@/lib/utils';
 import {
   CATEGORY_LABELS,
@@ -110,14 +111,14 @@ export function StepBasics() {
 export function StepLocation() {
   const { values, set, errors, taxonomy, location, setLocation, map, readOnly } = useEditor();
   const districts = taxonomy.districts.filter((d) => d.city_id === values.city_id);
-  const neighborhoods = taxonomy.neighborhoods.filter((n) => n.district_id === values.district_id);
+  const { items: neighborhoods, loading: hoodsLoading } = useDistrictNeighborhoods(values.district_id, taxonomy.neighborhoods);
   const fallbackCenter = useMemo(() => {
-    const n = taxonomy.neighborhoods.find((x) => x.id === values.neighborhood_id);
+    const n = neighborhoods.find((x) => x.id === values.neighborhood_id);
     const d = taxonomy.districts.find((x) => x.id === values.district_id);
     const c = taxonomy.cities.find((x) => x.id === values.city_id) ?? taxonomy.cities[0];
     const point = [n, d, c].find((x) => x?.latitude !== null && x?.latitude !== undefined && x?.longitude !== null);
     return point ? { lat: Number(point.latitude), lng: Number(point.longitude) } : { lat: 39.925, lng: 32.837 };
-  }, [taxonomy, values.city_id, values.district_id, values.neighborhood_id]);
+  }, [taxonomy, neighborhoods, values.city_id, values.district_id, values.neighborhood_id]);
   const center = location.latitude !== null && location.longitude !== null ? { lat: location.latitude, lng: location.longitude } : fallbackCenter;
 
   return (
@@ -159,7 +160,7 @@ export function StepLocation() {
             options={neighborhoods.map((n) => ({ value: n.id, label: n.name }))}
             errors={errors}
             disabled={readOnly || !values.district_id}
-            placeholder={neighborhoods.length ? 'Seçin' : 'Bu ilçe için mahalle yok'}
+            placeholder={hoodsLoading ? 'Yükleniyor…' : neighborhoods.length ? 'Seçin' : 'Bu ilçe için mahalle yok'}
           />
         </div>
       </StepSection>

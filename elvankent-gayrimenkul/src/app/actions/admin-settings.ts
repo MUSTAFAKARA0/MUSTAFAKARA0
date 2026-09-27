@@ -9,6 +9,8 @@ import { WEEKDAYS } from '@/modules/content/hours';
 import { emailField, phoneField } from '@/modules/crm/validation';
 import { BRANDING_COLUMN, BRANDING_KINDS, BRANDING_LABEL, BRANDING_PERMISSION, isOwnBrandingPath, type BrandingKind } from '@/modules/media/branding';
 import { MEDIA_BUCKETS } from '@/modules/media/variants';
+import { isEmailConfigured, sendEmail } from '@/modules/notifications/email';
+import { leadNotificationRecipients } from '@/modules/notifications/lead';
 import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/platform/actions';
 import { requirePermission } from '@/platform/auth/session';
 import type { TablesUpdate } from '@/types/supabase';
@@ -224,3 +226,76 @@ export async function trashDemoListings(): Promise<ActionResult<{ done: number }
   }, 'Demo ilanlar çöp kutusuna taşındı.');
 }
 
+
+// -----------------------------------------------------------------------------
+// Talep bildirimleri: alıcılar, açma/kapama ve test e-postası
+// -----------------------------------------------------------------------------
+const notificationSchema = z.object({
+  notify_new_lead: z.boolean(),
+  emails: z
+    .array(z.string().trim().toLowerCase().max(160))
+    .max(5, { error: 'En fazla 5 e-posta adresi ekleyebilirsiniz.' })
+    .transform((list) => [...new Set(list.filter(Boolean))])
+    .refine((list) => list.every((e) => z.email().safeParse(e).success), { error: 'Geçerli e-posta adresleri girin.' }),
+});
+
+export type NotificationSettingsInput = z.input<typeof notificationSchema>;
+
+export async function saveNotificationSettings(raw: NotificationSettingsInput): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const ctx = await requirePermission('settings.manage');
+    const input = notificationSchema.parse(raw);
+    const { error } = await ctx.supabase.from('organization_notification_settings').upsert(
+      {
+        organization_id: ctx.org.id,
+        notify_new_lead: input.notify_new_lead,
+        emails: input.emails,
+        updated_by: ctx.user.id,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'organization_id' },
+    );
+    assertNoDbError(error);
+    return null;
+  }, 'Bildirim ayarları kaydedildi.');
+}
+
+/** Ayarlanan alıcılara test e-postası gönderir (dakikada en fazla 1). */
+export async function sendTestNotification(): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const ctx = await requirePermission('settings.manage');
+    const db = createServiceClient();
+    if (!db) throw new ActionError('Sunucu yapılandırması eksik.');
+    const since = new Date(Date.now() - 60_000).toISOString();
+    const { count } = await db
+      .from('notification_deliveries')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', ctx.org.id)
+      .eq('event', 'test')
+      .gte('created_at', since);
+    if ((count ?? 0) > 0) throw new ActionError('Bir dakika içinde yalnızca bir test e-postası gönderilebilir.');
+
+    const { emails } = await leadNotificationRecipients(ctx.org.id);
+    if (emails.length === 0) throw new ActionError('Önce bildirim alacak bir e-posta adresi kaydedin.');
+    if (!isEmailConfigured()) throw new ActionError('E-posta gönderimi yapılandırılmamış (EMAIL_PROVIDER, RESEND_API_KEY, EMAIL_FROM).');
+
+    const result = await sendEmail({
+      to: emails,
+      subject: `Test bildirimi · ${ctx.org.name}`,
+      text: `Bu bir test e-postasıdır. Yeni web talepleri bu adreslere bildirilecek.\n\n— ${ctx.org.name}`,
+      html: `<p style="font-family:Arial,sans-serif;font-size:14px">Bu bir test e-postasıdır. Yeni web talepleri bu adreslere bildirilecek.</p><p style="font-family:Arial,sans-serif;font-size:12px;color:#666">${ctx.org.name.replace(/[<>&]/g, '')}</p>`,
+    });
+    await db.from('notification_deliveries').insert({
+      organization_id: ctx.org.id,
+      channel: 'email',
+      event: 'test',
+      recipients: emails,
+      status: result.ok ? 'sent' : result.skipped ? 'skipped' : 'failed',
+      provider: result.provider,
+      provider_message_id: result.ok ? result.id : null,
+      error: result.ok ? null : result.error.slice(0, 300),
+    });
+    if (!result.ok) throw new ActionError('Test e-postası gönderilemedi. Sağlayıcı ayarlarını ve gönderici alan adı doğrulamasını kontrol edin.');
+    return null;
+  }, 'Test e-postası gönderildi.');
+}

@@ -18,7 +18,7 @@ export default async function NewRegionPage() {
         locations={{
           cities: taxonomy.cities.map((c) => ({ id: c.id, name: c.name })),
           districts: taxonomy.districts.map((d) => ({ id: d.id, city_id: d.city_id, name: d.name })),
-          neighborhoods: taxonomy.neighborhoods.map((n) => ({ id: n.id, district_id: n.district_id, name: n.name })),
+          neighborhoods: [],
         }}
         siteBase={tenant?.baseUrl ?? ''}
         siteHost={tenant ? new URL(tenant.baseUrl).host : 'site'}

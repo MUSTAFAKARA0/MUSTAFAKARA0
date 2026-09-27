@@ -65,6 +65,8 @@ export interface ShellProps {
   siteUrl: string | null;
   canCreateListing: boolean;
   passwordChangeRequired: boolean;
+  /** Menü öğesi yanında gösterilecek sayılar (ör. yeni talepler) */
+  badges?: Record<string, number>;
   children: React.ReactNode;
 }
 
@@ -101,7 +103,7 @@ function SubLinks({ item, onNavigate }: { item: AdminNavItem; onNavigate?: () =>
   );
 }
 
-function NavList({ nav, onNavigate }: { nav: AdminNavSection[]; onNavigate?: () => void }) {
+function NavList({ nav, badges, onNavigate }: { nav: AdminNavSection[]; badges?: Record<string, number>; onNavigate?: () => void }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Yönetim menüsü" className="space-y-6">
@@ -125,6 +127,12 @@ function NavList({ nav, onNavigate }: { nav: AdminNavSection[]; onNavigate?: () 
                   >
                     <Icon className={cn('size-[18px] shrink-0', active ? 'text-primary' : 'text-muted-foreground')} aria-hidden />
                     {item.label}
+                    {(badges?.[item.href] ?? 0) > 0 && (
+                      <span className="numeric ml-auto rounded-full bg-primary px-2 py-0.5 text-[12px] leading-none font-bold text-primary-fg">
+                        {badges![item.href] > 99 ? '99+' : badges![item.href]}
+                        <span className="sr-only"> yeni</span>
+                      </span>
+                    )}
                   </Link>
                   {active && item.children && item.children.length > 0 && (
                     <Suspense fallback={null}>
@@ -245,7 +253,7 @@ function SearchBox({ className }: { className?: string }) {
   );
 }
 
-export function AdminShell({ nav, org, orgs, user, siteUrl, canCreateListing, passwordChangeRequired, children }: ShellProps) {
+export function AdminShell({ nav, org, orgs, user, siteUrl, canCreateListing, passwordChangeRequired, badges, children }: ShellProps) {
   const [open, setOpen] = useState(false);
   const sidebar = (onNavigate?: () => void) => (
     <div className="flex h-full flex-col">
@@ -253,7 +261,7 @@ export function AdminShell({ nav, org, orgs, user, siteUrl, canCreateListing, pa
         <OrgSwitcher org={org} orgs={orgs} />
       </div>
       <div className="flex-1 overflow-y-auto px-3 pb-6">
-        <NavList nav={nav} onNavigate={onNavigate} />
+        <NavList nav={nav} badges={badges} onNavigate={onNavigate} />
       </div>
       <div className="border-t border-border px-3 py-3">
         <UserMenu user={user} siteUrl={siteUrl} />

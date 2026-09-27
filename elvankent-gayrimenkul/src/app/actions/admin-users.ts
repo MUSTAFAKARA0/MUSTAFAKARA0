@@ -230,3 +230,36 @@ export async function resetMemberPassword(userId: string): Promise<ActionResult<
     return { temporaryPassword: password };
   });
 }
+
+/**
+ * Telefonunu kaybeden üyenin iki adımlı doğrulamasını sıfırlar (tüm TOTP
+ * faktörleri silinir; kişi bir sonraki girişte yeniden kurar). Geçici şifre ile
+ * aynı kurallar: kendine uygulanamaz, sahibe yalnızca sahip uygulayabilir,
+ * başka ofislere de üye olan kullanıcılar ve süper adminler bu yoldan sıfırlanamaz.
+ */
+export async function resetMemberMfa(userId: string): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const ctx = await requirePermission('users.manage');
+    assertNotSelf(ctx, userId);
+    const member = await loadMember(ctx, userId);
+    assertOwnerRules(ctx, member.role);
+    const service = requireService();
+    const [{ count: otherOrgs }, { data: profile }] = await Promise.all([
+      service.from('organization_members').select('user_id', { count: 'exact', head: true }).eq('user_id', userId).neq('organization_id', ctx.org.id),
+      service.from('profiles').select('is_super_admin').eq('id', userId).maybeSingle(),
+    ]);
+    if ((otherOrgs ?? 0) > 0 || profile?.is_super_admin) {
+      throw new ForbiddenError('Bu kullanıcı başka bir ofiste de kayıtlı; iki adımlı doğrulaması yalnızca platform yöneticisi tarafından sıfırlanabilir.');
+    }
+    const { data, error } = await service.auth.admin.mfa.listFactors({ userId });
+    if (error) throw new ActionError('Doğrulama bilgileri okunamadı.');
+    if (!data.factors.length) throw new ActionError('Bu kullanıcıda iki adımlı doğrulama kurulu değil.');
+    for (const factor of data.factors) {
+      const res = await service.auth.admin.mfa.deleteFactor({ id: factor.id, userId });
+      if (res.error) throw new ActionError('İki adımlı doğrulama sıfırlanamadı. Lütfen tekrar deneyin.');
+    }
+    await logSecurityEvent({ orgId: ctx.org.id, action: 'user.mfa_reset', actorId: ctx.user.id, targetType: 'user', targetId: userId });
+    refresh();
+    return null;
+  }, 'İki adımlı doğrulama sıfırlandı. Kişi bir sonraki girişte yeniden kurabilir.');
+}

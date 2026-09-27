@@ -9,6 +9,9 @@
  *   • Yetki yükseltme ve IDOR denemeleri reddedilir.
  *   • Depolama (Storage) klasörleri kiracılar arasında yalıtılmıştır.
  *   • Uygulamadaki yetki listesi veritabanındaki role_permissions ile aynıdır.
+ *   • İki adımlı doğrulama (MFA): faktörü olan kullanıcı ve MFA zorunlu ofisin
+ *     sahip/yöneticisi, kod girilmemiş (aal1) oturumla hiçbir veriye erişemez.
+ *   • Bildirim ayarları ve bildirim kayıtları kiracılar arasında yalıtılmıştır.
  *
  * Test kendi geçici organizasyonlarını (rlstest-*) ve kullanıcılarını
  * (rls-*@example.test) oluşturur ve sonunda SİLER. Mevcut verilere dokunmaz.
@@ -23,6 +26,7 @@ import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { PERMISSIONS, ROLE_PERMISSIONS } from '../../src/platform/auth/permissions.ts';
+import { freshTotp } from './totp.mjs';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -393,5 +397,127 @@ describe('Yetki tablosu (uygulama ↔ veritabanı)', { skip }, () => {
     }
     const known = new Set(PERMISSIONS);
     for (const r of data) assert.ok(known.has(r.permission), `Uygulamada tanımsız yetki: ${r.permission}`);
+  });
+});
+
+// -----------------------------------------------------------------------------
+async function freshSession(user) {
+  const client = createClient(url, anonKey, opts);
+  const res = await client.auth.signInWithPassword({ email: user.email, password: PASSWORD });
+  assert.ifError(res.error);
+  return client;
+}
+
+/** Kullanıcıya TOTP faktörü kurar; istemci oturumu aal2 olur. */
+async function enrollTotp(user) {
+  const enroll = await user.client.auth.mfa.enroll({ factorType: 'totp', friendlyName: `rls-${RUN}` });
+  assert.ifError(enroll.error);
+  const { code, counter } = await freshTotp(enroll.data.totp.secret);
+  const verify = await user.client.auth.mfa.challengeAndVerify({ factorId: enroll.data.id, code });
+  assert.ifError(verify.error);
+  user.factor = { factorId: enroll.data.id, secret: enroll.data.totp.secret, lastCounter: counter };
+  return user.factor;
+}
+
+async function upgrade(client, factor) {
+  const next = await freshTotp(factor.secret, factor.lastCounter);
+  factor.lastCounter = next.counter;
+  const res = await client.auth.mfa.challengeAndVerify({ factorId: factor.factorId, code: next.code });
+  assert.ifError(res.error);
+}
+
+describe('İki adımlı doğrulama (MFA) veritabanında zorunlu', { skip }, () => {
+  let adminFactor;
+  let ownerFactor;
+
+  test('MFA kuran kullanıcı, kod girilmemiş oturumla ofis verisine erişemez; kodla erişir', async () => {
+    const admin = T.A.users.admin;
+    adminFactor = await enrollTotp(admin);
+    // Kurulumu yapan oturum aal2: erişim var
+    assert.equal((await admin.client.from('leads').select('id').eq('id', T.A.leadId)).data?.length, 1);
+
+    const aal1 = await freshSession(admin);
+    assert.ok(denied(await aal1.from('leads').select('id').eq('id', T.A.leadId)), 'aal1 oturumu talebi okudu');
+    assert.ok(denied(await aal1.from('properties').select('id').eq('id', T.A.draftId)), 'aal1 oturumu taslağı okudu');
+    assert.ok((await aal1.rpc('org_dashboard', { p_org: T.A.orgId, p_days: 30 })).error, 'aal1 oturumu panoyu okudu');
+    assert.ok(denied(await aal1.from('properties').update({ title: 'aal1 değişikliği' }).eq('id', T.A.draftId).select('id')), 'aal1 oturumu yazdı');
+    const upload = await aal1.storage.from('media-originals').upload(`organizations/${T.A.orgId}/mfa-${RUN}.png`, PNG, { contentType: 'image/png' });
+    assert.ok(upload.error, 'aal1 oturumu depolamaya yazdı');
+
+    await upgrade(aal1, adminFactor);
+    assert.equal((await aal1.from('leads').select('id').eq('id', T.A.leadId)).data?.length, 1, 'aal2 sonrası erişim yok');
+  });
+
+  test('zorunluluğu yalnızca MFA doğrulanmış sahip açabilir', async () => {
+    const agentTry = await T.A.users.agent.client.rpc('set_require_admin_mfa', { p_org: T.A.orgId, p_value: true });
+    assert.ok(agentTry.error, 'danışman zorunluluğu değiştirdi');
+    const ownerNoMfa = await T.A.users.owner.client.rpc('set_require_admin_mfa', { p_org: T.A.orgId, p_value: true });
+    assert.ok(ownerNoMfa.error, 'MFA kurmamış sahip zorunluluğu açtı (kilitlenme riski)');
+    const otherOrg = await T.A.users.owner.client.rpc('set_require_admin_mfa', { p_org: T.B.orgId, p_value: true });
+    assert.ok(otherOrg.error, "A'nın sahibi B'nin politikasını değiştirdi");
+
+    ownerFactor = await enrollTotp(T.A.users.owner);
+    const ok = await T.A.users.owner.client.rpc('set_require_admin_mfa', { p_org: T.A.orgId, p_value: true });
+    assert.ifError(ok.error);
+    const org = await service.from('organizations').select('require_admin_mfa').eq('id', T.A.orgId).single();
+    assert.equal(org.data.require_admin_mfa, true);
+  });
+
+  test('zorunluluk açıkken sahip/yönetici aal1 ile erişemez; diğer roller etkilenmez', async () => {
+    const ownerAal1 = await freshSession(T.A.users.owner);
+    assert.ok(denied(await ownerAal1.from('customers').select('id').eq('id', T.A.customerId)), 'sahip aal1 ile müşteriyi okudu');
+    const agent = await freshSession(T.A.users.agent);
+    assert.equal((await agent.from('customers').select('id').eq('id', T.A.customerId)).data?.length, 1, 'danışman etkilendi');
+    await upgrade(ownerAal1, ownerFactor);
+    assert.equal((await ownerAal1.from('customers').select('id').eq('id', T.A.customerId)).data?.length, 1);
+    // Temizlik: zorunluluk kapatılır (sonraki testleri etkilemesin)
+    assert.ifError((await ownerAal1.rpc('set_require_admin_mfa', { p_org: T.A.orgId, p_value: false })).error);
+  });
+
+  test('ekip MFA durumu yalnızca kullanıcı yöneticilerine ve kendi ofisine açıktır', async () => {
+    const status = await T.A.users.owner.client.rpc('org_member_mfa_status', { p_org: T.A.orgId });
+    assert.ifError(status.error);
+    assert.equal(status.data.find((r) => r.user_id === T.A.users.admin.id)?.mfa_enabled, true);
+    assert.equal(status.data.find((r) => r.user_id === T.A.users.agent.id)?.mfa_enabled, false);
+    assert.ok((await T.A.users.agent.client.rpc('org_member_mfa_status', { p_org: T.A.orgId })).error, 'danışman ekip MFA durumunu okudu');
+    assert.ok((await T.A.users.owner.client.rpc('org_member_mfa_status', { p_org: T.B.orgId })).error, "A, B'nin ekip durumunu okudu");
+    assert.ok((await anon.rpc('org_member_mfa_status', { p_org: T.A.orgId })).error, 'anonim okudu');
+  });
+});
+
+// -----------------------------------------------------------------------------
+describe('Bildirim ayarları ve kayıtları (kiracı izolasyonu)', { skip }, () => {
+  before(async () => {
+    if (missing) return;
+    for (const key of ['A', 'B']) {
+      assert.ifError((await service.from('organization_notification_settings').upsert({ organization_id: T[key].orgId, emails: [`ofis-${key.toLowerCase()}@example.test`] })).error);
+      assert.ifError((await service.from('notification_deliveries').insert({ organization_id: T[key].orgId, channel: 'email', event: 'lead.created', lead_id: T[key].leadId, recipients: [`ofis-${key.toLowerCase()}@example.test`], status: 'sent', provider: 'test' })).error);
+    }
+  });
+
+  test('anonim ziyaretçi bildirim adreslerini ve kayıtlarını göremez', async () => {
+    assert.ok(denied(await anon.from('organization_notification_settings').select('emails')));
+    assert.ok(denied(await anon.from('notification_deliveries').select('id')));
+    // Herkese açık şirket ayarlarında bildirim adresi yoktur
+    const pub = await anon.from('organization_settings').select('*').eq('organization_id', T.A.orgId).single();
+    assert.ok(!JSON.stringify(pub.data ?? {}).includes('ofis-a@example.test'));
+  });
+
+  test("A'nın sahibi kendi ayarını görür, B'ninkini göremez ve değiştiremez", async () => {
+    const a = await freshSession(T.A.users.owner);
+    if (T.A.users.owner.factor) await upgrade(a, T.A.users.owner.factor);
+    const own = await a.from('organization_notification_settings').select('emails').eq('organization_id', T.A.orgId);
+    assert.deepEqual(own.data?.[0]?.emails, ['ofis-a@example.test']);
+    assert.ok(denied(await a.from('organization_notification_settings').select('emails').eq('organization_id', T.B.orgId)), 'B adresleri görüldü');
+    assert.ok(denied(await a.from('organization_notification_settings').update({ emails: ['saldirgan@example.test'] }).eq('organization_id', T.B.orgId).select('organization_id')), 'B adresleri değiştirildi');
+    const ins = await a.from('organization_notification_settings').insert({ organization_id: T.B.orgId, emails: ['saldirgan@example.test'] }).select('organization_id');
+    assert.ok(ins.error || denied(ins), 'B için ayar eklendi');
+    assert.ok(denied(await a.from('notification_deliveries').select('id').eq('organization_id', T.B.orgId)), 'B bildirim kayıtları görüldü');
+  });
+
+  test('ayar yetkisi olmayan roller adresleri göremez; kimse bildirim kaydı ekleyemez', async () => {
+    assert.ok(denied(await T.A.users.agent.client.from('organization_notification_settings').select('emails').eq('organization_id', T.A.orgId)), 'danışman adresleri gördü');
+    const fake = await T.A.users.agent.client.from('notification_deliveries').insert({ organization_id: T.A.orgId, channel: 'email', event: 'test', status: 'sent', provider: 'x' }).select('id');
+    assert.ok(fake.error || denied(fake), 'kullanıcı sahte bildirim kaydı ekledi');
   });
 });

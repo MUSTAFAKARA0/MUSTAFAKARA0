@@ -3,14 +3,16 @@ import Link from 'next/link';
 import { Check, Download, FlaskConical, Minus, Trash2 } from 'lucide-react';
 import { ActionButton } from '@/components/admin/action-controls';
 import { BrandingImageField } from '@/components/admin/branding-image-field';
+import { NotificationSettingsForm } from '@/components/admin/settings/notification-settings-form';
 import { SiteSettingsForm } from '@/components/admin/settings/site-settings-form';
 import { AdminPageHeader, Panel } from '@/components/admin/ui';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { trashDemoListings } from '@/app/actions/admin-settings';
-import { formatBytes, formatDate, formatNumber } from '@/lib/format';
+import { formatBytes, formatDate, formatDateTime, formatNumber } from '@/lib/format';
 import { brandingUrl } from '@/modules/media/variants';
+import { isEmailConfigured } from '@/modules/notifications/email';
 import { requirePagePermission } from '@/platform/auth/session';
 
 export const metadata: Metadata = { title: 'Ayarlar' };
@@ -68,6 +70,16 @@ export default async function SettingsPage() {
     ctx.plan.id ? ctx.supabase.from('plans').select('name').eq('id', ctx.plan.id).maybeSingle() : Promise.resolve({ data: null }),
     ctx.supabase.from('properties').select('id', { count: 'exact', head: true }).eq('organization_id', ctx.org.id).eq('is_demo', true).is('deleted_at', null),
   ]);
+  const [{ data: notify }, { data: company }, { data: deliveries }] = await Promise.all([
+    ctx.supabase.from('organization_notification_settings').select('notify_new_lead, emails').eq('organization_id', ctx.org.id).maybeSingle(),
+    ctx.supabase.from('organization_settings').select('email').eq('organization_id', ctx.org.id).maybeSingle(),
+    ctx.supabase
+      .from('notification_deliveries')
+      .select('id, event, status, recipients, error, created_at')
+      .eq('organization_id', ctx.org.id)
+      .order('created_at', { ascending: false })
+      .limit(8),
+  ]);
   const usage = usageRaw as unknown as Usage | null;
   const subStatus = SUBSCRIPTION_LABELS[sub?.status ?? usage?.subscription_status ?? ''];
   const canExport = ctx.can('data.export');
@@ -101,6 +113,31 @@ export default async function SettingsPage() {
                 />
               </div>
             </div>
+          </Panel>
+
+          <Panel title="Bildirimler" description="Yeni müşteri talebi geldiğinde ofisin haberdar olması için e-posta bildirimi.">
+            <NotificationSettingsForm
+              initial={{ notify_new_lead: notify?.notify_new_lead ?? true, emails: notify?.emails ?? [] }}
+              fallbackEmail={company?.email ?? null}
+              emailReady={isEmailConfigured()}
+            />
+            {deliveries && deliveries.length > 0 && (
+              <div className="mt-6 border-t border-border pt-5">
+                <h3 className="text-[13.5px] font-bold">Son bildirimler</h3>
+                <ul className="mt-2 divide-y divide-border text-[13px]">
+                  {deliveries.map((d) => (
+                    <li key={d.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2">
+                      <span className="min-w-0">
+                        {d.event === 'test' ? 'Test e-postası' : 'Yeni talep'} · <span className="numeric text-muted-foreground">{formatDateTime(d.created_at)}</span>
+                      </span>
+                      <Badge variant={d.status === 'sent' ? 'success' : d.status === 'failed' ? 'danger' : 'neutral'}>
+                        {d.status === 'sent' ? 'Gönderildi' : d.status === 'failed' ? 'Başarısız' : d.error === 'disabled' ? 'Kapalı' : 'Gönderilmedi'}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </Panel>
 
           {canExport && (

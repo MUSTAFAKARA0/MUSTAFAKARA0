@@ -92,6 +92,10 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
   const orgId = activeOrgIds.includes(tenant?.id ?? '') ? (tenant?.id ?? null) : (activeOrgIds[0] ?? null);
   await logSecurityEvent({ orgId, action: 'auth.login_success', actorId: data.user.id, ipHash });
 
+  // İki adımlı doğrulama kurulu ise şifreden sonra kod istenir
+  if ((data.user.factors ?? []).some((f) => f.status === 'verified')) {
+    redirect(`/admin/dogrulama?next=${encodeURIComponent(safeNext(formData.get('next')))}`);
+  }
   if (profile?.password_change_required) redirect('/admin/hesap?sifre=degistir');
   redirect(safeNext(formData.get('next')));
 }

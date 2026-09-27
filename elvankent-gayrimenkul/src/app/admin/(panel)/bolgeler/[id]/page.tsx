@@ -22,7 +22,7 @@ export default async function EditRegionPage({ params }: PageProps<'/admin/bolge
         locations={{
           cities: taxonomy.cities.map((c) => ({ id: c.id, name: c.name })),
           districts: taxonomy.districts.map((d) => ({ id: d.id, city_id: d.city_id, name: d.name })),
-          neighborhoods: taxonomy.neighborhoods.map((n) => ({ id: n.id, district_id: n.district_id, name: n.name })),
+          neighborhoods: taxonomy.neighborhoods.filter((n) => n.district_id === region.districtId).map((n) => ({ id: n.id, district_id: n.district_id, name: n.name })),
         }}
         siteBase={tenant?.baseUrl ?? ''}
         siteHost={tenant ? new URL(tenant.baseUrl).host : 'site'}

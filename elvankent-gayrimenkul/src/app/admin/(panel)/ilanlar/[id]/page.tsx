@@ -36,7 +36,10 @@ export default async function EditListingPage({ params, searchParams }: PageProp
       taxonomy={{
         cities: taxonomy.cities.map((c) => ({ id: c.id, name: c.name, latitude: c.latitude, longitude: c.longitude })),
         districts: taxonomy.districts.map((d) => ({ id: d.id, city_id: d.city_id, name: d.name, latitude: d.latitude, longitude: d.longitude })),
-        neighborhoods: taxonomy.neighborhoods.map((n) => ({ id: n.id, district_id: n.district_id, name: n.name, latitude: n.latitude, longitude: n.longitude })),
+        // Yalnızca ilanın ilçesindeki mahalleler; diğer ilçeler seçilince istenir
+        neighborhoods: taxonomy.neighborhoods
+          .filter((n) => n.district_id === data.property.district_id)
+          .map((n) => ({ id: n.id, district_id: n.district_id, name: n.name, latitude: n.latitude, longitude: n.longitude })),
         propertyTypes: taxonomy.propertyTypes.map((t) => ({ id: t.id, category: t.category, name: t.name })),
         features: taxonomy.features.map((f) => ({ id: f.id, label: f.label, feature_group: f.feature_group })),
       }}

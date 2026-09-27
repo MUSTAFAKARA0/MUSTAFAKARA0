@@ -3,13 +3,13 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Copy, KeyRound, MoreHorizontal, Power, UserMinus, UserPlus } from 'lucide-react';
+import { Copy, KeyRound, MoreHorizontal, Power, ShieldOff, UserMinus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Field, Input, Select } from '@/components/ui/form-controls';
-import { createMember, removeMember, resetMemberPassword, setMemberStatus } from '@/app/actions/admin-users';
+import { createMember, removeMember, resetMemberMfa, resetMemberPassword, setMemberStatus } from '@/app/actions/admin-users';
 import { ROLE_DESCRIPTIONS, ROLE_LABELS, type OrgRole } from '@/platform/auth/permissions';
 
 /** Geçici şifre yalnızca bir kez gösterilir; kaydedilmez ve loglanmaz */
@@ -145,10 +145,24 @@ export function NewMemberDialog({ roles, disabledReason }: { roles: OrgRole[]; d
   );
 }
 
-export function MemberMenu({ userId, name, email, status, canReset }: { userId: string; name: string; email: string | null; status: 'active' | 'disabled'; canReset: boolean }) {
+export function MemberMenu({
+  userId,
+  name,
+  email,
+  status,
+  canReset,
+  mfaEnabled = false,
+}: {
+  userId: string;
+  name: string;
+  email: string | null;
+  status: 'active' | 'disabled';
+  canReset: boolean;
+  mfaEnabled?: boolean;
+}) {
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const [confirm, setConfirm] = useState<null | 'disable' | 'remove' | 'reset'>(null);
+  const [confirm, setConfirm] = useState<null | 'disable' | 'remove' | 'reset' | 'mfa'>(null);
   const [password, setPassword] = useState<string | null>(null);
 
   async function run(fn: () => Promise<{ ok: boolean; error?: string; message?: string }>) {
@@ -183,6 +197,11 @@ export function MemberMenu({ userId, name, email, status, canReset }: { userId: 
           {canReset && (
             <DropdownMenuItem onSelect={() => setConfirm('reset')}>
               <KeyRound /> Geçici şifre oluştur
+            </DropdownMenuItem>
+          )}
+          {canReset && mfaEnabled && (
+            <DropdownMenuItem onSelect={() => setConfirm('mfa')}>
+              <ShieldOff /> İki adımlı doğrulamayı sıfırla
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
@@ -223,6 +242,15 @@ export function MemberMenu({ userId, name, email, status, canReset }: { userId: 
           setPassword(res.data.temporaryPassword);
           startTransition(() => router.refresh());
         }}
+      />
+      <ConfirmDialog
+        open={confirm === 'mfa'}
+        onOpenChange={(v) => !v && setConfirm(null)}
+        title={`${name} için iki adımlı doğrulama sıfırlansın mı?`}
+        description="Telefonunu kaybeden veya değiştiren kişi için kullanın. Kişinin kimliğini doğruladığınızdan emin olun; bir sonraki girişte doğrulamayı yeniden kurması istenir."
+        confirmLabel="Sıfırla"
+        destructive
+        onConfirm={() => run(() => resetMemberMfa(userId))}
       />
       <Dialog open={password !== null} onOpenChange={(v) => !v && setPassword(null)}>
         <DialogContent title="Geçici şifre" description={name} size="lg">

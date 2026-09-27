@@ -1,5 +1,6 @@
 'use client';
 
+import { useDistrictNeighborhoods } from '@/components/admin/use-neighborhoods';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -73,7 +74,7 @@ export function RegionEditor({ initial, locations, siteBase, siteHost }: { initi
   }, [dirty]);
 
   const districts = useMemo(() => locations.districts.filter((d) => d.city_id === cityId), [locations.districts, cityId]);
-  const neighborhoods = useMemo(() => locations.neighborhoods.filter((n) => n.district_id === districtId), [locations.neighborhoods, districtId]);
+  const { items: neighborhoods } = useDistrictNeighborhoods(districtId, locations.neighborhoods);
 
   function updateFaq(key: number, patch: Partial<Faq>) {
     setFaqs((list) => list.map((f) => (f.key === key ? { ...f, ...patch } : f)));

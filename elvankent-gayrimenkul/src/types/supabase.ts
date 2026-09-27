@@ -719,6 +719,63 @@ export type Database = {
           },
         ]
       }
+      notification_deliveries: {
+        Row: {
+          id: string
+          organization_id: string
+          channel: string
+          event: string
+          lead_id: string | null
+          recipients: string[]
+          status: string
+          provider: string
+          provider_message_id: string | null
+          error: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          channel: string
+          event: string
+          lead_id?: string | null
+          recipients?: string[]
+          status: string
+          provider: string
+          provider_message_id?: string | null
+          error?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          channel?: string
+          event?: string
+          lead_id?: string | null
+          recipients?: string[]
+          status?: string
+          provider?: string
+          provider_message_id?: string | null
+          error?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_deliveries_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_deliveries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_counters: {
         Row: {
           organization_id: string
@@ -816,6 +873,38 @@ export type Database = {
             foreignKeyName: "organization_members_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_notification_settings: {
+        Row: {
+          organization_id: string
+          notify_new_lead: boolean
+          emails: string[]
+          updated_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          notify_new_lead?: boolean
+          emails?: string[]
+          updated_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          organization_id?: string
+          notify_new_lead?: boolean
+          emails?: string[]
+          updated_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_notification_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -959,6 +1048,7 @@ export type Database = {
           is_default: boolean
           created_at: string
           updated_at: string
+          require_admin_mfa: boolean
         }
         Insert: {
           id?: string
@@ -969,6 +1059,7 @@ export type Database = {
           is_default?: boolean
           created_at?: string
           updated_at?: string
+          require_admin_mfa?: boolean
         }
         Update: {
           id?: string
@@ -979,6 +1070,7 @@ export type Database = {
           is_default?: boolean
           created_at?: string
           updated_at?: string
+          require_admin_mfa?: boolean
         }
         Relationships: []
       }
@@ -1989,6 +2081,15 @@ export type Database = {
         }
         Returns: Json
       }
+      org_member_mfa_status: {
+        Args: {
+          p_org: string
+        }
+        Returns: {
+          user_id: string
+          mfa_enabled: boolean
+        }[]
+      }
       org_plan: {
         Args: {
           p_org: string
@@ -2147,9 +2248,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      session_aal: {
+        Args: never
+        Returns: string
+      }
       set_property_cover: {
         Args: {
           p_media_id: string
+        }
+        Returns: undefined
+      }
+      set_require_admin_mfa: {
+        Args: {
+          p_org: string
+          p_value: boolean
         }
         Returns: undefined
       }
@@ -2215,6 +2327,10 @@ export type Database = {
           p_id: string
         }
         Returns: string
+      }
+      user_has_mfa: {
+        Args: never
+        Returns: boolean
       }
       user_org_ids: {
         Args: {

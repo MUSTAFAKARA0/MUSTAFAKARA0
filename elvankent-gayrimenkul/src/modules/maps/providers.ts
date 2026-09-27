@@ -8,6 +8,7 @@ import { serverEnv } from '@/lib/server-env';
  *
  *  osm      OpenStreetMap (anahtarsız; yoğun trafikte kullanım politikası gereği önerilmez)
  *  maptiler MapTiler raster döşemeleri (MAP_API_KEY, isteğe bağlı MAP_STYLE: streets-v2)
+ *  stadia   Stadia Maps raster döşemeleri (MAP_API_KEY, isteğe bağlı MAP_STYLE: alidade_smooth)
  *  mapbox   Mapbox Static Tiles (MAP_API_KEY = access token, MAP_STYLE: mapbox/streets-v12)
  *  custom   MAP_TILE_URL şablonu ({z}/{x}/{y})
  *
@@ -15,7 +16,7 @@ import { serverEnv } from '@/lib/server-env';
  * sunulmasına izin vermediği için bu mimaride desteklenmez; gerekirse istemci
  * tarafı bir sağlayıcı bileşeni (alan adı kısıtlamalı anahtarla) eklenebilir.
  */
-export type MapProviderId = 'osm' | 'maptiler' | 'mapbox' | 'custom';
+export type MapProviderId = 'osm' | 'maptiler' | 'stadia' | 'mapbox' | 'custom';
 
 export interface MapProvider {
   id: MapProviderId;
@@ -40,6 +41,17 @@ export function getMapProvider(): MapProvider {
       attribution: attribution || `&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> ${OSM_ATTRIBUTION}`,
       maxZoom: 19,
       tileUrl: (z, x, y) => `https://api.maptiler.com/maps/${encodeURIComponent(s)}/256/${z}/${x}/${y}.png?key=${encodeURIComponent(apiKey)}`,
+    };
+  }
+  if (provider === 'stadia' && apiKey) {
+    const s = style || 'alidade_smooth';
+    return {
+      id: 'stadia',
+      attribution:
+        attribution ||
+        `&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> ${OSM_ATTRIBUTION}`,
+      maxZoom: 19,
+      tileUrl: (z, x, y) => `https://tiles.stadiamaps.com/tiles/${encodeURIComponent(s)}/${z}/${x}/${y}.png?api_key=${encodeURIComponent(apiKey)}`,
     };
   }
   if (provider === 'mapbox' && apiKey) {

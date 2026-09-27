@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { ShieldCheck, Users } from 'lucide-react';
 import { AutoSaveSelect } from '@/components/admin/action-controls';
 import { MemberMenu, NewMemberDialog } from '@/components/admin/users/member-controls';
+import { MfaPolicyToggle } from '@/components/admin/mfa/mfa-policy';
 import { AdminPageHeader, EmptyPanel, Panel, TableWrap, td, th } from '@/components/admin/ui';
 import { Badge } from '@/components/ui/badge';
 import { updateMemberRole } from '@/app/actions/admin-users';
@@ -14,8 +15,13 @@ export const metadata: Metadata = { title: 'Kullanıcılar' };
 
 export default async function UsersPage() {
   const ctx = await requirePagePermission('users.manage');
-  const { data, error } = await ctx.supabase.rpc('list_org_members', { p_org: ctx.org.id });
+  const [{ data, error }, { data: mfaRows }, { data: org }] = await Promise.all([
+    ctx.supabase.rpc('list_org_members', { p_org: ctx.org.id }),
+    ctx.supabase.rpc('org_member_mfa_status', { p_org: ctx.org.id }),
+    ctx.supabase.from('organizations').select('require_admin_mfa').eq('id', ctx.org.id).maybeSingle(),
+  ]);
   const members = data ?? [];
+  const mfaOn = new Set((mfaRows ?? []).filter((r) => r.mfa_enabled).map((r) => r.user_id));
   const active = members.filter((m) => m.status === 'active').length;
   const limit = ctx.plan.limits.users;
   const full = limit !== null && active >= limit;
@@ -57,6 +63,11 @@ export default async function UsersPage() {
                         <span className="truncate">{name}</span>
                         {self && <Badge variant="primary-soft">Siz</Badge>}
                         {m.password_change_required && <Badge variant="warning">Şifre değişikliği bekliyor</Badge>}
+                        {mfaOn.has(m.user_id) ? (
+                          <Badge variant="success">2 adımlı doğrulama</Badge>
+                        ) : (
+                          org?.require_admin_mfa && (m.role === 'owner' || m.role === 'admin') && <Badge variant="warning">2 adımlı doğrulama kurulmadı</Badge>
+                        )}
                       </p>
                       {m.email && <p className="truncate text-[12.5px] text-muted-foreground">{m.email}</p>}
                     </td>
@@ -80,7 +91,7 @@ export default async function UsersPage() {
                     <td className={cn(td, 'whitespace-nowrap text-muted-foreground')}>{m.last_sign_in_at ? formatRelativeDate(m.last_sign_in_at) : 'Hiç giriş yapmadı'}</td>
                     <td className={cn(td, 'whitespace-nowrap text-muted-foreground')}>{formatDate(m.created_at)}</td>
                     <td className={cn(td, 'text-right')}>
-                      {!locked && <MemberMenu userId={m.user_id} name={name} email={m.email} status={m.status} canReset={m.role !== 'owner' || ctx.role === 'owner'} />}
+                      {!locked && <MemberMenu userId={m.user_id} name={name} email={m.email} status={m.status} canReset={m.role !== 'owner' || ctx.role === 'owner'} mfaEnabled={mfaOn.has(m.user_id)} />}
                     </td>
                   </tr>
                 );
@@ -88,6 +99,18 @@ export default async function UsersPage() {
             </tbody>
           </TableWrap>
         )}
+      </Panel>
+
+      <Panel
+        className="mt-6"
+        title="Güvenlik politikası"
+        description="Sahip ve yönetici hesapları tüm ofis verisine erişir; bu hesaplarda iki adımlı doğrulama önerilir."
+      >
+        <MfaPolicyToggle
+          enabled={org?.require_admin_mfa ?? false}
+          canChange={ctx.role === 'owner'}
+          selfHasMfa={Boolean(ctx.mfa.factorId)}
+        />
       </Panel>
 
       <Panel className="mt-6" title="Roller ve yetkiler" description="Yetkiler veritabanında da uygulanır; bir düğmenin gizlenmesi tek başına koruma değildir.">

@@ -1,11 +1,15 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useCallback, useRef, useState } from 'react';
 import { Expand, ImageOff, Images } from 'lucide-react';
-import { Lightbox } from '@/components/gallery/lightbox';
 import { MediaImage } from '@/components/gallery/media-image';
 import { cn } from '@/lib/utils';
 import type { PropertyImage } from '@/modules/properties/types';
+
+// Tam ekran galeri (yakınlaştırma, kaydırma) yalnızca ilk açılışta yüklenir: ilk
+// yüklemede indirilen/çalıştırılan JavaScript azalır (mobil LCP / INP)
+const Lightbox = dynamic(() => import('@/components/gallery/lightbox').then((m) => m.Lightbox), { ssr: false });
 
 function altFor(img: PropertyImage, title: string, i: number) {
   return img.alt_text || `${title} – fotoğraf ${i + 1}`;
@@ -18,12 +22,15 @@ function altFor(img: PropertyImage, title: string, i: number) {
  */
 export function PropertyGallery({ images, title, overlay }: { images: PropertyImage[]; title: string; overlay?: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  // Bir kez açıldıktan sonra bileşen yerinde kalır (kapanış animasyonu ve hızlı yeniden açılış)
+  const [opened, setOpened] = useState(false);
   const [startIndex, setStartIndex] = useState(0);
   const [mobileIndex, setMobileIndex] = useState(0);
   const mobileRef = useRef<HTMLDivElement>(null);
 
   const openAt = useCallback((i: number) => {
     setStartIndex(i);
+    setOpened(true);
     setOpen(true);
   }, []);
 
@@ -137,7 +144,7 @@ export function PropertyGallery({ images, title, overlay }: { images: PropertyIm
         {overlay}
       </div>
 
-      <Lightbox images={images} title={title} open={open} onOpenChange={setOpen} startIndex={startIndex} />
+      {(open || opened) && <Lightbox images={images} title={title} open={open} onOpenChange={setOpen} startIndex={startIndex} />}
     </>
   );
 }

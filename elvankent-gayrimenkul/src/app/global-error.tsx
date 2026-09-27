@@ -1,9 +1,14 @@
 'use client';
 
+import { useEffect } from 'react';
+import { reportClientError } from '@/modules/monitoring/client';
 import './globals.css';
 
 /** Kök düzeyde (yerleşim dahil) çöken durumlar için son savunma hattı */
-export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  useEffect(() => {
+    if (!error.digest) reportClientError(error, 'boundary');
+  }, [error]);
   return (
     <html lang="tr">
       <body className="flex min-h-dvh items-center justify-center bg-background p-6 font-sans text-foreground">

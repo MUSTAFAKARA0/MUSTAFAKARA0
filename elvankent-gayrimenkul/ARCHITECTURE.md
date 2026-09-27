@@ -126,6 +126,15 @@ Döşemeler tarayıcıya `/api/tiles/{z}/{x}/{y}` üzerinden sunulur; sağlayıc
 - Güvenlik başlıkları ve CSP `next.config.ts` içinde; panel ve platform sayfaları `noindex` + `no-store`.
 - Dışa aktarma (CSV/JSON) `data.export` yetkisi ister, siteler arası isteği reddeder ve denetim kaydına yazılır; CSV formül enjeksiyonuna karşı korunur.
 - Marka görselleri sunucuda yeniden kodlanır (SVG kabul edilmez), dosya adı depolama yolunda kullanılmaz.
+- İki adımlı doğrulama (TOTP): `user_org_ids()` oturumun doğrulama düzeyini (`aal`) kontrol eder; MFA kurmuş kullanıcının kod girilmemiş oturumu ve MFA zorunlu ofisin sahip/yöneticisi hiçbir ofis verisine erişemez (veritabanında zorlanır, sunucu katmanı `/admin/dogrulama`'ya yönlendirir).
+- Ortam ayrımı: `SITE_ENV` (`production` / `demo` / `preview` / `development`, yoksa `VERCEL_ENV`). Canlı dışındaki her ortam `noindex` başlığı, site haritasız robots.txt ve "DEMO ORTAMI" bandı ile sunulur (`src/lib/site-env.ts`). `supabase/seed.sql` yalnızca açık onayla ve gerçek ilan bulunmayan veritabanında çalışır.
+
+## 9a. Bildirimler ve izleme (Stage 3)
+
+- Yeni talep → `submit_lead` → yanıt sonrası (`after()`) e-posta (`src/modules/notifications`; Resend HTTP API veya kapalı). Varsayılan e-posta içeriği kişisel veri içermez. Alıcılar `organization_notification_settings` (herkese kapalı tablo), gönderimler `notification_deliveries` tablosuna yazılır; kanal alanı WhatsApp/webhook eklenmesine hazırdır.
+- Hatalar: `src/instrumentation.ts` (`onRequestError`) ve tarayıcı hataları (`/api/monitoring/client-error`) → tek satır JSON log + isteğe bağlı Sentry (SDK'sız) / webhook; kişisel veri maskelenir. `GET /api/health` uptime içindir.
+- Vercel Speed Insights her zaman, Web Analytics yalnızca analitik çerez onayıyla yüklenir.
+- Özel alan adları `src/modules/domains` üzerinden (`DOMAIN_PROVIDER=manual|vercel`).
 
 ## 10. Klasör yapısı (özet)
 
@@ -144,14 +153,17 @@ src/
 ├── platform/                    # auth (oturum, yetkiler), tenant, branding (tema), audit, actions
 └── lib/                         # supabase istemcileri, env, format, slug, utils
 supabase/migrations/             # veritabanı şeması (sırayla uygulanır)
-tests/security/rls.test.mjs      # güvenlik testleri
+tests/security/rls.test.mjs      # güvenlik testleri (MFA dahil)
+tests/unit/*.test.mjs            # birim testleri
+docs/                            # işletim, yedekleme, canlıya çıkış belgeleri
+scripts/                         # create-admin, prelaunch, yedek/geri yükleme, konum içe aktarma
 tests/e2e/*.spec.ts              # Playwright uçtan uca testler
 ```
 
 ## 11. Bilinen sınırlamalar
 
 - Ödeme altyapısı bağlı değildir; abonelikler süper admin panelinden elle yönetilir (veritabanı yapısı hazırdır).
-- Referans konum verisi şu an Ankara'nın bir bölümünü kapsar (1 il, 5 ilçe, 15 mahalle); yeni bölgeler için `cities`/`districts`/`neighborhoods` tablolarına veri eklenmelidir.
-- Özel alan adı için DNS kaydı ve Vercel'e alan adı ekleme işlemi platform dışında yapılır.
-- E-posta bildirimleri (yeni talep vb.) bu sürümde yoktur; talepler panelde görüntülenir.
+- Referans konum verisi şu an Ankara'nın bir bölümünü kapsar (1 il, 5 ilçe, 15 mahalle); Türkiye geneli veri `npm run import:locations` ile resmî kaynaktan yüklenir (docs/LOCATION_DATA.md).
+- Özel alan adı için DNS kaydı platform dışında yapılır; Vercel'e ekleme `DOMAIN_PROVIDER=vercel` ile otomatikleşir, aksi halde elle yapılır.
+- Yeni talep e-posta bildirimi e-posta sağlayıcısı (Resend) yapılandırılınca çalışır; WhatsApp bildirimi henüz yoktur.
 - Oturum açmış bir kullanıcı, başka bir kiracının **yayındaki** ilan görselinin iç meta verilerini (ör. orijinal dosya adı) API üzerinden okuyabilir; anonim ziyaretçi için bu sütunlar kapalıdır. Özel dosyalar ve yayında olmayan içerik her durumda kapalıdır.
