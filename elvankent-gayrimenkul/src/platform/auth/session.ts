@@ -1,7 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { createSessionClient, type DB } from '@/lib/supabase/server';
 import { getTenantFromRequest } from '@/platform/tenant/tenant';
@@ -248,8 +248,13 @@ export async function requireSuperAdmin(): Promise<SessionUser> {
 
 export async function requireSuperAdminPage(): Promise<SessionUser> {
   const session = await getSessionUser();
-  if (!session) redirect('/admin/giris?next=/platform');
-  if (!session.profile.isSuperAdmin) redirect('/admin/yetkisiz?izin=platform');
+  if (!session) redirect('/platform/giris');
+  if (!session.profile.isSuperAdmin) {
+    // Kiracı (emlak ofisi) kullanıcısı için platform alanı YOKTUR: 404 (varlığı da gösterilmez).
+    // Adresi elle yazma denemesi güvenlik kaydına işlenir.
+    await logSecurityEvent({ orgId: null, action: 'auth.forbidden', actorId: session.user.id, metadata: { area: 'platform' } });
+    notFound();
+  }
   if (await getMfaRequirement()) redirect(mfaUrl('/platform'));
   return session;
 }

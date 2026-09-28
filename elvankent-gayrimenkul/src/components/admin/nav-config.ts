@@ -1,3 +1,4 @@
+import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 import type { Permission } from '@/platform/auth/permissions';
 
 export type AdminIconKey =
@@ -105,7 +106,8 @@ export function filterNav(
       .map((item) => ({ ...item, children: item.children?.filter((c) => !c.permission || can(c.permission)) })),
   })).filter((s) => s.items.length > 0);
   if (isSuperAdmin) {
-    sections.push({ title: 'Platform', items: [{ href: '/platform', label: 'Süper admin', icon: 'platform', match: ['/platform'] }] });
+    // Yalnızca süper admin görür (sunucuda filtrelenir). Platform ayrı bir alandır: ofis markası taşımaz.
+    sections.push({ title: 'Platform', items: [{ href: '/platform', label: `${PLATFORM_BRAND.name} platform yönetimi`, icon: 'platform', match: ['/platform'] }] });
   }
   return sections;
 }

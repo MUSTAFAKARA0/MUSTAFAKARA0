@@ -14,6 +14,7 @@
 | [ADMIN_GUIDE.md](./ADMIN_GUIDE.md) | Yönetim paneli kullanım kılavuzu |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Mimari, çok kiracılı yapı, güvenlik katmanları, medya hattı, SEO |
 | [docs/DEMO_SETUP.md](./docs/DEMO_SETUP.md) | Ayrı demo/önizleme ortamı (Supabase demo projesi + Vercel Preview) ve telefon kabul testi |
+| [docs/PLATFORM_VE_KIRACI.md](./docs/PLATFORM_VE_KIRACI.md) | Platform sahibi (KARAY) ↔ kiracı (emlak ofisi) ayrımı: marka, yetki, tema, veritabanı |
 | [docs/TELEFON_KABUL_TESTI.md](./docs/TELEFON_KABUL_TESTI.md) | Gerçek telefonda yapılacak kısa kabul testi ve MFA (iki adımlı doğrulama) kurulumu |
 | [docs/PRODUCTION_MIGRATION.md](./docs/PRODUCTION_MIGRATION.md) | Canlı veritabanı yükseltmesi: yedek, sıra, kontroller, geri dönüş |
 | [docs/DEPLOYMENT_RUNBOOK.md](./docs/DEPLOYMENT_RUNBOOK.md) | 15 adımlık canlıya çıkış sırası |

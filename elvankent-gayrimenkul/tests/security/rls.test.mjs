@@ -521,3 +521,89 @@ describe('Bildirim ayarları ve kayıtları (kiracı izolasyonu)', { skip }, () 
     assert.ok(fake.error || denied(fake), 'kullanıcı sahte bildirim kaydı ekledi');
   });
 });
+
+// -----------------------------------------------------------------------------
+// Platform sahibi (KARAY, süper admin) ↔ kiracılar (emlak ofisleri)
+// -----------------------------------------------------------------------------
+describe('Platform sahibi ↔ kiracı ayrımı', { skip }, () => {
+  let platformAdmin;
+  before(async () => {
+    if (missing) return;
+    platformAdmin = await makeUser('platform');
+    assert.ifError((await service.from('profiles').update({ is_super_admin: true }).eq('id', platformAdmin.id)).error);
+  });
+
+  test('herkese açık anahtarla kiracı listesi, ayarları ve alan adları toplu çekilemez', async () => {
+    for (const table of ['organizations', 'organization_settings', 'organization_domains']) {
+      const res = await anon.from(table).select('*');
+      assert.ok(denied(res), `${table} anonim kullanıcıya liste döndürdü`);
+    }
+  });
+  test('herkese açık site kiracısını yalnızca adresiyle (tekil) bulur; askıdaki kiracı bulunmaz', async () => {
+    const found = await anon.rpc('public_tenant', { p_slug: T.A.slug });
+    assert.ifError(found.error);
+    assert.equal(found.data.length, 1);
+    assert.equal(found.data[0].id, T.A.orgId);
+    const settings = await anon.rpc('public_tenant_settings', { p_org: T.A.orgId });
+    assert.ifError(settings.error);
+    assert.equal(settings.data[0].display_name, 'RLS Test A');
+    assert.equal(settings.data[0].updated_by, null, 'son değiştiren kullanıcı herkese açık dönmemeli');
+    assert.ok(denied(await anon.rpc('public_tenant', { p_slug: 'olmayan-ofis-xyz' })));
+    assert.ifError((await service.from('organizations').update({ status: 'suspended' }).eq('id', T.B.orgId)).error);
+    const suspended = await anon.rpc('public_tenant', { p_slug: T.B.slug });
+    const suspendedSettings = await anon.rpc('public_tenant_settings', { p_org: T.B.orgId });
+    await service.from('organizations').update({ status: 'active' }).eq('id', T.B.orgId);
+    assert.ok(denied(suspended), 'askıdaki kiracı çözümlendi');
+    assert.ok(denied(suspendedSettings), 'askıdaki kiracının ayarları döndü');
+  });
+  test("kiracı kullanıcısı yalnızca kendi ofisini görür (B'yi, B'nin ayarlarını, aboneliğini göremez)", async () => {
+    for (const role of ROLES) {
+      const c = T.A.users[role].client;
+      const orgs = await c.from('organizations').select('id');
+      assert.ifError(orgs.error);
+      assert.deepEqual(orgs.data.map((o) => o.id), [T.A.orgId], `${role}: başka kiracı göründü`);
+      const settings = await c.from('organization_settings').select('organization_id');
+      assert.deepEqual(settings.data.map((s) => s.organization_id), [T.A.orgId], `${role}: başka kiracının ayarı göründü`);
+      assert.ok(denied(await c.from('subscriptions').select('id').eq('organization_id', T.B.orgId)));
+    }
+  });
+  test("kiracı sahibi başka kiracının markasını değiştiremez; kendi markasını değiştirebilir", async () => {
+    const ow = T.A.users.owner.client;
+    assert.ok(denied(await ow.from('organization_settings').update({ primary_color: '#123456' }).eq('organization_id', T.B.orgId).select('organization_id')));
+    const own = await ow.from('organization_settings').update({ primary_color: '#654321' }).eq('organization_id', T.A.orgId).select('primary_color');
+    assert.ifError(own.error);
+    assert.equal(own.data[0].primary_color, '#654321');
+    const b = await service.from('organization_settings').select('primary_color').eq('organization_id', T.B.orgId).single();
+    assert.notEqual(b.data.primary_color, '#123456');
+  });
+  test('kiracı sahibi platform planlarını, kiracı durumunu ve süper admin bayrağını değiştiremez', async () => {
+    const ow = T.A.users.owner.client;
+    assert.ok(denied(await ow.from('plans').update({ max_users: 999 }).eq('id', 'baslangic').select('id')));
+    assert.ok(denied(await ow.from('organizations').update({ status: 'suspended' }).eq('id', T.B.orgId).select('id')));
+    assert.ok((await ow.from('organizations').insert({ slug: `hack-${RUN}`, name: 'Hack', reference_prefix: 'HCK' })).error);
+    assert.ok((await ow.rpc('platform_update_plan', { p_id: 'baslangic', p_name: 'Hack', p_max_users: 1, p_max_properties: 1, p_max_storage_mb: 1, p_crm: false, p_analytics: false, p_pdf: false, p_custom_domain: false, p_price: 0 })).error);
+    assert.ok((await ow.rpc('platform_add_domain', { p_org: T.A.orgId, p_hostname: `hack-${RUN}.example.com`, p_primary: false })).error);
+    assert.ok(denied(await ow.from('profiles').update({ is_super_admin: true }).eq('id', T.A.users.admin.id).select('id')));
+    assert.ok((await ow.from('organization_members').insert({ organization_id: T.B.orgId, user_id: T.A.users.agent.id, role: 'owner', status: 'active' })).error);
+    assert.ok(denied(await ow.from('audit_logs').select('id').is('organization_id', null)), 'platform kayıtları kiracıya göründü');
+  });
+  test('süper admin (platform) tüm kiracıları ve ayarlarını görür, kiracıyı yönetebilir', async () => {
+    const pa = platformAdmin.client;
+    const orgs = await pa.from('organizations').select('id').in('id', [T.A.orgId, T.B.orgId]);
+    assert.ifError(orgs.error);
+    assert.equal(orgs.data.length, 2);
+    const settings = await pa.from('organization_settings').select('organization_id').in('organization_id', [T.A.orgId, T.B.orgId]);
+    assert.equal(settings.data.length, 2);
+    const list = await pa.rpc('platform_organizations');
+    assert.ifError(list.error);
+    assert.ok(list.data.some((o) => o.id === T.B.orgId));
+    assert.ifError((await pa.rpc('platform_set_org_plan', { p_org: T.B.orgId, p_plan: 'profesyonel', p_status: 'active' })).error);
+    const sub = await service.from('subscriptions').select('plan_id').eq('organization_id', T.B.orgId).eq('status', 'active').single();
+    assert.equal(sub.data.plan_id, 'profesyonel');
+  });
+  test('süper admin üyesi olmadığı kiracının CRM verisini doğrudan okuyamaz (yalnızca platform işlemleri)', async () => {
+    const pa = platformAdmin.client;
+    assert.ok(denied(await pa.from('customers').select('id').eq('organization_id', T.B.orgId)));
+    assert.ok(denied(await pa.from('leads').select('id').eq('organization_id', T.B.orgId)));
+  });
+});

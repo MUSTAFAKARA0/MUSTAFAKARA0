@@ -323,13 +323,20 @@ test.describe('Yönetim paneli (telefon)', () => {
     await guest.close();
   });
 
-  test('52–54: süper admin: /platform ve "Ofis paneli" bağlantısı; çıkış', async ({ page }) => {
+  test('52–54: süper admin: KARAY platformu, müşteri ofisinin paneline geçiş; çıkış', async ({ page }) => {
     await login(page);
     await page.goto('/platform');
     await expect(page).toHaveURL(/\/platform$/);
-    const office = page.getByRole('link', { name: /^Ofis paneli · / });
-    await expect(office).toBeVisible();
-    await office.click();
+    // Platform başlığı KARAY markasını taşır; ofis (Elvankent) adı/logosu başlıkta yoktur
+    const header = page.getByRole('banner');
+    await expect(header.getByText('KARAY', { exact: true })).toBeVisible();
+    await expect(header.getByText(/Elvankent/)).toHaveCount(0);
+    await expect(header.locator('img[src*="/branding/"]')).toHaveCount(0);
+    await noOverflow(page, '/platform');
+    // Ofis paneline geçiş: organizasyon ayrıntısından (üyelik varsa)
+    await page.goto('/platform/organizasyonlar');
+    await page.getByRole('link', { name: /Elvankent Gayrimenkul/ }).first().click();
+    await page.getByRole('button', { name: 'Ofis paneline geç' }).click();
     await expect(page).toHaveURL(/\/admin$/);
     await openMenu(page);
     await page.getByRole('button', { name: 'Hesap menüsü' }).filter({ visible: true }).first().click();
@@ -366,9 +373,10 @@ test.describe('Yönetim paneli (telefon)', () => {
       await expect(p.getByText(/Şifreniz (güncellendi|değiştirildi)/).first()).toBeVisible({ timeout: 20_000 });
       await p.goto('/admin');
       await openMenu(p);
-      await expect(p.getByRole('link', { name: 'Süper admin' })).toHaveCount(0);
-      await p.goto('/platform');
-      await expect(p).toHaveURL(/\/admin\/yetkisiz\?izin=platform/);
+      await expect(p.getByRole('link', { name: /platform yönetimi/i })).toHaveCount(0);
+      const res = await p.goto('/platform');
+      expect(res?.status()).toBe(404);
+      await expect(p.getByText('KARAY', { exact: true })).toHaveCount(0);
       await ctx.close();
     } finally {
       const { data } = await service.auth.admin.listUsers({ perPage: 200 });

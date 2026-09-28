@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Geçici platform simgesi (yer tutucu). KARAY logosu teslim edilince değiştirilecek. -->
+  <rect width="64" height="64" rx="14" fill="#1f2a44"/>
+  <rect x="17" y="17" width="12" height="12" rx="3" fill="#ffffff" fill-opacity="0.9"/>
+  <rect x="35" y="17" width="12" height="12" rx="3" fill="#ffffff" fill-opacity="0.55"/>
+  <rect x="17" y="35" width="12" height="12" rx="3" fill="#ffffff" fill-opacity="0.55"/>
+  <rect x="35" y="35" width="12" height="12" rx="3" fill="#ffffff" fill-opacity="0.9"/>
+</svg>

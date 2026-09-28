@@ -22,8 +22,8 @@ export async function GET(_request: Request, { params }: RouteContext<'/t/[tenan
     icons: favicon
       ? [{ src: favicon, sizes: 'any', type: favicon.endsWith('.svg') ? 'image/svg+xml' : 'image/png', purpose: 'any' }]
       : [
-          { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-          { src: '/apple-icon.png', sizes: '180x180', type: 'image/png', purpose: 'any' },
+          { src: '/site-icon', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+          { src: '/site-icon/apple', sizes: '180x180', type: 'image/png', purpose: 'any' },
         ],
   };
   return new Response(JSON.stringify(manifest), {

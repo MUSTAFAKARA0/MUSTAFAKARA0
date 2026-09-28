@@ -77,12 +77,29 @@ function defaultSettings(orgId: string, name: string): OrgSettings {
   };
 }
 
-async function loadTenant(key: string): Promise<Tenant | null> {
-  if (!isSupabaseConfigured() || !isValidTenantKey(key)) return null;
-  const supabase = createPublicClient([cacheTags.tenants], 300);
+/**
+ * Veritabanında public_tenant* fonksiyonları yoksa (20260929000001 migration'ı henüz
+ * uygulanmamış) PostgREST "fonksiyon bulunamadı" döner → eski doğrudan okumaya dönülür.
+ */
+function missingFunction(error: { code?: string } | null): boolean {
+  return error?.code === 'PGRST202' || error?.code === '42883';
+}
 
+type PublicOrg = { id: string; slug: string; name: string; is_default: boolean; reference_prefix: string; status: string };
+
+/**
+ * Kiracı TEK TEK ve yalnızca adresiyle (slug) veya doğrulanmış alan adıyla bulunur;
+ * herkese açık anahtarla ofis listesi çekilemez (platformun müşteri listesi gizli).
+ */
+async function findOrg(supabase: ReturnType<typeof createPublicClient>, key: string): Promise<PublicOrg | null> {
+  const byHost = key.includes('.');
+  const rpc = await supabase.rpc('public_tenant', byHost ? { p_hostname: key } : { p_slug: key }, { get: true });
+  if (!rpc.error) return rpc.data?.[0] ?? null;
+  if (!missingFunction(rpc.error)) throw new Error(`Site bilgisi yüklenemedi: ${rpc.error.message}`);
+
+  // Geriye uyumluluk: migration öncesi veritabanı
   let orgId: string | null = null;
-  if (key.includes('.')) {
+  if (byHost) {
     const { data } = await supabase.from('organization_domains').select('organization_id').eq('hostname', key).maybeSingle();
     orgId = data?.organization_id ?? null;
     if (!orgId) return null;
@@ -90,14 +107,29 @@ async function loadTenant(key: string): Promise<Tenant | null> {
   const orgQuery = supabase.from('organizations').select(ORG_COLUMNS);
   const { data: org, error } = await (orgId ? orgQuery.eq('id', orgId) : orgQuery.eq('slug', key)).maybeSingle();
   if (error) throw new Error(`Site bilgisi yüklenemedi: ${error.message}`);
+  return org;
+}
+
+async function loadTenant(key: string): Promise<Tenant | null> {
+  if (!isSupabaseConfigured() || !isValidTenantKey(key)) return null;
+  const supabase = createPublicClient([cacheTags.tenants], 300);
+
+  const org = await findOrg(supabase, key);
   if (!org || org.status !== 'active') return null;
 
   const orgClient = createPublicClient([cacheTags.tenants, cacheTags.org(org.id)], 300);
-  const [settingsRes, domainsRes, planRes] = await Promise.all([
-    orgClient.from('organization_settings').select('*').eq('organization_id', org.id).maybeSingle(),
-    orgClient.from('organization_domains').select('hostname, is_primary').eq('organization_id', org.id),
+  const [settingsRpc, domainsRpc, planRes] = await Promise.all([
+    orgClient.rpc('public_tenant_settings', { p_org: org.id }, { get: true }),
+    orgClient.rpc('public_tenant_domains', { p_org: org.id }, { get: true }),
     orgClient.rpc('org_plan', { p_org: org.id }, { get: true }),
   ]);
+  const legacy = missingFunction(settingsRpc.error) || missingFunction(domainsRpc.error);
+  const [settingsRes, domainsRes] = legacy
+    ? await Promise.all([
+        orgClient.from('organization_settings').select('*').eq('organization_id', org.id).maybeSingle(),
+        orgClient.from('organization_domains').select('hostname, is_primary').eq('organization_id', org.id),
+      ])
+    : [{ data: settingsRpc.data?.[0] ?? null }, { data: domainsRpc.data }];
 
   const settings = settingsRes.data ?? defaultSettings(org.id, org.name);
   const primaryDomain = domainsRes.data?.find((d) => d.is_primary)?.hostname;

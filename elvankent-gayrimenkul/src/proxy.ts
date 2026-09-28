@@ -18,7 +18,7 @@ import { defaultHostsFromSiteUrl, tenantKeyForHost, type TenantHostConfig } from
  */
 
 const TENANT_HEADER = 'x-tenant-key';
-const PUBLIC_AUTH_PATHS = new Set(['/admin/giris', '/admin/sifremi-unuttum', '/admin/sifre-yenile', '/admin/auth/callback']);
+const PUBLIC_AUTH_PATHS = new Set(['/admin/giris', '/admin/sifremi-unuttum', '/admin/sifre-yenile', '/admin/auth/callback', '/platform/giris']);
 
 function hostConfig(): TenantHostConfig {
   return {
@@ -83,6 +83,8 @@ export async function proxy(request: NextRequest) {
   if (isUnder(pathname, '/admin') || isUnder(pathname, '/platform')) {
     const { response, hasUser } = await withSession(request, requestHeaders, null);
     if (!hasUser && !PUBLIC_AUTH_PATHS.has(pathname)) {
+      // Platform (KARAY) ve ofis paneli ayrı giriş sayfalarına sahiptir
+      if (isUnder(pathname, '/platform')) return privateHeaders(NextResponse.redirect(new URL('/platform/giris', request.url)));
       const loginUrl = new URL('/admin/giris', request.url);
       const next = pathname + request.nextUrl.search;
       if (next !== '/admin') loginUrl.searchParams.set('next', next);

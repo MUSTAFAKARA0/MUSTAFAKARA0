@@ -82,6 +82,14 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
     })
     .map((m) => m.organization_id);
   const isSuperAdmin = profile?.is_super_admin ?? false;
+  const platformLogin = formData.get('scope') === 'platform';
+
+  // Platform (KARAY) girişi yalnızca süper admin içindir; ofis kullanıcısı buradan giremez
+  if (platformLogin && !isSuperAdmin) {
+    await logSecurityEvent({ orgId: null, action: 'auth.login_denied', actorId: data.user.id, metadata: { reason: 'not_platform_admin' }, ipHash });
+    await supabase.auth.signOut();
+    return { error: 'Bu hesap platform yöneticisi değil. Ofis paneline ofisinizin giriş sayfasından girin.', email };
+  }
 
   if (activeOrgIds.length === 0 && !isSuperAdmin) {
     await logSecurityEvent({ orgId: tenant?.id ?? null, action: 'auth.login_denied', actorId: data.user.id, metadata: { reason: 'no_membership' }, ipHash });
@@ -97,6 +105,8 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
     redirect(`/admin/dogrulama?next=${encodeURIComponent(safeNext(formData.get('next')))}`);
   }
   if (profile?.password_change_required) redirect('/admin/hesap?sifre=degistir');
+  // Hiçbir ofiste üyeliği olmayan süper admin doğrudan platform alanına gider
+  if (platformLogin || (isSuperAdmin && activeOrgIds.length === 0 && !formData.get('next'))) redirect('/platform');
   redirect(safeNext(formData.get('next')));
 }
 
@@ -108,6 +118,17 @@ export async function signOut() {
   }
   (await cookies()).delete(ACTIVE_ORG_COOKIE);
   redirect('/admin/giris');
+}
+
+/** Platform (KARAY) konsolundan çıkış: platform giriş sayfasına döner */
+export async function signOutPlatform() {
+  const session = await getSessionUser();
+  if (session) {
+    await logSecurityEvent({ orgId: null, action: 'auth.logout', actorId: session.user.id });
+    await session.supabase.auth.signOut();
+  }
+  (await cookies()).delete(ACTIVE_ORG_COOKIE);
+  redirect('/platform/giris');
 }
 
 /** Aktif organizasyonu değiştirir — yalnızca kullanıcının GERÇEK üyeliği varsa */

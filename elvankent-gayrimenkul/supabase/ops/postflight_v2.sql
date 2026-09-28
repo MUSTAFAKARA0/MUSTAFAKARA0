@@ -69,5 +69,13 @@ checks as (
   union all
   select 13, 'Yetki tablosu (rol × yetki satırı)', (select count(*)::text from public.role_permissions),
          case when (select count(*) from public.role_permissions) > 0 then 'TAMAM' else 'HATA' end
+  union all
+  select 14, 'Kiracı listesi herkese kapalı (platform_owner_isolation)',
+         (select count(*)::text from pg_policies where schemaname = 'public'
+            and policyname in ('organizations_public_read', 'settings_public_read', 'domains_public_read')) || ' açık politika',
+         case when not exists (select 1 from pg_policies where schemaname = 'public'
+                                 and policyname in ('organizations_public_read', 'settings_public_read', 'domains_public_read'))
+               and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'public_tenant')
+              then 'TAMAM' else 'HATA: 20260929000001_platform_owner_isolation.sql uygulanmamış' end
 )
 select sira, kontrol, deger, durum from checks order by sira;

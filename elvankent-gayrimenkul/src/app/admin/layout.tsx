@@ -6,6 +6,8 @@ export const metadata: Metadata = {
   title: { default: 'Yönetim Paneli', template: '%s | Yönetim Paneli' },
   robots: { index: false, follow: false, nocache: true },
   referrer: 'same-origin',
+  // Bulunulan alan adındaki ofisin simgesi (ofis girişi o ofisin markasını taşır)
+  icons: { icon: { url: '/site-icon', type: 'image/svg+xml' } },
 };
 
 export const viewport: Viewport = { themeColor: '#f5f4f1' };

@@ -2106,6 +2106,35 @@ export type Database = {
           custom_domain_enabled: boolean
         }[]
       }
+      public_tenant: {
+        Args: {
+          p_slug?: string
+          p_hostname?: string
+        }
+        Returns: {
+          id: string
+          slug: string
+          name: string
+          is_default: boolean
+          reference_prefix: string
+          status: Database["public"]["Enums"]["org_status"]
+        }[]
+      }
+      public_tenant_domains: {
+        Args: {
+          p_org: string
+        }
+        Returns: {
+          hostname: string
+          is_primary: boolean
+        }[]
+      }
+      public_tenant_settings: {
+        Args: {
+          p_org: string
+        }
+        Returns: Database["public"]["Tables"]["organization_settings"]["Row"][]
+      }
       org_usage: {
         Args: {
           p_org: string

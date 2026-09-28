@@ -7,6 +7,8 @@
  *                                      değerleri ancak commit sonrası kullanılabilir)
  *   supabase/demo/03_v2_stage3.sql     V2 + Stage 3 migration'ları
  *   supabase/demo/04_demo_seed.sql     12 DEMO ilan (seed.sql + açık onay satırı)
+ *   supabase/demo/06_platform_updates.sql  sonradan eklenen migration'lar (29.09.2026+),
+ *                                      kurulu demo projesinde 05'ten sonra çalıştırılır
  *
  * Kaynak her zaman supabase/migrations ve supabase/seed.sql'dir; bu dosyalar yalnızca
  * onların sıralı birleşimidir (elle düzenlemeyin). 01 dışındaki her dosya, veritabanında
@@ -29,7 +31,9 @@ const check = process.argv.includes('--check');
 const migrations = readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort();
 const V1 = migrations.filter((f) => f.startsWith('20260922'));
 const ENUMS = migrations.filter((f) => f === '20260926000001_v2_enums.sql');
-const REST = migrations.filter((f) => !V1.includes(f) && !ENUMS.includes(f));
+// 29.09.2026 ve sonrası: demo projesine sonradan eklenen migration'lar (ayrı dosya: 06)
+const LATER = migrations.filter((f) => f >= '20260929');
+const REST = migrations.filter((f) => !V1.includes(f) && !ENUMS.includes(f) && !LATER.includes(f));
 if (V1.length !== 4 || ENUMS.length !== 1) throw new Error('Beklenmeyen migration listesi');
 
 const header = (title, note) => `-- =============================================================================
@@ -107,6 +111,16 @@ insert into elvankent_demo.environment default values;
     "\n-- Açık onay: seed.sql bu ayar olmadan çalışmaz\nselect set_config('app.allow_demo_seed', 'on', false);\n\n" +
     readFileSync(join(root, 'supabase/seed.sql'), 'utf8').trimEnd() +
     '\n',
+  '06_platform_updates.sql':
+    header(
+      'DEMO GÜNCELLEME 6 — kurulum sonrası eklenen migration\'lar',
+      'Kurulu demo projesinde (01–05 bitmiş) SQL Editor > New query > yapıştır > Run. Tekrar çalıştırılabilir.',
+    ) +
+    '\n' +
+    requireMarker +
+    body(LATER) +
+    history(LATER) +
+    "\n-- API şema önbelleğini yenile\nnotify pgrst, 'reload schema';\n",
 };
 
 let stale = [];

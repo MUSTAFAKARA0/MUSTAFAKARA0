@@ -7,12 +7,13 @@ import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/form-controls';
 import { signIn, type AuthFormState } from '@/app/actions/auth';
 
-export function LoginForm({ next }: { next?: string }) {
+export function LoginForm({ next, scope }: { next?: string; scope?: 'platform' }) {
   const [state, action, pending] = useActionState<AuthFormState, FormData>(signIn, {});
   const [showPassword, setShowPassword] = useState(false);
   return (
     <form action={action} className="space-y-5">
       {next && <input type="hidden" name="next" value={next} />}
+      {scope && <input type="hidden" name="scope" value={scope} />}
       <Field label="E-posta" htmlFor="email">
         <Input id="email" name="email" type="email" autoComplete="username" required defaultValue={state.email} autoFocus />
       </Field>

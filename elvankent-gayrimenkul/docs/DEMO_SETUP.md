@@ -125,7 +125,10 @@ Supabase › **Authentication › Users** › **Add user** › **Create new user
 2. Hiçbir satırı değiştirmeyin; dosya demo veritabanındaki tek kullanıcıyı kendisi bulur. Metnin sonuna bir kez tıklayın (seçili bir yer kalmasın) → **Run**.
 3. Sonuç tablosunda `e-postanız | owner | true` görünmeli.
 
-Bu hesap demo ofisinin **sahibi** olur ve `/platform` (süper admin) ekranına da erişir.
+Bu hesap demo ofisinin **sahibi** olur ve `/platform` (KARAY süper admin) ekranına da erişir. Bu, kurulumu tek hesapla başlatmak için geçicidir: platform sahibi (KARAY) ile müşteri ofisi (Elvankent) ayrı şirketlerdir. Elvankent için ayrı bir sahip hesabı açtıktan sonra kendi hesabınızın ofis üyeliğini kaldırmanız önerilir (docs/PLATFORM_VE_KIRACI.md › "Hesapları ayırma").
+
+### 2.4 Sonradan eklenen güncellemeler (kurulu demo için)
+[06_platform_updates.sql](https://raw.githubusercontent.com/MUSTAFAKARA0/MUSTAFAKARA0/claude/elvankent-real-estate-platform-vxq9dj/elvankent-gayrimenkul/supabase/demo/06_platform_updates.sql): SQL Editor › New query › yapıştır › Run. Tekrar çalıştırılabilir; veri silmez. (Çalıştırılmasa da site çalışır; bu dosya ofis listesinin herkese açık anahtarla çekilmesini kapatır.)
 
 > Alternatif (terminal kullananlar için): `.env.local` içine **yalnızca demo** projesinin URL ve service_role değerlerini yazıp `npm run create-admin -- eposta@... --super-admin` çalıştırın. Betik güçlü bir şifre üretir ve bir kez gösterir.
 
@@ -306,4 +309,4 @@ Supabase › elvankent-demo › Settings › General › **Delete project**, ard
 
 ## Kod değişirse (geliştirici notu)
 
-`supabase/demo/01–04` dosyaları `npm run demo:sql` ile `supabase/migrations` ve `supabase/seed.sql`'den üretilir; CI güncel olup olmadıklarını kontrol eder. Demo veritabanı kurulduktan sonra eklenecek yeni migration'lar Supabase CLI ile uygulanabilir: `supabase db push` yalnızca eksik olanları çalıştırır, çünkü 01–03 migration geçmişini kaydeder.
+`supabase/demo/01–04` ve `06` dosyaları `npm run demo:sql` ile `supabase/migrations` ve `supabase/seed.sql`'den üretilir; CI güncel olup olmadıklarını kontrol eder. Demo veritabanı kurulduktan sonra eklenecek yeni migration'lar Supabase CLI ile uygulanabilir: `supabase db push` yalnızca eksik olanları çalıştırır, çünkü 01–03 migration geçmişini kaydeder.

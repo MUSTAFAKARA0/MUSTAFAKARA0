@@ -30,7 +30,8 @@ export async function generateMetadata({ params }: LayoutProps<'/t/[tenant]'>): 
     manifest: '/manifest.webmanifest',
     // Demo / önizleme ortamı arama motorlarına kapalıdır (ayrıca X-Robots-Tag başlığı)
     ...(isIndexable() ? {} : { robots: { index: false, follow: false } }),
-    ...(favicon ? { icons: { icon: favicon, apple: favicon } } : {}),
+    // Ofisin yüklediği simge; yoksa ofis adından ve renginden üretilen otomatik simge
+    icons: favicon ? { icon: favicon, apple: favicon } : { icon: { url: '/site-icon', type: 'image/svg+xml' }, apple: '/site-icon/apple' },
     verification: {
       google: s.google_site_verification ?? process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? undefined,
     },
