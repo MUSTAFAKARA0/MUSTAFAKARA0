@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, CheckCircle2, CloudOff, ExternalLink, Eye, Loader2, RefreshCw } from 'lucide-react';

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import {
   Building2,
   CalendarClock,

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { CalendarDays } from 'lucide-react';
 import { AppointmentActions } from '@/components/admin/crm/appointment-actions';
 import { NewAppointmentDialog } from '@/components/admin/crm/lead-controls';

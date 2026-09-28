@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { ExternalLink, FileText, ImageIcon, Newspaper, PencilLine, Plus, RotateCcw, Scale, Search, Trash2 } from 'lucide-react';
 import { ActionButton } from '@/components/admin/action-controls';
 import { AdminPageHeader, EmptyPanel } from '@/components/admin/ui';

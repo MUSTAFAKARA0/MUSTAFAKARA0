@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Suspense, useState, useTransition } from 'react';
 import {

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { Check, Download, FlaskConical, Minus, Trash2 } from 'lucide-react';
 import { ActionButton } from '@/components/admin/action-controls';
 import { BrandingImageField } from '@/components/admin/branding-image-field';

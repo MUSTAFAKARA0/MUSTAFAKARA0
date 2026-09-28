@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { Logo } from '@/components/layout/logo';
 import { PlatformWordmark } from '@/components/platform/platform-wordmark';
 import { brandingUrl } from '@/modules/media/variants';

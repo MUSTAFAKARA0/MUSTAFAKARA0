@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { Suspense } from 'react';
 import { Building2, Plus, Trash2 } from 'lucide-react';
 import { ListingsFilters } from '@/components/admin/listings/listings-filters';

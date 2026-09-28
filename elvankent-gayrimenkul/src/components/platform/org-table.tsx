@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { TableWrap, td, th } from '@/components/admin/ui';
 import { Badge } from '@/components/ui/badge';
 import { formatBytes, formatNumber, formatRelativeDate } from '@/lib/format';

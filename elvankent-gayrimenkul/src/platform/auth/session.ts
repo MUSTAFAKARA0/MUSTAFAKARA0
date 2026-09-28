@@ -6,7 +6,7 @@ import { notFound, redirect } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { serverEnv } from '@/lib/server-env';
 import { createSessionClient, type DB } from '@/lib/supabase/server';
-import { getTenantFromRequest } from '@/platform/tenant/tenant';
+import { getTenantFromRequest, getTenantKeyFromRequest } from '@/platform/tenant/tenant';
 import { ForbiddenError, UnauthenticatedError } from '@/platform/actions';
 import { logSecurityEvent } from '@/platform/audit';
 import { PERMISSIONS, type OrgRole, type Permission } from '@/platform/auth/permissions';
@@ -88,25 +88,78 @@ export interface OrgContext extends SessionUser {
   can: (permission: Permission) => boolean;
 }
 
-/** Oturumdaki kullanıcıyı Auth sunucusunda doğrular (JWT imzası + oturum). */
-export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
+/** Aktif ofisin marka bilgisi (panel başlığı, tema, simge) */
+export interface OrgBrand {
+  displayName: string | null;
+  logoUrl: string | null;
+  faviconUrl: string | null;
+  primaryColor: string | null;
+  accentColor: string | null;
+}
+
+interface ContextRow {
+  profile: { full_name: string | null; is_super_admin: boolean; password_change_required: boolean } | null;
+  memberships: { org_id: string; slug: string; name: string; status: Enums<'org_status'>; role: OrgRole; require_admin_mfa: boolean }[];
+  org: { id: string; slug: string; name: string; reference_prefix: string } | null;
+  role: OrgRole | null;
+  permissions: string[];
+  plan: {
+    plan_id: string | null;
+    subscription_status: Enums<'subscription_status'> | null;
+    max_users: number | null;
+    max_properties: number | null;
+    max_storage_mb: number | null;
+    crm_enabled: boolean;
+    analytics_enabled: boolean;
+    pdf_enabled: boolean;
+    custom_domain_enabled: boolean;
+  } | null;
+  brand: { display_name: string | null; logo_url: string | null; favicon_url: string | null; primary_color: string | null; accent_color: string | null } | null;
+}
+
+/**
+ * İstek başına TEK oturum yükü (performans): Auth doğrulaması (getUser) ile oturum
+ * bağlamı (session_context: profil, üyelikler, aktif ofis, yetkiler, plan, marka)
+ * AYNI ANDA istenir → 1 ağ gidiş-dönüşü. Önceden 4–5 ardışık sorgu yapılıyordu.
+ * Güvenlik: bağlam, çağıranın RLS yetkileriyle okunur; getUser başarısızsa bağlam atılır.
+ * session_context yoksa (migration uygulanmamış) null döner → eski sorgulara dönülür.
+ */
+const loadSession = cache(async () => {
   const supabase = await createSessionClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
-  const [{ data: profile }, { data: aal }] = await Promise.all([
-    supabase.from('profiles').select('full_name, is_super_admin, password_change_required').eq('id', data.user.id).maybeSingle(),
+  const [cookieStore, hostKey] = await Promise.all([cookies(), getTenantKeyFromRequest().catch(() => null)]);
+  const preferred = cookieStore.get(ACTIVE_ORG_COOKIE)?.value;
+  const [userRes, ctxRes, aalRes] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.rpc('session_context', { p_preferred_org: preferred && isUuidLike(preferred) ? preferred : undefined, p_host_key: hostKey ?? undefined }),
     supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
   ]);
-  const factor = (data.user.factors ?? []).find((f) => f.factor_type === 'totp' && f.status === 'verified');
+  if (userRes.error || !userRes.data.user) return null;
+  const context = ctxRes.error ? null : ((ctxRes.data as unknown as ContextRow | null) ?? null);
+  return { supabase, user: userRes.data.user, aal: aalRes.data?.currentLevel === 'aal2' ? ('aal2' as const) : ('aal1' as const), context };
+});
+
+function isUuidLike(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+/** Oturumdaki kullanıcıyı Auth sunucusunda doğrular (JWT imzası + oturum). */
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
+  const loaded = await loadSession();
+  if (!loaded) return null;
+  const { supabase, user, context } = loaded;
+  const profile =
+    context?.profile ??
+    (context ? null : (await supabase.from('profiles').select('full_name, is_super_admin, password_change_required').eq('id', user.id).maybeSingle()).data);
+  const factor = (user.factors ?? []).find((f) => f.factor_type === 'totp' && f.status === 'verified');
   return {
     supabase,
-    user: data.user,
+    user,
     profile: {
       fullName: profile?.full_name ?? null,
       isSuperAdmin: profile?.is_super_admin ?? false,
       passwordChangeRequired: profile?.password_change_required ?? false,
     },
-    mfa: { aal: aal?.currentLevel === 'aal2' ? 'aal2' : 'aal1', factorId: factor?.id ?? null },
+    mfa: { aal: loaded.aal, factorId: factor?.id ?? null },
   };
 });
 
@@ -127,6 +180,10 @@ export const getSessionScope = cache(async (): Promise<SessionScope> => {
 export const getMemberships = cache(async (): Promise<Membership[]> => {
   const session = await getSessionUser();
   if (!session) return [];
+  const context = (await loadSession())?.context;
+  if (context) {
+    return context.memberships.map((m) => ({ orgId: m.org_id, slug: m.slug, name: m.name, status: m.status, role: m.role, requireAdminMfa: m.require_admin_mfa }));
+  }
   const { data } = await session.supabase
     .from('organization_members')
     .select('role, status, organization:organizations(id, slug, name, status, require_admin_mfa)')
@@ -184,6 +241,12 @@ export const getOrgContext = cache(async (): Promise<OrgContext | null> => {
   const active = memberships.filter((m) => m.status === 'active');
   if (active.length === 0) return null;
 
+  // Hızlı yol: session_context aynı seçimi (tercih → alan adı → ilk üyelik) veritabanında yaptı
+  const context = (await loadSession())?.context;
+  if (context?.org && context.role) {
+    return buildOrgContext(session, memberships, context.org, context.role, context.permissions, context.plan ? [context.plan] : []);
+  }
+
   const cookieStore = await cookies();
   const preferred = cookieStore.get(ACTIVE_ORG_COOKIE)?.value;
   let chosen = active.find((m) => m.orgId === preferred);
@@ -198,15 +261,25 @@ export const getOrgContext = cache(async (): Promise<OrgContext | null> => {
     session.supabase.rpc('org_plan', { p_org: chosen.orgId }),
   ]);
   if (!org) return null;
+  return buildOrgContext(session, memberships, org, chosen.role, (perms ?? []).map((p) => p.permission), plan ?? []);
+});
 
+function buildOrgContext(
+  session: SessionUser,
+  memberships: Membership[],
+  org: { id: string; slug: string; name: string; reference_prefix: string },
+  role: OrgRole,
+  permissionList: string[],
+  plan: NonNullable<ContextRow['plan']>[],
+): OrgContext {
   const known = new Set<string>(PERMISSIONS);
-  const permissions = new Set((perms ?? []).map((p) => p.permission).filter((p): p is Permission => known.has(p)));
-  const p = plan?.[0];
+  const permissions = new Set(permissionList.filter((p): p is Permission => known.has(p)));
+  const p = plan[0];
 
   return {
     ...session,
     org: { id: org.id, slug: org.slug, name: org.name, referencePrefix: org.reference_prefix },
-    role: chosen.role,
+    role,
     permissions,
     memberships,
     plan: {
@@ -222,6 +295,22 @@ export const getOrgContext = cache(async (): Promise<OrgContext | null> => {
     },
     can: (permission) => permissions.has(permission),
   };
+}
+
+/**
+ * Aktif ofisin marka bilgisi (panel başlığı/teması). session_context ile aynı çağrıda gelir;
+ * yoksa tek sorgu (RLS: yalnızca üyesi olduğu ofis).
+ */
+export const getOrgBrand = cache(async (): Promise<OrgBrand | null> => {
+  const ctx = await getOrgContext();
+  if (!ctx) return null;
+  const context = (await loadSession())?.context;
+  const b =
+    context?.org?.id === ctx.org.id
+      ? context.brand
+      : (await ctx.supabase.from('organization_settings').select('display_name, logo_url, favicon_url, primary_color, accent_color').eq('organization_id', ctx.org.id).maybeSingle()).data;
+  if (!b) return null;
+  return { displayName: b.display_name, logoUrl: b.logo_url, faviconUrl: b.favicon_url, primaryColor: b.primary_color, accentColor: b.accent_color };
 });
 
 /** Server action / route handler: oturum + organizasyon zorunlu. */

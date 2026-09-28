@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { LogOut } from 'lucide-react';
 import { PlatformNav } from '@/components/platform/platform-nav';
 import { PlatformWordmark } from '@/components/platform/platform-wordmark';

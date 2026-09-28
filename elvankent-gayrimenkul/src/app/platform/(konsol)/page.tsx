@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { Building2, HardDrive, Home, Inbox, Plus, Users } from 'lucide-react';
 import { AdminPageHeader, Panel, StatCard } from '@/components/admin/ui';
 import { OrgTable } from '@/components/platform/org-table';

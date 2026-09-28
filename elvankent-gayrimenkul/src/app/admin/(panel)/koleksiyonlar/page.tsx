@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { Ban, ExternalLink, FolderHeart, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { ActionButton } from '@/components/admin/action-controls';
 import { CopyLinkButton } from '@/components/admin/crm/copy-link-button';

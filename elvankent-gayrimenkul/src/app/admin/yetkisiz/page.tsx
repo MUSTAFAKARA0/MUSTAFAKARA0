@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { firstParam } from '@/lib/utils';

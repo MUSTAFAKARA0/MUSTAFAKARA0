@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { AuthCard } from '@/components/admin/auth-card';
 import { PasswordForm } from '@/components/admin/password-form';
 import { getSessionUser } from '@/platform/auth/session';

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { formatNumber, formatShortDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 

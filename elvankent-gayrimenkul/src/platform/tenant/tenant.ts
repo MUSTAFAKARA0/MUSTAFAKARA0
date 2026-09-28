@@ -168,11 +168,15 @@ export async function requireTenant(rawKey: string): Promise<Tenant> {
   return tenant;
 }
 
+/** Bulunulan alan adının kiracı anahtarı (proxy'nin hesapladığı değer; istemci başlığı proxy'de silinir) */
+export async function getTenantKeyFromRequest(): Promise<string> {
+  const h = await headers();
+  return h.get('x-tenant-key') ?? tenantKeyForHost(h.get('x-forwarded-host') ?? h.get('host'), tenantHostConfig());
+}
+
 /** Yeniden yazılmamış rotalar (yönetim paneli, not-found) için Host başlığından kiracı. */
 export async function getTenantFromRequest(): Promise<Tenant | null> {
-  const h = await headers();
-  const key = h.get('x-tenant-key') ?? tenantKeyForHost(h.get('x-forwarded-host') ?? h.get('host'), tenantHostConfig());
-  return getTenant(key);
+  return getTenant(await getTenantKeyFromRequest());
 }
 
 /** Kiracı sitesinde mutlak adres üretir. */

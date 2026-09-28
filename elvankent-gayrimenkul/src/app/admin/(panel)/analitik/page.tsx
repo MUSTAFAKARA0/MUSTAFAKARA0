@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { BarChart3, Eye, Heart, Inbox, MessageCircle, Phone, QrCode, Share2, Users } from 'lucide-react';
 import { AreaChart, BarList } from '@/components/admin/charts';
 import { AdminPageHeader, EmptyPanel, ListingStatusBadge, Panel, StatCard, TableWrap, td, th } from '@/components/admin/ui';

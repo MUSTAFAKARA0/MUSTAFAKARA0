@@ -62,9 +62,13 @@ async function withSession(request: NextRequest, requestHeaders: Headers, rewrit
     },
   });
 
-  // getUser(): JWT'yi Auth sunucusunda doğrular (yalnızca çerezi okumak yeterli değildir)
-  const { data } = await supabase.auth.getUser();
-  return { response, hasUser: Boolean(data.user) };
+  // Performans: proxy yalnızca oturum çerezini yeniler (süresi dolmuşsa) ve oturumsuz
+  // ziyaretçiyi giriş sayfasına yönlendirir; bunun için Auth sunucusuna gitmez (getSession
+  // yerel okur). Güvenlik sınırı burası DEĞİLDİR: her sayfa ve işlem getUser() ile oturumu
+  // Auth sunucusunda doğrular, veritabanı ayrıca RLS uygular. Önceden her istekte burada da
+  // getUser() çağrılıyordu (istek başına fazladan bir ağ gidiş-dönüşü).
+  const { data } = await supabase.auth.getSession();
+  return { response, hasUser: data.session !== null };
 }
 
 export async function proxy(request: NextRequest) {

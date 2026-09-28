@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { notFound } from 'next/navigation';
 import { Mail, Phone, ShieldCheck, Trash2 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/common/brand-icons';

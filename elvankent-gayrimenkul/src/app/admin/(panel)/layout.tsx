@@ -5,26 +5,23 @@ import { brandingUrl } from '@/modules/media/variants';
 import { siteIconSvg } from '@/modules/seo/site-icon';
 import { ROLE_LABELS } from '@/platform/auth/permissions';
 import { buildTheme, themeCss } from '@/platform/branding/theme';
-import { getOrgContext, requirePageContext } from '@/platform/auth/session';
+import { getOrgBrand, requirePageContext } from '@/platform/auth/session';
 import { getTenantFromRequest } from '@/platform/tenant/tenant';
 
 /** Panel simgesi = aktif ofisin simgesi (yüklenmişse), yoksa ofis adından üretilen otomatik simge */
 export async function generateMetadata(): Promise<Metadata> {
-  const ctx = await getOrgContext();
-  if (!ctx) return {};
-  const { data } = await ctx.supabase
-    .from('organization_settings')
-    .select('display_name, primary_color, accent_color, favicon_url')
-    .eq('organization_id', ctx.org.id)
-    .maybeSingle();
-  if (!data) return {};
-  const icon = brandingUrl(data.favicon_url) ?? `data:image/svg+xml,${encodeURIComponent(siteIconSvg(data))}`;
+  const brand = await getOrgBrand();
+  if (!brand) return {};
+  const icon =
+    brandingUrl(brand.faviconUrl) ??
+    `data:image/svg+xml,${encodeURIComponent(siteIconSvg({ display_name: brand.displayName ?? '', primary_color: brand.primaryColor ?? '', accent_color: brand.accentColor ?? '' }))}`;
   return { icons: { icon } };
 }
 
 export default async function PanelLayout({ children }: LayoutProps<'/admin'>) {
   const ctx = await requirePageContext();
-  const [tenant, newLeads] = await Promise.all([
+  // Marka (tema/logo) oturum bağlamıyla aynı çağrıda gelir (ek sorgu yok); rozet sayımı paralel
+  const [tenant, newLeads, brand] = await Promise.all([
     getTenantFromRequest().catch(() => null),
     // Menüde "yeni talep" rozeti: ofisin henüz ilgilenmediği talepler
     ctx.can('leads.read')
@@ -36,33 +33,23 @@ export default async function PanelLayout({ children }: LayoutProps<'/admin'>) {
           .is('deleted_at', null)
           .then((r) => r.count ?? 0)
       : Promise.resolve(0),
+    getOrgBrand(),
   ]);
   const nav = filterNav(ctx.can, ctx.plan.features);
   // Aktif organizasyonun sitesi: bulunulan alan adı aynı ofisse göreli kök, değilse yok
   const siteUrl = tenant?.id === ctx.org.id ? '/' : null;
-  // Panelin markası = giriş yapan kullanıcının AKTİF ofisi (bulunulan alan adının ofisi değil).
-  // Aynı ofisse önbellekteki ayarlar, değilse tek sorgu (RLS: yalnızca üyesi olduğu ofis).
-  const brand =
-    tenant?.id === ctx.org.id
-      ? {
-          logo_url: tenant.settings.logo_url,
-          primary_color: tenant.settings.primary_color,
-          accent_color: tenant.settings.accent_color,
-        }
-      : ((await ctx.supabase.from('organization_settings').select('logo_url, primary_color, accent_color').eq('organization_id', ctx.org.id).maybeSingle())
-          .data ?? null);
   const scope = `[data-org-theme="${ctx.org.id}"],body:has([data-org-theme="${ctx.org.id}"])`;
   return (
     <div data-org-theme={ctx.org.id} className="contents">
       <style href={`org-theme-${ctx.org.id}`} precedence="high">
-        {themeCss(buildTheme(brand?.primary_color, brand?.accent_color), scope)}
+        {themeCss(buildTheme(brand?.primaryColor, brand?.accentColor), scope)}
       </style>
       <AdminShell
         nav={nav}
         org={{
           id: ctx.org.id,
           name: ctx.org.name,
-          logoUrl: brandingUrl(brand?.logo_url),
+          logoUrl: brandingUrl(brand?.logoUrl),
         }}
         orgs={ctx.memberships.map((m) => ({
           id: m.orgId,

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { ShieldCheck } from 'lucide-react';
 import { AuditList } from '@/components/admin/audit-list';
 import { AdminPageHeader, EmptyPanel, Panel } from '@/components/admin/ui';

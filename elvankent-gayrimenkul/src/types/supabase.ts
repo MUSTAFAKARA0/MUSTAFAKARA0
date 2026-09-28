@@ -2106,6 +2106,13 @@ export type Database = {
           custom_domain_enabled: boolean
         }[]
       }
+      session_context: {
+        Args: {
+          p_preferred_org?: string
+          p_host_key?: string
+        }
+        Returns: Json
+      }
       public_tenant: {
         Args: {
           p_slug?: string

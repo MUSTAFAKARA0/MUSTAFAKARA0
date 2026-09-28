@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { AlertTriangle, HardDrive, ImageIcon, Images, Loader2, Star, Trash2 } from 'lucide-react';
 import { ActionButton } from '@/components/admin/action-controls';
 import { AdminPageHeader, EmptyPanel, StatCard } from '@/components/admin/ui';

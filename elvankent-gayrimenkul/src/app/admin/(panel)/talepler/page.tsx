@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import Link from '@/components/common/intent-link';
 import { Inbox, Search } from 'lucide-react';
 import { NewLeadDialog } from '@/components/admin/crm/new-lead-dialog';
 import { AdminPageHeader, EmptyPanel } from '@/components/admin/ui';
