@@ -323,21 +323,34 @@ test.describe('Yönetim paneli (telefon)', () => {
     await guest.close();
   });
 
-  test('52–54: süper admin: KARAY platformu, müşteri ofisinin paneline geçiş; çıkış', async ({ page }) => {
+  test('52–54: ofis paneli ve KARAY platformu ayrı oturumlardır; çıkış', async ({ page }) => {
+    // Ofis girişi (hesap hem Elvankent sahibi hem süper admin) → platforma geçiş YOK
     await login(page);
+    await openMenu(page);
+    await expect(page.getByRole('link', { name: /platform/i })).toHaveCount(0);
     await page.goto('/platform');
+    await expect(page).toHaveURL(/\/platform\/giris$/);
+    await expect(page.getByLabel('Şifre', { exact: true })).toBeVisible();
+    // Platform girişi (şifre yeniden) → KARAY konsolu
+    await page.getByLabel('E-posta').fill(email!);
+    await page.getByLabel('Şifre', { exact: true }).fill(password!);
+    await page.getByRole('button', { name: 'Giriş yap' }).click();
     await expect(page).toHaveURL(/\/platform$/);
-    // Platform başlığı KARAY markasını taşır; ofis (Elvankent) adı/logosu başlıkta yoktur
     const header = page.getByRole('banner');
     await expect(header.getByRole('img', { name: 'KARAY' })).toBeVisible();
     await expect(header.getByText(/Elvankent/)).toHaveCount(0);
     await expect(header.locator('img[src*="/branding/"]')).toHaveCount(0);
     await noOverflow(page, '/platform');
-    // Ofis paneline geçiş: organizasyon ayrıntısından (üyelik varsa)
-    await page.goto('/platform/organizasyonlar');
-    await page.getByRole('link', { name: /Elvankent Gayrimenkul/ }).first().click();
-    await page.getByRole('button', { name: 'Ofis paneline geç' }).click();
-    await expect(page).toHaveURL(/\/admin$/);
+    // Platform oturumu ofis paneline geçemez
+    await page.goto('/admin');
+    await expect(page).toHaveURL(/\/admin\/giris/);
+    await expect(page.getByText('Ofis paneli ayrı bir giriş gerektirir.', { exact: false })).toBeVisible();
+    // Platform çıkışı
+    await page.goto('/platform');
+    await page.getByRole('button', { name: /Çıkış/ }).click();
+    await expect(page).toHaveURL(/\/platform\/giris/);
+    // Ofis çıkışı
+    await login(page);
     await openMenu(page);
     await page.getByRole('button', { name: 'Hesap menüsü' }).filter({ visible: true }).first().click();
     await page.getByRole('menuitem', { name: /Çıkış yap/ }).click();

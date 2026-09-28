@@ -1,4 +1,3 @@
-import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 import type { Permission } from '@/platform/auth/permissions';
 
 export type AdminIconKey =
@@ -16,8 +15,7 @@ export type AdminIconKey =
   | 'settings'
   | 'users'
   | 'company'
-  | 'security'
-  | 'platform';
+  | 'security';
 
 export type PlanFeatureKey = 'crm' | 'analytics' | 'pdf' | 'customDomain';
 
@@ -97,7 +95,6 @@ export const ADMIN_NAV: AdminNavSection[] = [
 export function filterNav(
   can: (p: Permission) => boolean,
   features: Record<PlanFeatureKey, boolean>,
-  isSuperAdmin: boolean,
 ): AdminNavSection[] {
   const sections: AdminNavSection[] = ADMIN_NAV.map((section) => ({
     ...section,
@@ -105,9 +102,5 @@ export function filterNav(
       .filter((item) => (!item.permission || can(item.permission)) && (!item.feature || features[item.feature]))
       .map((item) => ({ ...item, children: item.children?.filter((c) => !c.permission || can(c.permission)) })),
   })).filter((s) => s.items.length > 0);
-  if (isSuperAdmin) {
-    // Yalnızca süper admin görür (sunucuda filtrelenir). Platform ayrı bir alandır: ofis markası taşımaz.
-    sections.push({ title: 'Platform', items: [{ href: '/platform', label: `${PLATFORM_BRAND.name} platform yönetimi`, icon: 'platform', match: ['/platform'] }] });
-  }
   return sections;
 }

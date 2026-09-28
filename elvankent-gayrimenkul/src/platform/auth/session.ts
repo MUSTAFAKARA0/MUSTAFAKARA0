@@ -1,8 +1,10 @@
 import 'server-only';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
+import { serverEnv } from '@/lib/server-env';
 import { createSessionClient, type DB } from '@/lib/supabase/server';
 import { getTenantFromRequest } from '@/platform/tenant/tenant';
 import { ForbiddenError, UnauthenticatedError } from '@/platform/actions';
@@ -11,6 +13,39 @@ import { PERMISSIONS, type OrgRole, type Permission } from '@/platform/auth/perm
 import type { Enums } from '@/types/supabase';
 
 export const ACTIVE_ORG_COOKIE = 'eg_active_org';
+
+/**
+ * Oturum alanı: KARAY platformu ile emlak ofisi paneli AYRI oturumlardır.
+ *   'platform' → yalnızca /platform/giris ile açılan oturum; /platform açılır, /admin açılmaz
+ *   'office'   → /admin/giris ile (veya şifre sıfırlama bağlantısıyla) açılan oturum; /platform açılmaz
+ * Aynı kişi hem süper admin hem bir ofisin üyesi olsa bile iki alan arasında geçiş için
+ * diğer girişten yeniden şifre girmesi gerekir. Çerez yalnızca alanı seçer; yetkinin kaynağı
+ * her zaman veritabanıdır (is_super_admin, üyelikler, RLS) — çerezi değiştirmek yetki vermez.
+ */
+export const SESSION_SCOPE_COOKIE = 'eg_scope';
+export type SessionScope = 'platform' | 'office';
+
+/** Oturum kimliği (Supabase erişim belirtecindeki session_id; belirteç yenilense de aynı kalır) */
+export function sessionIdFromAccessToken(token: string | null | undefined): string | null {
+  try {
+    const payload = JSON.parse(Buffer.from((token ?? '').split('.')[1] ?? '', 'base64url').toString('utf8')) as { session_id?: unknown };
+    return typeof payload.session_id === 'string' ? payload.session_id : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * İmzalı alan değeri: kullanıcıya VE o girişte açılan oturuma bağlıdır. Elle yazılan,
+ * başka bir girişten kalan veya başka kullanıcıya ait değer geçersizdir (→ ofis alanı).
+ * İmza anahtarı yalnızca sunucudadır; yoksa platform alanı açılmaz (güvenli varsayılan).
+ */
+export function sessionScopeValue(scope: SessionScope, userId: string, sessionId: string | null): string | null {
+  const key = serverEnv.supabaseServiceRoleKey || serverEnv.ipHashSalt;
+  if (!key || !sessionId) return null;
+  const signature = createHmac('sha256', key).update(`eg-scope|${scope}|${userId}|${sessionId}`).digest('base64url');
+  return `${scope}.${signature}`;
+}
 
 export interface Membership {
   orgId: string;
@@ -75,6 +110,19 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   };
 });
 
+/** Oturumun alanı (çerez başka bir kullanıcıya aitse veya yoksa: ofis) */
+export const getSessionScope = cache(async (): Promise<SessionScope> => {
+  const session = await getSessionUser();
+  if (!session) return 'office';
+  const value = (await cookies()).get(SESSION_SCOPE_COOKIE)?.value;
+  if (!value?.startsWith('platform.')) return 'office';
+  // getUser() belirteci Auth sunucusunda doğruladı; oturum kimliği aynı belirteçten okunur
+  const { data } = await session.supabase.auth.getSession();
+  const expected = sessionScopeValue('platform', session.user.id, sessionIdFromAccessToken(data.session?.access_token));
+  if (!expected || expected.length !== value.length) return 'office';
+  return timingSafeEqual(Buffer.from(expected), Buffer.from(value)) ? 'platform' : 'office';
+});
+
 /** Kullanıcının üyelikleri (RLS: yalnızca kendi satırları + ekip) */
 export const getMemberships = cache(async (): Promise<Membership[]> => {
   const session = await getSessionUser();
@@ -128,6 +176,8 @@ export function mfaUrl(next?: string): string {
 export const getOrgContext = cache(async (): Promise<OrgContext | null> => {
   const session = await getSessionUser();
   if (!session) return null;
+  // Platform (KARAY) oturumu ofis paneline erişemez: ofis girişi ayrıca yapılmalıdır
+  if ((await getSessionScope()) === 'platform') return null;
   // İki adımlı doğrulama tamamlanmadan organizasyon bağlamı verilmez
   if (await getMfaRequirement()) return null;
   const memberships = await getMemberships();
@@ -179,6 +229,7 @@ export async function requireOrgContext(): Promise<OrgContext> {
   const ctx = await getOrgContext();
   if (!ctx) {
     if (!(await getSessionUser())) throw new UnauthenticatedError();
+    if ((await getSessionScope()) === 'platform') throw new ForbiddenError('Ofis paneli için ofis giriş sayfasından oturum açın.');
     if (await getMfaRequirement()) throw new ForbiddenError('Bu işlem için iki adımlı doğrulama gerekiyor. Sayfayı yenileyip doğrulama kodunu girin.');
     throw new ForbiddenError('Aktif bir organizasyon üyeliğiniz bulunmuyor.');
   }
@@ -223,6 +274,7 @@ export async function requirePageContext(next?: string): Promise<OrgContext> {
   const ctx = await getOrgContext();
   if (ctx) return ctx;
   if (!(await getSessionUser())) redirect(next ? `/admin/giris?next=${encodeURIComponent(next)}` : '/admin/giris');
+  if ((await getSessionScope()) === 'platform') redirect('/admin/giris?alan=platform');
   if (await getMfaRequirement()) redirect(mfaUrl(next));
   redirect('/admin/erisim-yok');
 }
@@ -238,6 +290,9 @@ export async function requirePagePermission(permission: Permission): Promise<Org
 export async function requireSuperAdmin(): Promise<SessionUser> {
   const session = await getSessionUser();
   if (!session) throw new UnauthenticatedError();
+  if (session.profile.isSuperAdmin && (await getSessionScope()) !== 'platform') {
+    throw new ForbiddenError('Platform işlemleri için platform girişinden oturum açın.');
+  }
   if (session.profile.isSuperAdmin && (await getMfaRequirement())) throw new ForbiddenError('Bu işlem için iki adımlı doğrulama gerekiyor.');
   if (!session.profile.isSuperAdmin) {
     await logSecurityEvent({ orgId: null, action: 'auth.forbidden', actorId: session.user.id, metadata: { area: 'platform' } });
@@ -255,6 +310,8 @@ export async function requireSuperAdminPage(): Promise<SessionUser> {
     await logSecurityEvent({ orgId: null, action: 'auth.forbidden', actorId: session.user.id, metadata: { area: 'platform' } });
     notFound();
   }
+  // Ofis panelinden açılmış oturumla platforma geçilemez: platform girişi (şifre) gerekir
+  if ((await getSessionScope()) !== 'platform') redirect('/platform/giris');
   if (await getMfaRequirement()) redirect(mfaUrl('/platform'));
   return session;
 }

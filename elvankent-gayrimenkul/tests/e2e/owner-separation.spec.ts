@@ -276,3 +276,44 @@ test("TEST-OWNER-08: Elvankent kendi markasını değiştirir; tema yalnızca o 
   const bSettings = await service!.from('organization_settings').select('primary_color').eq('organization_id', S.bId!).single();
   expect(bSettings.data!.primary_color).toBe(B_PRIMARY);
 });
+
+test('TEST-OWNER-09: aynı kişi hem süper admin hem ofis sahibi olsa bile iki alan arasında geçiş yoktur', async ({ page, context }) => {
+  // Ofis girişi → menüde platform bağlantısı yok; /platform şifre ister; platform işlemleri reddedilir
+  await loginOffice(page, adminEmail!, adminPassword!);
+  await expect(page).toHaveURL(/\/admin/);
+  await expect(page.getByRole('link', { name: /platform/i })).toHaveCount(0);
+  for (const path of ['/platform', '/platform/organizasyonlar', `/platform/organizasyonlar/${S.bId}`, '/platform/kullanicilar', '/platform/planlar', '/platform/kayitlar']) {
+    await page.goto(path);
+    await expect(page, path).toHaveURL(/\/platform\/giris$/);
+    await expect(page.getByRole('heading', { name: 'Genel bakış' })).toHaveCount(0);
+  }
+  // Ofis girişi platforma yönlendirme kabul etmez (next=/platform yok sayılır)
+  const { ctx: c2, page: p2 } = await newPage(page.context().browser()!);
+  await p2.goto('/admin/giris?next=/platform');
+  await p2.getByLabel('E-posta').fill(adminEmail!);
+  await p2.getByLabel('Şifre', { exact: true }).fill(adminPassword!);
+  await p2.getByRole('button', { name: 'Giriş yap' }).click();
+  await expect(p2).toHaveURL(/\/admin(\?|$)/);
+  await c2.close();
+
+  // Elle yazılmış / sahte alan çerezi platformu açmaz
+  const host = new URL(page.url()).hostname;
+  for (const value of ['platform', 'platform.x', 'platform.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA']) {
+    await context.addCookies([{ name: 'eg_scope', value, domain: host, path: '/' }]);
+    await page.goto('/platform');
+    await expect(page, value).toHaveURL(/\/platform\/giris$/);
+  }
+
+  // Platform girişi → konsol; ofis paneli ve ofis API'si kapalı
+  await loginPlatform(page);
+  await page.goto('/admin');
+  await expect(page).toHaveURL(/\/admin\/giris\?alan=platform/);
+  await page.goto('/admin/ilanlar');
+  await expect(page).toHaveURL(/\/admin\/giris/);
+  const api = await page.request.post('/api/admin/branding', { multipart: { kind: 'logo' } });
+  expect(api.status()).toBeGreaterThanOrEqual(400);
+  // Platform oturum çerezi başka bir girişe taşınamaz: ofis girişi yapılınca platform yeniden şifre ister
+  await loginOffice(page, adminEmail!, adminPassword!);
+  await page.goto('/platform');
+  await expect(page).toHaveURL(/\/platform\/giris$/);
+});

@@ -24,7 +24,6 @@ import {
   Search,
   ShieldCheck,
   SlidersHorizontal,
-  Sparkles,
   UserCog,
   UserRound,
   Users,
@@ -54,7 +53,6 @@ const ICONS: Record<AdminIconKey, LucideIcon> = {
   users: UserCog,
   company: Building,
   security: ShieldCheck,
-  platform: Sparkles,
 };
 
 export interface ShellProps {

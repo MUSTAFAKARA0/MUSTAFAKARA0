@@ -8,7 +8,15 @@ import { maskEmail } from '@/lib/format';
 import { getRequestFingerprint } from '@/lib/request';
 import { createSessionClient } from '@/lib/supabase/server';
 import { logSecurityEvent } from '@/platform/audit';
-import { ACTIVE_ORG_COOKIE, getMemberships, getSessionUser } from '@/platform/auth/session';
+import {
+  ACTIVE_ORG_COOKIE,
+  getMemberships,
+  getSessionUser,
+  SESSION_SCOPE_COOKIE,
+  sessionIdFromAccessToken,
+  sessionScopeValue,
+  type SessionScope,
+} from '@/platform/auth/session';
 import { getTenantFromRequest } from '@/platform/tenant/tenant';
 
 export interface AuthFormState {
@@ -32,11 +40,22 @@ const passwordSchema = z
   .refine((v) => /[A-Za-zÇĞİÖŞÜçğıöşü]/.test(v) && /\d/.test(v), { error: 'Şifre en az bir harf ve bir rakam içermelidir.' })
   .refine((v) => !/^(.)\1+$/.test(v), { error: 'Şifre tek bir karakterin tekrarı olamaz.' });
 
-/** Yalnızca site içi göreli yollara yönlendir (açık yönlendirme açığını önler) */
+/** Ofis girişi yalnızca ofis paneli içine döner (platform adresine asla; açık yönlendirme de yok) */
 function safeNext(next: FormDataEntryValue | null): string {
   const value = typeof next === 'string' ? next : '';
   if (value.startsWith('//') || value.includes('\\')) return '/admin';
-  return /^\/(admin|platform|onizleme)(\/|\?|$)/.test(value) ? value : '/admin';
+  return /^\/(admin|onizleme)(\/|\?|$)/.test(value) ? value : '/admin';
+}
+
+/** Oturumun alanını (platform / ofis) işaretler — bkz. SESSION_SCOPE_COOKIE */
+async function setSessionScope(scope: SessionScope, userId: string, accessToken: string | undefined) {
+  const value = sessionScopeValue(scope, userId, sessionIdFromAccessToken(accessToken)) ?? 'office';
+  (await cookies()).set(SESSION_SCOPE_COOKIE, value, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+  });
 }
 
 export async function signIn(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
@@ -91,23 +110,24 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
     return { error: 'Bu hesap platform yöneticisi değil. Ofis paneline ofisinizin giriş sayfasından girin.', email };
   }
 
-  if (activeOrgIds.length === 0 && !isSuperAdmin) {
+  // Ofis girişi yalnızca bir ofise üye hesaplar içindir (platform yöneticisi de olsa)
+  if (!platformLogin && activeOrgIds.length === 0) {
     await logSecurityEvent({ orgId: tenant?.id ?? null, action: 'auth.login_denied', actorId: data.user.id, metadata: { reason: 'no_membership' }, ipHash });
     await supabase.auth.signOut();
     return { error: 'Bu hesabın aktif bir ofis üyeliği bulunmuyor. Yöneticinizle iletişime geçin.', email };
   }
 
-  const orgId = activeOrgIds.includes(tenant?.id ?? '') ? (tenant?.id ?? null) : (activeOrgIds[0] ?? null);
-  await logSecurityEvent({ orgId, action: 'auth.login_success', actorId: data.user.id, ipHash });
+  const orgId = platformLogin ? null : activeOrgIds.includes(tenant?.id ?? '') ? (tenant?.id ?? null) : (activeOrgIds[0] ?? null);
+  await logSecurityEvent({ orgId, action: 'auth.login_success', actorId: data.user.id, ipHash, metadata: { area: platformLogin ? 'platform' : 'office' } });
+  await setSessionScope(platformLogin ? 'platform' : 'office', data.user.id, data.session?.access_token);
+  const destination = platformLogin ? '/platform' : safeNext(formData.get('next'));
 
   // İki adımlı doğrulama kurulu ise şifreden sonra kod istenir
   if ((data.user.factors ?? []).some((f) => f.status === 'verified')) {
-    redirect(`/admin/dogrulama?next=${encodeURIComponent(safeNext(formData.get('next')))}`);
+    redirect(`/admin/dogrulama?next=${encodeURIComponent(destination)}`);
   }
-  if (profile?.password_change_required) redirect('/admin/hesap?sifre=degistir');
-  // Hiçbir ofiste üyeliği olmayan süper admin doğrudan platform alanına gider
-  if (platformLogin || (isSuperAdmin && activeOrgIds.length === 0 && !formData.get('next'))) redirect('/platform');
-  redirect(safeNext(formData.get('next')));
+  if (!platformLogin && profile?.password_change_required) redirect('/admin/hesap?sifre=degistir');
+  redirect(destination);
 }
 
 export async function signOut() {
@@ -117,6 +137,7 @@ export async function signOut() {
     await session.supabase.auth.signOut();
   }
   (await cookies()).delete(ACTIVE_ORG_COOKIE);
+  (await cookies()).delete(SESSION_SCOPE_COOKIE);
   redirect('/admin/giris');
 }
 
@@ -128,6 +149,7 @@ export async function signOutPlatform() {
     await session.supabase.auth.signOut();
   }
   (await cookies()).delete(ACTIVE_ORG_COOKIE);
+  (await cookies()).delete(SESSION_SCOPE_COOKIE);
   redirect('/platform/giris');
 }
 

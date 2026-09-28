@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ExternalLink, Globe, LogIn, Trash2 } from 'lucide-react';
+import { ExternalLink, Globe, Trash2 } from 'lucide-react';
 import { ActionButton, AutoSaveSelect } from '@/components/admin/action-controls';
 import { AuditList } from '@/components/admin/audit-list';
 import { AdminPageHeader, EmptyPanel, Panel } from '@/components/admin/ui';
@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { vercelDnsRecords } from '@/modules/domains/provider';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { switchOrganization } from '@/app/actions/auth';
 import { removeDomain, setOrganizationStatus } from '@/app/actions/platform';
 import { formatBytes, formatDate, formatNumber, formatRelativeDate } from '@/lib/format';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -45,9 +44,6 @@ export default async function PlatformOrgPage({ params }: PageProps<'/platform/o
     .map((u) => ({ ...u, membership: (u.memberships as Membership[]).find((m) => m.slug === org.slug) }))
     .filter((u) => u.membership);
   const plan = plans.find((p) => p.id === org.plan_id);
-  // Süper adminin bu müşteri ofisinde ayrıca üyeliği varsa ofis paneline geçiş (ör. destek için).
-  // Platform yönetimi için üyelik GEREKMEZ; plan, durum ve alan adı bu sayfadan yönetilir.
-  const ownMembership = members.find((u) => u.user_id === session.user.id && u.membership?.status === 'active');
   const status = ORG_STATUS_LABELS[org.status];
   const sub = org.subscription_status ? SUBSCRIPTION_LABELS[org.subscription_status] : null;
   const storageLimit = plan?.max_storage_mb ? plan.max_storage_mb * 1024 * 1024 : null;
@@ -68,14 +64,6 @@ export default async function PlatformOrgPage({ params }: PageProps<'/platform/o
         }
         actions={
           <div className="flex flex-wrap gap-2">
-            {ownMembership && (
-              <form action={switchOrganization}>
-                <input type="hidden" name="orgId" value={org.id} />
-                <Button type="submit" variant="outline" title="Bu ofiste ayrıca üyeliğiniz var">
-                  <LogIn /> Ofis paneline geç
-                </Button>
-              </form>
-            )}
             {tenant && (
               <Button asChild variant="outline">
                 <a href={tenant.baseUrl} target="_blank" rel="noopener noreferrer">

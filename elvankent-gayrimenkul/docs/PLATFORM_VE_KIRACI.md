@@ -40,6 +40,21 @@ Kontrol katmanları:
 3. **Veritabanı (RLS):** tüm tablolar kiracıya göre süzülür; platform fonksiyonları `is_super_admin()` ister; `is_super_admin` sütunu kullanıcılara kapalıdır.
 4. **Giriş:** `/platform/giris` yalnızca süper admini kabul eder; ofis hesabıyla giriş reddedilir.
 
+## Oturum ayrımı (ofis paneli ↔ platform)
+
+Aynı kişi hem süper admin hem bir ofisin üyesi olsa bile iki alan **ayrı oturumdur**:
+
+| Giriş | Açılan alan | Diğer alan |
+| --- | --- | --- |
+| `/admin/giris` (ofis) | `/admin` | `/platform` açılmaz → `/platform/giris` şifre ister |
+| `/platform/giris` (KARAY) | `/platform` | `/admin` açılmaz → `/admin/giris` ofis hesabıyla giriş ister |
+
+- Ofis panelinde platforma bağlantı yoktur; platformda ofis paneline geçiş düğmesi yoktur.
+- Ofis girişi `next=/platform` yönlendirmesini kabul etmez; ofisi olmayan hesap ofis girişinden giremez.
+- Alan, `eg_scope` çerezinde **imzalı** tutulur (sunucu anahtarıyla HMAC; kullanıcıya ve o girişte açılan oturuma bağlı). Elle yazılan, başka girişten kalan veya başka kullanıcıya ait değer geçersizdir. Çerez yalnızca alanı seçer; yetkinin kaynağı yine veritabanıdır.
+- Platform işlemleri (server action) ve ofis işlemleri/API'leri de aynı kuralla korunur.
+- Test: `tests/e2e/owner-separation.spec.ts` › TEST-OWNER-09.
+
 ## Marka ve tema yalıtımı
 
 - **Platform:** `PLATFORM_SCOPE` kapsayıcısına bağlı tema (renkler + sans-serif başlık). Kapsayıcı sayfada yoksa hiçbir yeri etkilemez. Platform simgesi KARAY favicon'udur (logo paketi). Kiracı logosu/simgesi platformda kullanılmaz.

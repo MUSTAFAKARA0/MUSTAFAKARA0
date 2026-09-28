@@ -37,7 +37,7 @@ export default async function PanelLayout({ children }: LayoutProps<'/admin'>) {
           .then((r) => r.count ?? 0)
       : Promise.resolve(0),
   ]);
-  const nav = filterNav(ctx.can, ctx.plan.features, ctx.profile.isSuperAdmin);
+  const nav = filterNav(ctx.can, ctx.plan.features);
   // Aktif organizasyonun sitesi: bulunulan alan adı aynı ofisse göreli kök, değilse yok
   const siteUrl = tenant?.id === ctx.org.id ? '/' : null;
   // Panelin markası = giriş yapan kullanıcının AKTİF ofisi (bulunulan alan adının ofisi değil).
