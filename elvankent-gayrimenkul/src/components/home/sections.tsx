@@ -7,6 +7,7 @@ import { FeaturedPropertyCard } from '@/components/property/featured-property-ca
 import { PropertyGrid } from '@/components/property/property-grid';
 import { Button } from '@/components/ui/button';
 import { telHref, whatsappHref } from '@/lib/contact-links';
+import { cn } from '@/lib/utils';
 import { formatDate, formatPhoneDisplay } from '@/lib/format';
 import { formatOpeningHours, parseOpeningHours } from '@/modules/content/hours';
 import type { PostSummary, RegionPage } from '@/modules/content/queries';
@@ -14,17 +15,26 @@ import type { MediaSource } from '@/modules/media/variants';
 import type { PropertyCard } from '@/modules/properties/types';
 import type { Tenant } from '@/platform/tenant/tenant';
 
-export function ShowcaseSection({ items }: { items: PropertyCard[] }) {
+/** KARAY Web Sitesi Yönetimi › Ana Sayfa: bölüm metinlerinin isteğe bağlı değiştirilmesi */
+export interface SectionOverride {
+  eyebrow?: string;
+  title?: string;
+  description?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+}
+
+export function ShowcaseSection({ items, o }: { items: PropertyCard[]; o?: SectionOverride }) {
   if (!items.length) return null;
   const [first, ...rest] = items;
   return (
     <section aria-labelledby="vitrin" className="container-page py-16 sm:py-24">
       <SectionHeading
         id="vitrin"
-        eyebrow="Seçkiler"
-        title="Öne çıkan gayrimenkuller"
-        description="Ekibimizin öne çıkardığı, ayrıntılı bilgi ve fotoğraflarıyla yayındaki ilanlar."
-        action={{ href: '/ilanlar?one_cikan=1', label: 'Tüm öne çıkanlar' }}
+        eyebrow={o?.eyebrow ?? 'Seçkiler'}
+        title={o?.title ?? 'Öne çıkan gayrimenkuller'}
+        description={o?.description ?? 'Ekibimizin öne çıkardığı, ayrıntılı bilgi ve fotoğraflarıyla yayındaki ilanlar.'}
+        action={{ href: o?.ctaHref ?? '/ilanlar?one_cikan=1', label: o?.ctaLabel ?? 'Tüm öne çıkanlar' }}
       />
       <div className="mt-10">
         <FeaturedPropertyCard property={first} />
@@ -41,13 +51,13 @@ export interface CategoryTile {
   image: MediaSource | null;
 }
 
-export function CategorySection({ tiles }: { tiles: CategoryTile[] }) {
+export function CategorySection({ tiles, o }: { tiles: CategoryTile[]; o?: SectionOverride }) {
   const visible = tiles.filter((t) => t.count > 0);
   if (visible.length < 2) return null;
   return (
     <section aria-labelledby="kategoriler" className="bg-glow py-16 sm:py-24">
       <div className="container-page">
-        <SectionHeading id="kategoriler" eyebrow="Keşfedin" title="Ne tür bir gayrimenkul arıyorsunuz?" />
+        <SectionHeading id="kategoriler" eyebrow={o?.eyebrow ?? 'Keşfedin'} title={o?.title ?? 'Ne tür bir gayrimenkul arıyorsunuz?'} description={o?.description} />
         <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {visible.map((t) => (
             <li key={t.href}>
@@ -83,27 +93,33 @@ export function CategorySection({ tiles }: { tiles: CategoryTile[] }) {
   );
 }
 
-export function LatestSection({ items }: { items: PropertyCard[] }) {
+export function LatestSection({ items, o }: { items: PropertyCard[]; o?: SectionOverride }) {
   if (!items.length) return null;
   return (
     <section aria-labelledby="yeni-ilanlar" className="container-page py-16 sm:py-24">
-      <SectionHeading id="yeni-ilanlar" eyebrow="Güncel" title="Yeni eklenen ilanlar" action={{ href: '/ilanlar', label: 'Tüm ilanlar' }} />
+      <SectionHeading
+        id="yeni-ilanlar"
+        eyebrow={o?.eyebrow ?? 'Güncel'}
+        title={o?.title ?? 'Yeni eklenen ilanlar'}
+        description={o?.description}
+        action={{ href: o?.ctaHref ?? '/ilanlar', label: o?.ctaLabel ?? 'Tüm ilanlar' }}
+      />
       <PropertyGrid items={items} columns={4} className="mt-10" />
     </section>
   );
 }
 
-export function RegionsSection({ regions, counts }: { regions: RegionPage[]; counts: Map<string, number> }) {
+export function RegionsSection({ regions, counts, o }: { regions: RegionPage[]; counts: Map<string, number>; o?: SectionOverride }) {
   if (!regions.length) return null;
   return (
     <section aria-labelledby="bolgeler" className="border-y border-border bg-glow py-16 sm:py-20">
       <div className="container-page grid gap-10 lg:grid-cols-[1fr_1.4fr] lg:gap-16">
         <SectionHeading
           id="bolgeler"
-          eyebrow="Bölgeler"
-          title="Çalıştığımız bölgeleri yakından tanıyın"
-          description="Bölge sayfalarında güncel ilanları ve yayındaki ilanlara göre hesaplanan fiyat aralıklarını bulabilirsiniz."
-          action={{ href: '/bolgeler', label: 'Tüm bölgeler' }}
+          eyebrow={o?.eyebrow ?? 'Bölgeler'}
+          title={o?.title ?? 'Çalıştığımız bölgeleri yakından tanıyın'}
+          description={o?.description ?? 'Bölge sayfalarında güncel ilanları ve yayındaki ilanlara göre hesaplanan fiyat aralıklarını bulabilirsiniz.'}
+          action={{ href: o?.ctaHref ?? '/bolgeler', label: o?.ctaLabel ?? 'Tüm bölgeler' }}
         />
         <ul className="grid gap-3">
           {regions.slice(0, 6).map((r) => (
@@ -135,10 +151,10 @@ const STEPS = [
   { title: 'Tapu ve teslim', text: 'Belgeler, tapu randevusu ve teslim adımlarında süreci birlikte takip ederiz.' },
 ];
 
-export function ProcessSection() {
+export function ProcessSection({ o }: { o?: SectionOverride }) {
   return (
     <section aria-labelledby="surec" className="container-page py-16 sm:py-24">
-      <SectionHeading id="surec" eyebrow="Çalışma şeklimiz" title="Gayrimenkul arayışınızda adım adım yanınızdayız" />
+      <SectionHeading id="surec" eyebrow={o?.eyebrow ?? 'Çalışma şeklimiz'} title={o?.title ?? 'Gayrimenkul arayışınızda adım adım yanınızdayız'} description={o?.description} />
       <ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
         {STEPS.map((s, i) => (
           <li key={s.title} className="relative overflow-hidden rounded-2xl border border-border bg-surface p-6 shadow-sm">
@@ -155,29 +171,31 @@ export function ProcessSection() {
   );
 }
 
-export function OwnerCtaSection({ tenant }: { tenant: Tenant }) {
-  const wa = whatsappHref(tenant.settings.whatsapp ?? tenant.settings.phone, 'Merhaba, gayrimenkulümü satmak/kiraya vermek istiyorum.');
+export function OwnerCtaSection({ tenant, o, valuation = true, whatsapp = true }: { tenant: Tenant; o?: SectionOverride; valuation?: boolean; whatsapp?: boolean }) {
+  const wa = !whatsapp ? null : whatsappHref(tenant.settings.whatsapp ?? tenant.settings.phone, 'Merhaba, gayrimenkulümü satmak/kiraya vermek istiyorum.');
   return (
     <section aria-labelledby="mulk-sahibi" className="container-page pb-16 sm:pb-24">
       <div className="glow-inverse relative isolate overflow-hidden rounded-[1.75rem] px-6 py-12 text-inverse-foreground shadow-lg sm:px-12 sm:py-16 lg:px-16">
         <div className="dots-inverse pointer-events-none absolute inset-0 -z-10" aria-hidden />
         <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.4fr_1fr]">
           <div>
-            <p className="eyebrow eyebrow-line text-accent">Mülk sahipleri için</p>
+            <p className="eyebrow eyebrow-line text-accent">{o?.eyebrow ?? 'Mülk sahipleri için'}</p>
             <h2 id="mulk-sahibi" className="mt-3 font-display text-display-lg text-white">
-              Gayrimenkulünüzü satmak veya kiraya vermek mi istiyorsunuz?
+              {o?.title ?? 'Gayrimenkulünüzü satmak veya kiraya vermek mi istiyorsunuz?'}
             </h2>
             <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-white/75">
-              Mülkünüzün bilgilerini paylaşın; bölgedeki güncel ilanları ve piyasa koşullarını birlikte değerlendirerek size
-              dönüş yapalım. Resmi değerleme raporu gereken durumlarda lisanslı uzmanlara yönlendiririz.
+              {o?.description ??
+                'Mülkünüzün bilgilerini paylaşın; bölgedeki güncel ilanları ve piyasa koşullarını birlikte değerlendirerek size dönüş yapalım. Resmi değerleme raporu gereken durumlarda lisanslı uzmanlara yönlendiririz.'}
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-            <Button asChild size="lg" variant="inverse">
-              <Link href="/degerleme">
-                Değerleme talebi oluştur <ArrowRight />
-              </Link>
-            </Button>
+            {(valuation || o?.ctaHref) && (
+              <Button asChild size="lg" variant="inverse">
+                <Link href={o?.ctaHref ?? '/degerleme'}>
+                  {o?.ctaLabel ?? 'Değerleme talebi oluştur'} <ArrowRight />
+                </Link>
+              </Button>
+            )}
             {wa && (
               <Button asChild size="lg" variant="whatsapp">
                 <a href={wa} target="_blank" rel="noopener noreferrer">
@@ -192,11 +210,17 @@ export function OwnerCtaSection({ tenant }: { tenant: Tenant }) {
   );
 }
 
-export function BlogSection({ posts }: { posts: PostSummary[] }) {
+export function BlogSection({ posts, o }: { posts: PostSummary[]; o?: SectionOverride }) {
   if (!posts.length) return null;
   return (
     <section aria-labelledby="rehber" className="container-page pb-16 sm:pb-24">
-      <SectionHeading id="rehber" eyebrow="Rehber" title="Gayrimenkul rehberi" action={{ href: '/blog', label: 'Tüm yazılar' }} />
+      <SectionHeading
+        id="rehber"
+        eyebrow={o?.eyebrow ?? 'Rehber'}
+        title={o?.title ?? 'Gayrimenkul rehberi'}
+        description={o?.description}
+        action={{ href: o?.ctaHref ?? '/blog', label: o?.ctaLabel ?? 'Tüm yazılar' }}
+      />
       <ul className="mt-10 grid gap-8 md:grid-cols-3">
         {posts.slice(0, 3).map((p) => (
           <li key={p.id}>
@@ -217,10 +241,10 @@ export function BlogSection({ posts }: { posts: PostSummary[] }) {
   );
 }
 
-export function ContactBand({ tenant }: { tenant: Tenant }) {
+export function ContactBand({ tenant, o, whatsapp = true }: { tenant: Tenant; o?: SectionOverride; whatsapp?: boolean }) {
   const s = tenant.settings;
   const phone = telHref(s.phone);
-  const wa = whatsappHref(s.whatsapp ?? s.phone, 'Merhaba, bilgi almak istiyorum.');
+  const wa = !whatsapp ? null : whatsappHref(s.whatsapp ?? s.phone, 'Merhaba, bilgi almak istiyorum.');
   const address = [s.address_line, s.address_district, s.address_city].filter(Boolean).join(', ');
   const hours = formatOpeningHours(parseOpeningHours(s.opening_hours));
   const directions =
@@ -234,12 +258,12 @@ export function ContactBand({ tenant }: { tenant: Tenant }) {
     <section aria-labelledby="iletisim-ozet" className="border-t border-border bg-glow">
       <div className="container-page grid gap-10 py-16 sm:py-20 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
         <div>
-          <p className="eyebrow eyebrow-line">İletişim</p>
+          <p className="eyebrow eyebrow-line">{o?.eyebrow ?? 'İletişim'}</p>
           <h2 id="iletisim-ozet" className="mt-3 font-display text-display-lg text-foreground">
-            Sorularınız için buradayız
+            {o?.title ?? 'Sorularınız için buradayız'}
           </h2>
           <p className="mt-4 max-w-md text-[16px] leading-relaxed text-muted-foreground">
-            Aradığınız gayrimenkulü tarif edin veya ilgilendiğiniz ilan hakkında bilgi alın.
+            {o?.description ?? 'Aradığınız gayrimenkulü tarif edin veya ilgilendiğiniz ilan hakkında bilgi alın.'}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             {phone && (
@@ -307,6 +331,40 @@ export function ContactBand({ tenant }: { tenant: Tenant }) {
             </div>
           )}
         </dl>
+      </div>
+    </section>
+  );
+}
+
+/** Serbest metin bölümü (ör. Hakkımızda özeti, hizmetler): başlık + paragraflar + isteğe bağlı düğme */
+export function TextSection({ id, o, body }: { id: string; o?: SectionOverride; body?: string }) {
+  const paragraphs = (body ?? '').split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  if (!o?.title && paragraphs.length === 0) return null;
+  const headingId = `bolum-${id}`;
+  return (
+    <section aria-labelledby={o?.title ? headingId : undefined} className="container-page py-14 sm:py-20">
+      <div className="max-w-3xl">
+        {o?.eyebrow && <p className="eyebrow eyebrow-line">{o.eyebrow}</p>}
+        {o?.title && (
+          <h2 id={headingId} className={cn('font-display text-display-lg text-foreground', o.eyebrow && 'mt-3')}>
+            {o.title}
+          </h2>
+        )}
+        {o?.description && <p className="mt-3 text-[17px] leading-relaxed text-muted-foreground">{o.description}</p>}
+        {paragraphs.length > 0 && (
+          <div className="prose-content mt-6">
+            {paragraphs.map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
+        )}
+        {o?.ctaHref && o.ctaLabel && (
+          <Button asChild size="lg" className="mt-8">
+            <Link href={o.ctaHref}>
+              {o.ctaLabel} <ArrowRight />
+            </Link>
+          </Button>
+        )}
       </div>
     </section>
   );

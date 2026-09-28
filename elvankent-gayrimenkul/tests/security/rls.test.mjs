@@ -607,3 +607,101 @@ describe('Platform sahibi ↔ kiracı ayrımı', { skip }, () => {
     assert.ok(denied(await pa.from('leads').select('id').eq('organization_id', T.B.orgId)));
   });
 });
+
+describe('Web sitesi yapılandırması (site_configs) ve oturum bağlamı', { skip }, () => {
+  let platformAdmin;
+  before(async () => {
+    if (missing) return;
+    platformAdmin = await makeUser('siteadmin');
+    assert.ifError((await service.from('profiles').update({ is_super_admin: true }).eq('id', platformAdmin.id)).error);
+  });
+
+  test('her yeni kiracı için site kaydı otomatik oluşur', async () => {
+    const rows = await service.from('site_configs').select('organization_id, site_status, published_version').in('organization_id', [T.A.orgId, T.B.orgId]);
+    assert.ifError(rows.error);
+    assert.equal(rows.data.length, 2);
+    for (const r of rows.data) assert.equal(r.site_status, 'active');
+  });
+
+  test('anonim ziyaretçi taslağı ve sürüm geçmişini okuyamaz; yalnızca yayındaki sürüm (public_site_config) açıktır', async () => {
+    assert.ok(denied(await anon.from('site_configs').select('draft')));
+    assert.ok(denied(await anon.from('site_config_revisions').select('config')));
+    const pub = await anon.rpc('public_site_config', { p_org: T.A.orgId });
+    assert.ifError(pub.error);
+    assert.equal(pub.data.length, 1);
+    assert.ok(!('draft' in pub.data[0]), 'taslak herkese açık çıktıda');
+    // Askıdaki kiracının yapılandırması dönmez
+    await service.from('organizations').update({ status: 'suspended' }).eq('id', T.B.orgId);
+    const suspended = await anon.rpc('public_site_config', { p_org: T.B.orgId });
+    await service.from('organizations').update({ status: 'active' }).eq('id', T.B.orgId);
+    assert.deepEqual(suspended.data ?? [], []);
+  });
+
+  test('kiracı kullanıcıları başka kiracının site kaydını göremez; hiçbir rol doğrudan yazamaz', async () => {
+    for (const role of ROLES) {
+      const c = T.A.users[role].client;
+      const rows = await c.from('site_configs').select('organization_id');
+      assert.ifError(rows.error);
+      assert.deepEqual(rows.data.map((r) => r.organization_id), [T.A.orgId], `${role}: başka kiracının site kaydı göründü`);
+      assert.ok(denied(await c.from('site_configs').update({ site_status: 'maintenance' }).eq('organization_id', T.A.orgId).select('organization_id')), `${role}: doğrudan yazabildi`);
+      assert.ok(denied(await c.from('site_config_revisions').select('version')), `${role}: sürüm geçmişi göründü`);
+    }
+  });
+
+  test('kiracı sahibi site_* platform işlemlerini çağıramaz (kendi ofisi için bile)', async () => {
+    const ow = T.A.users.owner.client;
+    for (const [fn, args] of [
+      ['site_save_draft', { p_org: T.A.orgId, p_section: 'theme', p_value: 'atlas' }],
+      ['site_publish', { p_org: T.A.orgId }],
+      ['site_rollback', { p_org: T.A.orgId, p_version: 1 }],
+      ['site_discard_draft', { p_org: T.A.orgId }],
+      ['site_set_status', { p_org: T.A.orgId, p_status: 'maintenance' }],
+      ['site_set_features', { p_org: T.A.orgId, p_overrides: { crm: true } }],
+      ['platform_sites', {}],
+    ]) {
+      assert.ok((await ow.rpc(fn, args)).error, `${fn} kiracıya açık`);
+    }
+    const row = await service.from('site_configs').select('site_status, feature_overrides').eq('organization_id', T.A.orgId).single();
+    assert.equal(row.data.site_status, 'active');
+    assert.deepEqual(row.data.feature_overrides, {});
+  });
+
+  test('süper admin taslak kaydeder, yayınlar, geri alır; geçersiz bölüm reddedilir; işlemler denetime yazılır', async () => {
+    const pa = platformAdmin.client;
+    assert.ifError((await pa.rpc('site_save_draft', { p_org: T.B.orgId, p_section: 'theme', p_value: 'atlas' })).error);
+    assert.ok((await pa.rpc('site_save_draft', { p_org: T.B.orgId, p_section: 'hack', p_value: {} })).error, 'geçersiz bölüm kabul edildi');
+    const v1 = await pa.rpc('site_publish', { p_org: T.B.orgId, p_note: 'rls v1' });
+    assert.ifError(v1.error);
+    assert.ifError((await pa.rpc('site_save_draft', { p_org: T.B.orgId, p_section: 'theme', p_value: 'marble' })).error);
+    const v2 = await pa.rpc('site_publish', { p_org: T.B.orgId });
+    assert.ifError(v2.error);
+    assert.ifError((await pa.rpc('site_rollback', { p_org: T.B.orgId, p_version: v1.data })).error);
+    const row = await service.from('site_configs').select('published, published_version, has_unpublished_changes').eq('organization_id', T.B.orgId).single();
+    assert.equal(row.data.published.theme, 'atlas');
+    assert.equal(row.data.published_version, v2.data + 1);
+    assert.equal(row.data.has_unpublished_changes, false);
+    const logs = await service.from('audit_logs').select('action').eq('organization_id', T.B.orgId).like('action', 'site.%');
+    const actions = new Set(logs.data.map((l) => l.action));
+    for (const a of ['site.draft_saved', 'site.published', 'site.rolled_back']) assert.ok(actions.has(a), `${a} denetimde yok`);
+  });
+
+  test('özellik geçersiz kılması plan kontrolüne (org_plan) yansır', async () => {
+    const pa = platformAdmin.client;
+    assert.ifError((await pa.rpc('site_set_features', { p_org: T.B.orgId, p_overrides: { crm: false } })).error);
+    const plan = await service.rpc('org_plan', { p_org: T.B.orgId });
+    assert.equal(plan.data[0].crm_enabled, false);
+    assert.ifError((await pa.rpc('site_set_features', { p_org: T.B.orgId, p_overrides: {} })).error);
+    const back = await service.rpc('org_plan', { p_org: T.B.orgId });
+    assert.equal(back.data[0].crm_enabled, true);
+  });
+
+  test('session_context yalnızca oturum sahibinin verisini döner; anonim çağıramaz', async () => {
+    const c = T.A.users.agent.client;
+    const ctx = await c.rpc('session_context', { p_preferred_org: T.B.orgId, p_host_key: null });
+    assert.ifError(ctx.error);
+    assert.equal(ctx.data.org?.id, T.A.orgId, 'başka kiracı seçilebildi');
+    assert.deepEqual(ctx.data.memberships.map((m) => m.org_id), [T.A.orgId], 'başka kiracının üyeliği döndü');
+    const a = await anon.rpc('session_context', { p_preferred_org: T.A.orgId, p_host_key: null });
+    assert.ok(a.error || a.data === null || a.data?.profile == null, 'anonim oturum bağlamı aldı');
+  });
+});

@@ -80,7 +80,7 @@ export default async function CollectionPage({ params }: PageProps<'/t/[tenant]/
     collection.items.map((i) => i.property_id),
   );
   const notes = new Map(collection.items.map((i) => [i.property_id, i.note]));
-  const whatsapp = whatsappHref(s.whatsapp ?? s.phone, `Merhaba, "${collection.title}" seçkisindeki ilanlar hakkında bilgi almak istiyorum.`);
+  const whatsapp = tenant.site.overrides.whatsapp === false ? null : whatsappHref(s.whatsapp ?? s.phone, `Merhaba, "${collection.title}" seçkisindeki ilanlar hakkında bilgi almak istiyorum.`);
 
   return (
     <>

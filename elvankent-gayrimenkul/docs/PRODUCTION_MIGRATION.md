@@ -12,7 +12,8 @@ V1 şeması + V1 demo verisi + gerçekçi canlı kayıtlar (yönetici, gerçek i
 | Yedek (`pg_dump -Fc`) + okunabilirlik (`pg_restore --list`) | TAMAM |
 | 13 migration dosyası, her biri tek işlemde | hepsi başarılı (toplam < 1 sn) |
 | 14. dosya (`platform_owner_isolation`, 29.09.2026) — iki kez çalıştırıldı | sorunsuz; son kontrol #14 TAMAM |
-| Son kontrol (`supabase/ops/postflight_v2.sql`) | 13/13 TAMAM (14. dosyadan sonra 14/14) |
+| 15–16. dosyalar (`session_context_and_indexes`, `site_builder`, 30.09.2026) — yerelde tekrar tekrar çalıştırıldı | sorunsuz; son kontrol #15–16 TAMAM |
+| Son kontrol (`supabase/ops/postflight_v2.sql`) | 13/13 TAMAM (14. dosyadan sonra 14/14; 16 dosyanın tamamından sonra 16/16) |
 | Veri eşlemesi | ilan 9→9, fotoğraf 25→25, talep 2→2, V1 yöneticisi → sahip (owner), şirket bilgileri taşındı |
 | Eski ilan adresi | `/ilan/…-100009` → `/ilan/…` kalıcı yönlendirme (308) |
 | Stage 3 dosyalarını ikinci kez çalıştırma | sorunsuz (tekrar çalıştırılabilir) |
@@ -39,9 +40,15 @@ V1'de `20260922000001…04` zaten uygulanmıştır — **tekrar çalıştırmay�
 20260928000002_stage3_mfa.sql
 20260928000003_stage3_location_codes.sql
 20260929000001_platform_owner_isolation.sql
+20260930000001_session_context_and_indexes.sql
+20260930000002_site_builder.sql
 ```
 
 `20260929000001_platform_owner_isolation.sql` (platform sahibi KARAY ↔ kiracı yalıtımı): kiracı listesinin, ayarlarının ve alan adlarının herkese açık anahtarla **toplu** çekilmesini kapatır; site ofisini yalnızca adresiyle/alan adıyla tek tek bulur (`public_tenant*` fonksiyonları). Veri değiştirmez, tekrar çalıştırılabilir. Uygulama kodu bu dosya uygulanmadan önce de sonra da çalışır. Geri dönüş SQL'i dosyanın sonundadır.
+
+`20260930000001_session_context_and_indexes.sql` (performans): panelin oturum bilgisini (profil, üyelik, ofis, rol, yetki, plan, marka) tek çağrıda döndüren `session_context` fonksiyonu (SECURITY INVOKER — RLS aynen uygulanır) ve eksik yabancı anahtar indeksleri. Veri değiştirmez, tekrar çalıştırılabilir; uygulama fonksiyon yoksa eski sorgulara döner. Geri dönüş dosyanın sonundadır.
+
+`20260930000002_site_builder.sql` (KARAY Web Sitesi Yönetimi): `site_configs` (taslak / yayındaki görünüm, site durumu, özellik bayrakları) ve `site_config_revisions` (yayın sürümleri) tabloları, her mevcut ofis için boş (varsayılan görünümlü) kayıt, `organization_settings`'e üç yeni boş sütun (`short_name`, `logo_mobile_url`, `maps_url`), yalnızca süper adminin çağırabildiği `site_*` fonksiyonları ve herkese açık `public_site_config` (yalnızca yayındaki sürüm). Mevcut veri değişmez; kayıtlar boş olduğu için siteler bugünkü görünümüyle açılır. `org_plan` özellik bayraklarını dikkate alacak şekilde güncellenir (bayrak yoksa plan değerleri aynen geçerlidir). Tekrar çalıştırılabilir; uygulama tablo yoksa varsayılan görünümle çalışır. Geri dönüş SQL'i dosyanın sonundadır.
 
 - `supabase db push` hangi dosyaların uygulandığını `supabase_migrations.schema_migrations` tablosundan takip eder. V1 SQL Editor ile uygulandıysa bu tabloda kayıt yoktur ve CLI V1 dosyalarını da çalıştırmaya çalışır — bu durumda **SQL Editor ile dosya dosya** ilerleyin veya önce V1 sürümlerini `supabase migration repair --status applied 20260922000001 20260922000002 20260922000003 20260922000004` ile işaretleyin.
 - SQL Editor'de her dosyanın tamamını **ayrı bir sorgu** olarak tek seferde çalıştırın; hata verirse **sonraki dosyaya geçmeyin** (her dosya kendi içinde bütündür). `v2_enums` dosyası mutlaka tek başına çalıştırılmalıdır (yeni enum değerleri ancak o sorgu bittikten sonra kullanılabilir).
@@ -52,7 +59,7 @@ V1'de `20260922000001…04` zaten uygulanmıştır — **tekrar çalıştırmay�
 
 Canlı veritabanının bir kopyası üzerinde, canlıya dokunmadan tam prova:
 1. Supabase › **canlı proje** › Database › **Backups** › son yedeğin yanında **Restore to a new project** (Pro planı gerekir). Pro yoksa: bilgisayarınızda `pg_dump` ile yedek alın (aşağıda 2. adım) ve Supabase'te yeni boş bir proje açıp `pg_restore --no-owner` ile yükleyin.
-2. Yeni (kopya) projede aşağıdaki "Adım adım" 3–5'i uygulayın (ön kontrol, 14 dosya, son kontrol).
+2. Yeni (kopya) projede aşağıdaki "Adım adım" 3–5'i uygulayın (ön kontrol, 16 dosya, son kontrol).
 3. Demo Vercel projesinin ortam değişkenlerini geçici olarak bu kopya projeye çevirip siteyi ve paneli kontrol edin; sonra demo değerlerine geri alın.
 4. Her şey TAMAM ise kopya projeyi silin ve canlı geçiş için bakım penceresi belirleyin.
 
@@ -65,7 +72,7 @@ Canlı veritabanının bir kopyası üzerinde, canlıya dokunmadan tam prova:
    - Doğrulama: `pg_restore --list yedek-v1-….dump | head` (hata vermemeli) ve dosya boyutu > 0.
    - Fotoğraflar: `npm run backup:storage -- --out=./yedek/storage-v1` (docs/BACKUP_RESTORE.md).
 3. **Ön kontrol:** SQL Editor'de `supabase/ops/preflight_v1.sql` → çıktıyı saklayın. HATA varsa durun.
-4. **Migration:** yukarıdaki 14 dosya, sırayla.
+4. **Migration:** yukarıdaki 16 dosya, sırayla.
 5. **Son kontrol:** `supabase/ops/postflight_v2.sql` → tüm "durum"lar TAMAM olmalı; sayıları ön kontrolle karşılaştırın (ilan, fotoğraf = media_assets, talep = leads).
 6. Uygulamayı yayına alın (docs/DEPLOYMENT_RUNBOOK.md, adım 8+).
 

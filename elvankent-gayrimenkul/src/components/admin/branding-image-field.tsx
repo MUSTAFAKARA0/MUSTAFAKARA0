@@ -10,12 +10,26 @@ import { Progress } from '@/components/ui/progress';
 import { removeBrandingImage } from '@/app/actions/admin-settings';
 import { cn } from '@/lib/utils';
 
-type Kind = 'logo' | 'favicon' | 'hero' | 'og';
+type Kind = 'logo' | 'logo_mobile' | 'favicon' | 'hero' | 'og';
+
+/** Güvenli SVG yalnızca logo ve simge türlerinde kabul edilir (sunucuda denetlenip PNG'ye çevrilir) */
+const SVG_KINDS: Kind[] = ['logo', 'logo_mobile', 'favicon'];
 
 /**
  * Marka görseli alanı: dosya sunucuya gönderilir, orada doğrulanıp yeniden
  * kodlanır (PNG/JPEG) ve ayar kaydedilir. Başarılı olunca sayfa tazelenir.
+ * `orgId` verilirse KARAY platform uç noktası kullanılır (süper admin, seçilen kiracı).
  */
+async function removePlatformImage(orgId: string, kind: Kind): Promise<{ ok: true; message?: string } | { ok: false; error: string }> {
+  try {
+    const res = await fetch(`/api/platform/branding?orgId=${encodeURIComponent(orgId)}&kind=${kind}`, { method: 'DELETE' });
+    const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+    return res.ok ? { ok: true, message: data.message } : { ok: false, error: data.error ?? 'Görsel kaldırılamadı.' };
+  } catch {
+    return { ok: false, error: 'Sunucuya ulaşılamadı.' };
+  }
+}
+
 export function BrandingImageField({
   kind,
   label,
@@ -24,6 +38,7 @@ export function BrandingImageField({
   previewClassName,
   disabled,
   stacked,
+  orgId,
 }: {
   kind: Kind;
   label: string;
@@ -33,6 +48,8 @@ export function BrandingImageField({
   disabled?: boolean;
   /** Geniş önizlemeler (paylaşım, ana sayfa görseli): önizleme üstte, düğmeler altta */
   stacked?: boolean;
+  /** KARAY Web Sitesi Yönetimi: hedef kiracı (sunucuda süper admin yetkisiyle doğrulanır) */
+  orgId?: string;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -48,7 +65,8 @@ export function BrandingImageField({
       const body = new FormData();
       body.set('kind', kind);
       body.set('file', file);
-      const res = await fetch('/api/admin/branding', { method: 'POST', body });
+      if (orgId) body.set('orgId', orgId);
+      const res = await fetch(orgId ? '/api/platform/branding' : '/api/admin/branding', { method: 'POST', body });
       const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
       if (!res.ok) {
         setError(data.error ?? 'Görsel yüklenemedi. Lütfen tekrar deneyin.');
@@ -72,7 +90,7 @@ export function BrandingImageField({
         ref={inputRef}
         id={inputId}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/avif"
+        accept={`image/jpeg,image/png,image/webp,image/avif${SVG_KINDS.includes(kind) ? ',image/svg+xml' : ''}`}
         className="sr-only"
         tabIndex={-1}
         aria-hidden
@@ -117,7 +135,7 @@ export function BrandingImageField({
         description="Sitede varsayılan görünüm kullanılır. Daha sonra yeni bir görsel yükleyebilirsiniz."
         confirmLabel="Kaldır"
         onConfirm={async () => {
-          const res = await removeBrandingImage(kind);
+          const res = orgId ? await removePlatformImage(orgId, kind) : kind === 'logo_mobile' ? { ok: false as const, error: 'Geçersiz görsel türü.' } : await removeBrandingImage(kind);
           if (!res.ok) {
             toast.error(res.error);
             return false;

@@ -11,6 +11,7 @@ import { formatDate } from '@/lib/format';
 import { firstParam, parsePositiveInt } from '@/lib/utils';
 import { getPostsPage, type PostSummary } from '@/modules/content/queries';
 import { requireTenant } from '@/platform/tenant/tenant';
+import { applyPageSeo, guardSitePage, sitePageSettings } from '@/platform/site/pages';
 
 export const revalidate = 300;
 
@@ -21,11 +22,11 @@ function pageFrom(searchParams: Record<string, string | string[] | undefined>): 
 export async function generateMetadata({ params, searchParams }: PageProps<'/t/[tenant]/blog'>): Promise<Metadata> {
   const tenant = await requireTenant((await params).tenant);
   const page = pageFrom(await searchParams);
-  return {
+  return applyPageSeo(page > 1 ? undefined : await sitePageSettings(tenant, 'blog'), {
     title: page > 1 ? `Gayrimenkul rehberi – Sayfa ${page}` : 'Gayrimenkul rehberi',
     description: `${tenant.settings.display_name} rehberi: alım, satım, kiralama ve yatırım süreçleri hakkında bilgilendirici yazılar.`,
     alternates: { canonical: page > 1 ? `/blog?sayfa=${page}` : '/blog' },
-  };
+  });
 }
 
 function PostCard({ post, featured = false }: { post: PostSummary; featured?: boolean }) {
@@ -73,6 +74,7 @@ function PostCard({ post, featured = false }: { post: PostSummary; featured?: bo
 
 export default async function BlogIndexPage({ params, searchParams }: PageProps<'/t/[tenant]/blog'>) {
   const tenant = await requireTenant((await params).tenant);
+  await guardSitePage(tenant, 'blog');
   const page = pageFrom(await searchParams);
   const { items, pageCount } = await getPostsPage(tenant.id, page);
   if (page > 1 && items.length === 0) notFound();

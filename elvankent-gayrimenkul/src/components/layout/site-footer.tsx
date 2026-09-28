@@ -16,16 +16,21 @@ import { formatPhoneDisplay } from '@/lib/format';
 import { formatOpeningHours, parseOpeningHours } from '@/modules/content/hours';
 import { brandingUrl } from '@/modules/media/variants';
 import type { Tenant } from '@/platform/tenant/tenant';
+import { isHrefAvailable } from '@/components/layout/nav';
+import { cn } from '@/lib/utils';
+import type { SiteView } from '@/platform/site/load';
 
 interface FooterRegion {
   slug: string;
   name: string;
 }
 
-export function SiteFooter({ tenant, regions, hasBlog }: { tenant: Tenant; regions: FooterRegion[]; hasBlog: boolean }) {
+export function SiteFooter({ tenant, regions, hasBlog, view }: { tenant: Tenant; regions: FooterRegion[]; hasBlog: boolean; view: SiteView }) {
   const s = tenant.settings;
+  const f = view.config.footer;
+  const available = (href: string) => isHrefAvailable(href, view, hasBlog);
   const phone = telHref(s.phone);
-  const wa = whatsappHref(s.whatsapp ?? s.phone, 'Merhaba, bilgi almak istiyorum.');
+  const wa = view.features.whatsapp ? whatsappHref(s.whatsapp ?? s.phone, 'Merhaba, bilgi almak istiyorum.') : null;
   const address = [s.address_line, s.address_district, s.address_city].filter(Boolean).join(', ');
   const hours = formatOpeningHours(parseOpeningHours(s.opening_hours));
   const socials = [
@@ -59,45 +64,57 @@ export function SiteFooter({ tenant, regions, hasBlog }: { tenant: Tenant; regio
     { href: '/kullanim-kosullari', label: 'Kullanım koşulları' },
   ];
 
+  // Footer sütunları: KARAY Web Sitesi Yönetimi'nden (Footer) veya varsayılan
+  const columns: { id: string; title: string; links: { href: string; label: string; external?: boolean }[] }[] = f.columns?.length
+    ? f.columns.map((c) => ({
+        id: c.id,
+        title: c.title,
+        links: c.links.filter((l) => l.visible && available(l.href)).map((l) => ({ href: l.href, label: l.label, external: /^https?:/.test(l.href) })),
+      }))
+    : [
+        { id: 'ilanlar', title: 'İlanlar', links: listingLinks },
+        { id: 'bolgeler', title: 'Bölgeler', links: [...regions.slice(0, 6).map((r) => ({ href: `/bolgeler/${r.slug}`, label: r.name })), { href: '/bolgeler', label: 'Tüm bölgeler' }].filter((l) => available(l.href)) },
+        { id: 'kurumsal', title: 'Kurumsal', links: companyLinks.filter((l) => available(l.href)) },
+      ];
+  const about = f.about ?? s.tagline ?? s.description;
+
   const heading = 'mb-4 text-[12px] font-bold tracking-[0.14em] text-white/55 uppercase';
   const linkClass = 'text-[14.5px] text-white/80 transition-colors hover:text-white';
 
   return (
     <footer className="bg-surface-inverse text-inverse-foreground">
-      <div className="container-page grid gap-12 py-14 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:py-20">
+      <div className={cn('container-page grid gap-12 py-14 md:grid-cols-2 lg:py-20', columns.length >= 3 ? 'lg:grid-cols-[1.4fr_1fr_1fr_1fr]' : 'lg:grid-cols-[1.4fr_1fr_1fr]')}>
         <div className="max-w-sm">
           <Logo name={s.display_name} logoUrl={brandingUrl(s.logo_url)} tone="light" />
-          {(s.tagline || s.description) && (
-            <p className="mt-5 text-[14.5px] leading-relaxed text-white/70">{s.tagline ?? s.description}</p>
-          )}
-          <ul className="mt-6 space-y-2.5 text-[14.5px] text-white/80">
-            {phone && s.phone && (
+          {about && <p className="mt-5 text-[14.5px] leading-relaxed text-white/70">{about}</p>}
+          <ul className={cn('mt-6 space-y-2.5 text-[14.5px] text-white/80', !f.showContact && !f.showHours && 'hidden')}>
+            {f.showContact && phone && s.phone && (
               <li>
                 <a href={phone} className="flex items-center gap-2.5 hover:text-white">
                   <Phone className="size-4 text-white/50" aria-hidden /> <span className="numeric">{formatPhoneDisplay(s.phone)}</span>
                 </a>
               </li>
             )}
-            {wa && (
+            {f.showContact && wa && (
               <li>
                 <a href={wa} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 hover:text-white">
                   <WhatsAppIcon className="size-4 text-white/50" /> WhatsApp ile yazın
                 </a>
               </li>
             )}
-            {s.email && (
+            {f.showContact && s.email && (
               <li>
                 <a href={`mailto:${s.email}`} className="flex items-center gap-2.5 break-all hover:text-white">
                   <Mail className="size-4 shrink-0 text-white/50" aria-hidden /> {s.email}
                 </a>
               </li>
             )}
-            {address && (
+            {f.showContact && address && (
               <li className="flex items-start gap-2.5">
                 <MapPin className="mt-0.5 size-4 shrink-0 text-white/50" aria-hidden /> <span>{address}</span>
               </li>
             )}
-            {(hours.length > 0 || s.working_hours_note) && (
+            {f.showHours && (hours.length > 0 || s.working_hours_note) && (
               <li className="flex items-start gap-2.5">
                 <Clock className="mt-0.5 size-4 shrink-0 text-white/50" aria-hidden />
                 <span>
@@ -111,7 +128,7 @@ export function SiteFooter({ tenant, regions, hasBlog }: { tenant: Tenant; regio
               </li>
             )}
           </ul>
-          {socials.length > 0 && (
+          {f.showSocial && socials.length > 0 && (
             <ul className="mt-6 flex flex-wrap gap-2" aria-label="Sosyal medya">
               {socials.map(({ href, label, Icon }) => (
                 <li key={label}>
@@ -130,54 +147,31 @@ export function SiteFooter({ tenant, regions, hasBlog }: { tenant: Tenant; regio
           )}
         </div>
 
-        <nav aria-label="İlanlar">
-          <h2 className={heading}>İlanlar</h2>
-          <ul className="space-y-2.5">
-            {listingLinks.map((l) => (
-              <li key={l.href}>
-                <Link href={l.href} className={linkClass}>
-                  {l.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        <nav aria-label="Bölgeler">
-          <h2 className={heading}>Bölgeler</h2>
-          <ul className="space-y-2.5">
-            {regions.slice(0, 6).map((r) => (
-              <li key={r.slug}>
-                <Link href={`/bolgeler/${r.slug}`} className={linkClass}>
-                  {r.name}
-                </Link>
-              </li>
-            ))}
-            <li>
-              <Link href="/bolgeler" className={linkClass}>
-                Tüm bölgeler
-              </Link>
-            </li>
-          </ul>
-        </nav>
-
-        <nav aria-label="Kurumsal">
-          <h2 className={heading}>Kurumsal</h2>
-          <ul className="space-y-2.5">
-            {companyLinks.map((l) => (
-              <li key={l.href}>
-                <Link href={l.href} className={linkClass}>
-                  {l.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {columns.map((c) => (
+          <nav key={c.id} aria-label={c.title}>
+            <h2 className={heading}>{c.title}</h2>
+            <ul className="space-y-2.5">
+              {c.links.map((l) => (
+                <li key={l.href + l.label}>
+                  {l.external ? (
+                    <a href={l.href} target="_blank" rel="noopener noreferrer" className={linkClass}>
+                      {l.label}
+                    </a>
+                  ) : (
+                    <Link href={l.href} className={linkClass}>
+                      {l.label}
+                    </Link>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))}
       </div>
       <div className="border-t border-white/10">
         <div className="container-page flex flex-col gap-4 py-6 text-[13px] text-white/60 md:flex-row md:items-center md:justify-between">
           <p>
-            © {new Date().getFullYear()} {s.legal_name ?? s.display_name}. Tüm hakları saklıdır.
+            © {new Date().getFullYear()} {f.copyright ?? `${s.legal_name ?? s.display_name}. Tüm hakları saklıdır.`}
           </p>
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
             {legalLinks.map((l) => (

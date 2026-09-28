@@ -9,23 +9,25 @@ import { formatPhoneDisplay } from '@/lib/format';
 import { formatOpeningHours, parseOpeningHours } from '@/modules/content/hours';
 import { publicMapConfig } from '@/modules/maps/providers';
 import { requireTenant } from '@/platform/tenant/tenant';
+import { applyPageSeo, guardSitePage, sitePageSettings } from '@/platform/site/pages';
 
 export const revalidate = 300;
 
 export async function generateMetadata({ params }: PageProps<'/t/[tenant]/iletisim'>): Promise<Metadata> {
   const tenant = await requireTenant((await params).tenant);
-  return {
+  return applyPageSeo(await sitePageSettings(tenant, 'iletisim'), {
     title: 'İletişim',
     description: `${tenant.settings.display_name} iletişim bilgileri: telefon, WhatsApp, e-posta, ofis adresi ve çalışma saatleri.`,
     alternates: { canonical: '/iletisim' },
-  };
+  });
 }
 
 export default async function ContactPage({ params }: PageProps<'/t/[tenant]/iletisim'>) {
   const tenant = await requireTenant((await params).tenant);
+  await guardSitePage(tenant, 'iletisim');
   const s = tenant.settings;
   const phone = telHref(s.phone);
-  const wa = whatsappHref(s.whatsapp ?? s.phone, 'Merhaba, bilgi almak istiyorum.');
+  const wa = tenant.site.overrides.whatsapp === false ? null : whatsappHref(s.whatsapp ?? s.phone, 'Merhaba, bilgi almak istiyorum.');
   const address = [s.address_line, s.address_district, s.address_city].filter(Boolean).join(', ');
   const hours = formatOpeningHours(parseOpeningHours(s.opening_hours));
   const hasOffice = s.office_latitude !== null && s.office_longitude !== null;

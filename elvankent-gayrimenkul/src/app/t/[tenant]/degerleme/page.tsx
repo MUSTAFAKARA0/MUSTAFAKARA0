@@ -3,14 +3,18 @@ import { CheckCircle2 } from 'lucide-react';
 import { PageHeader } from '@/components/common/page-header';
 import { LeadForm } from '@/components/forms/lead-form';
 import { requireTenant } from '@/platform/tenant/tenant';
+import { applyPageSeo, guardSitePage, sitePageSettings } from '@/platform/site/pages';
 
 export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: 'Gayrimenkul değerleme talebi',
-  description: 'Satmak veya kiraya vermek istediğiniz gayrimenkulün bilgilerini paylaşın; bölgedeki güncel piyasa koşullarıyla birlikte değerlendirip size dönüş yapalım.',
-  alternates: { canonical: '/degerleme' },
-};
+export async function generateMetadata({ params }: PageProps<'/t/[tenant]/degerleme'>): Promise<Metadata> {
+  const tenant = await requireTenant((await params).tenant);
+  return applyPageSeo(await sitePageSettings(tenant, 'degerleme'), {
+    title: 'Gayrimenkul değerleme talebi',
+    description: 'Satmak veya kiraya vermek istediğiniz gayrimenkulün bilgilerini paylaşın; bölgedeki güncel piyasa koşullarıyla birlikte değerlendirip size dönüş yapalım.',
+    alternates: { canonical: '/degerleme' },
+  });
+}
 
 const POINTS = [
   'Mülkünüzün konum, alan, oda sayısı ve bina yaşı bilgilerini paylaşırsınız.',
@@ -24,6 +28,7 @@ const POINTS = [
  */
 export default async function ValuationPage({ params }: PageProps<'/t/[tenant]/degerleme'>) {
   const tenant = await requireTenant((await params).tenant);
+  await guardSitePage(tenant, 'degerleme');
   return (
     <>
       <PageHeader

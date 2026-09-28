@@ -910,6 +910,64 @@ export type Database = {
           },
         ]
       }
+      site_configs: {
+        Row: {
+          organization_id: string
+          draft: Json
+          published: Json
+          published_version: number
+          has_unpublished_changes: boolean
+          site_status: string
+          maintenance_message: string | null
+          feature_overrides: Json
+          draft_updated_at: string | null
+          draft_updated_by: string | null
+          published_at: string | null
+          published_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          draft?: Json
+          published?: Json
+          published_version?: number
+          has_unpublished_changes?: boolean
+          site_status?: string
+          maintenance_message?: string | null
+          feature_overrides?: Json
+        }
+        Update: {
+          draft?: Json
+          published?: Json
+          site_status?: string
+          maintenance_message?: string | null
+          feature_overrides?: Json
+        }
+        Relationships: []
+      }
+      site_config_revisions: {
+        Row: {
+          id: string
+          organization_id: string
+          version: number
+          config: Json
+          note: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          organization_id: string
+          version: number
+          config: Json
+          note?: string | null
+          created_by?: string | null
+        }
+        Update: {
+          note?: string | null
+        }
+        Relationships: []
+      }
       organization_settings: {
         Row: {
           organization_id: string
@@ -919,6 +977,9 @@ export type Database = {
           description: string | null
           service_area: string | null
           logo_url: string | null
+          logo_mobile_url: string | null
+          maps_url: string | null
+          short_name: string | null
           favicon_url: string | null
           primary_color: string
           accent_color: string
@@ -958,6 +1019,9 @@ export type Database = {
           description?: string | null
           service_area?: string | null
           logo_url?: string | null
+          logo_mobile_url?: string | null
+          maps_url?: string | null
+          short_name?: string | null
           favicon_url?: string | null
           primary_color?: string
           accent_color?: string
@@ -997,6 +1061,9 @@ export type Database = {
           description?: string | null
           service_area?: string | null
           logo_url?: string | null
+          logo_mobile_url?: string | null
+          maps_url?: string | null
+          short_name?: string | null
           favicon_url?: string | null
           primary_color?: string
           accent_color?: string
@@ -2112,6 +2179,60 @@ export type Database = {
           p_host_key?: string
         }
         Returns: Json
+      }
+      public_site_config: {
+        Args: {
+          p_org: string
+        }
+        Returns: {
+          published: Json
+          published_version: number
+          site_status: string
+          maintenance_message: string | null
+          feature_overrides: Json
+        }[]
+      }
+      platform_sites: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          organization_id: string
+          slug: string
+          name: string
+          org_status: Database["public"]["Enums"]["org_status"]
+          is_default: boolean
+          site_status: string
+          published_version: number
+          has_unpublished_changes: boolean
+          published_at: string | null
+          draft_updated_at: string | null
+          theme: string
+          primary_domain: string | null
+          logo_url: string | null
+        }[]
+      }
+      site_save_draft: {
+        Args: { p_org: string; p_section: string; p_value: Json }
+        Returns: undefined
+      }
+      site_publish: {
+        Args: { p_org: string; p_note?: string }
+        Returns: number
+      }
+      site_rollback: {
+        Args: { p_org: string; p_version: number }
+        Returns: number
+      }
+      site_discard_draft: {
+        Args: { p_org: string }
+        Returns: undefined
+      }
+      site_set_status: {
+        Args: { p_org: string; p_status: string; p_message?: string }
+        Returns: undefined
+      }
+      site_set_features: {
+        Args: { p_org: string; p_overrides: Json }
+        Returns: undefined
       }
       public_tenant: {
         Args: {

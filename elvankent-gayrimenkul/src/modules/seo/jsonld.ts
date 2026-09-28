@@ -29,7 +29,7 @@ export function organizationId(tenant: Tenant): string {
   return tenantUrl(tenant, '/#organization');
 }
 
-export function organizationJsonLd(tenant: Tenant) {
+export function organizationJsonLd(tenant: Tenant, seo?: { schemaType: 'RealEstateAgent' | 'LocalBusiness' | 'Organization'; priceRange?: string }) {
   const s = tenant.settings;
   const sameAs = [s.instagram_url, s.facebook_url, s.x_url, s.youtube_url, s.linkedin_url, s.tiktok_url].filter(Boolean);
   const hasAddress = Boolean(s.address_line && s.address_city);
@@ -38,7 +38,9 @@ export function organizationJsonLd(tenant: Tenant) {
 
   return {
     '@context': 'https://schema.org',
-    '@type': hasAddress ? 'RealEstateAgent' : 'Organization',
+    // Adres yoksa yerel işletme türleri kullanılmaz (Google gereği); site SEO ayarı türü seçebilir
+    '@type': hasAddress ? (seo?.schemaType ?? 'RealEstateAgent') : 'Organization',
+    ...(hasAddress && seo?.priceRange ? { priceRange: seo.priceRange } : {}),
     '@id': organizationId(tenant),
     name: s.display_name,
     ...(s.legal_name ? { legalName: s.legal_name } : {}),

@@ -1,0 +1,76 @@
+import type { Metadata } from 'next';
+import Link from '@/components/common/intent-link';
+import { Panel } from '@/components/admin/ui';
+import { SiteStatusForm } from '@/components/platform/site/status-form';
+import { formatDate } from '@/lib/format';
+import { getSiteOr404 } from '@/modules/platform/sites';
+import { requireSuperAdminPage } from '@/platform/auth/session';
+import { findPalette } from '@/platform/site/palettes';
+import { THEMES } from '@/platform/site/themes';
+
+export const metadata: Metadata = { title: 'Site Kontrol Merkezi' };
+
+export default async function SiteGeneralPage({ params }: PageProps<'/platform/siteler/[id]'>) {
+  const session = await requireSuperAdminPage();
+  const site = await getSiteOr404(session, (await params).id);
+  const d = site.draft;
+  const colorLabel = d.colors.mode === 'brand' ? 'Ofisin marka renkleri' : `${findPalette(d.colors.preset)?.name ?? 'Palet'}${d.colors.mode === 'custom' ? ' (özelleştirilmiş)' : ''}`;
+  const rows: [string, string, string][] = [
+    ['Tema', THEMES[d.theme].name, 'tema'],
+    ['Renkler', colorLabel, 'renkler'],
+    ['Menü', d.navigation ? `${d.navigation.length} öğe (özel)` : 'Varsayılan menü', 'menu'],
+    ['Ana sayfa', d.home ? `${d.home.sections.filter((s) => s.enabled).length} bölüm (özel sıra)` : 'Varsayılan bölümler', 'ana-sayfa'],
+    ['SEO', d.seo.robots === 'noindex' ? 'Arama motorlarına kapalı' : 'Arama motorlarına açık', 'seo'],
+  ];
+  return (
+    <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="min-w-0 space-y-6">
+        <Panel title="Taslak özeti" description="Bu ayarlar taslaktadır; canlı sitede görünmeleri için yukarıdan yayınlayın.">
+          <dl className="divide-y divide-border">
+            {rows.map(([k, v, tab]) => (
+              <div key={k} className="flex flex-wrap items-center justify-between gap-2 py-3 first:pt-0 last:pb-0">
+                <dt className="text-[13.5px] text-muted-foreground">{k}</dt>
+                <dd className="flex items-center gap-3 text-[14px] font-semibold">
+                  {v}
+                  <Link href={`/platform/siteler/${site.org.id}/${tab}`} className="text-[13px] font-semibold text-primary-ink hover:underline">
+                    Düzenle
+                  </Link>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </Panel>
+        <Panel title="Yayın bilgisi">
+          <dl className="grid gap-4 text-[14px] sm:grid-cols-3">
+            <div>
+              <dt className="text-[12.5px] text-muted-foreground">Canlı sürüm</dt>
+              <dd className="mt-1 font-semibold">{site.version > 0 ? `Sürüm ${site.version}` : 'Varsayılan görünüm'}</dd>
+            </div>
+            <div>
+              <dt className="text-[12.5px] text-muted-foreground">Son yayın</dt>
+              <dd className="mt-1 font-semibold">{site.publishedAt ? formatDate(site.publishedAt) : '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-[12.5px] text-muted-foreground">Son taslak değişikliği</dt>
+              <dd className="mt-1 font-semibold">{site.draftUpdatedAt ? formatDate(site.draftUpdatedAt) : '—'}</dd>
+            </div>
+          </dl>
+        </Panel>
+      </div>
+      <div className="space-y-6">
+        <Panel id="site-durumu" title="Site durumu" className="scroll-mt-24">
+          <SiteStatusForm orgId={site.org.id} status={site.status} message={site.maintenanceMessage} />
+        </Panel>
+        <Panel title="Nasıl çalışır?">
+          <ol className="list-decimal space-y-1.5 pl-5 text-[13.5px] leading-relaxed text-muted-foreground">
+            <li>Sekmelerde değişiklik yapıp &quot;Taslağa kaydet&quot;e basın.</li>
+            <li>&quot;Önizle&quot; ile taslağı canlı siteyi bozmadan görün.</li>
+            <li>&quot;Değişiklikleri yayınla&quot; ile canlıya alın (yeni sürüm).</li>
+            <li>Sorun olursa Geçmiş sekmesinden önceki sürüme dönün.</li>
+          </ol>
+          <p className="mt-3 text-[12.5px] text-muted-foreground">Marka/iletişim bilgileri, site durumu, domain ve özellikler anında geçerlidir.</p>
+        </Panel>
+      </div>
+    </div>
+  );
+}

@@ -2,6 +2,9 @@ import { getPublishedPosts, getRegionPages } from '@/modules/content/queries';
 import { LISTING_TYPE_TO_SLUG, type ListingType } from '@/modules/properties/constants';
 import { getInventoryCounts, getRegionCounts, getSitemapProperties } from '@/modules/properties/queries';
 import { regionListingPath } from '@/modules/properties/routes';
+import { publishedSiteView } from '@/platform/site/load';
+import { isPageAvailable } from '@/platform/site/pages';
+import type { PageKey } from '@/platform/site/schema';
 import { getTenant, tenantUrl } from '@/platform/tenant/tenant';
 
 interface Entry {
@@ -23,6 +26,10 @@ function escapeXml(value: string): string {
 export async function GET(_request: Request, { params }: RouteContext<'/t/[tenant]/sitemap.xml'>) {
   const tenant = await getTenant(decodeURIComponent((await params).tenant));
   if (!tenant) return new Response('Not found', { status: 404 });
+  // KARAY › Sayfalar'dan gizlenen veya özelliği kapatılan sayfalar listelenmez;
+  // bakımdaki / yayında olmayan sitenin haritası boştur
+  const view = publishedSiteView(tenant);
+  const pageOn = (key: PageKey) => view.status === 'active' && isPageAvailable(view, key);
 
   const [properties, inventory, regionCounts, regions, posts] = await Promise.all([
     getSitemapProperties(tenant.id),
@@ -58,23 +65,23 @@ export async function GET(_request: Request, { params }: RouteContext<'/t/[tenan
     if (c.neighborhoodSlug) entries.push({ path: regionListingPath(c.citySlug, c.districtSlug, c.neighborhoodSlug), priority: 0.5 });
   }
 
-  if (regions.length > 0) {
+  if (regions.length > 0 && pageOn('bolgeler')) {
     entries.push({ path: '/bolgeler', priority: 0.6 });
     for (const r of regions) entries.push({ path: `/bolgeler/${r.slug}`, priority: 0.6 });
   }
 
   for (const p of properties) entries.push({ path: `/ilan/${p.slug}`, lastModified: p.updated_at, priority: 0.8 });
 
-  if (posts.length > 0) {
+  if (posts.length > 0 && pageOn('blog')) {
     entries.push({ path: '/blog', priority: 0.5 });
     for (const post of posts) entries.push({ path: `/blog/${post.slug}`, lastModified: post.publishedAt, priority: 0.5 });
   }
 
-  for (const path of ['/hakkimizda', '/hizmetlerimiz', '/iletisim', '/degerleme']) entries.push({ path, priority: 0.5 });
+  for (const key of ['hakkimizda', 'hizmetlerimiz', 'iletisim', 'degerleme'] as const) if (pageOn(key)) entries.push({ path: `/${key}`, priority: 0.5 });
   for (const path of ['/kvkk', '/gizlilik-politikasi', '/cerez-politikasi', '/kullanim-kosullari']) entries.push({ path, priority: 0.2 });
 
   const seen = new Set<string>();
-  const urls = entries
+  const urls = (view.status === 'active' ? entries : [])
     .filter((e) => (seen.has(e.path) ? false : (seen.add(e.path), true)))
     .map((e) => {
       const lastmod = e.lastModified ? `<lastmod>${new Date(e.lastModified).toISOString()}</lastmod>` : '';

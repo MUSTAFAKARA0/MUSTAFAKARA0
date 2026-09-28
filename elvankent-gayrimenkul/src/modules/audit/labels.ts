@@ -7,7 +7,7 @@ import { ROLE_LABELS, type OrgRole } from '@/platform/auth/permissions';
  * eylem adı, hedef etiketi ve değişen alan adları kullanılır.
  */
 
-export type AuditCategory = 'auth' | 'property' | 'team' | 'settings' | 'content' | 'crm' | 'media' | 'data' | 'platform';
+export type AuditCategory = 'auth' | 'property' | 'team' | 'settings' | 'content' | 'crm' | 'media' | 'data' | 'platform' | 'site';
 
 export const AUDIT_CATEGORIES: Record<AuditCategory, { label: string; prefixes: string[] }> = {
   auth: { label: 'Oturum ve yetki', prefixes: ['auth.'] },
@@ -19,6 +19,7 @@ export const AUDIT_CATEGORIES: Record<AuditCategory, { label: string; prefixes: 
   media: { label: 'Medya', prefixes: ['media.'] },
   data: { label: 'Veri dışa aktarma', prefixes: ['data.'] },
   platform: { label: 'Platform', prefixes: ['organization.', 'plan.', 'subscription.'] },
+  site: { label: 'Web sitesi', prefixes: ['site.', 'domain.'] },
 };
 
 const MEMBER_STATUS: Record<string, string> = { active: 'aktif', disabled: 'devre dışı' };
@@ -77,6 +78,20 @@ const role = (v: unknown) => ROLE_LABELS[v as OrgRole] ?? String(v ?? '');
 const money = (v: unknown, currency: unknown) =>
   v === null || v === undefined ? '—' : `${Number(v).toLocaleString('tr-TR')} ${currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '₺'}`;
 
+const SITE_SECTION_LABELS: Record<string, string> = {
+  theme: 'Tema', colors: 'Renkler', typography: 'Tipografi', header: 'Header', navigation: 'Menü', home: 'Ana sayfa',
+  footer: 'Footer', pages: 'Sayfalar', seo: 'SEO',
+};
+const SITE_STATUS_LABELS: Record<string, string> = { active: 'Yayında', maintenance: 'Bakımda', draft: 'Yayında değil' };
+function featureDiff(oldV: unknown, newV: unknown): string | null {
+  const o = (oldV && typeof oldV === 'object' ? oldV : {}) as Record<string, boolean>;
+  const n = (newV && typeof newV === 'object' ? newV : {}) as Record<string, boolean>;
+  const keys = [...new Set([...Object.keys(o), ...Object.keys(n)])].filter((k) => o[k] !== n[k]);
+  if (!keys.length) return null;
+  const v = (x: boolean | undefined) => (x === undefined ? 'plan' : x ? 'açık' : 'kapalı');
+  return keys.map((k) => `${k}: ${v(o[k])} → ${v(n[k])}`).join(', ');
+}
+
 /** Kayıt için kısa bir cümle ve (varsa) ayrıntı satırı */
 export function describeAudit(row: AuditRow): { text: string; detail: string | null; tone: 'neutral' | 'danger' | 'warning' | 'success' } {
   const m = meta(row);
@@ -134,6 +149,30 @@ export function describeAudit(row: AuditRow): { text: string; detail: string | n
       return { text: 'Bir kullanıcı için geçici şifre oluşturdu', detail: null, tone: 'warning' };
     case 'settings.updated':
       return { text: 'Şirket / site ayarlarını güncelledi', detail: fieldList(m.fields), tone: 'neutral' };
+    case 'site.draft_saved':
+      return {
+        text: `Web sitesi taslağını düzenledi${target ? ` (${SITE_SECTION_LABELS[String(row.target_label)] ?? row.target_label})` : ''}`,
+        detail: m.old !== undefined && m.new !== undefined && (m.old || m.new) ? `Tema: ${m.old ?? 'Klasik'} → ${m.new}` : null,
+        tone: 'neutral',
+      };
+    case 'site.published':
+      return {
+        text: `Web sitesi değişikliklerini yayınladı (${row.target_label ?? 'yeni sürüm'})`,
+        detail: m.old_theme !== m.new_theme && m.new_theme ? `Tema: ${m.old_theme ?? 'klasik'} → ${m.new_theme}` : typeof m.note === 'string' && m.note ? `Not: ${m.note}` : null,
+        tone: 'success',
+      };
+    case 'site.rolled_back':
+      return { text: `Web sitesini önceki sürüme döndürdü (${row.target_label})`, detail: m.new_version ? `Yeni sürüm: ${m.new_version}` : null, tone: 'warning' };
+    case 'site.draft_discarded':
+      return { text: 'Yayınlanmamış site değişikliklerini geri aldı', detail: null, tone: 'neutral' };
+    case 'site.status_changed':
+      return { text: 'Site durumunu değiştirdi', detail: `${SITE_STATUS_LABELS[String(m.old)] ?? m.old ?? '—'} → ${SITE_STATUS_LABELS[String(m.new)] ?? m.new}`, tone: 'warning' };
+    case 'site.features_changed':
+      return { text: 'Site özelliklerini (özellik bayrakları) değiştirdi', detail: featureDiff(m.old, m.new), tone: 'warning' };
+    case 'site.brand_updated':
+      return { text: 'Marka ve iletişim bilgilerini güncelledi (KARAY)', detail: fieldList(m.fields), tone: 'neutral' };
+    case 'site.branding_uploaded':
+      return { text: `${target || 'Marka görseli'} yüklendi (KARAY)`, detail: null, tone: 'neutral' };
     case 'domain.added':
       return { text: `${target} alan adını ekledi`, detail: null, tone: 'neutral' };
     case 'domain.removed':

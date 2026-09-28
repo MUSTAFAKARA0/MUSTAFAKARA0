@@ -15,6 +15,7 @@ import { followRedirect } from '@/modules/seo/redirects';
 import { articleJsonLd } from '@/modules/seo/jsonld';
 import { baseOpenGraph, siteOgImage } from '@/modules/seo/og';
 import { requireTenant } from '@/platform/tenant/tenant';
+import { guardSitePage } from '@/platform/site/pages';
 
 export const revalidate = 300;
 
@@ -50,6 +51,7 @@ export async function generateMetadata({ params }: PageProps<'/t/[tenant]/blog/[
 export default async function BlogPostPage({ params }: PageProps<'/t/[tenant]/blog/[slug]'>) {
   const { tenant: key, slug } = await params;
   const tenant = await requireTenant(key);
+  await guardSitePage(tenant, 'blog');
   const post = await getPostBySlug(tenant.id, slug);
   if (!post) {
     // Adresi değişen / silinen içerik: tanımlı yönlendirme varsa uygula

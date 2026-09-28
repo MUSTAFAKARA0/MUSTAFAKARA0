@@ -43,7 +43,7 @@ export function PropertyDetailView({ tenant, p, similar, mode = 'public', delete
   const s = tenant.settings;
   const url = tenantUrl(tenant, `/ilan/${p.slug}`);
   const tel = telHref(s.phone);
-  const whatsapp = whatsappHref(s.whatsapp ?? s.phone, propertyWhatsappMessage(p.title, p.referenceNo, url));
+  const whatsapp = tenant.site.overrides.whatsapp === false ? null : whatsappHref(s.whatsapp ?? s.phone, propertyWhatsappMessage(p.title, p.referenceNo, url));
   const priceLabel = formatListingPrice(p.price, p.currency, p.listingType);
   const location = [p.neighborhoodName, p.districtName, p.cityName].filter(Boolean).join(', ');
   const available = p.status === 'published';

@@ -12,6 +12,10 @@
  * ============================================================================
  */
 :root {
+  /* Yazı tipleri (varsayılan; kiracı yapılandırması değiştirebilir) */
+  --font-sans-face: var(--font-manrope);
+  --font-display-face: var(--font-fraunces);
+
   /* Marka (kiracıya göre değişir) */
   --primary: #0e4d45;
   --primary-fg: #ffffff;
@@ -398,6 +402,52 @@
   }
   .scrim-hero {
     background: linear-gradient(to top, rgb(10 14 13 / 0.78) 0%, rgb(10 14 13 / 0.35) 50%, rgb(10 14 13 / 0.18) 100%);
+  }
+}
+
+/*
+ * Site temaları (KARAY Web Sitesi Yönetimi). Renk/yazı tipi/köşe değerleri tokenlardan
+ * gelir (src/platform/site/tokens.ts); burada yalnızca temaya özgü SUNUM farkları var.
+ */
+@layer components {
+  h1.font-display,
+  h2.font-display,
+  h3.font-display {
+    font-weight: var(--site-heading-weight, 400);
+  }
+  /* Kart stilleri: outline (Marble) · flat (Atlas) · elevated (Klasik, varsayılan) */
+  [data-site-card='outline'] .card-lift {
+    box-shadow: none;
+    border-color: var(--border);
+  }
+  [data-site-card='outline'] .card-lift:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--primary);
+  }
+  [data-site-card='flat'] .card-lift {
+    box-shadow: none;
+    border-color: transparent;
+    background: var(--surface-muted);
+  }
+  [data-site-card='flat'] .card-lift:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border-strong);
+  }
+  [data-site-theme='marble'] .eyebrow {
+    letter-spacing: 0.24em;
+  }
+  [data-site-theme='atlas'] .eyebrow-line::before {
+    height: 3px;
+    background: var(--accent);
+  }
+  /* Koyu header: header içindeki tokenlar ikincil (koyu) renge göre tersine çevrilir */
+  [data-header-style='dark'] {
+    --surface: var(--surface-inverse);
+    --foreground: var(--inverse-foreground);
+    --surface-muted: color-mix(in oklab, var(--inverse-foreground) 12%, var(--surface-inverse));
+    --border: color-mix(in oklab, var(--inverse-foreground) 16%, var(--surface-inverse));
   }
 }
 

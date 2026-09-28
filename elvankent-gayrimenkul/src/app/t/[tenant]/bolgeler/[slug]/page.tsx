@@ -15,6 +15,7 @@ import { findRedirect, getRegionPriceStats, searchProperties } from '@/modules/p
 import { followRedirect } from '@/modules/seo/redirects';
 import { regionListingPath } from '@/modules/properties/routes';
 import { requireTenant } from '@/platform/tenant/tenant';
+import { guardSitePage } from '@/platform/site/pages';
 
 export const revalidate = 300;
 
@@ -41,6 +42,7 @@ export async function generateMetadata({ params }: PageProps<'/t/[tenant]/bolgel
 export default async function RegionPage({ params }: PageProps<'/t/[tenant]/bolgeler/[slug]'>) {
   const { tenant: key, slug } = await params;
   const tenant = await requireTenant(key);
+  await guardSitePage(tenant, 'bolgeler');
   const region = await getRegionPageBySlug(tenant.id, slug);
   if (!region) {
     // Adresi değişen / silinen içerik: tanımlı yönlendirme varsa uygula

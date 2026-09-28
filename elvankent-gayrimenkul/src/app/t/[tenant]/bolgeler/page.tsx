@@ -7,20 +7,22 @@ import { getRegionPages } from '@/modules/content/queries';
 import { getRegionCounts } from '@/modules/properties/queries';
 import { regionListingPath } from '@/modules/properties/routes';
 import { requireTenant } from '@/platform/tenant/tenant';
+import { applyPageSeo, guardSitePage, sitePageSettings } from '@/platform/site/pages';
 
 export const revalidate = 300;
 
 export async function generateMetadata({ params }: PageProps<'/t/[tenant]/bolgeler'>): Promise<Metadata> {
   const tenant = await requireTenant((await params).tenant);
-  return {
+  return applyPageSeo(await sitePageSettings(tenant, 'bolgeler'), {
     title: 'Bölgeler',
     description: `${tenant.settings.display_name} bölge rehberleri: güncel ilanlar ve yayındaki ilanlara göre fiyat aralıkları.`,
     alternates: { canonical: '/bolgeler' },
-  };
+  });
 }
 
 export default async function RegionsIndexPage({ params }: PageProps<'/t/[tenant]/bolgeler'>) {
   const tenant = await requireTenant((await params).tenant);
+  await guardSitePage(tenant, 'bolgeler');
   const [regions, counts] = await Promise.all([getRegionPages(tenant.id), getRegionCounts(tenant.id)]);
   const districtTotals = new Map<string, { name: string; path: string; count: number }>();
   for (const c of counts) {

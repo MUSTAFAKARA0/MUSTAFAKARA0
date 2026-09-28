@@ -9,6 +9,7 @@ import { createPublicClient } from '@/lib/supabase/server';
 import { isValidTenantKey, tenantKeyForHost } from '@/platform/tenant/host';
 import { tenantHostConfig } from '@/platform/tenant/config';
 import type { Tables } from '@/types/supabase';
+import { parseFeatureOverrides, type FeatureOverrides, type SiteStatus } from '@/platform/site/schema';
 
 export type OrgSettings = Tables<'organization_settings'>;
 
@@ -17,6 +18,15 @@ export interface TenantFeatures {
   analytics: boolean;
   pdf: boolean;
   customDomain: boolean;
+}
+
+/** Yayındaki site yapılandırması (KARAY Web Sitesi Yönetimi); taslak burada ASLA yoktur */
+export interface TenantSite {
+  published: unknown;
+  version: number;
+  status: SiteStatus;
+  maintenanceMessage: string | null;
+  overrides: FeatureOverrides;
 }
 
 export interface Tenant {
@@ -31,6 +41,7 @@ export interface Tenant {
   /** Kanonik site kökü (sonunda / olmadan): SEO, sitemap, paylaşım bağlantıları */
   baseUrl: string;
   features: TenantFeatures;
+  site: TenantSite;
 }
 
 const ORG_COLUMNS = 'id, slug, name, is_default, reference_prefix, status';
@@ -44,6 +55,9 @@ function defaultSettings(orgId: string, name: string): OrgSettings {
     description: null,
     service_area: null,
     logo_url: null,
+    logo_mobile_url: null,
+    maps_url: null,
+    short_name: null,
     favicon_url: null,
     primary_color: '#0e4d45',
     accent_color: '#b5813a',
@@ -118,11 +132,14 @@ async function loadTenant(key: string): Promise<Tenant | null> {
   if (!org || org.status !== 'active') return null;
 
   const orgClient = createPublicClient([cacheTags.tenants, cacheTags.org(org.id)], 300);
-  const [settingsRpc, domainsRpc, planRes] = await Promise.all([
+  const [settingsRpc, domainsRpc, planRes, siteRes] = await Promise.all([
     orgClient.rpc('public_tenant_settings', { p_org: org.id }, { get: true }),
     orgClient.rpc('public_tenant_domains', { p_org: org.id }, { get: true }),
     orgClient.rpc('org_plan', { p_org: org.id }, { get: true }),
+    orgClient.rpc('public_site_config', { p_org: org.id }, { get: true }),
   ]);
+  // Site yapılandırması yoksa (migration öncesi veya satır yok) varsayılan görünüm
+  const siteRow = siteRes.error ? null : (siteRes.data?.[0] ?? null);
   const legacy = missingFunction(settingsRpc.error) || missingFunction(domainsRpc.error);
   const [settingsRes, domainsRes] = legacy
     ? await Promise.all([
@@ -154,6 +171,13 @@ async function loadTenant(key: string): Promise<Tenant | null> {
       analytics: plan?.analytics_enabled ?? false,
       pdf: plan?.pdf_enabled ?? false,
       customDomain: plan?.custom_domain_enabled ?? false,
+    },
+    site: {
+      published: siteRow?.published ?? {},
+      version: siteRow?.published_version ?? 0,
+      status: (['active', 'maintenance', 'draft'] as const).find((x) => x === siteRow?.site_status) ?? 'active',
+      maintenanceMessage: siteRow?.maintenance_message ?? null,
+      overrides: parseFeatureOverrides(siteRow?.feature_overrides),
     },
   };
 }

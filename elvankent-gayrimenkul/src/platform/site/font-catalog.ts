@@ -1,0 +1,11 @@
+import type { FontId } from '@/platform/site/schema';
+
+/** Yazı tipi kataloğu (yalnızca veri; yükleyiciler fonts.ts'te). CSS değişkenleri <html> üzerinde tanımlıdır. */
+export const FONT_CATALOG: Record<FontId, { name: string; cssVar: string; kind: 'serif' | 'sans' }> = {
+  manrope: { name: 'Manrope', cssVar: '--font-manrope', kind: 'sans' },
+  fraunces: { name: 'Fraunces', cssVar: '--font-fraunces', kind: 'serif' },
+  inter: { name: 'Inter', cssVar: '--font-inter', kind: 'sans' },
+  playfair: { name: 'Playfair Display', cssVar: '--font-playfair', kind: 'serif' },
+  'dm-sans': { name: 'DM Sans', cssVar: '--font-dm-sans', kind: 'sans' },
+  lora: { name: 'Lora', cssVar: '--font-lora', kind: 'serif' },
+};

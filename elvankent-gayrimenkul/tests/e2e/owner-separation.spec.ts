@@ -265,7 +265,7 @@ test("TEST-OWNER-08: Elvankent kendi markasını değiştirir; tema yalnızca o 
   const k = await newPage(browser);
   await loginPlatform(k.page);
   expect(await cssVar(k.page, '--primary')).toBe(PLATFORM_PRIMARY);
-  await expect(k.page.locator('img[src*="/branding/"]')).toHaveCount(0);
+  await expect(k.page.locator('img[src*="branding"]')).toHaveCount(0);
   const icons = await k.page.locator('link[rel="icon"], link[rel="apple-touch-icon"]').evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
   expect(icons.length).toBeGreaterThan(0);
   for (const href of icons) expect(href, 'platform simgesi').toMatch(/^\/platform\//);

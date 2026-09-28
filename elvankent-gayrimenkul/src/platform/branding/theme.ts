@@ -7,11 +7,11 @@ const HEX = /^#[0-9a-f]{6}$/i;
 
 type RGB = [number, number, number];
 
-function parse(hex: string): RGB {
+export function parse(hex: string): RGB {
   return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as RGB;
 }
 
-function toHex([r, g, b]: RGB): string {
+export function toHex([r, g, b]: RGB): string {
   return `#${[r, g, b].map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, '0')).join('')}`;
 }
 
@@ -30,7 +30,7 @@ export function contrastRatio(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-function mix(a: RGB, b: RGB, weightA: number): RGB {
+export function mix(a: RGB, b: RGB, weightA: number): RGB {
   return [0, 1, 2].map((i) => a[i] * weightA + b[i] * (1 - weightA)) as RGB;
 }
 
@@ -43,7 +43,7 @@ function readableOnWhite(hex: string): string {
   return toHex(rgb);
 }
 
-function foregroundFor(hex: string): string {
+export function foregroundFor(hex: string): string {
   return contrastRatio(hex, '#ffffff') >= 4.5 ? '#ffffff' : '#141a18';
 }
 
@@ -84,4 +84,24 @@ export function buildTheme(primaryColor: string | null | undefined, accentColor:
 /** <style> içine yazılacak CSS (yalnızca doğrulanmış hex değerleri → enjeksiyon yok) */
 export function themeCss(tokens: ThemeTokens, selector = ':root'): string {
   return `${selector}{--primary:${tokens.primary};--primary-fg:${tokens.primaryFg};--primary-hover:${tokens.primaryHover};--primary-ink:${tokens.primaryInk};--primary-soft:${tokens.primarySoft};--accent:${tokens.accent};--accent-fg:${tokens.accentFg};--accent-ink:${tokens.accentInk};--accent-soft:${tokens.accentSoft};--ring:${tokens.primary};}`;
+}
+
+/** a ve b renklerini karıştırır (weightA: a'nın payı) — hex giriş/çıkış */
+export function mixHex(a: string, b: string, weightA: number): string {
+  return toHex(mix(parse(a), parse(b), weightA));
+}
+
+/**
+ * Ön plan rengini zemine göre en az `ratio` kontrasta ulaşana kadar koyulaştırır
+ * (açık zemin) veya açar (koyu zemin). Tasarım tokenlarında okunabilirliği korur.
+ */
+export function ensureContrast(fg: string, bg: string, ratio = 4.5): string {
+  let rgb = parse(fg);
+  const target: RGB = luminance(parse(bg)) > 0.4 ? [0, 0, 0] : [255, 255, 255];
+  for (let i = 0; i < 24 && contrastRatio(toHex(rgb), bg) < ratio; i++) rgb = mix(rgb, target, 0.88);
+  return toHex(rgb);
+}
+
+export function isDark(hex: string): boolean {
+  return luminance(parse(hex)) < 0.2;
 }

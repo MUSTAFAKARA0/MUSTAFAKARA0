@@ -306,20 +306,20 @@ test.describe('Yönetim paneli (telefon)', () => {
     // Panel (menüde)
     await page.reload();
     await openMenu(page);
-    await expect(page.locator('img[src*="/branding/"]').filter({ visible: true }).first()).toBeVisible();
+    await expect(page.locator('img[src*="branding"]').filter({ visible: true }).first()).toBeVisible();
     // Site ve giriş sayfası: oturumsuz ziyaretçi
     const guest = await (browser as Browser).newContext();
     const g = await guest.newPage();
     for (const url of ['/', '/admin/giris']) {
       await expect(async () => {
         await g.goto(url);
-        const img = g.locator('img[src*="/branding/"]').first();
+        const img = g.locator('img[src*="branding"]').first();
         await expect(img).toBeVisible({ timeout: 2_000 });
         expect(await img.evaluate((el) => (el as HTMLImageElement).naturalWidth), `${url} logo yüklenmeli`).toBeGreaterThan(0);
       }).toPass({ timeout: 30_000 });
     }
     await g.goto('/');
-    await expect(g.getByRole('contentinfo').locator('img[src*="/branding/"]')).toHaveCount(1);
+    await expect(g.getByRole('contentinfo').locator('img[src*="branding"]')).toHaveCount(1);
     await guest.close();
   });
 
@@ -339,7 +339,7 @@ test.describe('Yönetim paneli (telefon)', () => {
     const header = page.getByRole('banner');
     await expect(header.getByRole('img', { name: 'KARAY' })).toBeVisible();
     await expect(header.getByText(/Elvankent/)).toHaveCount(0);
-    await expect(header.locator('img[src*="/branding/"]')).toHaveCount(0);
+    await expect(header.locator('img[src*="branding"]')).toHaveCount(0);
     await noOverflow(page, '/platform');
     // Platform oturumu ofis paneline geçemez
     await page.goto('/admin');

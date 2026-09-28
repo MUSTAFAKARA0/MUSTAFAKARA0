@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { ArrowRight, GitCompareArrows, Heart, Menu, MapPin, Phone } from 'lucide-react';
+import { ArrowRight, ChevronDown, GitCompareArrows, Heart, Menu, MapPin, Phone } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/common/brand-icons';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, SheetContent } from '@/components/ui/dialog';
@@ -15,26 +15,57 @@ function isActive(pathname: string, item: NavItem): boolean {
   return (item.match ?? [item.href]).some((m) => pathname === m || pathname.startsWith(`${m}-`) || pathname.startsWith(`${m}/`));
 }
 
+/** Site içi bağlantı Next Link, dış bağlantı yeni sekmede */
+function NavLink({ item, children, ...props }: { item: NavItem; children: React.ReactNode } & Omit<React.ComponentProps<'a'>, 'href'>) {
+  if (item.external) {
+    return (
+      <a href={item.href} target="_blank" rel="noopener noreferrer" {...props}>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <Link href={item.href} {...props}>
+      {children}
+    </Link>
+  );
+}
+
 export function DesktopNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Ana menü" className="hidden lg:block">
       <ul className="flex items-center gap-1">
         {items.map((item) => {
-          const active = isActive(pathname, item);
+          const active = isActive(pathname, item) || (item.children ?? []).some((c) => isActive(pathname, c));
+          const hasChildren = (item.children?.length ?? 0) > 0;
           return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                aria-current={active ? 'page' : undefined}
+            <li key={item.href + item.label} className={cn(hasChildren && 'group relative')}>
+              <NavLink
+                item={item}
+                aria-current={active && !hasChildren ? 'page' : undefined}
+                aria-haspopup={hasChildren ? 'true' : undefined}
                 className={cn(
-                  'relative rounded-lg px-3 py-2 text-[14.5px] font-medium transition-colors',
+                  'relative inline-flex items-center gap-1 rounded-lg px-3 py-2 text-[14.5px] font-medium transition-colors',
                   active ? 'text-foreground' : 'text-foreground/70 hover:text-foreground',
                 )}
               >
                 {item.label}
+                {hasChildren && <ChevronDown className="size-3.5 opacity-60" aria-hidden />}
                 {active && <span className="absolute inset-x-3 -bottom-[17px] h-[2px] rounded-full bg-primary" aria-hidden />}
-              </Link>
+              </NavLink>
+              {hasChildren && (
+                // Alt menü: fareyle üzerine gelince veya klavyeyle odaklanınca açılır
+                <ul className="invisible absolute top-full left-0 z-50 mt-2 min-w-52 rounded-xl border border-border bg-surface p-1.5 opacity-0 shadow-lg transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+                  {item.children!.map((c) => (
+                    <li key={c.href + c.label}>
+                      <NavLink item={c} className="block rounded-lg px-3 py-2 text-[14px] text-foreground/80 hover:bg-surface-muted hover:text-foreground">
+                        {c.label}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           );
         })}
@@ -52,7 +83,21 @@ function CountBadge({ count }: { count: number }) {
   );
 }
 
-export function HeaderActions({ phoneHref, phoneLabel }: { phoneHref: string | null; phoneLabel: string | null }) {
+export function HeaderActions({
+  phoneHref,
+  phoneLabel,
+  whatsappHref = null,
+  mobilePhoneHref = null,
+  showFavorites = true,
+  cta = null,
+}: {
+  phoneHref: string | null;
+  phoneLabel: string | null;
+  whatsappHref?: string | null;
+  mobilePhoneHref?: string | null;
+  showFavorites?: boolean;
+  cta?: { label: string; href: string } | null;
+}) {
   const { items: favorites } = useFavorites();
   const { items: compare } = useCompare();
   const hydrated = useHydrated();
@@ -70,15 +115,41 @@ export function HeaderActions({ phoneHref, phoneLabel }: { phoneHref: string | n
           <CountBadge count={compareCount} />
         </Link>
       )}
-      <Link
-        href="/favoriler"
-        className="relative inline-flex size-10 items-center justify-center rounded-xl text-foreground/80 transition hover:bg-surface-muted hover:text-foreground"
-        aria-label={favCount > 0 ? `Favorilerim (${favCount} ilan)` : 'Favorilerim'}
-      >
-        <Heart className="size-5" />
-        <CountBadge count={favCount} />
-      </Link>
-      {phoneHref ? (
+      {showFavorites && (
+        <Link
+          href="/favoriler"
+          className="relative inline-flex size-10 items-center justify-center rounded-xl text-foreground/80 transition hover:bg-surface-muted hover:text-foreground"
+          aria-label={favCount > 0 ? `Favorilerim (${favCount} ilan)` : 'Favorilerim'}
+        >
+          <Heart className="size-5" />
+          <CountBadge count={favCount} />
+        </Link>
+      )}
+      {mobilePhoneHref && (
+        <a
+          href={mobilePhoneHref}
+          className="inline-flex size-10 items-center justify-center rounded-xl text-foreground/80 transition hover:bg-surface-muted hover:text-foreground md:hidden"
+          aria-label="Arayın"
+        >
+          <Phone className="size-5" />
+        </a>
+      )}
+      {whatsappHref && (
+        <a
+          href={whatsappHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hidden size-10 items-center justify-center rounded-xl text-foreground/80 transition hover:bg-surface-muted hover:text-foreground md:inline-flex"
+          aria-label="WhatsApp'tan yazın"
+        >
+          <WhatsAppIcon className="size-5" />
+        </a>
+      )}
+      {cta ? (
+        <Button asChild size="sm" className="ml-1 hidden h-10 rounded-xl px-4 md:inline-flex">
+          <Link href={cta.href}>{cta.label}</Link>
+        </Button>
+      ) : phoneHref ? (
         <Button asChild size="sm" className="ml-1 hidden h-10 rounded-xl px-4 md:inline-flex">
           <a href={phoneHref}>
             <Phone />
@@ -101,6 +172,7 @@ export function MobileMenu({
   phoneLabel,
   whatsappHref,
   address,
+  showFavorites = true,
 }: {
   items: NavItem[];
   name: string;
@@ -108,6 +180,7 @@ export function MobileMenu({
   phoneLabel: string | null;
   whatsappHref: string | null;
   address: string | null;
+  showFavorites?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -151,9 +224,9 @@ export function MobileMenu({
             {items.map((item) => {
               const active = isActive(pathname, item);
               return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
+                <li key={item.href + item.label}>
+                  <NavLink
+                    item={item}
                     onClick={() => setOpen(false)}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
@@ -163,13 +236,28 @@ export function MobileMenu({
                   >
                     {item.label}
                     <ArrowRight className="size-5 opacity-40" aria-hidden />
-                  </Link>
+                  </NavLink>
+                  {(item.children?.length ?? 0) > 0 && (
+                    <ul className="mb-1 ml-3 border-l border-border pl-2">
+                      {item.children!.map((c) => (
+                        <li key={c.href + c.label}>
+                          <NavLink
+                            item={c}
+                            onClick={() => setOpen(false)}
+                            className="block rounded-lg px-3 py-2.5 text-[15.5px] text-foreground/80 hover:bg-surface-muted hover:text-foreground"
+                          >
+                            {c.label}
+                          </NavLink>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               );
             })}
           </ul>
         </nav>
-        <div className="mt-6 grid grid-cols-2 gap-2 text-sm">
+        <div className={cn('mt-6 grid grid-cols-2 gap-2 text-sm', !showFavorites && 'hidden')}>
           <Link href="/favoriler" onClick={() => setOpen(false)} className="flex items-center gap-2 rounded-xl border border-border px-3 py-3 font-medium">
             <Heart className="size-4" /> Favorilerim
           </Link>

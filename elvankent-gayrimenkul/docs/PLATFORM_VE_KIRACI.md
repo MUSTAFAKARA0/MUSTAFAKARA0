@@ -19,6 +19,7 @@ Elvankent Gayrimenkul platformun sahibi değildir; platformun ilk müşterisidir
 | Platform alanı | `/platform` (`src/app/platform`): dış katman KARAY teması ve simgesi, `(konsol)` katmanı süper admin kontrolü, `/platform/giris` ayrı giriş |
 | Kiracı (emlak ofisi) | `organizations` (+ `subscriptions`, `organization_domains`) |
 | Kiracı markası | `organization_settings` (logo, renkler, iletişim, SEO) — yalnızca o kiracının sitesinde ve ofis panelinde kullanılır |
+| Kiracı sitesinin görünümü | `site_configs` (tema, renkler, menü, ana sayfa, sayfalar, SEO, durum, özellik bayrakları) — yalnızca KARAY › Web Siteleri'nden (docs/WEB_SITESI_YONETIMI.md) |
 | Kiracı kullanıcıları ve rolleri | `organization_members` (owner, admin, agent, editor, viewer) + `role_permissions` |
 | Elvankent | `organizations` satırı `slug = 'elvankent'`, `is_default = true` ("varsayılan kiracı" = ana alan adında açılan site; sahiplik anlamı yoktur) |
 
@@ -100,3 +101,4 @@ Demo kurulumu tek hesapla başladığı için sizin hesabınız hem süper admin
 
 - `tests/security/rls.test.mjs` › "Platform sahibi ↔ kiracı ayrımı" (veritabanı).
 - `tests/e2e/owner-separation.spec.ts` › TEST-OWNER-01…08 (uygulama + veritabanı).
+- `tests/e2e/site-builder.spec.ts` › TEST-SITE-01…12 (KARAY Web Sitesi Yönetimi; ayrıntı: docs/WEB_SITESI_YONETIMI.md).

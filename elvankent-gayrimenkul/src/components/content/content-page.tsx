@@ -6,24 +6,34 @@ import { getContentPage } from '@/modules/content/queries';
 import { Markdown, markdownToPlainText } from '@/modules/content/markdown';
 import type { PageKey } from '@/modules/content/default-pages';
 import { requireTenant } from '@/platform/tenant/tenant';
+import { applyPageSeo, guardSitePage, sitePageSettings } from '@/platform/site/pages';
+import type { PageKey as SitePageKey } from '@/platform/site/schema';
+
+/** KARAY › Sayfalar ile yönetilen içerik sayfaları (yasal metinler her zaman yayındadır) */
+const MANAGED: Partial<Record<PageKey, SitePageKey>> = { about: 'hakkimizda', services: 'hizmetlerimiz' };
 
 export async function contentPageMetadata(tenantKey: string, key: PageKey): Promise<Metadata> {
   const tenant = await requireTenant(tenantKey);
   const page = await getContentPage(tenant, key);
-  return {
-    title: page.seoTitle ?? page.title,
+  const managed = MANAGED[key];
+  const settings = managed ? await sitePageSettings(tenant, managed) : undefined;
+  return applyPageSeo(settings, {
+    title: page.seoTitle ?? settings?.title ?? page.title,
     description: page.seoDescription ?? (markdownToPlainText(page.body, 160) || page.description),
     alternates: { canonical: page.path },
-  };
+  });
 }
 
 /** Yönetim panelinden düzenlenebilen sayfalar (Hakkımızda, KVKK, gizlilik...) */
 export async function ContentPageView({ tenantKey, pageKey, children }: { tenantKey: string; pageKey: PageKey; children?: React.ReactNode }) {
   const tenant = await requireTenant(tenantKey);
+  const managed = MANAGED[pageKey];
+  const settings = managed ? await guardSitePage(tenant, managed) : undefined;
   const page = await getContentPage(tenant, pageKey);
+  const title = settings?.title ?? page.title;
   return (
     <>
-      <PageHeader tenant={tenant} title={page.title} crumbs={[{ name: page.title, path: page.path }]} />
+      <PageHeader tenant={tenant} title={title} crumbs={[{ name: title, path: page.path }]} />
       <div className="container-page py-12 sm:py-16">
         <div className="mx-auto max-w-3xl">
           {page.needsLegalReview && (

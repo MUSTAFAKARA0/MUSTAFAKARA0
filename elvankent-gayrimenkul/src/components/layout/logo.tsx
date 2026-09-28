@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +25,8 @@ export function Monogram({ name, className }: { name: string; className?: string
 interface LogoProps {
   name: string;
   logoUrl?: string | null;
+  /** Telefonda gösterilecek ayrı logo (yüklenmişse) */
+  mobileLogoUrl?: string | null;
   tone?: 'dark' | 'light';
   className?: string;
   href?: string;
@@ -33,20 +36,25 @@ interface LogoProps {
  * Marka logosu. Şirket ayarlarından logo yüklenmişse o görsel, aksi halde
  * tipografik logo gösterilir. Şirket adı koda gömülü değildir (white-label).
  */
-export function Logo({ name, logoUrl, tone = 'dark', className, href = '/' }: LogoProps) {
+export function Logo({ name, logoUrl, mobileLogoUrl, tone = 'dark', className, href = '/' }: LogoProps) {
   const [first, ...rest] = name.trim().split(/\s+/);
   const content = logoUrl ? (
     // Yüklenen logonun en-boy oranı bilinmediğinden sabit bir kutu ayrılır ve logo kutuya orantılı
     // sığdırılır (object-contain). Kutu önceden ayrılmazsa logo geç yüklenince sayfa kayıyordu (CLS).
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={logoUrl}
-      alt={name}
-      width={190}
-      height={40}
-      decoding="async"
-      className="h-9 w-[168px] object-contain object-left sm:h-10 sm:w-[190px]"
-    />
+    // next/image: ekran yoğunluğuna uygun boyutta ve WebP/AVIF olarak otomatik optimize edilir.
+    <>
+      <Image
+        src={logoUrl}
+        alt={name}
+        width={190}
+        height={40}
+        sizes="190px"
+        className={cn('h-9 w-[168px] object-contain object-left sm:h-10 sm:w-[190px]', mobileLogoUrl && 'hidden sm:block')}
+      />
+      {mobileLogoUrl && (
+        <Image src={mobileLogoUrl} alt={name} width={140} height={36} sizes="140px" className="h-9 w-[140px] object-contain object-left sm:hidden" />
+      )}
+    </>
   ) : (
     <span className="flex items-center gap-2.5">
       <Monogram name={name} />

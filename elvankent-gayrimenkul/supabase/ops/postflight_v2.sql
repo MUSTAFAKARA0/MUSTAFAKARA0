@@ -77,5 +77,21 @@ checks as (
                                  and policyname in ('organizations_public_read', 'settings_public_read', 'domains_public_read'))
                and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'public_tenant')
               then 'TAMAM' else 'HATA: 20260929000001_platform_owner_isolation.sql uygulanmamış' end
+  union all
+  select 15, 'Oturum bağlamı + indeksler (session_context)',
+         case when exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'session_context') then 'var' else 'yok' end,
+         case when exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'session_context')
+              then 'TAMAM' else 'HATA: 20260930000001_session_context_and_indexes.sql uygulanmamış' end
+  union all
+  select 16, 'Web sitesi yapılandırması (her ofis için site kaydı)',
+         case when to_regclass('public.site_configs') is null then 'tablo yok'
+              else (select count(*)::text from public.organizations o
+                     where not exists (select 1 from public.site_configs c where c.organization_id = o.id)) || ' kayıtsız ofis' end,
+         case when to_regclass('public.site_configs') is null then 'HATA: 20260930000002_site_builder.sql uygulanmamış'
+              when (select relrowsecurity from pg_class where oid = 'public.site_configs'::regclass)
+               and (select relrowsecurity from pg_class where oid = 'public.site_config_revisions'::regclass)
+               and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'public_site_config')
+               and not exists (select 1 from public.organizations o where not exists (select 1 from public.site_configs c where c.organization_id = o.id))
+              then 'TAMAM' else 'HATA' end
 )
 select sira, kontrol, deger, durum from checks order by sira;

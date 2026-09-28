@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 const LINKS = [
   { href: '/platform', label: 'Genel bakış', exact: true },
   { href: '/platform/organizasyonlar', label: 'Organizasyonlar' },
+  { href: '/platform/siteler', label: 'Web Siteleri' },
   { href: '/platform/planlar', label: 'Planlar ve abonelikler' },
   { href: '/platform/kullanicilar', label: 'Tüm kullanıcılar' },
   { href: '/platform/kayitlar', label: 'Sistem kayıtları' },

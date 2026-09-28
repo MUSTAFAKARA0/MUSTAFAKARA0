@@ -18,7 +18,7 @@
 | 0 | Prova | docs/PRODUCTION_MIGRATION.md › "Canlıdan önce son prova" (canlı yedeğin kopyasında) | kopya projede postflight TAMAM, site çalışıyor |
 | 1 | Yedek | Supabase Backups/PITR + `pg_dump -Fc` + `npm run backup:storage` | dosyalar oluştu |
 | 2 | Yedek doğrulama | `pg_restore --list`, `manifest.json` dosya sayısı | hata yok, sayılar mantıklı |
-| 3 | Veritabanı migration | docs/PRODUCTION_MIGRATION.md (14 dosya, sırayla) | `postflight_v2.sql` 14/14 TAMAM |
+| 3 | Veritabanı migration | docs/PRODUCTION_MIGRATION.md (16 dosya, sırayla) | `postflight_v2.sql` 16/16 TAMAM |
 | 4 | Ortam değişkenleri | Vercel › Production: tablo aşağıda | `npm run prelaunch -- --production` (yerelde canlı değerlerle) kritik yok |
 | 5 | Depolama | Supabase › Storage: 4 kova; `media-originals` özel | postflight #12 TAMAM |
 | 6 | Auth | Site URL, Redirect URL `/admin/auth/callback`, sign-up kapalı, TOTP açık, özel SMTP (Resend) | test hesabıyla şifre sıfırlama e-postası geliyor |
