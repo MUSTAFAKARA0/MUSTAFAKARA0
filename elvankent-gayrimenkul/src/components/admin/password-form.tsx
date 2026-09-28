@@ -18,7 +18,7 @@ function strength(value: string): { score: number; label: string } {
 }
 
 /** Yeni şifre formu (şifre yenileme sayfası ve hesap ayarları) */
-export function PasswordForm({ onDoneHref }: { onDoneHref?: string }) {
+export function PasswordForm({ onDoneHref, onDoneLabel = 'Panele devam et' }: { onDoneHref?: string; onDoneLabel?: string }) {
   const [state, action, pending] = useActionState<AuthFormState, FormData>(updatePassword, {});
   const [value, setValue] = useState('');
   const [show, setShow] = useState(false);
@@ -32,7 +32,7 @@ export function PasswordForm({ onDoneHref }: { onDoneHref?: string }) {
           <p className="font-semibold">{state.message}</p>
           {onDoneHref && (
             <a href={onDoneHref} className="mt-1 inline-block font-semibold underline underline-offset-2">
-              Panele devam et
+              {onDoneLabel}
             </a>
           )}
         </div>

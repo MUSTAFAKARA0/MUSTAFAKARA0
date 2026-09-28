@@ -317,3 +317,52 @@ test('TEST-OWNER-09: aynı kişi hem süper admin hem ofis sahibi olsa bile iki 
   await page.goto('/platform');
   await expect(page).toHaveURL(/\/platform\/giris$/);
 });
+
+test('TEST-OWNER-10: KARAY şifre yenileme KARAY sayfalarında kalır; ofis paneline veya konsola oturum açmaz', async ({ page }) => {
+  // Geçici süper admin (ofis üyeliği YOK)
+  const email = `owner-${RUN}-karay@example.test`;
+  const created = await service!.auth.admin.createUser({ email, password: PASSWORD, email_confirm: true });
+  expect(created.error).toBeNull();
+  const userId = created.data.user!.id;
+  try {
+    await service!.from('profiles').upsert({ id: userId, is_super_admin: true });
+    // Platform girişindeki "Şifremi unuttum" → KARAY markalı istek sayfası
+    await page.goto('/platform/giris');
+    await page.getByRole('link', { name: 'Şifremi unuttum' }).click();
+    await expect(page).toHaveURL(/\/platform\/sifremi-unuttum$/);
+    await expect(page.getByRole('img', { name: 'KARAY' })).toBeVisible();
+    await expect(page.getByText('Elvankent')).toHaveCount(0);
+    // Geçersiz bağlantı → KARAY sayfasına döner
+    await page.goto('/admin/auth/callback?token_hash=gecersiz&type=recovery&next=/platform/sifre-yenile');
+    await expect(page).toHaveURL(/\/platform\/sifremi-unuttum\?hata=gecersiz/);
+    // Geri dönüş adresi yalnızca şifre sayfası olabilir; konsol adresi yok sayılır
+    await page.goto('/admin/auth/callback?token_hash=gecersiz&type=recovery&next=/platform');
+    await expect(page).toHaveURL(/\/admin\/sifremi-unuttum\?hata=gecersiz/);
+
+    // Geçerli sıfırlama bağlantısı (e-postadaki ile aynı belirteç)
+    const link = await service!.auth.admin.generateLink({ type: 'recovery', email });
+    expect(link.error).toBeNull();
+    await page.goto(`/admin/auth/callback?token_hash=${link.data.properties!.hashed_token}&type=recovery&next=/platform/sifre-yenile`);
+    await expect(page).toHaveURL(/\/platform\/sifre-yenile$/);
+    await expect(page.getByRole('img', { name: 'KARAY' })).toBeVisible();
+    const newPassword = `Karay-${Date.now()}-Yeni9`;
+    await page.getByLabel('Yeni şifre', { exact: true }).fill(newPassword);
+    await page.getByLabel('Yeni şifre (tekrar)').fill(newPassword);
+    await page.getByRole('button', { name: /Şifreyi kaydet/ }).click();
+    await expect(page.getByRole('link', { name: 'Platform girişine git' })).toBeVisible();
+    // Sıfırlama oturumu konsolu açmaz; ofis paneli de açılmaz (üyelik yok)
+    await page.goto('/platform');
+    await expect(page).toHaveURL(/\/platform\/giris$/);
+    await page.goto('/admin');
+    await expect(page).not.toHaveURL(/\/admin$/);
+    // Yeni şifreyle platform girişi çalışır
+    await page.goto('/platform/giris');
+    await page.getByLabel('E-posta').fill(email);
+    await page.getByLabel('Şifre', { exact: true }).fill(newPassword);
+    await page.getByRole('button', { name: 'Giriş yap' }).click();
+    await expect(page).toHaveURL(/\/platform$/);
+  } finally {
+    await service!.auth.admin.deleteUser(userId);
+  }
+});
+

@@ -5,6 +5,8 @@ import { createSessionClient } from '@/lib/supabase/server';
 const OTP_TYPES: EmailOtpType[] = ['recovery', 'invite', 'magiclink', 'email', 'signup', 'email_change'];
 
 function safeNext(value: string | null): string {
+  // KARAY platform şifre yenileme sayfası: yalnızca bu tam adres (platform konsoluna DEĞİL)
+  if (value === '/platform/sifre-yenile') return value;
   return value && /^\/admin(\/|\?|$)/.test(value) && !value.startsWith('//') ? value : '/admin';
 }
 
@@ -29,7 +31,8 @@ export async function GET(request: NextRequest) {
     ok = !(await supabase.auth.verifyOtp({ token_hash: tokenHash, type })).error;
   }
 
-  const target = new URL(ok ? next : '/admin/sifremi-unuttum?hata=gecersiz', request.url);
+  const failed = next.startsWith('/platform') ? '/platform/sifremi-unuttum?hata=gecersiz' : '/admin/sifremi-unuttum?hata=gecersiz';
+  const target = new URL(ok ? next : failed, request.url);
   const response = NextResponse.redirect(target);
   response.headers.set('Cache-Control', 'private, no-store');
   response.headers.set('Referrer-Policy', 'no-referrer');

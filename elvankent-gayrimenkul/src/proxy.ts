@@ -18,7 +18,7 @@ import { defaultHostsFromSiteUrl, tenantKeyForHost, type TenantHostConfig } from
  */
 
 const TENANT_HEADER = 'x-tenant-key';
-const PUBLIC_AUTH_PATHS = new Set(['/admin/giris', '/admin/sifremi-unuttum', '/admin/sifre-yenile', '/admin/auth/callback', '/platform/giris']);
+const PUBLIC_AUTH_PATHS = new Set(['/admin/giris', '/admin/sifremi-unuttum', '/admin/sifre-yenile', '/admin/auth/callback', '/platform/giris', '/platform/sifremi-unuttum', '/platform/sifre-yenile']);
 
 function hostConfig(): TenantHostConfig {
   return {

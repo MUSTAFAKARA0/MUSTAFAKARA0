@@ -187,8 +187,11 @@ export async function requestPasswordReset(_prev: AuthFormState, formData: FormD
   if (!parsed.success) return { error: parsed.error.issues[0]?.message, email };
   const supabase = await createSessionClient();
   const origin = await requestOrigin();
+  // KARAY platform girişinden istenen sıfırlama, KARAY markalı sayfaya döner (ofis paneline değil).
+  // Dönüş adresi aynı callback'tir → Supabase'teki izinli adres listesinde değişiklik gerekmez.
+  const next = formData.get('scope') === 'platform' ? '/platform/sifre-yenile' : '/admin/sifre-yenile';
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
-    redirectTo: `${origin}/admin/auth/callback?next=/admin/sifre-yenile`,
+    redirectTo: `${origin}/admin/auth/callback?next=${next}`,
   });
   if (error?.status === 429) return { error: 'Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin.', email };
   const { ipHash } = await getRequestFingerprint();

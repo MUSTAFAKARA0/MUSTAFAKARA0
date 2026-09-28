@@ -53,7 +53,9 @@ Aynı kişi hem süper admin hem bir ofisin üyesi olsa bile iki alan **ayrı ot
 - Ofis girişi `next=/platform` yönlendirmesini kabul etmez; ofisi olmayan hesap ofis girişinden giremez.
 - Alan, `eg_scope` çerezinde **imzalı** tutulur (sunucu anahtarıyla HMAC; kullanıcıya ve o girişte açılan oturuma bağlı). Elle yazılan, başka girişten kalan veya başka kullanıcıya ait değer geçersizdir. Çerez yalnızca alanı seçer; yetkinin kaynağı yine veritabanıdır.
 - Platform işlemleri (server action) ve ofis işlemleri/API'leri de aynı kuralla korunur.
-- Test: `tests/e2e/owner-separation.spec.ts` › TEST-OWNER-09.
+- Şifre yenileme de ayrıdır: KARAY girişindeki "Şifremi unuttum" → `/platform/sifremi-unuttum` → e-postadaki bağlantı → `/platform/sifre-yenile` (KARAY markalı). Bağlantıyla açılan oturum konsolu açmaz; yeni şifreyle platform girişi yapılır. Supabase'teki izinli dönüş adresi aynıdır (`/admin/auth/callback`), ayar değişikliği gerekmez.
+- **Şifre hesaba aittir, alana değil:** aynı hesap iki alanda da kullanılıyorsa şifre değişikliği ikisini de etkiler. Tam ayrım için KARAY ve ofis için ayrı hesap kullanın (aşağıda "Hesapları ayırma").
+- Test: `tests/e2e/owner-separation.spec.ts` › TEST-OWNER-09, TEST-OWNER-10.
 
 ## Marka ve tema yalıtımı
 

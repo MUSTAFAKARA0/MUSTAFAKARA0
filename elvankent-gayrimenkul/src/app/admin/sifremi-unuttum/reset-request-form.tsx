@@ -7,14 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/form-controls';
 import { requestPasswordReset, type AuthFormState } from '@/app/actions/auth';
 
-export function ResetRequestForm() {
+export function ResetRequestForm({ scope }: { scope?: 'platform' }) {
+  const loginHref = scope === 'platform' ? '/platform/giris' : '/admin/giris';
   const [state, action, pending] = useActionState<AuthFormState, FormData>(requestPasswordReset, {});
   if (state.message) {
     return (
       <div role="status" className="text-center">
         <MailCheck className="mx-auto size-10 text-success" aria-hidden />
         <p className="mt-3 text-sm leading-relaxed text-foreground/85">{state.message}</p>
-        <Link href="/admin/giris" className="mt-5 inline-block text-sm font-semibold text-primary-ink hover:underline">
+        <Link href={loginHref} className="mt-5 inline-block text-sm font-semibold text-primary-ink hover:underline">
           Giriş sayfasına dön
         </Link>
       </div>
@@ -22,6 +23,7 @@ export function ResetRequestForm() {
   }
   return (
     <form action={action} className="space-y-5">
+      {scope && <input type="hidden" name="scope" value={scope} />}
       <Field label="E-posta" htmlFor="email">
         <Input id="email" name="email" type="email" autoComplete="email" required defaultValue={state.email} autoFocus />
       </Field>
@@ -34,7 +36,7 @@ export function ResetRequestForm() {
         {!pending && <Send />} Bağlantı gönder
       </Button>
       <p className="text-center text-sm">
-        <Link href="/admin/giris" className="text-muted-foreground hover:text-foreground">
+        <Link href={loginHref} className="text-muted-foreground hover:text-foreground">
           Giriş sayfasına dön
         </Link>
       </p>

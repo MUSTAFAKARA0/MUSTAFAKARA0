@@ -40,7 +40,7 @@ export function LoginForm({ next, scope }: { next?: string; scope?: 'platform' }
           </div>
         </Field>
         <p className="mt-2 text-right text-[13px]">
-          <Link href="/admin/sifremi-unuttum" className="font-medium text-primary-ink hover:underline">
+          <Link href={scope === 'platform' ? '/platform/sifremi-unuttum' : '/admin/sifremi-unuttum'} className="font-medium text-primary-ink hover:underline">
             Şifremi unuttum
           </Link>
         </p>
