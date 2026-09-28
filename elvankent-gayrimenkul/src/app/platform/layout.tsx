@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { PLATFORM_BRAND, PLATFORM_SCOPE, platformThemeCss } from '@/platform/branding/platform-brand';
+import { platformFont } from '@/platform/branding/platform-font';
 
 const title = `${PLATFORM_BRAND.name} · ${PLATFORM_BRAND.consoleName}`;
 
@@ -8,8 +9,14 @@ export const metadata: Metadata = {
   applicationName: `${PLATFORM_BRAND.name} ${PLATFORM_BRAND.product}`,
   robots: { index: false, follow: false, nocache: true },
   referrer: 'same-origin',
-  // Platform simgesi (kiracı simgesi değil). Logo teslim edilince PLATFORM_BRAND.iconUrl güncellenir.
-  icons: { icon: { url: PLATFORM_BRAND.iconUrl, type: 'image/svg+xml' } },
+  // KARAY simgesi (logo paketi); kiracı simgesi kullanılmaz
+  icons: {
+    icon: [
+      { url: PLATFORM_BRAND.icons.ico, sizes: '32x32' },
+      { url: PLATFORM_BRAND.icons.svg, type: 'image/svg+xml' },
+    ],
+    apple: PLATFORM_BRAND.icons.apple,
+  },
 };
 
 export const viewport: Viewport = { themeColor: PLATFORM_BRAND.headerBackground };
@@ -21,9 +28,9 @@ export const viewport: Viewport = { themeColor: PLATFORM_BRAND.headerBackground 
  */
 export default function PlatformRootLayout({ children }: LayoutProps<'/platform'>) {
   return (
-    <div className={`${PLATFORM_SCOPE} min-h-dvh bg-background text-foreground`}>
+    <div className={`${PLATFORM_SCOPE} ${platformFont.className} min-h-dvh bg-background text-foreground`}>
       <style href="platform-theme" precedence="high">
-        {platformThemeCss()}
+        {platformThemeCss(platformFont.style.fontFamily)}
       </style>
       {children}
     </div>

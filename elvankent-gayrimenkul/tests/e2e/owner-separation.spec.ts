@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { PLATFORM_BRAND } from '../../src/platform/branding/platform-brand';
 
 /**
  * Platform sahibi (KARAY) ↔ kiracı (emlak ofisi) ayrımı — TEST-OWNER-01…08.
@@ -28,7 +29,7 @@ const opts = { auth: { persistSession: false, autoRefreshToken: false } };
 const service = url && serviceKey ? createClient(url, serviceKey, opts) : null;
 const RUN = randomBytes(3).toString('hex');
 const PASSWORD = `Owner-${randomBytes(6).toString('hex')}-9a`;
-const PLATFORM_PRIMARY = '#1f2a44';
+const PLATFORM_PRIMARY = PLATFORM_BRAND.primaryColor;
 const B_PRIMARY = '#7a1f5c';
 const E_NEW_PRIMARY = '#8b2e16';
 
@@ -129,7 +130,7 @@ test('TEST-OWNER-01: Elvankent kullanıcısı KARAY platform alanına erişemez 
   ]) {
     const res = await page.goto(path);
     expect(res?.status(), path).toBe(404);
-    await expect(page.getByText('KARAY', { exact: true }), path).toHaveCount(0);
+    await expect(page.getByRole('img', { name: 'KARAY' }), path).toHaveCount(0);
     await expect(page.getByText(S.bName), path).toHaveCount(0);
   }
   // Platform giriş sayfası oturumu açık ofis kullanıcısına yalnızca bilgi gösterir
@@ -223,7 +224,7 @@ test('TEST-OWNER-06: Elvankent süper admin oluşturamaz, başka kiracıya kulla
 
 test('TEST-OWNER-07: Süper admin (KARAY) kiracıları yönetebilir', async ({ page }) => {
   await loginPlatform(page);
-  await expect(page.getByRole('banner').getByText('KARAY', { exact: true })).toBeVisible();
+  await expect(page.getByRole('banner').getByRole('img', { name: 'KARAY' })).toBeVisible();
   await page.goto('/platform/organizasyonlar');
   await expect(page.getByRole('link', { name: 'Elvankent Gayrimenkul' }).first()).toBeVisible();
   await page.getByRole('link', { name: S.bName }).click();
@@ -265,7 +266,10 @@ test("TEST-OWNER-08: Elvankent kendi markasını değiştirir; tema yalnızca o 
   await loginPlatform(k.page);
   expect(await cssVar(k.page, '--primary')).toBe(PLATFORM_PRIMARY);
   await expect(k.page.locator('img[src*="/branding/"]')).toHaveCount(0);
-  expect(await k.page.locator('link[rel="icon"]').first().getAttribute('href')).toContain('/platform/');
+  const icons = await k.page.locator('link[rel="icon"], link[rel="apple-touch-icon"]').evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
+  expect(icons.length).toBeGreaterThan(0);
+  for (const href of icons) expect(href, 'platform simgesi').toMatch(/^\/platform\//);
+  await expect(k.page.getByRole('img', { name: 'KARAY' }).first()).toBeVisible();
   await k.ctx.close();
 
   // B ofisinin kaydı Elvankent'in değişikliğinden etkilenmez

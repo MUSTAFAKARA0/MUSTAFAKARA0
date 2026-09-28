@@ -329,7 +329,7 @@ test.describe('Yönetim paneli (telefon)', () => {
     await expect(page).toHaveURL(/\/platform$/);
     // Platform başlığı KARAY markasını taşır; ofis (Elvankent) adı/logosu başlıkta yoktur
     const header = page.getByRole('banner');
-    await expect(header.getByText('KARAY', { exact: true })).toBeVisible();
+    await expect(header.getByRole('img', { name: 'KARAY' })).toBeVisible();
     await expect(header.getByText(/Elvankent/)).toHaveCount(0);
     await expect(header.locator('img[src*="/branding/"]')).toHaveCount(0);
     await noOverflow(page, '/platform');
@@ -376,7 +376,7 @@ test.describe('Yönetim paneli (telefon)', () => {
       await expect(p.getByRole('link', { name: /platform yönetimi/i })).toHaveCount(0);
       const res = await p.goto('/platform');
       expect(res?.status()).toBe(404);
-      await expect(p.getByText('KARAY', { exact: true })).toHaveCount(0);
+      await expect(p.getByRole('img', { name: 'KARAY' })).toHaveCount(0);
       await ctx.close();
     } finally {
       const { data } = await service.auth.admin.listUsers({ perPage: 200 });

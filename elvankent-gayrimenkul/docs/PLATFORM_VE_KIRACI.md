@@ -42,7 +42,7 @@ Kontrol katmanları:
 
 ## Marka ve tema yalıtımı
 
-- **Platform:** `PLATFORM_SCOPE` kapsayıcısına bağlı tema (renkler + sans-serif başlık). Kapsayıcı sayfada yoksa hiçbir yeri etkilemez. Platform simgesi `public/platform/placeholder-icon.svg` (yer tutucu). Kiracı logosu/simgesi platformda kullanılmaz.
+- **Platform:** `PLATFORM_SCOPE` kapsayıcısına bağlı tema (renkler + sans-serif başlık). Kapsayıcı sayfada yoksa hiçbir yeri etkilemez. Platform simgesi KARAY favicon'udur (logo paketi). Kiracı logosu/simgesi platformda kullanılmaz.
 - **Kiracı sitesi:** yalnızca o kiracının `organization_settings` renkleri, logosu ve simgesi. Yüklenmiş site simgesi yoksa ofis adının baş harfinden ve renginden **otomatik simge** üretilir (`/site-icon`). Önceden tüm sitelerde kullanılan Elvankent "E" simgesi kaldırıldı. KARAY adı kiracı sitesinde **görünmez** ("Powered by KARAY" ileride platform ayarı olarak düşünülebilir).
 - **Ofis paneli:** tema ve logo, **giriş yapan kullanıcının aktif ofisinden** gelir (önceden alan adının ofisinden geliyordu; aynı adresten giren başka bir ofis, Elvankent'in renklerini görürdü — düzeltildi).
 - Bir kiracının tema değişikliği yalnızca kendi `organization_settings` satırını değiştirir (RLS); platform teması kodla gelir, kiracıyı etkilemez.
@@ -56,11 +56,21 @@ Kontrol katmanları:
 - Tekrar çalıştırılabilir, veri değiştirmez; kod migration öncesi ve sonrası çalışır; geri dönüş SQL'i dosyanın sonunda.
 - Not: bir ofisin **kamuya açık sitesindeki** bilgileri (logo, telefon, adres) doğası gereği herkese açıktır — ama yalnızca ofisin adresi bilinerek, tek tek okunabilir; liste çekilemez.
 
-## KARAY logosu geldiğinde
+## KARAY logosu ve kurumsal kimlik
 
-1. Dosyaları `public/platform/` klasörüne koyun (ör. `karay-logo.svg`, `karay-icon.svg`).
-2. `src/platform/branding/platform-brand.ts` › `logoUrl` ve `iconUrl` alanlarını doldurun; gerekirse `primaryColor`/`accentColor` değerlerini logoya göre güncelleyin.
-3. Platform başlığı, platform girişi, doğrulama (MFA) ekranı ve platform simgesi otomatik olarak logoyu kullanır.
+Logo paketi (28.09.2026) platforma eklendi. Web için kullanılan dosyalar `public/platform/` klasöründedir (paketten değiştirilmeden kopyalandı):
+
+| Dosya | Nerede |
+| --- | --- |
+| `karay-logo-yatay-sade-koyu-zemin.svg` | Süper admin başlığı (lacivert zemin, slogansız, ≥110 px) |
+| `karay-logo-yatay.svg` | Platform girişi ve doğrulama (MFA) ekranı (açık zemin, sloganlı, ≥200 px) |
+| `karay-logo-yatay-koyu-zemin.svg`, `karay-logo-yatay-sade.svg` | Hazır (ileride koyu zeminde sloganlı / açık zeminde slogansız kullanım için) |
+| `favicon.ico`, `favicon.svg`, `apple-touch-icon.png` | Platform sekme simgesi ve ana ekran simgesi |
+| `uygulama-ikonu-192.png`, `uygulama-ikonu-512.png` | Hazır (ileride platform uygulama bildirimi için) |
+
+Renkler (paket): KARAY Lacivert `#0B1B3A` (butonlar, başlık zemini), Sinyal Mavisi `#2F6BFF` (vurgu), Bulut `#F4F7FB` (sayfa zemini); Turkuaz ve Arduvaz tanımlı. Yazı tipi: Poppins (yalnızca platform alanında yüklenir; kiracı sitelerinin yazı tipleri değişmez).
+
+Tümü `src/platform/branding/platform-brand.ts` içinde tanımlıdır. Logo dosyaları yeniden çizilmez, renkleri/oranları değiştirilmez (paket kullanım kuralları). Baskı (PDF/CMYK), dikey logo ve sosyal medya dosyaları web için gerekmediğinden depoya eklenmedi.
 
 ## Hesapları ayırma (demo için öneri)
 

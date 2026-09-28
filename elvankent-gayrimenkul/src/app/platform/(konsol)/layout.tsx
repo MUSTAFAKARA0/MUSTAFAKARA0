@@ -22,7 +22,7 @@ export default async function PlatformConsoleLayout({ children }: LayoutProps<'/
         <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 pt-4 pb-2 sm:px-6">
           <div className="flex items-center justify-between gap-3">
             <Link href="/platform" className="flex min-w-0 items-center gap-3" aria-label={`${PLATFORM_BRAND.name} ${PLATFORM_BRAND.consoleName}`}>
-              <PlatformWordmark tone="light" />
+              <PlatformWordmark tone="dark" tagline={false} height={34} />
               <span className="hidden rounded-md bg-white/10 px-2 py-1 text-[11px] font-bold tracking-wide text-white/80 uppercase sm:inline">
                 {PLATFORM_BRAND.consoleName}
               </span>

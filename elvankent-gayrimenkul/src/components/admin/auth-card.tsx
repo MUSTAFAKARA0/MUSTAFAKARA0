@@ -3,6 +3,7 @@ import { Logo } from '@/components/layout/logo';
 import { PlatformWordmark } from '@/components/platform/platform-wordmark';
 import { brandingUrl } from '@/modules/media/variants';
 import { PLATFORM_SCOPE, platformThemeCss } from '@/platform/branding/platform-brand';
+import { platformFont } from '@/platform/branding/platform-font';
 import { getTenantFromRequest } from '@/platform/tenant/tenant';
 
 /**
@@ -23,15 +24,15 @@ export async function AuthCard({
 }) {
   if (brand === 'platform') {
     return (
-      <div className={`${PLATFORM_SCOPE} min-h-dvh bg-background`}>
+      <div className={`${PLATFORM_SCOPE} ${platformFont.className} min-h-dvh bg-background`}>
         <style href="platform-theme" precedence="high">
-          {platformThemeCss()}
+          {platformThemeCss(platformFont.style.fontFamily)}
         </style>
         <main className="flex min-h-dvh items-center justify-center px-4 py-10">
           <div className="w-full max-w-[26rem]">
             <div className="mb-8 flex flex-col items-center text-center">
-              <PlatformWordmark />
-              <h1 className="mt-6 text-[1.6rem] leading-tight font-bold text-foreground">{title}</h1>
+              <PlatformWordmark height={64} />
+              <h1 className="mt-7 text-[1.5rem] leading-tight font-semibold text-foreground">{title}</h1>
               {description && <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{description}</p>}
             </div>
             <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8">{children}</div>
