@@ -256,22 +256,21 @@ test('TEST-SITE-05: özellik bayrağı (WhatsApp kapalı) ve bakım modu anında
   await back.close();
 });
 
-test('TEST-SITE-06: marka bilgisi ve logo (PNG, güvenli SVG) yüklenir; zararlı SVG reddedilir', async ({ page, context }) => {
+test('TEST-SITE-06: marka ve logo (PNG, güvenli SVG) taslağa yüklenir, yayınlanınca canlıya geçer; zararlı SVG reddedilir', async ({ page, context }) => {
   await loginPlatform(page);
   await page.goto(tab('marka'));
   await page.getByLabel('Slogan').fill(`Slogan ${RUN}`);
-  await page.getByRole('button', { name: 'Kaydet ve yayınla' }).click();
-  await expect(page.getByText('Marka ve iletişim bilgileri kaydedildi (anında yayında)')).toBeVisible();
+  await saveDraft(page);
 
   const png = path.join(process.cwd(), 'public', 'og-default.png');
   await page.locator('#branding-logo').setInputFiles(png);
-  await expect(page.getByText('Logo güncellendi', { exact: false })).toBeVisible();
+  await expect(page.getByText('Logo taslağa kaydedildi', { exact: false })).toBeVisible();
   await page.locator('#branding-logo_mobile').setInputFiles({
     name: 'amblem.svg',
     mimeType: 'image/svg+xml',
     buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#1d3a6b"/></svg>'),
   });
-  await expect(page.getByText('Mobil logo güncellendi', { exact: false })).toBeVisible();
+  await expect(page.getByText('Mobil logo taslağa kaydedildi', { exact: false })).toBeVisible();
   await page.locator('#branding-favicon').setInputFiles({
     name: 'x.svg',
     mimeType: 'image/svg+xml',
@@ -279,9 +278,24 @@ test('TEST-SITE-06: marka bilgisi ve logo (PNG, güvenli SVG) yüklenir; zararl�
   });
   await expect(page.getByRole('alert').filter({ hasText: /SVG/ })).toBeVisible();
 
+  // Taslak: canlı ayar kaydı değişmedi, değişiklikler taslakta
+  const before = await service!.from('organization_settings').select('tagline, logo_url').eq('organization_id', S.orgId!).single();
+  expect(before.data!.tagline).not.toBe(`Slogan ${RUN}`);
+  expect(before.data!.logo_url).toBeNull();
+  const draft = await service!.from('site_configs').select('draft').eq('organization_id', S.orgId!).single();
+  const brand = (draft.data!.draft as { brand: Record<string, string | null> }).brand;
+  expect(brand.tagline).toBe(`Slogan ${RUN}`);
+  expect(brand.logo_url).toMatch(new RegExp(`^organizations/${S.orgId}/branding/logo-[0-9a-f]+-\\d+x\\d+\\.png$`));
+  expect(brand.logo_mobile_url).toMatch(/\.png$/);
+  expect(brand.favicon_url).toBeUndefined();
+  const live0 = await live(context);
+  await expect(live0.page.getByText(`Slogan ${RUN}`)).toHaveCount(0);
+  await live0.close();
+
+  await publish(page, 'E2E marka');
   const { data } = await service!.from('organization_settings').select('tagline, logo_url, logo_mobile_url, favicon_url').eq('organization_id', S.orgId!).single();
   expect(data!.tagline).toBe(`Slogan ${RUN}`);
-  expect(data!.logo_url).toMatch(new RegExp(`^organizations/${S.orgId}/branding/logo-`));
+  expect(data!.logo_url).toBe(brand.logo_url);
   expect(data!.logo_mobile_url).toMatch(/\.png$/);
   expect(data!.favicon_url).toBeNull();
 
@@ -305,7 +319,7 @@ test('TEST-SITE-07: alan adı eklenir ve kaldırılır', async ({ page }) => {
 test('TEST-SITE-08: önemli işlemler denetim kaydına yazılır ve Geçmiş sekmesinde görünür', async ({ page }) => {
   const { data } = await service!.from('audit_logs').select('action').eq('organization_id', S.orgId!);
   const actions = new Set((data ?? []).map((r) => r.action));
-  for (const a of ['site.draft_saved', 'site.published', 'site.rolled_back', 'site.features_changed', 'site.status_changed', 'site.brand_updated', 'site.branding_uploaded']) {
+  for (const a of ['site.draft_saved', 'site.published', 'site.rolled_back', 'site.features_changed', 'site.status_changed', 'site.branding_uploaded']) {
     expect(actions.has(a), a).toBe(true);
   }
   await loginPlatform(page);

@@ -29,10 +29,24 @@ export function SiteHeader({ tenant, hasBlog, view }: { tenant: Tenant; hasBlog:
         h.sticky ? 'sticky' : 'relative',
       )}
     >
-      <div className={cn('container-page flex items-center justify-between gap-4', h.height === 'compact' ? 'h-14 lg:h-16' : 'h-16 lg:h-[76px]')}>
-        <Logo name={s.display_name} logoUrl={brandingUrl(s.logo_url)} mobileLogoUrl={mobileLogo} tone={dark ? 'light' : 'dark'} />
+      {/* Üç bölge: marka (sol) · menü (tam ortada) · aksiyonlar (sağ). Telefonda marka + aksiyonlar + menü düğmesi. */}
+      <div
+        className={cn(
+          'container-page flex items-center justify-between gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-6',
+          h.height === 'compact' ? 'h-14 lg:h-16' : 'h-16 lg:h-[78px]',
+        )}
+      >
+        <Logo
+          name={s.display_name}
+          logoUrl={brandingUrl(s.logo_url)}
+          mobileLogoUrl={mobileLogo}
+          tone={dark ? 'light' : 'dark'}
+          display={h.brand}
+          tagline={h.showTagline ? s.tagline : null}
+          className="max-w-full justify-self-start"
+        />
         <DesktopNav items={nav} />
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex shrink-0 items-center justify-self-end gap-1 sm:gap-2">
           <HeaderActions
             phoneHref={h.showPhone ? phone : null}
             phoneLabel={h.showPhone && s.phone ? formatPhoneDisplay(s.phone) : null}

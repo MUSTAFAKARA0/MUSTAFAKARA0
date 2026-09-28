@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { publicEnv } from '@/lib/env';
 import { formatRelativeDate } from '@/lib/format';
-import { isUuid } from '@/lib/utils';
+import { cn, isUuid } from '@/lib/utils';
 import { brandingUrl } from '@/modules/media/variants';
 import { ORG_STATUS_LABELS } from '@/modules/platform/queries';
 import { getSiteAdmin, SITE_STATUS_META } from '@/modules/platform/sites';
@@ -24,7 +24,11 @@ const SECTION_TAB: Record<string, string> = {
   footer: 'footer',
   pages: 'sayfalar',
   seo: 'seo',
+  brand: 'marka',
+  style: 'tema',
 };
+
+const TAB_LABEL: Record<string, string> = { marka: 'Marka', tema: 'Tema', renkler: 'Renkler', tipografi: 'Tipografi', header: 'Header', menu: 'Menü', 'ana-sayfa': 'Ana Sayfa', footer: 'Footer', sayfalar: 'Sayfalar', seo: 'SEO' };
 
 /**
  * Site Kontrol Merkezi: bir müşterinin (kiracı) web sitesi. Üstte kimlik ve yayın durumu,
@@ -41,10 +45,9 @@ export default async function SiteControlLayout({ children, params }: LayoutProp
   const orgStatus = ORG_STATUS_LABELS[site.org.status];
   const domain = site.primaryDomain ?? (site.org.isDefault ? new URL(publicEnv.siteUrl).host : null);
   const siteUrl = domain ? (site.primaryDomain ? `https://${domain}` : publicEnv.siteUrl) : null;
-  const logo = brandingUrl(site.settings.logo_url);
-  const customized = Object.keys(site.draftRaw)
-    .map((k) => SECTION_TAB[k])
-    .filter(Boolean);
+  const logo = brandingUrl(site.brand.logo_url);
+  const pending = [...new Set(site.pendingSections.map((k) => SECTION_TAB[k]).filter(Boolean))];
+  const pendingLabels = pending.map((t) => TAB_LABEL[t]).filter(Boolean);
   return (
     <>
       <nav aria-label="Konum" className="mb-3 text-[13px] text-muted-foreground">
@@ -91,7 +94,34 @@ export default async function SiteControlLayout({ children, params }: LayoutProp
           <PublishButton orgId={site.org.id} disabled={!site.hasUnpublishedChanges} />
         </div>
       </div>
-      <SiteTabs orgId={site.org.id} customized={customized} />
+      {/* Canlı ↔ taslak durumu: kullanıcı neyin yayında olduğunu düşünmek zorunda kalmaz */}
+      <div className="mb-4 grid gap-2 sm:grid-cols-2">
+        <div className="flex items-start gap-3 rounded-2xl border border-border bg-surface px-4 py-3">
+          <span className={cn('mt-1.5 size-2.5 shrink-0 rounded-full', site.status === 'active' && site.org.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500')} aria-hidden />
+          <div className="min-w-0 text-[13.5px]">
+            <p className="font-semibold text-foreground">
+              Canlı site · {site.version > 0 ? `Sürüm ${site.version}` : 'Varsayılan görünüm'}
+            </p>
+            <p className="text-muted-foreground">
+              {site.publishedAt ? `Son yayın ${formatRelativeDate(site.publishedAt)}` : 'Henüz yayın yapılmadı'} · ziyaretçiler bunu görür
+            </p>
+          </div>
+        </div>
+        <div className={cn('flex items-start gap-3 rounded-2xl border px-4 py-3', site.hasUnpublishedChanges ? 'border-amber-300 bg-amber-50' : 'border-border bg-surface')}>
+          <span className={cn('mt-1.5 size-2.5 shrink-0 rounded-full', site.hasUnpublishedChanges ? 'bg-amber-500' : 'bg-border-strong')} aria-hidden />
+          <div className="min-w-0 text-[13.5px]">
+            <p className={cn('font-semibold', site.hasUnpublishedChanges ? 'text-amber-900' : 'text-foreground')}>
+              {site.hasUnpublishedChanges ? 'Taslakta yayınlanmamış değişiklikler var' : 'Taslak canlı siteyle aynı'}
+            </p>
+            <p className={site.hasUnpublishedChanges ? 'text-amber-900/80' : 'text-muted-foreground'}>
+              {site.hasUnpublishedChanges
+                ? `${pendingLabels.length ? pendingLabels.join(', ') : 'Bölümler'} · önizleyip yayınlayın`
+                : 'Değişiklikler önce taslağa kaydedilir; yayınlayana kadar canlı site değişmez'}
+            </p>
+          </div>
+        </div>
+      </div>
+      <SiteTabs orgId={site.org.id} pending={pending} />
       <div className="pt-6">{children}</div>
     </>
   );

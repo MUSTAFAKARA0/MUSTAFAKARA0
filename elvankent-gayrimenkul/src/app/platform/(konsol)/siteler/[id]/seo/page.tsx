@@ -12,7 +12,7 @@ export default async function Page({ params }: PageProps<'/platform/siteler/[id]
     <SeoForm
       orgId={site.org.id}
       initial={site.draft.seo}
-      fallback={{ title: site.settings.seo_title ?? site.settings.display_name, description: site.settings.seo_description ?? site.settings.description ?? '' }}
+      fallback={{ title: site.brand.seo_title ?? site.brand.display_name, description: site.brand.seo_description ?? site.brand.description ?? '' }}
     />
   );
 }

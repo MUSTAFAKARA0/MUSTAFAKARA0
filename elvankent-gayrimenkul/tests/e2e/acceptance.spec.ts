@@ -299,6 +299,19 @@ test.describe('Yönetim paneli (telefon)', () => {
   });
 
   test('48: logo yüklenir; site başlığı, alt bilgi, giriş sayfası ve panelde görünür', async ({ page, browser }) => {
+    // Test, ofisin gerçek logosunu değiştirir: sonunda eski değer geri yüklenir (demo verisi kalıcı bozulmaz)
+    const service = supabaseUrl && serviceKey ? createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } }) : null;
+    const org = service ? (await service.from('organizations').select('id').eq('is_default', true).single()).data : null;
+    const before = service && org ? (await service.from('organization_settings').select('logo_url').eq('organization_id', org.id).single()).data : null;
+    test.info().annotations.push({ type: 'restore', description: 'logo_url' });
+    try {
+      await logoScenario(page, browser);
+    } finally {
+      if (service && org && before) await service.from('organization_settings').update({ logo_url: before.logo_url }).eq('organization_id', org.id);
+    }
+  });
+
+  async function logoScenario(page: Page, browser: Browser) {
     await login(page);
     await page.goto('/admin/sirket');
     await page.locator('#branding-logo').setInputFiles(logoFile);
@@ -321,7 +334,7 @@ test.describe('Yönetim paneli (telefon)', () => {
     await g.goto('/');
     await expect(g.getByRole('contentinfo').locator('img[src*="branding"]')).toHaveCount(1);
     await guest.close();
-  });
+  }
 
   test('52–54: ofis paneli ve KARAY platformu ayrı oturumlardır; çıkış', async ({ page }) => {
     // Ofis girişi (hesap hem Elvankent sahibi hem süper admin) → platforma geçiş YOK

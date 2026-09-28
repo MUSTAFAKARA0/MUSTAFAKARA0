@@ -1,4 +1,4 @@
-import type { FontId, ThemeId } from '@/platform/site/schema';
+import type { FontId, SiteConfig, ThemeId } from '@/platform/site/schema';
 
 /**
  * Tema kayıt sistemi. Her tema aynı sayfa/veri yapısını farklı SUNUMLA gösterir:
@@ -60,3 +60,23 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
 };
 
 export const THEME_LIST = Object.values(THEMES);
+
+/** Kiracının etkin bileşen stilleri: tema varsayılanı + Tema › Bileşen stilleri ayarları */
+export interface ResolvedStyle {
+  card: ThemeDefinition['card'];
+  hero: ThemeDefinition['hero'];
+  button: 'rounded' | 'pill' | 'square';
+  footer: 'dark' | 'light' | 'brand';
+}
+
+export const THEME_BUTTON: Record<ThemeId, ResolvedStyle['button']> = { klasik: 'rounded', marble: 'square', atlas: 'rounded' };
+
+export function resolveStyle(config: Pick<SiteConfig, 'theme' | 'style'>): ResolvedStyle {
+  const theme = THEMES[config.theme];
+  return {
+    card: config.style.card ?? theme.card,
+    hero: config.style.hero ?? theme.hero,
+    button: config.style.button ?? THEME_BUTTON[config.theme],
+    footer: config.style.footer ?? 'dark',
+  };
+}

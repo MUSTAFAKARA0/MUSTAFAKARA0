@@ -4,16 +4,22 @@ import { cache } from 'react';
 import { isUuid } from '@/lib/utils';
 import type { SessionUser } from '@/platform/auth/session';
 import { parseFeatureOverrides, parseSiteConfig, type FeatureOverrides, type SiteConfig, type SiteStatus } from '@/platform/site/schema';
+import { applyBrandDraft } from '@/platform/site/brand';
 import type { OrgSettings } from '@/platform/tenant/tenant';
 import type { Enums } from '@/types/supabase';
 
 export interface SiteAdmin {
   org: { id: string; slug: string; name: string; status: Enums<'org_status'>; isDefault: boolean };
+  /** Canlıdaki ofis ayarları (yayındaki marka) */
   settings: OrgSettings;
+  /** Taslaktaki etkin marka: canlı ayarlar + bekleyen marka değişiklikleri */
+  brand: OrgSettings;
   draft: SiteConfig;
   published: SiteConfig;
   /** Ham taslak (hangi bölümlerin özelleştirildiğini göstermek için) */
   draftRaw: Record<string, unknown>;
+  /** Taslakta canlıdan farklı olan bölümler (yayınlanmamış) */
+  pendingSections: string[];
   version: number;
   hasUnpublishedChanges: boolean;
   status: SiteStatus;
@@ -39,12 +45,19 @@ export const getSiteAdmin = cache(async (session: SessionUser, orgId: string): P
   if (!org.data || !settings.data) return null;
   const row = site.data;
   const draftRaw = row?.draft && typeof row.draft === 'object' ? (row.draft as Record<string, unknown>) : {};
+  const draft = parseSiteConfig(draftRaw);
+  const publishedRaw = row?.published && typeof row.published === 'object' ? (row.published as Record<string, unknown>) : {};
+  const pendingSections = [...new Set([...Object.keys(draftRaw), ...Object.keys(publishedRaw)])].filter(
+    (k) => JSON.stringify(draftRaw[k] ?? null) !== JSON.stringify(publishedRaw[k] ?? null),
+  );
   return {
     org: { id: org.data.id, slug: org.data.slug, name: org.data.name, status: org.data.status, isDefault: org.data.is_default },
     settings: settings.data,
-    draft: parseSiteConfig(draftRaw),
+    brand: applyBrandDraft(settings.data, draft.brand),
+    draft,
     published: parseSiteConfig(row?.published),
     draftRaw,
+    pendingSections,
     version: row?.published_version ?? 0,
     hasUnpublishedChanges: row?.has_unpublished_changes ?? false,
     status: (['active', 'maintenance', 'draft'] as const).find((x) => x === row?.site_status) ?? 'active',

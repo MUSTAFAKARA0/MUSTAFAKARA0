@@ -154,23 +154,19 @@ function OrgSwitcher({ org, orgs }: Pick<ShellProps, 'org' | 'orgs'>) {
   const [pending, startTransition] = useTransition();
   const trigger = (
     <span className="flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left">
+      {/* Ofis kimliği: logo (en-boy oranı korunur) + ofis adı + "Ofis Yönetimi". Platform (KARAY) markası burada yer almaz. */}
       {org.logoUrl ? (
-        // Yatay logolar geniş olduğundan logo varken ad yazısı yerine logo gösterilir (ad ekran okuyucuya verilir)
-        <span className="min-w-0 flex-1">
-          {/* eslint-disable-next-line @next/next/no-img-element -- marka görseli Storage'dan, sabit küçük boyut */}
-          <img src={org.logoUrl} alt="" width={200} height={36} className="block h-9 w-full max-w-[200px] object-contain object-left" />
-          <span className="sr-only">{org.name}</span>
-          <span className="mt-1 block text-[12px] text-muted-foreground">Yönetim paneli</span>
+        <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-white p-1">
+          {/* eslint-disable-next-line @next/next/no-img-element -- marka görseli Storage'dan, sabit küçük kutu */}
+          <img src={org.logoUrl} alt="" width={40} height={40} className="max-h-full max-w-full object-contain" />
         </span>
       ) : (
-        <>
-          <Monogram name={org.name} className="size-9 text-[0.95rem]" />
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14px] font-bold text-foreground">{org.name}</span>
-            <span className="block text-[12px] text-muted-foreground">Yönetim paneli</span>
-          </span>
-        </>
+        <Monogram name={org.name} className="size-11 text-[1rem]" />
       )}
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[14.5px] leading-tight font-bold text-foreground">{org.name}</span>
+        <span className="mt-0.5 block text-[12px] font-medium text-muted-foreground">Ofis Yönetimi</span>
+      </span>
       {orgs.length > 1 && <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" aria-hidden />}
     </span>
   );
@@ -281,6 +277,8 @@ export function AdminShell({ nav, org, orgs, user, siteUrl, canCreateListing, pa
       </div>
       <div className="border-t border-border px-3 py-3">
         <UserMenu user={user} siteUrl={siteUrl} />
+        {/* Hiyerarşi: ofis, KARAY altyapısının müşterisidir (platform yönetimine erişim yoktur) */}
+        <p className="mt-2 px-2 text-[11px] text-muted-foreground/80">KARAY altyapısıyla çalışır</p>
       </div>
     </div>
   );
@@ -311,7 +309,18 @@ export function AdminShell({ nav, org, orgs, user, siteUrl, canCreateListing, pa
               {sidebar(() => setOpen(false))}
             </SheetContent>
           </Dialog>
-          <SearchBox className="max-w-md flex-1" />
+          {/* Telefonda ofis kimliği (masaüstünde yan menüde) */}
+          <Link href="/admin" className="shrink-0 lg:hidden" aria-label={`${org.name} – Ofis Yönetimi`}>
+            {org.logoUrl ? (
+              <span className="flex size-10 items-center justify-center overflow-hidden rounded-xl border border-border bg-white p-1">
+                {/* eslint-disable-next-line @next/next/no-img-element -- marka görseli, sabit küçük kutu */}
+                <img src={org.logoUrl} alt="" width={36} height={36} className="max-h-full max-w-full object-contain" />
+              </span>
+            ) : (
+              <Monogram name={org.name} className="size-10 text-[0.95rem]" />
+            )}
+          </Link>
+          <SearchBox className="max-w-md min-w-0 flex-1" />
           <div className="ml-auto flex items-center gap-2">
             {siteUrl && (
               <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">

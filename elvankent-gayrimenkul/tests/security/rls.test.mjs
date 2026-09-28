@@ -685,6 +685,40 @@ describe('Web sitesi yapılandırması (site_configs) ve oturum bağlamı', { sk
     for (const a of ['site.draft_saved', 'site.published', 'site.rolled_back']) assert.ok(actions.has(a), `${a} denetimde yok`);
   });
 
+  test('marka taslağı: yalnızca beyaz listedeki alanlar; yayında ofis ayarlarına uygulanır, geri almada eski marka döner', async () => {
+    const pa = platformAdmin.client;
+    const before = (await service.from('organization_settings').select('display_name, primary_color').eq('organization_id', T.B.orgId).single()).data;
+    // Beyaz liste dışı sütun (ör. updated_by, organization_id) reddedilir
+    assert.ok((await pa.rpc('site_save_draft', { p_org: T.B.orgId, p_section: 'brand', p_value: { organization_id: T.A.orgId } })).error, 'beyaz liste dışı alan kabul edildi');
+    assert.ok((await pa.rpc('site_save_draft', { p_org: T.B.orgId, p_section: 'brand', p_value: { seo_title: 'x' } })).error);
+    // Yardımcı fonksiyonlar doğrudan çağrılamaz
+    assert.ok((await pa.rpc('site_apply_brand', { p_org: T.B.orgId, p_brand: { display_name: 'Hack' } })).error);
+    assert.ok((await T.A.users.owner.client.rpc('site_brand_snapshot', { p_org: T.B.orgId })).error);
+    // Taslak: canlı değişmez
+    assert.ifError((await pa.rpc('site_save_draft', { p_org: T.B.orgId, p_section: 'brand', p_value: { display_name: 'RLS Yeni Ad', primary_color: '#23466e' } })).error);
+    const mid = (await service.from('organization_settings').select('display_name').eq('organization_id', T.B.orgId).single()).data;
+    assert.equal(mid.display_name, before.display_name);
+    // A ofisi B'nin taslağını okuyamaz
+    assert.ok(denied(await T.A.users.owner.client.from('site_configs').select('draft').eq('organization_id', T.B.orgId)));
+    const v = await pa.rpc('site_publish', { p_org: T.B.orgId, p_note: 'rls marka' });
+    assert.ifError(v.error);
+    const after = (await service.from('organization_settings').select('display_name, primary_color').eq('organization_id', T.B.orgId).single()).data;
+    assert.equal(after.display_name, 'RLS Yeni Ad');
+    assert.equal(after.primary_color, '#23466e');
+    const rev = (await service.from('site_config_revisions').select('config').eq('organization_id', T.B.orgId).eq('version', v.data).single()).data;
+    assert.equal(rev.config.brand.display_name, 'RLS Yeni Ad');
+    const cfg = (await service.from('site_configs').select('draft, published').eq('organization_id', T.B.orgId).single()).data;
+    assert.ok(!('brand' in cfg.draft) && !('brand' in cfg.published), 'yayından sonra bekleyen marka kalmamalı');
+    // Önceki sürüme dönüş (marka anlık görüntüsü olan) eski adı geri getirir
+    assert.ifError((await pa.rpc('site_save_draft', { p_org: T.B.orgId, p_section: 'brand', p_value: { display_name: 'RLS İkinci Ad' } })).error);
+    assert.ifError((await pa.rpc('site_publish', { p_org: T.B.orgId })).error);
+    assert.ifError((await pa.rpc('site_rollback', { p_org: T.B.orgId, p_version: v.data })).error);
+    const back = (await service.from('organization_settings').select('display_name').eq('organization_id', T.B.orgId).single()).data;
+    assert.equal(back.display_name, 'RLS Yeni Ad');
+    // Kiracı B'nin marka ayarı A tarafından değiştirilemez
+    assert.ok(denied(await T.A.users.owner.client.from('organization_settings').update({ display_name: 'Hack' }).eq('organization_id', T.B.orgId).select('organization_id')));
+  });
+
   test('özellik geçersiz kılması plan kontrolüne (org_plan) yansır', async () => {
     const pa = platformAdmin.client;
     assert.ifError((await pa.rpc('site_set_features', { p_org: T.B.orgId, p_overrides: { crm: false } })).error);

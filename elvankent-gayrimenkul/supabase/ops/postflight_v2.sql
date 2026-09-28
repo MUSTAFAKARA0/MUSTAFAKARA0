@@ -93,5 +93,11 @@ checks as (
                and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'public_site_config')
                and not exists (select 1 from public.organizations o where not exists (select 1 from public.site_configs c where c.organization_id = o.id))
               then 'TAMAM' else 'HATA' end
+  union all
+  select 17, 'Marka taslak → yayın akışı (site_apply_brand)',
+         case when exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'site_apply_brand') then 'var' else 'yok' end,
+         case when exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'site_apply_brand')
+               and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'site_brand_snapshot')
+              then 'TAMAM' else 'HATA: 20261001000001_site_brand_publish.sql uygulanmamış' end
 )
 select sira, kontrol, deger, durum from checks order by sira;

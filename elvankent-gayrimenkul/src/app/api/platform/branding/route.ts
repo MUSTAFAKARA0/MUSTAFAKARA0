@@ -1,7 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
-import { cacheTags } from '@/lib/cache-tags';
 import { isSameOrigin } from '@/lib/same-origin';
 import { createServiceClient } from '@/lib/supabase/server';
 import { isUuid } from '@/lib/utils';
@@ -11,14 +10,16 @@ import {
   BRANDING_LABEL,
   BRANDING_MAX_INPUT_BYTES,
   BrandingError,
-  isOwnBrandingPath,
   processBranding,
   type BrandingKind,
 } from '@/modules/media/branding';
 import { MEDIA_BUCKETS } from '@/modules/media/variants';
 import { logSecurityEvent } from '@/platform/audit';
 import { requireSuperAdmin } from '@/platform/auth/session';
-import type { TablesUpdate } from '@/types/supabase';
+import { parseSiteConfig } from '@/platform/site/schema';
+import type { Json } from '@/types/supabase';
+
+type SessionDb = Awaited<ReturnType<typeof requireSuperAdmin>>['supabase'];
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -29,8 +30,16 @@ const json = (body: Record<string, unknown>, status: number) => NextResponse.jso
  * KARAY Web Sitesi Yönetimi › Marka: süper admin bir kiracının logo / mobil logo / site
  * simgesi / paylaşım / ana sayfa görselini yükler. Yetki: platform oturumu + süper admin
  * (requireSuperAdmin). Dosya sunucuda doğrulanıp yeniden kodlanır; yol kullanıcı girdisi
- * içermez; değişiklik denetim kaydına yazılır ve kiracı sitesinde anında görünür.
+ * içermez. Görsel TASLAĞA yazılır (site_configs.draft.brand): canlı site yayınlanınca
+ * değişir, önizlemede hemen görünür. Eski dosya silinmez (sürüm geçmişi ona başvurabilir).
  */
+
+/** Taslaktaki marka alanını günceller (süper admin oturumuyla; site_save_draft yetkiyi tekrar doğrular) */
+async function setDraftBrandField(db: SessionDb, orgId: string, column: string, value: string | null) {
+  const { data } = await db.from('site_configs').select('draft').eq('organization_id', orgId).maybeSingle();
+  const brand = { ...parseSiteConfig(data?.draft).brand, [column]: value };
+  return db.rpc('site_save_draft', { p_org: orgId, p_section: 'brand', p_value: brand as Json });
+}
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return json({ error: 'Geçersiz istek kaynağı.' }, 403);
   let session;
@@ -67,25 +76,21 @@ export async function POST(request: Request) {
     return json({ error: 'Görsel işlenemedi. Lütfen farklı bir dosya deneyin.' }, 400);
   }
 
-  const path = `organizations/${orgId}/branding/${kind}-${randomBytes(8).toString('hex')}.${output.ext}`;
+  // Boyut dosya adında: logo sayfada doğru en-boy oranıyla, kayma (CLS) olmadan yer ayırır
+  const path = `organizations/${orgId}/branding/${kind}-${randomBytes(8).toString('hex')}-${output.width}x${output.height}.${output.ext}`;
   const { error: uploadError } = await service.storage
     .from(MEDIA_BUCKETS.branding)
     .upload(path, output.buffer, { contentType: output.contentType, cacheControl: '31536000', upsert: false });
   if (uploadError) return json({ error: 'Görsel kaydedilemedi. Lütfen tekrar deneyin.' }, 502);
 
-  const { error } = await service
-    .from('organization_settings')
-    .update({ [column]: path } as TablesUpdate<'organization_settings'>)
-    .eq('organization_id', orgId);
+  const { error } = await setDraftBrandField(session.supabase, orgId, column, path);
   if (error) {
     await service.storage.from(MEDIA_BUCKETS.branding).remove([path]);
-    return json({ error: 'Ayar güncellenemedi.' }, 500);
+    return json({ error: 'Taslak güncellenemedi.' }, 500);
   }
-  const previous = (before as Record<string, string | null>)[column];
-  if (isOwnBrandingPath(orgId, previous) && previous !== path) await service.storage.from(MEDIA_BUCKETS.branding).remove([previous]);
-  await logSecurityEvent({ orgId, action: 'site.branding_uploaded', actorId: session.user.id, targetType: 'branding', targetLabel: BRANDING_LABEL[kind] });
-  revalidateTag(cacheTags.org(orgId), { expire: 0 });
-  return json({ path, message: `${BRANDING_LABEL[kind]} güncellendi (anında yayında).` }, 201);
+  await logSecurityEvent({ orgId, action: 'site.branding_uploaded', actorId: session.user.id, targetType: 'branding', targetLabel: `${BRANDING_LABEL[kind]} (taslak)` });
+  revalidatePath(`/platform/siteler/${orgId}`, 'layout');
+  return json({ path, message: `${BRANDING_LABEL[kind]} taslağa kaydedildi. Canlı sitede görünmesi için yayınlayın.` }, 201);
 }
 
 /** Görseli kaldırır (ör. mobil logo) */
@@ -106,10 +111,9 @@ export async function DELETE(request: Request) {
   const column = BRANDING_COLUMN[kind];
   const { data: before } = await service.from('organization_settings').select(column).eq('organization_id', orgId).maybeSingle();
   if (!before) return json({ error: 'Site bulunamadı.' }, 404);
-  await service.from('organization_settings').update({ [column]: null } as TablesUpdate<'organization_settings'>).eq('organization_id', orgId);
-  const previous = (before as Record<string, string | null>)[column];
-  if (isOwnBrandingPath(orgId, previous)) await service.storage.from(MEDIA_BUCKETS.branding).remove([previous]);
-  await logSecurityEvent({ orgId, action: 'site.branding_uploaded', actorId: session.user.id, targetType: 'branding', targetLabel: `${BRANDING_LABEL[kind]} kaldırıldı` });
-  revalidateTag(cacheTags.org(orgId), { expire: 0 });
-  return json({ message: `${BRANDING_LABEL[kind]} kaldırıldı.` }, 200);
+  const { error } = await setDraftBrandField(session.supabase, orgId, column, null);
+  if (error) return json({ error: 'Taslak güncellenemedi.' }, 500);
+  await logSecurityEvent({ orgId, action: 'site.branding_uploaded', actorId: session.user.id, targetType: 'branding', targetLabel: `${BRANDING_LABEL[kind]} kaldırıldı (taslak)` });
+  revalidatePath(`/platform/siteler/${orgId}`, 'layout');
+  return json({ message: `${BRANDING_LABEL[kind]} taslakta kaldırıldı. Canlı sitede yayınlayınca kalkar.` }, 200);
 }

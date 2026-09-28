@@ -67,7 +67,8 @@ export async function POST(request: Request) {
   // yetkisiyle paylaşım görseli yükleniyorsa sunucu istemcisi (yetki yukarıda doğrulandı)
   const storageClient = ctx.can('settings.manage') ? ctx.supabase : createServiceClient();
   if (!storageClient) return json({ error: 'Depolama yapılandırılmamış.' }, 503);
-  const path = `organizations/${ctx.org.id}/branding/${kind}-${randomBytes(8).toString('hex')}.${output.ext}`;
+  // Boyut dosya adında: logo sayfada doğru en-boy oranıyla, kayma (CLS) olmadan yer ayırır
+  const path = `organizations/${ctx.org.id}/branding/${kind}-${randomBytes(8).toString('hex')}-${output.width}x${output.height}.${output.ext}`;
   const { error: uploadError } = await storageClient.storage
     .from(MEDIA_BUCKETS.branding)
     .upload(path, output.buffer, { contentType: output.contentType, cacheControl: '31536000', upsert: false });

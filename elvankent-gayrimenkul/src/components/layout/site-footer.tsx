@@ -19,6 +19,7 @@ import type { Tenant } from '@/platform/tenant/tenant';
 import { isHrefAvailable } from '@/components/layout/nav';
 import { cn } from '@/lib/utils';
 import type { SiteView } from '@/platform/site/load';
+import { resolveStyle } from '@/platform/site/themes';
 
 interface FooterRegion {
   slug: string;
@@ -28,6 +29,8 @@ interface FooterRegion {
 export function SiteFooter({ tenant, regions, hasBlog, view }: { tenant: Tenant; regions: FooterRegion[]; hasBlog: boolean; view: SiteView }) {
   const s = tenant.settings;
   const f = view.config.footer;
+  const footerStyle = resolveStyle(view.config).footer;
+  const logo = brandingUrl(s.logo_url);
   const available = (href: string) => isHrefAvailable(href, view, hasBlog);
   const phone = telHref(s.phone);
   const wa = view.features.whatsapp ? whatsappHref(s.whatsapp ?? s.phone, 'Merhaba, bilgi almak istiyorum.') : null;
@@ -78,52 +81,55 @@ export function SiteFooter({ tenant, regions, hasBlog, view }: { tenant: Tenant;
       ];
   const about = f.about ?? s.tagline ?? s.description;
 
-  const heading = 'mb-4 text-[12px] font-bold tracking-[0.14em] text-white/55 uppercase';
-  const linkClass = 'text-[14.5px] text-white/80 transition-colors hover:text-white';
+  const heading = 'mb-4 text-[12px] font-bold tracking-[0.14em] text-inverse-foreground/55 uppercase';
+  const linkClass = 'text-[14.5px] text-inverse-foreground/80 transition-colors hover:text-inverse-foreground';
 
   return (
-    <footer className="bg-surface-inverse text-inverse-foreground">
+    <footer className="site-footer bg-surface-inverse text-inverse-foreground">
       <div className={cn('container-page grid gap-12 py-14 md:grid-cols-2 lg:py-20', columns.length >= 3 ? 'lg:grid-cols-[1.4fr_1fr_1fr_1fr]' : 'lg:grid-cols-[1.4fr_1fr_1fr]')}>
-        <div className="max-w-sm">
-          <Logo name={s.display_name} logoUrl={brandingUrl(s.logo_url)} tone="light" />
-          {about && <p className="mt-5 text-[14.5px] leading-relaxed text-white/70">{about}</p>}
-          <ul className={cn('mt-6 space-y-2.5 text-[14.5px] text-white/80', !f.showContact && !f.showHours && 'hidden')}>
+        <div className="max-w-sm min-w-0">
+          {/* Koyu/marka zeminde logo açık bir plaka üzerinde: koyu renkli logolar kaybolmaz */}
+          <div className={cn('inline-flex max-w-full min-w-0', logo && footerStyle !== 'light' && 'rounded-2xl bg-white px-3.5 py-2.5 shadow-sm')}>
+            <Logo name={s.display_name} logoUrl={logo} tone={logo && footerStyle !== 'light' ? 'dark' : 'light'} size="footer" display={view.config.header.brand} className="max-w-full" />
+          </div>
+          {about && <p className="mt-5 text-[14.5px] leading-relaxed text-inverse-foreground/70">{about}</p>}
+          <ul className={cn('mt-6 space-y-2.5 text-[14.5px] text-inverse-foreground/80', !f.showContact && !f.showHours && 'hidden')}>
             {f.showContact && phone && s.phone && (
               <li>
-                <a href={phone} className="flex items-center gap-2.5 hover:text-white">
-                  <Phone className="size-4 text-white/50" aria-hidden /> <span className="numeric">{formatPhoneDisplay(s.phone)}</span>
+                <a href={phone} className="flex items-center gap-2.5 hover:text-inverse-foreground">
+                  <Phone className="size-4 text-inverse-foreground/50" aria-hidden /> <span className="numeric">{formatPhoneDisplay(s.phone)}</span>
                 </a>
               </li>
             )}
             {f.showContact && wa && (
               <li>
-                <a href={wa} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 hover:text-white">
-                  <WhatsAppIcon className="size-4 text-white/50" /> WhatsApp ile yazın
+                <a href={wa} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 hover:text-inverse-foreground">
+                  <WhatsAppIcon className="size-4 text-inverse-foreground/50" /> WhatsApp ile yazın
                 </a>
               </li>
             )}
             {f.showContact && s.email && (
               <li>
-                <a href={`mailto:${s.email}`} className="flex items-center gap-2.5 break-all hover:text-white">
-                  <Mail className="size-4 shrink-0 text-white/50" aria-hidden /> {s.email}
+                <a href={`mailto:${s.email}`} className="flex items-center gap-2.5 break-all hover:text-inverse-foreground">
+                  <Mail className="size-4 shrink-0 text-inverse-foreground/50" aria-hidden /> {s.email}
                 </a>
               </li>
             )}
             {f.showContact && address && (
               <li className="flex items-start gap-2.5">
-                <MapPin className="mt-0.5 size-4 shrink-0 text-white/50" aria-hidden /> <span>{address}</span>
+                <MapPin className="mt-0.5 size-4 shrink-0 text-inverse-foreground/50" aria-hidden /> <span>{address}</span>
               </li>
             )}
             {f.showHours && (hours.length > 0 || s.working_hours_note) && (
               <li className="flex items-start gap-2.5">
-                <Clock className="mt-0.5 size-4 shrink-0 text-white/50" aria-hidden />
+                <Clock className="mt-0.5 size-4 shrink-0 text-inverse-foreground/50" aria-hidden />
                 <span>
                   {hours.map((h) => (
                     <span key={h} className="block">
                       {h}
                     </span>
                   ))}
-                  {s.working_hours_note && <span className="block text-white/60">{s.working_hours_note}</span>}
+                  {s.working_hours_note && <span className="block text-inverse-foreground/60">{s.working_hours_note}</span>}
                 </span>
               </li>
             )}
@@ -137,7 +143,7 @@ export function SiteFooter({ tenant, regions, hasBlog, view }: { tenant: Tenant;
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={label}
-                    className="flex size-10 items-center justify-center rounded-xl bg-white/8 text-white/80 transition hover:bg-white/15 hover:text-white"
+                    className="flex size-10 items-center justify-center rounded-xl bg-inverse-foreground/8 text-inverse-foreground/80 transition hover:bg-inverse-foreground/15 hover:text-inverse-foreground"
                   >
                     <Icon className="size-[18px]" />
                   </a>
@@ -168,21 +174,21 @@ export function SiteFooter({ tenant, regions, hasBlog, view }: { tenant: Tenant;
           </nav>
         ))}
       </div>
-      <div className="border-t border-white/10">
-        <div className="container-page flex flex-col gap-4 py-6 text-[13px] text-white/60 md:flex-row md:items-center md:justify-between">
+      <div className="border-t border-inverse-foreground/10">
+        <div className="container-page flex flex-col gap-4 py-6 text-[13px] text-inverse-foreground/60 md:flex-row md:items-center md:justify-between">
           <p>
             © {new Date().getFullYear()} {f.copyright ?? `${s.legal_name ?? s.display_name}. Tüm hakları saklıdır.`}
           </p>
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
             {legalLinks.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="hover:text-white">
+                <Link href={l.href} className="hover:text-inverse-foreground">
                   {l.label}
                 </Link>
               </li>
             ))}
             <li>
-              <CookiePreferencesLink className="hover:text-white" />
+              <CookiePreferencesLink className="hover:text-inverse-foreground" />
             </li>
           </ul>
         </div>

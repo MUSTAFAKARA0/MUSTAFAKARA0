@@ -451,6 +451,28 @@
   }
 }
 
+/*
+ * Kiracı bileşen stilleri (Tema › Bileşen stilleri). Katmansız: Tailwind yardımcı
+ * sınıflarından (rounded-*) önce gelir. Yalnızca kiracı sitesinin kapsayıcısında geçerlidir;
+ * yönetim panelleri etkilenmez.
+ */
+[data-site-button='pill'] .btn {
+  border-radius: 9999px;
+}
+[data-site-button='square'] .btn {
+  border-radius: 4px;
+}
+/* Footer zemini: koyu (varsayılan) · açık · marka rengi. Tokenlar footer içinde yeniden tanımlanır. */
+[data-site-footer='light'] .site-footer {
+  --surface-inverse: var(--surface-muted);
+  --inverse-foreground: var(--foreground);
+  border-top: 1px solid var(--border);
+}
+[data-site-footer='brand'] .site-footer {
+  --surface-inverse: var(--primary);
+  --inverse-foreground: var(--primary-fg);
+}
+
 /* Leaflet harita uyumu */
 .leaflet-container {
   font-family: var(--font-sans);

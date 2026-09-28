@@ -10,6 +10,14 @@ KARAY  — platform sahibi, SaaS altyapı sağlayıcısı (süper admin: /platfo
 
 Elvankent Gayrimenkul platformun sahibi değildir; platformun ilk müşterisidir. KARAY ile Elvankent hiçbir ekranda aynı şirket gibi görünmez.
 
+| Deneyim | Marka | Başlık |
+| --- | --- | --- |
+| KARAY Super Admin (`/platform`) | Platform markası (`platform-brand.ts`, kodla; KARAY logo paketi, Poppins, lacivert) | `[KARAY] Platform yönetimi`; genel bakışta "Platform sahibi → müşteri ofisleri", ilk müşteri etiketli |
+| Ofis paneli (`/admin`) | Kiracı markası (`organization_settings`) | `[ofis logosu] Elvankent Gayrimenkul · Ofis Yönetimi`; menüde "Web sitesi › Marka ve Görünüm"; altta küçük "KARAY altyapısıyla çalışır" |
+| Kiracı sitesi | Kiracı markası + site yapılandırması (`site_configs`) | `[logo] Elvankent Gayrimenkul`; KARAY adı/logosu/renkleri yer almaz |
+
+Platform markası (platform_branding) kodla gelir ve yalnızca `.platform-scope` kapsayıcısında uygulanır; kiracı markası (tenant_branding) veritabanındadır ve yalnızca o kiracının sitesinde/panelinde uygulanır. Biri diğerini değiştiremez (TEST-KARAY-05/06).
+
 ## Nerede tanımlı?
 
 | Kavram | Yer |
@@ -101,4 +109,5 @@ Demo kurulumu tek hesapla başladığı için sizin hesabınız hem süper admin
 
 - `tests/security/rls.test.mjs` › "Platform sahibi ↔ kiracı ayrımı" (veritabanı).
 - `tests/e2e/owner-separation.spec.ts` › TEST-OWNER-01…08 (uygulama + veritabanı).
+- `tests/e2e/karay-branding.spec.ts` › TEST-KARAY-01…15 (marka ve kiracı ayrımı).
 - `tests/e2e/site-builder.spec.ts` › TEST-SITE-01…12 (KARAY Web Sitesi Yönetimi; ayrıntı: docs/WEB_SITESI_YONETIMI.md).

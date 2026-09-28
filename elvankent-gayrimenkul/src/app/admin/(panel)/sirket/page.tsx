@@ -9,7 +9,7 @@ import { brandingUrl } from '@/modules/media/variants';
 import { getTaxonomy } from '@/modules/properties/taxonomy';
 import { requirePagePermission } from '@/platform/auth/session';
 
-export const metadata: Metadata = { title: 'Şirket ayarları' };
+export const metadata: Metadata = { title: 'Marka ve görünüm' };
 
 export default async function CompanySettingsPage() {
   const ctx = await requirePagePermission('settings.manage');
@@ -24,7 +24,7 @@ export default async function CompanySettingsPage() {
   return (
     <>
       <AdminPageHeader
-        title="Şirket ayarları"
+        title="Marka ve görünüm"
         description="Sitenizin kimliği: marka, renkler, iletişim ve adres bilgileri. Değişiklikler kaydedildiği anda sitede görünür."
       />
       <CompanyForm

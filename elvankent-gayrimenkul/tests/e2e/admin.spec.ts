@@ -131,7 +131,7 @@ test('Talepler listesi ve yönetim sayfaları hatasız açılır', async ({ page
     ['/admin/bolgeler', 'Bölge sayfaları'],
     ['/admin/seo', 'SEO'],
     ['/admin/ayarlar', 'Ayarlar'],
-    ['/admin/sirket', 'Şirket ayarları'],
+    ['/admin/sirket', 'Marka ve görünüm'],
     ['/admin/kullanicilar', 'Kullanıcılar'],
     ['/admin/guvenlik', 'Güvenlik ve işlem kayıtları'],
   ] as const) {

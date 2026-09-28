@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Field, Input } from '@/components/ui/form-controls';
 import { cn } from '@/lib/utils';
+import { hasUnsavedChanges, useDirtyGuard } from '@/components/platform/site/dirty-guard';
 import { createSitePreviewLink, discardSiteDraft, publishSite, saveSiteSection } from '@/app/actions/site-builder';
 import type { SiteSection } from '@/platform/site/schema';
 
@@ -47,7 +48,15 @@ export function PublishButton({ orgId, disabled, size = 'sm' }: { orgId: string;
   const [, startTransition] = useTransition();
   return (
     <>
-      <Button size={size} disabled={disabled} onClick={() => setOpen(true)} title={disabled ? 'Yayınlanmamış değişiklik yok' : undefined}>
+      <Button
+        size={size}
+        disabled={disabled}
+        onClick={() => {
+          if (hasUnsavedChanges() && !window.confirm('Bu sekmede kaydedilmemiş değişiklikler var; yayına dahil edilmezler. Yine de devam edilsin mi?')) return;
+          setOpen(true);
+        }}
+        title={disabled ? 'Yayınlanmamış değişiklik yok' : undefined}
+      >
         <Rocket /> Değişiklikleri yayınla
       </Button>
       <ConfirmDialog
@@ -132,10 +141,19 @@ export function useSectionSave(orgId: string, section: SiteSection) {
 
 /** Formların altındaki yapışkan kaydetme çubuğu (telefonda da erişilebilir) */
 export function SaveBar({ pending, dirty, onSave, onReset, note, saveLabel = 'Taslağa kaydet' }: { pending: boolean; dirty: boolean; onSave: () => void; onReset?: () => void; note?: string; saveLabel?: string }) {
+  useDirtyGuard(dirty);
   return (
-    <div className={cn('sticky bottom-0 z-10 -mx-4 mt-6 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:px-5')}>
+    <div
+      className={cn(
+        'sticky bottom-0 z-10 -mx-4 mt-6 border-t bg-background/95 px-4 py-3 backdrop-blur transition-colors sm:mx-0 sm:rounded-2xl sm:border sm:px-5',
+        dirty ? 'border-amber-400 bg-amber-50/95' : 'border-border',
+      )}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-[13px] text-muted-foreground">{dirty ? 'Kaydedilmemiş değişiklikler var.' : (note ?? 'Değişiklikler taslağa kaydedilir; canlı site yayınlayana kadar değişmez.')}</p>
+        <p role="status" className={cn('flex items-center gap-2 text-[13px]', dirty ? 'font-semibold text-amber-900' : 'text-muted-foreground')}>
+          {dirty && <span className="size-2 shrink-0 rounded-full bg-amber-500" aria-hidden />}
+          {dirty ? 'Kaydedilmemiş değişiklikler var — taslağa kaydedin.' : (note ?? 'Değişiklikler taslağa kaydedilir; canlı site yayınlayana kadar değişmez.')}
+        </p>
         <div className="flex gap-2">
           {onReset && (
             <Button type="button" variant="ghost" size="sm" disabled={!dirty || pending} onClick={onReset}>

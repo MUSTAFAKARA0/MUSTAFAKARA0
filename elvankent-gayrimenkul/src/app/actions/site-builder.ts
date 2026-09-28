@@ -6,12 +6,11 @@ import { cacheTags } from '@/lib/cache-tags';
 import { createServiceClient } from '@/lib/supabase/server';
 import { isUuid } from '@/lib/utils';
 import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/platform/actions';
-import { logSecurityEvent } from '@/platform/audit';
 import { requireSuperAdmin } from '@/platform/auth/session';
 import { createPreviewToken } from '@/platform/site/preview';
-import { FEATURE_KEYS, SECTION_SCHEMAS, type SiteSection } from '@/platform/site/schema';
+import { FEATURE_KEYS, SECTION_SCHEMAS, parseSiteConfig, type BrandDraft, type BrandField, type SiteSection } from '@/platform/site/schema';
 import { getTenant } from '@/platform/tenant/tenant';
-import type { Json, TablesUpdate } from '@/types/supabase';
+import type { Json } from '@/types/supabase';
 
 /**
  * KARAY Web Sitesi Yönetimi işlemleri (yalnızca süper admin, platform oturumu).
@@ -161,13 +160,16 @@ const brandSchema = z.object({
   youtube_url: optionalUrl,
   linkedin_url: optionalUrl,
   tiktok_url: optionalUrl,
+  primary_color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, { message: 'Renk #RRGGBB biçiminde olmalıdır.' }).transform((v) => v.toLowerCase()),
+  accent_color: z.string().trim().regex(/^#[0-9a-fA-F]{6}$/, { message: 'Renk #RRGGBB biçiminde olmalıdır.' }).transform((v) => v.toLowerCase()),
 });
 export type BrandInput = z.input<typeof brandSchema>;
 
 /**
- * Marka ve iletişim bilgileri ofisin kendi ayar kaydındadır (ofis de Şirket Ayarları'ndan
- * düzenler); değişiklik anında yayına girer. Süper admin yetkisi doğrulandıktan sonra
- * sunucu istemcisiyle yazılır ve denetim kaydına işlenir.
+ * Marka ve iletişim bilgileri TASLAĞA yazılır (site_configs.draft.brand; yalnızca canlıdan
+ * farklı alanlar). Canlı site "Değişiklikleri yayınla" ile değişir; önizlemede görünür.
+ * Yayında ofisin ayar kaydına (organization_settings) uygulanır, sürüm kaydına anlık
+ * görüntü yazılır; geri almada eski marka geri gelir.
  */
 export async function updateSiteBrand(orgId: string, input: BrandInput): Promise<ActionResult<null>> {
   return runAction(async () => {
@@ -175,18 +177,23 @@ export async function updateSiteBrand(orgId: string, input: BrandInput): Promise
     const parsed = brandSchema.safeParse(input);
     if (!parsed.success) throw new ActionError(firstIssue(parsed.error));
     const session = await requireSuperAdmin();
-    const service = createServiceClient();
-    if (!service) throw new ActionError('Sunucu yapılandırması eksik.');
-    const { data: before } = await service.from('organization_settings').select('*').eq('organization_id', orgId).maybeSingle();
-    if (!before) throw new ActionError('Site bulunamadı.');
-    const patch = parsed.data as TablesUpdate<'organization_settings'>;
-    const { error } = await service.from('organization_settings').update(patch).eq('organization_id', orgId);
+    const [settings, site] = await Promise.all([
+      session.supabase.from('organization_settings').select('*').eq('organization_id', orgId).maybeSingle(),
+      session.supabase.from('site_configs').select('draft').eq('organization_id', orgId).maybeSingle(),
+    ]);
+    if (!settings.data) throw new ActionError('Site bulunamadı.');
+    const live = settings.data as unknown as Record<string, unknown>;
+    const draft: BrandDraft = { ...parseSiteConfig(site.data?.draft).brand };
+    for (const [k, v] of Object.entries(parsed.data) as [BrandField, string | null][]) {
+      // Canlıyla aynıysa taslaktan çıkar (bekleyen değişiklik yok)
+      if ((live[k] ?? null) === v) delete draft[k];
+      else draft[k] = v;
+    }
+    const { error } = await session.supabase.rpc('site_save_draft', { p_org: orgId, p_section: 'brand', p_value: draft as Json });
     assertNoDbError(error);
-    const changed = Object.keys(patch).filter((k) => (before as Record<string, unknown>)[k] !== (patch as Record<string, unknown>)[k]);
-    await logSecurityEvent({ orgId, action: 'site.brand_updated', actorId: session.user.id, metadata: { fields: changed } });
-    refreshSite(orgId);
+    revalidatePath(`/platform/siteler/${orgId}`, 'layout');
     return null;
-  }, 'Marka ve iletişim bilgileri kaydedildi (anında yayında).');
+  }, 'Marka taslağa kaydedildi. Canlı sitede görünmesi için "Değişiklikleri yayınla"ya basın.');
 }
 
 /** Taslak önizleme bağlantısı (1 saat geçerli; yalnızca bağlantıyı açan tarayıcı taslağı görür) */

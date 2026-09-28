@@ -189,7 +189,9 @@ export const getTenant = cache(loadTenant);
 export async function requireTenant(rawKey: string): Promise<Tenant> {
   const tenant = await getTenant(decodeURIComponent(rawKey));
   if (!tenant) notFound();
-  return tenant;
+  // KARAY önizlemesi açıksa taslak marka üste bindirilir (yalnızca o tarayıcıda)
+  const { withPreviewBrand } = await import('@/platform/site/load');
+  return withPreviewBrand(tenant);
 }
 
 /** Bulunulan alan adının kiracı anahtarı (proxy'nin hesapladığı değer; istemci başlığı proxy'de silinir) */

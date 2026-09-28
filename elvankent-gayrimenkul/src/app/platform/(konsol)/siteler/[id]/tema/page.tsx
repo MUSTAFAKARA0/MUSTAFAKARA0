@@ -1,3 +1,4 @@
+import { brandingUrl } from '@/modules/media/variants';
 import type { Metadata } from 'next';
 import { ThemeForm } from '@/components/platform/site/appearance-forms';
 import { getSiteOr404 } from '@/modules/platform/sites';
@@ -12,9 +13,9 @@ export default async function Page({ params }: PageProps<'/platform/siteler/[id]
     <ThemeForm
       orgId={site.org.id}
       draft={site.draft}
-      brand={{ primary_color: site.settings.primary_color, accent_color: site.settings.accent_color }}
+      brand={{ primary_color: site.brand.primary_color, accent_color: site.brand.accent_color, logoUrl: brandingUrl(site.brand.logo_url), tagline: site.brand.tagline }}
       darkAllowed={site.overrides.dark_mode === true}
-      name={site.settings.display_name}
+      name={site.brand.display_name}
     />
   );
 }

@@ -11,11 +11,11 @@ KARAY süper admin panelinin iki görevi vardır: **platform yönetimi** (organi
 | Sekme | İçerik | Kayıt |
 | --- | --- | --- |
 | Genel | Taslak özeti, yayın bilgisi, site durumu (Yayında / Bakım / Yayında değil) | Durum anında |
-| Marka | Logo, mobil logo, site simgesi, paylaşım ve ana sayfa görseli; ad, kısa ad, unvan, slogan, açıklama, iletişim, harita bağlantısı, sosyal hesaplar | Anında (ofisin kendi ayar kaydı) |
-| Tema | Klasik / Marble / Atlas (canlı önizlemeli) | Taslak |
-| Renkler | Ofis marka renkleri / hazır palet / özel renkler (11 tasarım belirteci), koyu palet (bayrakla) | Taslak |
+| Marka | Logo, mobil logo, site simgesi, paylaşım ve ana sayfa görseli; ad, kısa ad, unvan, slogan, açıklama, iletişim, harita bağlantısı, sosyal hesaplar, ana/vurgu rengi | Taslak (yayınlanınca ofis ayarlarına uygulanır; "Taslakta" işaretli alanlar yayınlanmamıştır) |
+| Tema | Klasik / Marble / Atlas + bileşen stilleri: hero düzeni, ilan kartı, düğme köşeleri, footer zemini (canlı önizlemeli) | Taslak |
+| Renkler | Ofis marka renkleri / 9 hazır palet (Lüks Konut, Modern Şehir, Doğal Yaşam dahil) / özel renkler (11 tasarım belirteci), koyu palet (bayrakla) | Taslak |
 | Tipografi | Sınırlı yazı tipi listesi, başlık kalınlığı, ölçek | Taslak |
-| Header | Masaüstü (görünüm, yükseklik, yapışkan, telefon/WhatsApp/favori, çağrı düğmesi) ve mobil ayrı | Taslak |
+| Header | Marka alanı (otomatik / yalnızca logo / logo + ad / yalnızca ad, slogan), masaüstü (görünüm, yükseklik, yapışkan, telefon/WhatsApp/favori, çağrı düğmesi) ve mobil ayrı; canlı önizlemeli | Taslak |
 | Ana Sayfa | Bölümleri aç/kapa, sırala (↑/↓ düğmeleri — telefonda da çalışır), metin ve düğme; metin bölümü ekle | Taslak |
 | Sayfalar | Hakkımızda, Hizmetler, İletişim, Değerleme, Blog, Bölgeler: yayında/gizli, başlık, SEO ve paylaşım (OG) alanları | Taslak |
 | Menü | Öğe ekle/sil/gizle/sırala, site içi sayfa veya dış bağlantı, açılır alt öğeler | Taslak |
@@ -26,6 +26,10 @@ KARAY süper admin panelinin iki görevi vardır: **platform yönetimi** (organi
 | Geçmiş | Yayın sürümleri (geri yükleme) ve site işlem kaydı | — |
 
 Sayfa adresleri (slug) sabittir: SEO ve paylaşılmış bağlantılar bozulmasın diye değiştirilemez. Yasal sayfalar (KVKK vb.) her zaman yayındadır.
+
+## Canlı mı, taslak mı?
+
+Kontrol Merkezi'nin üstünde iki durum kartı vardır: **Canlı site** (yayındaki sürüm, son yayın zamanı) ve **Taslak** (yayınlanmamış değişiklik varsa hangi bölümlerde olduğu). Yayınlanmamış değişikliği olan sekmede turuncu nokta görünür. Kaydedilmemiş form varken kaydetme çubuğu turuncuya döner; sekme değiştirmek, yayınlamak veya sayfayı kapatmak onay ister.
 
 ## Taslak → Önizleme → Yayın
 
@@ -38,6 +42,10 @@ Sayfa adresleri (slug) sabittir: SEO ve paylaşılmış bağlantılar bozulması
 
 - **Tek yapılandırma belgesi:** `site_configs.draft` / `published` (jsonb). Şema `src/platform/site/schema.ts` (zod); bozuk veya eski bir bölüm yalnızca o bölümün varsayılanına düşer, site asla kırılmaz. Kayıt yoksa bugünkü görünüm kullanılır.
 - **Tema kaydı (registry):** `src/platform/site/themes.ts`. Tema yalnızca sunumdur (yazı tipi, köşe, kart, hero ve header biçimi); veri, URL ve SEO değişmez. Yeni tema: `THEME_IDS`'e kimlik + `THEMES`'e tanım + gerekirse `globals.css`'te `[data-site-theme='…']` kuralları. 10+ tema için tasarlandı.
+- **Marka taslağı:** `site_configs.draft.brand` yalnızca değişen alanları tutar (beyaz liste: `site_brand_columns()`). Önizlemede kiracı ayarlarının üzerine bindirilir (`withPreviewBrand`, sayfa gövdeleri dahil). Yayında `site_apply_brand` ile `organization_settings`'e uygulanır ve sürüm kaydına tam anlık görüntü yazılır; geri alma bu anlık görüntüyü geri uygular. Herkese açık site marka bilgisini bugünkü gibi önbellekli ayar kaydından okur (ek sorgu yok). Ofisin kendi panelindeki (Marka ve Görünüm) değişiklikler anında geçerlidir.
+- **Bileşen stilleri:** `style` bölümü (kart, düğme, footer, hero) temanın varsayılanını ezer (`resolveStyle`). Sitede `data-site-card`, `data-site-button`, `data-site-footer` öznitelikleriyle uygulanır; renkler yine tokenlardan gelir (footer açık/marka zemininde tokenlar footer içinde yeniden tanımlanır, sabit beyaz renk yoktur).
+- **Logo:** yükleme sırasında piksel boyutu dosya adına yazılır (`logo-…-1200x480.png`); logo sayfada gerçek en-boy oranıyla (CSS aspect-ratio) önceden yer ayırır: kırpılmaz, bozulmaz, sayfa kaymaz (CLS). Koyu footer'da logo açık bir plaka üzerinde gösterilir.
+- **Canlı önizleme:** `LivePreview` gerçek sitenin token üreticisini (`siteCss`) ve aynı CSS kancalarını kullanır: header (logo/ad), hero + arama, ilan kartları, çağrı bandı, footer.
 - **Tasarım belirteçleri:** `src/platform/site/tokens.ts` yapılandırmayı CSS değişkenlerine çevirir (`html:root`'a tek `<style>`); bileşenlerde sabit renk yoktur. Okunabilirlik için kontrast otomatik düzeltilir. Hazır paletler `palettes.ts`.
 - **Yazı tipleri:** `fonts.ts` — next/font ile kendi sunucumuzdan; yalnızca varsayılan çift önceden yüklenir, diğerleri kullanılırsa iner (`display: optional`, düzen kayması yok).
 - **Okuma yolu (performans):** yayındaki yapılandırma, kiracı yüklemesiyle **aynı önbellekli çağrıda** (`public_site_config`) gelir; ziyaretçi başına ek sorgu yoktur. Taslak yalnızca önizleme açıkken okunur.
@@ -58,13 +66,14 @@ Site durumu **Bakım** veya **Yayında değil** iken ziyaretçi kısa bir bilgi 
 
 ## Denetim kaydı
 
-`site.draft_saved`, `site.published`, `site.rolled_back`, `site.draft_discarded`, `site.status_changed`, `site.features_changed`, `site.brand_updated`, `site.branding_uploaded` ve alan adı işlemleri. KARAY'da Geçmiş sekmesinde; ofisin kendi panelinde Güvenlik › "Web sitesi" filtresinde (şeffaflık: ofis, sitesinde kimin neyi değiştirdiğini görür) görünür.
+`site.draft_saved` (marka için değişen alan adlarıyla), `site.published`, `site.rolled_back`, `site.draft_discarded`, `site.status_changed`, `site.features_changed`, `site.brand_updated`, `site.branding_uploaded` ve alan adı işlemleri. KARAY'da Geçmiş sekmesinde; ofisin kendi panelinde Güvenlik › "Web sitesi" filtresinde (şeffaflık: ofis, sitesinde kimin neyi değiştirdiğini görür) görünür.
 
 ## Veritabanı
 
-`supabase/migrations/20260930000002_site_builder.sql` (tekrar çalıştırılabilir, veri silmez, geri dönüş SQL'i dosya sonunda). Canlıya uygulama: docs/PRODUCTION_MIGRATION.md. Son kontrol `postflight_v2.sql` #16.
+`supabase/migrations/20260930000002_site_builder.sql` ve `20261001000001_site_brand_publish.sql` (tekrar çalıştırılabilir, veri silmez, geri dönüş SQL'i dosya sonlarında). Canlıya uygulama: docs/PRODUCTION_MIGRATION.md. Son kontrol `postflight_v2.sql` #16–17.
 
 ## Testler
 
 - `tests/e2e/site-builder.spec.ts` › TEST-SITE-01…12 (geçici kiracı ve test alan adı; Elvankent'e dokunmaz).
+- `tests/e2e/karay-branding.spec.ts` › TEST-KARAY-01…15 (KARAY ↔ Elvankent ↔ Kiracı B ayrımı, marka taslak/önizleme/yayın/geri alma, CLS, 320/360 px header, mobil menü).
 - `tests/security/rls.test.mjs` › "Web sitesi yapılandırması (site_configs) ve oturum bağlamı".

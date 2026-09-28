@@ -4,6 +4,7 @@ import { cookies, draftMode } from 'next/headers';
 import { createServiceClient } from '@/lib/supabase/server';
 import { parseSiteConfig, type FeatureOverrides, type SiteConfig, type SiteStatus } from '@/platform/site/schema';
 import { PREVIEW_COOKIE, verifyPreviewToken } from '@/platform/site/preview';
+import { applyBrandDraft, hasBrandDraft } from '@/platform/site/brand';
 import type { Tenant } from '@/platform/tenant/tenant';
 
 /** Kiracı sitesinin o istekteki görünümü */
@@ -52,20 +53,38 @@ export function publishedSiteView(tenant: Tenant): SiteView {
  * Önizleme: Next draft mode açık VE önizleme çerezi bu kiracıya ait geçerli bir belirteçse
  * taslak okunur (sunucu istemcisiyle, önbelleksiz). Taslak başka hiçbir durumda okunmaz.
  */
-export const getSiteView = cache(async (tenant: Tenant): Promise<SiteView> => {
-  let raw: unknown = tenant.site.published;
-  let preview = false;
-  if ((await draftMode()).isEnabled) {
-    const token = (await cookies()).get(PREVIEW_COOKIE)?.value;
-    if (verifyPreviewToken(token) === tenant.id) {
-      const service = createServiceClient();
-      const { data } = service ? await service.from('site_configs').select('draft').eq('organization_id', tenant.id).maybeSingle() : { data: null };
-      if (data) {
-        raw = data.draft;
-        preview = true;
-      }
-    }
+/** Önizleme açıksa bu kiracının taslağı (istek başına bir kez; kiracı kimliğine göre tekilleştirilir) */
+const loadPreviewDraft = cache(async (orgId: string): Promise<unknown | null> => {
+  let enabled = false;
+  try {
+    enabled = (await draftMode()).isEnabled;
+  } catch {
+    return null; // istek bağlamı yok (derleme)
   }
+  if (!enabled) return null;
+  const token = (await cookies()).get(PREVIEW_COOKIE)?.value;
+  if (verifyPreviewToken(token) !== orgId) return null;
+  const service = createServiceClient();
+  const { data } = service ? await service.from('site_configs').select('draft').eq('organization_id', orgId).maybeSingle() : { data: null };
+  return data ? data.draft : null;
+});
+
+/**
+ * Önizlemede taslaktaki marka değişiklikleri (logo, ad, iletişim, renk) kiracı ayarlarının
+ * üzerine bindirilir; önizleme yoksa kiracı aynen döner (ek sorgu yok).
+ */
+export async function withPreviewBrand(tenant: Tenant): Promise<Tenant> {
+  const draft = await loadPreviewDraft(tenant.id);
+  if (!draft) return tenant;
+  const brand = parseSiteConfig(draft).brand;
+  if (!hasBrandDraft(brand)) return tenant;
+  return { ...tenant, settings: applyBrandDraft(tenant.settings, brand) };
+}
+
+export const getSiteView = cache(async (tenant: Tenant): Promise<SiteView> => {
+  const draft = await loadPreviewDraft(tenant.id);
+  const raw: unknown = draft ?? tenant.site.published;
+  const preview = draft !== null;
   return {
     config: parseSiteConfig(raw),
     status: tenant.site.status,

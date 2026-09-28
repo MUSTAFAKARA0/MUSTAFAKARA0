@@ -78,6 +78,13 @@ export const headerSchema = z.object({
   showPhone: z.boolean().default(true),
   showWhatsapp: z.boolean().default(false),
   showFavorites: z.boolean().default(true),
+  /**
+   * Marka alanı: auto = logo varsa logo, yoksa monogram + ad · logo = yalnızca logo ·
+   * logo-name = logo + şirket adı (logoda ad yazmıyorsa) · name = yalnızca yazı
+   */
+  brand: z.enum(['auto', 'logo', 'logo-name', 'name']).default('auto'),
+  /** Adın altında slogan (yalnızca geniş ekranda) */
+  showTagline: z.boolean().default(false),
   cta: z.object({ label: text(40).min(2), href: linkHref }).optional(),
   mobile: z.object({ showPhone: z.boolean().default(false), showWhatsapp: z.boolean().default(true) }).default({ showPhone: false, showWhatsapp: true }),
 });
@@ -124,6 +131,37 @@ export const footerSchema = z.object({
 });
 export type FooterConfig = z.infer<typeof footerSchema>;
 
+// --------------------------------------------------------------------------- Bileşen stilleri
+/**
+ * Temanın varsayılanlarını kiracı bazında ezen bileşen stilleri (boş = temadan).
+ * card: ilan/içerik kartları · button: düğme köşeleri · footer: alt bilgi zemini ·
+ * hero: ana sayfa üst bölüm düzeni
+ */
+export const styleSchema = z.object({
+  card: z.enum(['elevated', 'outline', 'flat']).optional(),
+  button: z.enum(['rounded', 'pill', 'square']).optional(),
+  footer: z.enum(['dark', 'light', 'brand']).optional(),
+  hero: z.enum(['overlay', 'centered', 'split']).optional(),
+});
+export type StyleConfig = z.infer<typeof styleSchema>;
+
+// --------------------------------------------------------------------------- Marka (taslak)
+/**
+ * Taslaktaki marka değişiklikleri (yalnızca DEĞİŞEN alanlar). Yayında
+ * organization_settings'e uygulanır; önizlemede üste bindirilir. Sütun adları
+ * veritabanındaki beyaz listeyle (site_brand_columns) aynıdır.
+ */
+export const BRAND_FIELDS = [
+  'display_name', 'short_name', 'legal_name', 'tagline', 'description',
+  'phone', 'whatsapp', 'email', 'address_line', 'address_district', 'address_city', 'maps_url',
+  'instagram_url', 'facebook_url', 'x_url', 'youtube_url', 'linkedin_url', 'tiktok_url',
+  'logo_url', 'logo_mobile_url', 'favicon_url', 'og_image_url', 'hero_image_url',
+  'primary_color', 'accent_color',
+] as const;
+export type BrandField = (typeof BRAND_FIELDS)[number];
+export type BrandDraft = Partial<Record<BrandField, string | null>>;
+export const brandDraftSchema = z.partialRecord(z.enum(BRAND_FIELDS), z.string().max(2000).nullable());
+
 // --------------------------------------------------------------------------- Sayfalar
 export const PAGE_KEYS = ['hakkimizda', 'hizmetlerimiz', 'iletisim', 'degerleme', 'blog', 'bolgeler'] as const;
 export type PageKey = (typeof PAGE_KEYS)[number];
@@ -159,7 +197,9 @@ export const SECTION_SCHEMAS = {
   footer: footerSchema,
   pages: pagesSchema,
   seo: seoSchema,
+  style: styleSchema,
 } as const;
+/** Genel kaydetme ile yazılabilen bölümler (marka yalnızca ayrı, doğrulamalı işlemle) */
 export type SiteSection = keyof typeof SECTION_SCHEMAS;
 export const SITE_SECTIONS = Object.keys(SECTION_SCHEMAS) as SiteSection[];
 
@@ -173,6 +213,9 @@ export interface SiteConfig {
   footer: FooterConfig;
   pages: Partial<Record<PageKey, PageSettings>>;
   seo: SeoConfig;
+  style: StyleConfig;
+  /** Yalnızca taslakta: yayınlanmamış marka değişiklikleri */
+  brand: BrandDraft;
 }
 
 /** Ham JSON belgeyi doğrular; geçersiz bölüm varsayılana döner (site asla kırılmaz) */
@@ -193,6 +236,8 @@ export function parseSiteConfig(raw: unknown): SiteConfig {
     footer: pick(footerSchema, doc.footer, footerSchema.parse({})),
     pages: pick(pagesSchema, doc.pages, {}),
     seo: pick(seoSchema, doc.seo, seoSchema.parse({})),
+    style: pick(styleSchema, doc.style, {}),
+    brand: pick(brandDraftSchema, doc.brand, {}) as BrandDraft,
   };
 }
 

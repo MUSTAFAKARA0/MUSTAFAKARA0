@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils';
 import { ORG_STATUS_LABELS, SUBSCRIPTION_LABELS, type PlatformOrg } from '@/modules/platform/queries';
 
 export function OrgTable({ orgs, plans }: { orgs: PlatformOrg[]; plans: Map<string, string> }) {
+  // Müşteri ofisleri KARAY'ın müşterileridir; en eski kayıt "İlk müşteri" olarak işaretlenir
+  const firstCustomerId = [...orgs].sort((a, b) => a.created_at.localeCompare(b.created_at))[0]?.id;
   return (
     <TableWrap className="[&_table]:min-w-[980px]">
       <thead className="border-b border-border bg-surface-muted/50">
@@ -30,9 +32,9 @@ export function OrgTable({ orgs, plans }: { orgs: PlatformOrg[]; plans: Map<stri
                 <Link href={`/platform/organizasyonlar/${o.id}`} className="font-semibold hover:underline">
                   {o.name}
                 </Link>
-                {o.is_default && (
+                {o.id === firstCustomerId && (
                   <Badge variant="primary-soft" className="ml-2">
-                    Varsayılan
+                    İlk müşteri
                   </Badge>
                 )}
                 <p className="truncate text-[12.5px] text-muted-foreground">{o.primary_domain ?? o.slug}</p>

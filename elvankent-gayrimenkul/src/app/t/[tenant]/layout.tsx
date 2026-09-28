@@ -1,3 +1,4 @@
+import { hashString } from '@/lib/utils';
 import type { Metadata } from 'next';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { SiteHeader } from '@/components/layout/site-header';
@@ -9,7 +10,7 @@ import { brandingUrl } from '@/modules/media/variants';
 import { baseOpenGraph, siteOgImage } from '@/modules/seo/og';
 import { MaintenancePage, PreviewBar } from '@/components/layout/site-status';
 import { getSiteView } from '@/platform/site/load';
-import { THEMES } from '@/platform/site/themes';
+import { resolveStyle, THEMES } from '@/platform/site/themes';
 import { siteCss } from '@/platform/site/tokens';
 import { requireTenant } from '@/platform/tenant/tenant';
 
@@ -53,8 +54,10 @@ export default async function TenantLayout({ children, params }: LayoutProps<'/t
   // Tema + palet + tipografi → CSS değişkenleri (yalnızca doğrulanmış değerler)
   const css = siteCss(view.config, s, view.features.darkMode);
   const theme = THEMES[view.config.theme];
+  const style = resolveStyle(view.config);
   const hasBlog = posts.length > 0 && view.features.blog;
-  const styleKey = `site-${tenant.id}-${view.preview ? 'onizleme' : tenant.site.version}`;
+  // Anahtar içerikten türetilir: ofis rengini değiştirdiğinde (sürüm aynı kalsa da) yeni stil yüklenir
+  const styleKey = `site-${tenant.id}-${view.preview ? 'onizleme' : tenant.site.version}-${hashString(css)}`;
 
   // Bakım / yayında değil: ziyaretçiye bakım sayfası (panel ve önizleme etkilenmez)
   if (view.status !== 'active' && !view.preview) {
@@ -69,7 +72,7 @@ export default async function TenantLayout({ children, params }: LayoutProps<'/t
   }
 
   return (
-    <div data-site-theme={theme.id} data-site-card={theme.card} className="contents">
+    <div data-site-theme={theme.id} data-site-card={style.card} data-site-button={style.button} data-site-footer={style.footer} className="contents">
       <style href={styleKey} precedence="high">
         {css}
       </style>

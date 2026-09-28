@@ -23,7 +23,7 @@ import { requireTenant } from '@/platform/tenant/tenant';
 import { Fragment } from 'react';
 import { getSiteView } from '@/platform/site/load';
 import { DEFAULT_HOME_SECTIONS, type HomeSectionConfig } from '@/platform/site/schema';
-import { THEMES } from '@/platform/site/themes';
+import { resolveStyle } from '@/platform/site/themes';
 
 export const revalidate = 300;
 
@@ -75,14 +75,13 @@ export default async function HomePage({ params }: PageProps<'/t/[tenant]'>) {
   }
 
   const view = await getSiteView(tenant);
-  const theme = THEMES[view.config.theme];
   const sections = view.config.home?.sections ?? DEFAULT_HOME_SECTIONS;
   const seo = view.config.seo;
   const render = (sec: HomeSectionConfig) => {
     const o: SectionOverride = { eyebrow: sec.eyebrow, title: sec.title, description: sec.description, ctaLabel: sec.ctaLabel, ctaHref: sec.ctaHref };
     switch (sec.type) {
       case 'hero':
-        return <Hero tenant={tenant} options={options} spotlight={showcase[0] ?? latestPool[0] ?? null} publishedCount={inventory.total} variant={theme.hero} o={o} />;
+        return <Hero tenant={tenant} options={options} spotlight={showcase[0] ?? latestPool[0] ?? null} publishedCount={inventory.total} variant={resolveStyle(view.config).hero} o={o} />;
       case 'showcase':
         return <ShowcaseSection items={showcase} o={o} />;
       case 'categories':

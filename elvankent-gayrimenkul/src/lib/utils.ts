@@ -58,3 +58,10 @@ export function isFutureDate(value: string | null | undefined): boolean {
   const time = new Date(value).getTime();
   return Number.isFinite(time) && time > Date.now();
 }
+
+/** Kısa, kararlı içerik özeti (önbellek anahtarı için; güvenlik amaçlı değildir) */
+export function hashString(value: string): string {
+  let h = 5381;
+  for (let i = 0; i < value.length; i++) h = ((h << 5) + h + value.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}

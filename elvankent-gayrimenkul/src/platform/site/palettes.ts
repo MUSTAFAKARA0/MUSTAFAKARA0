@@ -46,6 +46,24 @@ export const PALETTES: PalettePreset[] = [
     tokens: { primary: '#7a5634', secondary: '#2b2118', accent: '#c08a52', background: '#f8f3ec', surface: '#fffdf9', text: '#2b2118', muted: '#6b5d50', border: '#e8dccb', ...status },
   },
   {
+    id: 'luxury-estate',
+    name: 'Lüks Konut (bordo · pirinç)',
+    scheme: 'light',
+    tokens: { primary: '#5b1f2e', secondary: '#1a1416', accent: '#b8975a', background: '#faf7f2', surface: '#ffffff', text: '#1d1718', muted: '#6b5f5f', border: '#eadfd6', ...status },
+  },
+  {
+    id: 'modern-urban',
+    name: 'Modern Şehir (grafit · kiremit)',
+    scheme: 'light',
+    tokens: { primary: '#2d3a4a', secondary: '#11161d', accent: '#d9553b', background: '#f5f6f7', surface: '#ffffff', text: '#11161d', muted: '#5b6573', border: '#dfe3e8', ...status },
+  },
+  {
+    id: 'natural-estate',
+    name: 'Doğal Yaşam (zeytin · kum)',
+    scheme: 'light',
+    tokens: { primary: '#4f6b3a', secondary: '#1e2419', accent: '#b89a64', background: '#f7f6f0', surface: '#fffefa', text: '#1e2419', muted: '#5f6655', border: '#e3e1d3', ...status },
+  },
+  {
     id: 'night',
     name: 'Gece (koyu)',
     scheme: 'dark',

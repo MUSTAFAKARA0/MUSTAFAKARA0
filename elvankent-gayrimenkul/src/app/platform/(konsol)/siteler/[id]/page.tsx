@@ -68,7 +68,7 @@ export default async function SiteGeneralPage({ params }: PageProps<'/platform/s
             <li>&quot;Değişiklikleri yayınla&quot; ile canlıya alın (yeni sürüm).</li>
             <li>Sorun olursa Geçmiş sekmesinden önceki sürüme dönün.</li>
           </ol>
-          <p className="mt-3 text-[12.5px] text-muted-foreground">Marka/iletişim bilgileri, site durumu, domain ve özellikler anında geçerlidir.</p>
+          <p className="mt-3 text-[12.5px] text-muted-foreground">Marka dahil tüm görünüm ayarları bu akıştan geçer. Site durumu, domain ve özellikler ise anında geçerlidir.</p>
         </Panel>
       </div>
     </div>

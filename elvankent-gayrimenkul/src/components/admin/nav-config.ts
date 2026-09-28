@@ -73,11 +73,12 @@ export const ADMIN_NAV: AdminNavSection[] = [
     ],
   },
   {
-    title: 'İçerik',
+    title: 'Web sitesi',
     items: [
-      { href: '/admin/medya', label: 'Medya', icon: 'media', permission: 'media.manage' },
-      { href: '/admin/bolgeler', label: 'Bölgeler', icon: 'regions', permission: 'content.manage' },
+      { href: '/admin/sirket', label: 'Marka ve Görünüm', icon: 'company', permission: 'settings.manage' },
       { href: '/admin/icerikler', label: 'Blog / İçerikler', icon: 'content', permission: 'content.manage' },
+      { href: '/admin/bolgeler', label: 'Bölgeler', icon: 'regions', permission: 'content.manage' },
+      { href: '/admin/medya', label: 'Medya', icon: 'media', permission: 'media.manage' },
       { href: '/admin/seo', label: 'SEO', icon: 'seo', permission: 'seo.manage' },
     ],
   },
@@ -86,7 +87,6 @@ export const ADMIN_NAV: AdminNavSection[] = [
     items: [
       { href: '/admin/ayarlar', label: 'Ayarlar', icon: 'settings', permission: 'settings.manage' },
       { href: '/admin/kullanicilar', label: 'Kullanıcılar', icon: 'users', permission: 'users.manage' },
-      { href: '/admin/sirket', label: 'Şirket Ayarları', icon: 'company', permission: 'settings.manage' },
       { href: '/admin/guvenlik', label: 'Güvenlik / Loglar', icon: 'security', permission: 'audit.read' },
     ],
   },
