@@ -9,7 +9,7 @@
  *
  * Bilerek dışa AKTARILMAYANLAR (paket boyutu / çalışma ortamı):
  *   settings            zod şemaları → '@/theme-engine/settings'
- *   typography/fonts    next/font yükleyicileri → '@/theme-engine/typography/fonts'
+ *   typography/font-css seçili tipografi paketi (sunucu) → '@/theme-engine/typography/font-css'
  *   preview             istemci önizleme bileşeni → '@/theme-engine/preview/live-preview'
  *   design-css.ts       seçilmiş tema/varyant sunum kuralları (applyTheme satır içi yazar)
  */

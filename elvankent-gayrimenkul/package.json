@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "npm run test:unit && npm run test:rls",
-    "test:unit": "node --import ./tests/unit/register-alias.mjs --test tests/unit/*.test.mjs",
+    "test:unit": "node --import ./tests/unit/register-alias.mjs --conditions=react-server --test tests/unit/*.test.mjs",
     "test:rls": "node --env-file-if-exists=.env.local --test tests/security/rls.test.mjs",
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm run lint && npm run build",

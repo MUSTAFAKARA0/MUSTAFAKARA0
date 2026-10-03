@@ -307,12 +307,14 @@ test('SURF-11: kök layout ayrımı — KARAY ve ofis panelinde kiracı tema CSS
   expect(office.themeRules).toBe(0);
   expect(office.catalogVars).toEqual([]);
   expect(office.faces.filter((f) => THEME_FONTS.test(f) && !/Manrope|Fraunces/.test(f))).toEqual([]);
-  // Kiracı sitesi: katalog yazı tipi değişkenleri yüklü, tema veriden uygulanmış. Tema sunum CSS'i
-  // global değildir (Site Factory izolasyonu): varsayılan Klasik site için hiçbir tema/varyant kuralı yazılmaz.
+  // Kiracı sitesi: yalnızca seçili tipografi paketi (FONT-ISOLATION) — Klasik için Fraunces + Manrope;
+  // katalogdaki diğer yazı tiplerinin değişkenleri ve @font-face'leri yok. Tema sunum CSS'i global
+  // değildir (Site Factory izolasyonu): varsayılan Klasik site için hiçbir tema/varyant kuralı yazılmaz.
   await page.goto(`${SITE}/`);
   const site = await surfaceAssets(page);
   expect(site.themeRules).toBe(0);
-  expect(site.catalogVars.length).toBe(4);
+  expect(site.catalogVars).toEqual([]);
+  expect(site.faces.filter((f) => THEME_FONTS.test(f) && !/^(Manrope|Fraunces)( Fallback)?$/.test(f))).toEqual([]);
   expect(site.siteThemeOutsidePreview).toBeGreaterThan(0);
 });
 

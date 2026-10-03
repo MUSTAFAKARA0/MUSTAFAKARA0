@@ -11,6 +11,7 @@ import { baseOpenGraph, siteOgImage } from '@/modules/seo/og';
 import { MaintenancePage, PreviewBar } from '@/components/layout/site-status';
 import { getSiteView, requireSiteTenant } from '@/site-config/load';
 import { applyTheme } from '@/theme-engine';
+import { fontPackageCss, fontPreloads, resolveFontIds } from '@/theme-engine/typography/font-css';
 
 export async function generateMetadata({ params }: LayoutProps<'/t/[tenant]'>): Promise<Metadata> {
   const tenant = await requireSiteTenant((await params).tenant);
@@ -55,11 +56,25 @@ export default async function TenantLayout({ children, params }: LayoutProps<'/t
   const hasBlog = posts.length > 0 && view.features.blog;
   // Anahtar içerikten türetilir: ofis rengini değiştirdiğinde (sürüm aynı kalsa da) yeni stil yüklenir
   const styleKey = `site-${tenant.id}-${view.preview ? 'onizleme' : tenant.site.version}-${hashString(css)}`;
+  // Tipografi paketi: yalnızca bu sitenin başlık/gövde yazı tipleri (katalogdaki diğerleri sayfaya girmez)
+  const fontIds = resolveFontIds(view.config);
+  // Ön yükleme bağlantıları React tarafından <head>'e taşınır ("optional" yazı tipi ilk çizime yetişir)
+  const fonts = (
+    <>
+      {fontPreloads(fontIds).map((href) => (
+        <link key={href} rel="preload" href={href} as="font" type="font/woff2" crossOrigin="anonymous" />
+      ))}
+      <style href={`site-fonts-${fontIds.join('-')}`} precedence="high">
+        {fontPackageCss(fontIds)}
+      </style>
+    </>
+  );
 
   // Bakım / yayında değil: ziyaretçiye bakım sayfası (panel ve önizleme etkilenmez)
   if (view.status !== 'active' && !view.preview) {
     return (
       <>
+        {fonts}
         <style href={styleKey} precedence="high">
           {css}
         </style>
@@ -70,6 +85,7 @@ export default async function TenantLayout({ children, params }: LayoutProps<'/t
 
   return (
     <div {...attributes} className="contents">
+      {fonts}
       <style href={styleKey} precedence="high">
         {css}
       </style>

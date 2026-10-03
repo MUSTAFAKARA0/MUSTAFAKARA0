@@ -5,7 +5,8 @@ import { Heart, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { applyTheme } from '@/theme-engine/runtime';
 import type { ThemeInput } from '@/theme-engine/types';
-import { previewFontVariables } from '@/theme-engine/preview/preview-fonts';
+import { THEMES } from '@/theme-engine/themes';
+import { FONT_CATALOG } from '@/theme-engine/typography/catalog';
 
 export type Brand = { primary_color: string | null; accent_color: string | null; logoUrl?: string | null; tagline?: string | null };
 
@@ -54,6 +55,11 @@ export function LivePreview({
     () => applyTheme(config, brand, darkAllowed, `[data-live-preview="${id}"]`),
     [config, brand, darkAllowed, id],
   );
+  // Yazı tipleri: yalnızca önizlenen başlık/gövde ailesi, statik dosyadan (<link>) yüklenir;
+  // katalog verisi JavaScript paketine girmez (bkz. scripts/fonts/build-site-fonts.mjs)
+  const theme = THEMES[config.theme];
+  const fontIds = [...new Set([config.typography.heading ?? theme.fonts.heading, config.typography.body ?? theme.fonts.body])];
+  const fontVars = Object.fromEntries(fontIds.map((f) => [FONT_CATALOG[f].cssVar, `"${FONT_CATALOG[f].name}", "${FONT_CATALOG[f].name} Fallback"`]));
   const h = config.header;
   const thumb = variant === 'thumb';
   const showLogo = Boolean(brand.logoUrl) && h.brand !== 'name';
@@ -77,9 +83,12 @@ export function LivePreview({
   );
   const photo = 'bg-[linear-gradient(160deg,#c9d3d6,#98a6ab)]';
   return (
-    // Önizleme, tema CSS'ini ve yazı tipi kataloğunu kendisi getirir: KARAY platformu ve
+    // Önizleme, tema CSS'ini ve önizlenen yazı tiplerini kendisi getirir: KARAY platformu ve
     // KARAY sayfasının kökleri bunları yüklemez (yalnızca önizlemenin bulunduğu sayfalar yükler)
-    <div aria-label={label} role="img" className={`${previewFontVariables} overflow-hidden rounded-2xl border border-border shadow-sm`}>
+    <div aria-label={label} role="img" style={fontVars} className="overflow-hidden rounded-2xl border border-border shadow-sm">
+      {fontIds.map((f) => (
+        <link key={f} rel="stylesheet" href={`/fonts/site/${f}/preview.css`} precedence="default" />
+      ))}
       <style>{css}</style>
       <div
         data-live-preview={id}
