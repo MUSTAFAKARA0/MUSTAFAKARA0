@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { SURFACE_HEADER } from '@/platform/tenant/surface-header';
-import { DEFAULT_TENANT_KEY, defaultHostsFromSiteUrl, hostSurface, karayHostConfigFromEnv, resolveRequestSurface, tenantKeyForHost, type TenantHostConfig } from '@/platform/tenant/host';
+import { DEFAULT_TENANT_KEY, defaultHostsFromSiteUrl, isUnderPath, karayHostConfigFromEnv, resolveRequestSurface, tenantKeyForHost, type TenantHostConfig } from '@/platform/tenant/host';
 
 /**
  * İstek yönlendirici (Next.js 16 proxy, Node.js çalışma zamanı).
@@ -9,9 +8,8 @@ import { DEFAULT_TENANT_KEY, defaultHostsFromSiteUrl, hostSurface, karayHostConf
  * 1) Çok kiracılı site: alan adından kiracı anahtarı çözülür ve istek
  *    /t/{anahtar}{yol} rotasına YENİDEN YAZILIR (adres çubuğu değişmez).
  *    Böylece her ofisin sayfaları ISR önbelleğinde ayrı tutulur.
- * 2) Güvenlik: istemcinin gönderdiği `x-tenant-key` ve `x-request-surface`
- *    başlıkları HER ZAMAN sunucuda hesaplanan değerle değiştirilir; /t/* iç
- *    rotalarına doğrudan erişim kapalıdır.
+ * 2) Güvenlik: istemcinin gönderdiği `x-tenant-key` başlığı HER ZAMAN sunucuda
+ *    hesaplanan değerle değiştirilir; /t/* iç rotalarına doğrudan erişim kapalıdır.
  * 2b) Yüzey ayrımı (resolveRequestSurface): kiracı alan adında KARAY konsolu
  *    (/platform, /api/platform) ve KARAY sayfası (/karay) 404'tür.
  * 3) /admin, /platform ve /onizleme: Supabase oturum çerezleri yenilenir,
@@ -23,18 +21,14 @@ import { DEFAULT_TENANT_KEY, defaultHostsFromSiteUrl, hostSurface, karayHostConf
 const TENANT_HEADER = 'x-tenant-key';
 const PUBLIC_AUTH_PATHS = new Set(['/admin/giris', '/admin/sifremi-unuttum', '/admin/sifre-yenile', '/admin/auth/callback', '/platform/giris', '/platform/sifremi-unuttum', '/platform/sifre-yenile']);
 
-function hostConfig(): TenantHostConfig {
-  return {
-    // Kodda kiracı adı yok: env'de tanımlı değilse veritabanındaki varsayılan kiracı (is_default)
-    defaultSlug: process.env.DEFAULT_TENANT_SLUG?.trim() || DEFAULT_TENANT_KEY,
-    platformRootDomain: process.env.PLATFORM_ROOT_DOMAIN || undefined,
-    defaultHosts: defaultHostsFromSiteUrl(process.env.NEXT_PUBLIC_SITE_URL),
-  };
-}
-
-function isUnder(pathname: string, prefix: string): boolean {
-  return pathname === prefix || pathname.startsWith(`${prefix}/`);
-}
+// Yapılandırma bir kez okunur; yüzey ve kiracı çözümlemesi aynı (küçük harfli) kök alan adını kullanır
+const SURFACE_CONFIG = karayHostConfigFromEnv(process.env);
+const HOST_CONFIG: TenantHostConfig = {
+  // Kodda kiracı adı yok: env'de tanımlı değilse veritabanındaki varsayılan kiracı (is_default)
+  defaultSlug: process.env.DEFAULT_TENANT_SLUG?.trim() || DEFAULT_TENANT_KEY,
+  platformRootDomain: SURFACE_CONFIG.platformRootDomain,
+  defaultHosts: defaultHostsFromSiteUrl(process.env.NEXT_PUBLIC_SITE_URL),
+};
 
 /** Bu adreste böyle bir yüzey yok: sade 404 (oturum yenilenmez, çerez yazılmaz) */
 function notFound(): NextResponse {
@@ -86,18 +80,16 @@ async function withSession(request: NextRequest, requestHeaders: Headers, rewrit
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const host = request.headers.get('host');
-  const surfaceConfig = karayHostConfigFromEnv(process.env);
 
   // Yüzey kararı (KARAY ↔ kiracı) oturum çerezlerine dokunulmadan ÖNCE verilir: kiracı
   // alan adında /platform, /api/platform ve /karay hiç işlenmez, çerez yazılmaz.
-  const route = resolveRequestSurface(pathname, host, surfaceConfig);
+  const { route } = resolveRequestSurface(pathname, host, SURFACE_CONFIG);
   if (route.kind === 'not-found') return notFound();
 
-  const tenantKey = tenantKeyForHost(host, hostConfig());
+  const tenantKey = tenantKeyForHost(host, HOST_CONFIG);
   const requestHeaders = new Headers(request.headers);
-  // İstemcinin gönderdiği değerler her zaman sunucuda hesaplananla değiştirilir
+  // İstemcinin gönderdiği değer her zaman sunucuda hesaplananla değiştirilir
   requestHeaders.set(TENANT_HEADER, tenantKey);
-  requestHeaders.set(SURFACE_HEADER, hostSurface(host, surfaceConfig));
 
   // Yönetim paneli ve süper admin: oturum zorunlu (giriş/şifre sayfaları hariç)
   if (route.kind === 'panel') {
@@ -128,13 +120,13 @@ export async function proxy(request: NextRequest) {
   destination.pathname = `/t/${encodeURIComponent(tenantKey)}${pathname === '/' ? '' : pathname}`;
 
   // Taslak önizleme: oturum çerezi gerekir (sayfa ayrıca yetki kontrolü yapar)
-  if (isUnder(pathname, '/onizleme')) {
+  if (isUnderPath(pathname, '/onizleme')) {
     const { response } = await withSession(request, requestHeaders, destination);
     return privateHeaders(response);
   }
 
   const response = NextResponse.rewrite(destination, { request: { headers: requestHeaders } });
-  if (isUnder(pathname, '/koleksiyon')) {
+  if (isUnderPath(pathname, '/koleksiyon')) {
     response.headers.set('X-Robots-Tag', 'noindex, nofollow');
     response.headers.set('Referrer-Policy', 'no-referrer');
     response.headers.set('Cache-Control', 'private, no-store');
@@ -146,5 +138,12 @@ export const config = {
   matcher: [
     // Statik dosyalar ve Next.js iç kaynakları hariç her istek (robots.txt, sitemap.xml, manifest dahil)
     '/((?!_next/static|_next/image|__nextjs|.*\\.(?:ico|png|jpe?g|gif|webp|avif|svg|css|js|map|woff2?|ttf|otf)$).*)',
+    // Uygulama rotaları dosya uzantısıyla bitse bile (ör. /platform/x.png) proxy'den geçer:
+    // yüzey ayrımı ve kiracı başlığı uzantı hilesiyle atlatılamaz
+    '/platform/:path*',
+    '/admin/:path*',
+    '/api/:path*',
+    '/karay/:path*',
+    '/t/:path*',
   ],
 };

@@ -2,8 +2,7 @@ import 'server-only';
 import { publicEnv } from '@/lib/env';
 import { serverEnv } from '@/lib/server-env';
 import { headers } from 'next/headers';
-import { DEFAULT_TENANT_KEY, defaultHostsFromSiteUrl, type HostSurface, type TenantHostConfig } from '@/platform/tenant/host';
-import { SURFACE_HEADER } from '@/platform/tenant/surface-header';
+import { DEFAULT_TENANT_KEY, defaultHostsFromSiteUrl, hostSurface, karayHostConfigFromEnv, type HostSurface, type TenantHostConfig } from '@/platform/tenant/host';
 
 export function tenantHostConfig(): TenantHostConfig {
   return {
@@ -14,11 +13,11 @@ export function tenantHostConfig(): TenantHostConfig {
 }
 
 /**
- * Bu isteğin alan adı yüzeyi (karay | shared | tenant). Değer proxy'de Host'tan
- * hesaplanıp güvenilir başlıkla iletilir; başlık yoksa veya geçersizse kiracı sayılır
- * (kapalı varsayılan: KARAY yüzeyi açılmaz).
+ * Bu isteğin alan adı yüzeyi (karay | shared | tenant). Proxy ile AYNI fonksiyon ve
+ * yapılandırmayla, istemcinin değiştiremeyeceği Host başlığından hesaplanır (başlık
+ * aktarımına güvenilmez; proxy'nin atlandığı bir yol olsa bile sonuç aynıdır).
+ * Host yoksa kiracı sayılır (kapalı varsayılan).
  */
 export async function requestHostSurface(): Promise<HostSurface> {
-  const value = (await headers()).get(SURFACE_HEADER);
-  return value === 'karay' || value === 'shared' ? value : 'tenant';
+  return hostSurface((await headers()).get('host'), karayHostConfigFromEnv(process.env));
 }

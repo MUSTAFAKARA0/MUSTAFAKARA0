@@ -41,15 +41,7 @@ export function isValidTenantKey(key: string): boolean {
 
 export function tenantKeyForHost(rawHost: string | null | undefined, config: TenantHostConfig): string {
   const host = normalizeHost(rawHost);
-  if (
-    !host ||
-    host === 'localhost' ||
-    host.endsWith('.localhost') ||
-    IPV4.test(host) ||
-    host.startsWith('[') ||
-    host.endsWith('.vercel.app') ||
-    config.defaultHosts.includes(host)
-  ) {
+  if (!host || isDevOrPreviewHost(host) || config.defaultHosts.includes(host)) {
     return config.defaultSlug;
   }
 
@@ -83,6 +75,7 @@ export interface KarayHostConfig {
   platformRootDomain?: string;
 }
 
+/** Geliştirme ve önizleme adresleri (yüzey ve kiracı çözümlemesi AYNI listeyi kullanır) */
 function isDevOrPreviewHost(host: string): boolean {
   return host === 'localhost' || host.endsWith('.localhost') || IPV4.test(host) || host.startsWith('[') || host.endsWith('.vercel.app');
 }
@@ -113,7 +106,10 @@ export function platformConsoleAllowed(surface: HostSurface): boolean {
  *  - null: kiracı alan adı (açılmaz), ya da KARAY_HOSTS tanımlıyken diğer adresler.
  */
 export function karayHostKind(rawHost: string | null | undefined, config: KarayHostConfig): 'dedicated' | 'shared' | null {
-  const surface = hostSurface(rawHost, config);
+  return karayKindForSurface(hostSurface(rawHost, config), config);
+}
+
+function karayKindForSurface(surface: HostSurface, config: KarayHostConfig): 'dedicated' | 'shared' | null {
   if (surface === 'karay') return 'dedicated';
   if (surface === 'shared' && config.karayHosts.length === 0) return 'shared';
   return null;
@@ -135,21 +131,26 @@ export type RequestRoute =
   /** Kiracı sitesi: /t/{anahtar}{yol} */
   | { kind: 'tenant-site' };
 
-function isUnderPath(pathname: string, prefix: string): boolean {
+/** Yol öneki: /platform hem /platform hem /platform/... eşleşir; /platformlar eşleşmez */
+export function isUnderPath(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
-export function resolveRequestSurface(pathname: string, rawHost: string | null | undefined, config: KarayHostConfig): RequestRoute {
+export function resolveRequestSurface(pathname: string, rawHost: string | null | undefined, config: KarayHostConfig): { route: RequestRoute; surface: HostSurface } {
+  const surface = hostSurface(rawHost, config);
+  return { route: routeFor(pathname, surface, config), surface };
+}
+
+function routeFor(pathname: string, surface: HostSurface, config: KarayHostConfig): RequestRoute {
   // İç kiracı rotaları yalnızca yeniden yazma ile kullanılabilir
   if (isUnderPath(pathname, '/t')) return { kind: 'not-found' };
-  const surface = hostSurface(rawHost, config);
 
   if (isUnderPath(pathname, '/platform')) return platformConsoleAllowed(surface) ? { kind: 'panel', area: 'platform' } : { kind: 'not-found' };
   if (isUnderPath(pathname, '/api/platform')) return platformConsoleAllowed(surface) ? { kind: 'api' } : { kind: 'not-found' };
   if (isUnderPath(pathname, '/admin')) return { kind: 'panel', area: 'admin' };
   if (isUnderPath(pathname, '/api')) return { kind: 'api' };
 
-  const karay = karayHostKind(rawHost, config);
+  const karay = karayKindForSurface(surface, config);
   if (isUnderPath(pathname, '/karay')) return karay ? { kind: 'karay' } : { kind: 'not-found' };
   if (karay === 'dedicated') return { kind: 'karay-rewrite' };
   return { kind: 'tenant-site' };

@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
 /**
- * Yüzey ayrımı (KARAY ↔ kiracı alan adı) — SURF-01…09.
+ * Yüzey ayrımı (KARAY ↔ kiracı alan adı) — SURF-01…10.
  *
  * Kiracı (müşteri) alan adında yalnızca kiracı sitesi ve ofis paneli (/admin) vardır;
  * KARAY konsolu (/platform, /api/platform) ve KARAY sayfası (/karay) 404'tür ve KARAY
@@ -150,13 +150,9 @@ test('SURF-04: platform giriş işlemi kiracı alan adına gönderilse bile KARA
     const res = await raw(tenantHost(), path, { method: 'POST', headers: { 'Content-Type': contentType }, body });
     expect(res.cookies.map((c) => c.split('=')[0]), path).toEqual([]);
     expect(res.location ?? '', path).not.toMatch(/\/platform/);
+    // İşlem sunucuda reddedildi (giriş sayfasında form yanıtı görünür)
+    if (path === '/admin/giris') expect(res.body).toContain('Bu adreste platform girişi yapılamaz.');
   }
-  const { data } = await service!
-    .from('audit_logs')
-    .select('metadata')
-    .eq('action', 'auth.login_denied')
-    .gte('created_at', new Date(Date.now() - 60_000).toISOString());
-  expect((data ?? []).some((r) => (r.metadata as { reason?: string } | null)?.reason === 'platform_on_tenant_host')).toBe(true);
 
   // Kontrol: aynı gönderim KARAY adresinde oturum açar (koruma yalnızca kiracı alan adında)
   const ok = await raw(`localhost:${PORT}`, '/platform/giris', { method: 'POST', headers: { 'Content-Type': contentType }, body });
@@ -215,6 +211,20 @@ test('SURF-08: kiracı sitesi telefonda çalışır; KARAY bağlantısı yoktur'
   await expect(page.locator('a[href*="/platform"], a[href*="/karay"]')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   await ctx.close();
+});
+
+test('SURF-10: dosya uzantısı hilesiyle (ör. /platform/x.png) proxy ve yüzey kontrolü atlatılamaz', async () => {
+  for (const p of ['/platform/organizasyonlar/x.png', '/platform/giris.js', '/karay/yasal/x.png', '/karay/og-karay.png', '/api/platform/branding.css']) {
+    for (const headers of [{}, { 'x-request-surface': 'karay' }] as Record<string, string>[]) {
+      const res = await raw(tenantHost(), p, { headers });
+      expect(res.status, `${p} ${JSON.stringify(headers)}`).toBe(404);
+      expect(res.body, p).not.toMatch(/Platform yönetimi|KARAY ana sayfa/);
+    }
+  }
+  // İç kiracı rotası uzantıyla da kapalı
+  expect((await raw(tenantHost(), `/t/e2esf-${RUN}/x.png`)).status).toBe(404);
+  // KARAY adresinde KARAY görselleri sunulmaya devam eder
+  expect((await raw(`localhost:${PORT}`, '/karay/og-karay.png')).status).toBe(200);
 });
 
 test('SURF-09: white-label — müşteri sitesinde ve ofis panelinde başka müşterinin adı görünmez', async ({ page }) => {

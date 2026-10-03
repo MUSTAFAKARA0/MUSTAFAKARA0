@@ -55,10 +55,12 @@ Tek karar noktası: `src/platform/tenant/host.ts › resolveRequestSurface()` �
 
 Savunma katmanları:
 
-1. **Proxy:** kiracı alan adında `/platform`, `/api/platform`, `/karay` sade 404 döner; oturum yenilenmez, çerez yazılmaz. Proxy alan adı yüzeyini güvenilir `x-request-surface` başlığıyla iletir (istemcinin gönderdiği değer her zaman ezilir).
-2. **Sunucu:** Next.js sunucu işlemleri sayfadan bağımsız çağrılabildiği için platform girişi (`signIn`, `scope=platform`) kiracı alan adında reddedilir ve hiç oturum açılmaz; `getSessionScope()` kiracı alan adında platform çerezini yok sayar (tüm `requireSuperAdmin` işlemleri orada kapalıdır); `requireSuperAdminPage()` 404 verir.
+1. **Proxy:** kiracı alan adında `/platform`, `/api/platform`, `/karay` sade 404 döner; oturum yenilenmez, çerez yazılmaz. Uygulama rotaları (`/platform`, `/admin`, `/api`, `/karay`, `/t`) dosya uzantısıyla bitse bile (ör. `/platform/x.png`) proxy'den geçer.
+2. **Sunucu:** yüzey, proxy ile aynı fonksiyonla doğrudan `Host` başlığından hesaplanır (aktarılan başlıklara güvenilmez). Next.js sunucu işlemleri sayfadan bağımsız çağrılabildiği için platform kapsamlı işlemler (`signIn` ve şifre sıfırlama, `scope=platform`) kiracı alan adında reddedilir; oturum açılmaz, e-posta gönderilmez. `getSessionScope()` kiracı alan adında platform çerezini yok sayar (tüm `requireSuperAdmin` işlemleri orada kapalıdır); `requireSuperAdminPage()` 404 verir.
 3. **Veritabanı:** RLS ve `is_super_admin()` kontrolleri aynen geçerlidir.
 
-Testler: `tests/unit/surface.test.mjs` (karar tablosu), `tests/e2e/surface-isolation.spec.ts` (SURF-01…08: ham HTTP ile sahte başlık denemeleri, platform giriş işleminin müşteri alan adına gönderilmesi, KARAY çerezlerinin müşteri alan adına taşınması).
+Testler: `tests/unit/surface.test.mjs` (karar tablosu), `tests/e2e/surface-isolation.spec.ts` (SURF-01…10: ham HTTP ile sahte başlık ve dosya uzantısı denemeleri, platform giriş işleminin müşteri alan adına gönderilmesi, KARAY çerezlerinin müşteri alan adına taşınması, white-label).
 
+> **Barındırma varsayımı:** yüzey `Host` başlığından belirlenir. Vercel bunu korur. Kendi sunucunuzda bir ters vekil (nginx vb.) arkasında çalıştırırsanız vekil gerçek `Host`'u iletmelidir; `localhost`/IP olarak iletirse her alan adı "shared" sayılır.
+>
 > **Canlıya alırken:** KARAY konsolu müşteri alan adlarında (ör. `elvankentgayrimenkul.com/platform`) artık açılmaz. Konsola `KARAY_HOSTS` alan adından, `PLATFORM_ROOT_DOMAIN`'den veya `*.vercel.app` adresinden girilir.

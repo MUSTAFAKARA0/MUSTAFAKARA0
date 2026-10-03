@@ -68,9 +68,9 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
   const { ipHash } = await getRequestFingerprint();
   const platformLogin = formData.get('scope') === 'platform';
   // KARAY platform girişi kiracı (müşteri) alan adında yapılamaz: oturum hiç açılmaz,
-  // platform çerezi müşteri alan adına yazılmaz (proxy de /platform'u burada 404 yapar)
-  if (platformLogin && !platformConsoleAllowed(await requestHostSurface())) {
-    await logSecurityEvent({ orgId: null, action: 'auth.login_denied', metadata: { email: maskEmail(email), reason: 'platform_on_tenant_host' }, ipHash });
+  // platform çerezi müşteri alan adına yazılmaz (proxy de /platform'u burada 404 yapar).
+  // Kimlik doğrulamadan önce reddedildiği için kayıt yazılmaz (kayıt tablosu doldurulamaz).
+  if (platformLogin && !(await platformScopeAllowedHere())) {
     return { error: 'Bu adreste platform girişi yapılamaz.', email };
   }
   const tenant = await getTenantFromRequest().catch(() => null);
@@ -177,6 +177,13 @@ export async function switchOrganization(formData: FormData) {
   redirect('/admin');
 }
 
+const RESET_SENT_MESSAGE = 'Bu adrese kayıtlı bir hesap varsa şifre yenileme bağlantısı gönderildi. Gelen kutunuzu (ve istenmeyen klasörünü) kontrol edin.';
+
+/** Platform (KARAY) kapsamlı işlemler yalnızca KARAY/platform alan adlarında yapılır */
+async function platformScopeAllowedHere(): Promise<boolean> {
+  return platformConsoleAllowed(await requestHostSurface());
+}
+
 async function requestOrigin(): Promise<string> {
   const h = await headers();
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
@@ -193,18 +200,22 @@ export async function requestPasswordReset(_prev: AuthFormState, formData: FormD
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
   const parsed = emailField.safeParse(email);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message, email };
+  const platformReset = formData.get('scope') === 'platform';
+  // Kiracı alan adında platform sıfırlaması yapılmaz (bağlantı orada 404 olan sayfaya giderdi).
+  // Yanıt, hesabın varlığını açığa çıkarmamak için normal yanıtla aynıdır; e-posta gönderilmez.
+  if (platformReset && !(await platformScopeAllowedHere())) return { message: RESET_SENT_MESSAGE };
   const supabase = await createSessionClient();
   const origin = await requestOrigin();
   // KARAY platform girişinden istenen sıfırlama, KARAY markalı sayfaya döner (ofis paneline değil).
   // Dönüş adresi aynı callback'tir → Supabase'teki izinli adres listesinde değişiklik gerekmez.
-  const next = formData.get('scope') === 'platform' ? '/platform/sifre-yenile' : '/admin/sifre-yenile';
+  const next = platformReset ? '/platform/sifre-yenile' : '/admin/sifre-yenile';
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
     redirectTo: `${origin}/admin/auth/callback?next=${next}`,
   });
   if (error?.status === 429) return { error: 'Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin.', email };
   const { ipHash } = await getRequestFingerprint();
   await logSecurityEvent({ orgId: null, action: 'auth.password_reset_requested', metadata: { email: maskEmail(parsed.data) }, ipHash });
-  return { message: 'Bu adrese kayıtlı bir hesap varsa şifre yenileme bağlantısı gönderildi. Gelen kutunuzu (ve istenmeyen klasörünü) kontrol edin.' };
+  return { message: RESET_SENT_MESSAGE };
 }
 
 /** Oturum açıkken (veya sıfırlama bağlantısıyla gelince) yeni şifre belirler */

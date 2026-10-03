@@ -9,7 +9,7 @@ import { DEFAULT_TENANT_KEY, hostSurface, isValidTenantKey, karayHostConfigFromE
 const plain = karayHostConfigFromEnv({});
 const withRoot = karayHostConfigFromEnv({ PLATFORM_ROOT_DOMAIN: 'karayapp.com' });
 const withKaray = karayHostConfigFromEnv({ KARAY_HOSTS: 'karay.com.tr, www.karay.com.tr', PLATFORM_ROOT_DOMAIN: 'karayapp.com' });
-const kind = (path, host, cfg = plain) => resolveRequestSurface(path, host, cfg);
+const kind = (path, host, cfg = plain) => resolveRequestSurface(path, host, cfg).route;
 
 describe('Alan adı yüzeyi', () => {
   test('KARAY alan adı, platform kökü ve geliştirme/önizleme adresleri KARAY yüzeyidir', () => {
@@ -79,6 +79,16 @@ describe('KARAY alan adlarında yönlendirme', () => {
     assert.equal(karayHostKind('karay.com.tr', withKaray), 'dedicated');
     assert.equal(karayHostKind('localhost', plain), 'shared');
     assert.equal(karayHostKind('ornekemlak.com', plain), null);
+  });
+});
+
+describe('Tek karar noktası', () => {
+  test('karar ile birlikte hesaplanan yüzey döner; kök alan adı büyük harfle verilse de tutarlı', () => {
+    assert.equal(resolveRequestSurface('/platform', 'ornekemlak.com', plain).surface, 'tenant');
+    const upper = karayHostConfigFromEnv({ PLATFORM_ROOT_DOMAIN: 'KarayApp.com' });
+    assert.equal(upper.platformRootDomain, 'karayapp.com');
+    assert.deepEqual(resolveRequestSurface('/platform', 'karayapp.com', upper), { route: { kind: 'panel', area: 'platform' }, surface: 'shared' });
+    assert.equal(tenantKeyForHost('ofis1.karayapp.com', { defaultSlug: 'v', platformRootDomain: upper.platformRootDomain, defaultHosts: [] }), 'ofis1');
   });
 });
 
