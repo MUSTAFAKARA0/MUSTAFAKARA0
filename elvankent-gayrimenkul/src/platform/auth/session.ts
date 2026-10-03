@@ -6,6 +6,8 @@ import { notFound, redirect } from 'next/navigation';
 import type { User } from '@supabase/supabase-js';
 import { serverEnv } from '@/lib/server-env';
 import { createSessionClient, type DB } from '@/lib/supabase/server';
+import { requestHostSurface } from '@/platform/tenant/config';
+import { platformConsoleAllowed } from '@/platform/tenant/host';
 import { getTenantFromRequest, getTenantKeyFromRequest } from '@/platform/tenant/tenant';
 import { ForbiddenError, UnauthenticatedError } from '@/platform/actions';
 import { logSecurityEvent } from '@/platform/audit';
@@ -165,6 +167,8 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
 
 /** Oturumun alanı (çerez başka bir kullanıcıya aitse veya yoksa: ofis) */
 export const getSessionScope = cache(async (): Promise<SessionScope> => {
+  // Kiracı (müşteri) alan adında platform oturumu YOKTUR: çerez taşınmış olsa bile yok sayılır
+  if (!platformConsoleAllowed(await requestHostSurface())) return 'office';
   const session = await getSessionUser();
   if (!session) return 'office';
   const value = (await cookies()).get(SESSION_SCOPE_COOKIE)?.value;
@@ -391,6 +395,8 @@ export async function requireSuperAdmin(): Promise<SessionUser> {
 }
 
 export async function requireSuperAdminPage(): Promise<SessionUser> {
+  // Proxy kiracı alan adında /platform'u zaten 404 yapar; sunucuda da aynı kural
+  if (!platformConsoleAllowed(await requestHostSurface())) notFound();
   const session = await getSessionUser();
   if (!session) redirect('/platform/giris');
   if (!session.profile.isSuperAdmin) {

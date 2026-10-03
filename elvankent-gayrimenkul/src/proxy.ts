@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { defaultHostsFromSiteUrl, karayHostKind, karayHostsFromEnv, tenantKeyForHost, type TenantHostConfig } from '@/platform/tenant/host';
+import { SURFACE_HEADER } from '@/platform/tenant/surface-header';
+import { defaultHostsFromSiteUrl, hostSurface, karayHostConfigFromEnv, resolveRequestSurface, tenantKeyForHost, type TenantHostConfig } from '@/platform/tenant/host';
 
 /**
  * İstek yönlendirici (Next.js 16 proxy, Node.js çalışma zamanı).
@@ -8,9 +9,11 @@ import { defaultHostsFromSiteUrl, karayHostKind, karayHostsFromEnv, tenantKeyFor
  * 1) Çok kiracılı site: alan adından kiracı anahtarı çözülür ve istek
  *    /t/{anahtar}{yol} rotasına YENİDEN YAZILIR (adres çubuğu değişmez).
  *    Böylece her ofisin sayfaları ISR önbelleğinde ayrı tutulur.
- * 2) Güvenlik: istemcinin gönderdiği `x-tenant-key` başlığı HER ZAMAN
- *    silinip sunucuda hesaplanan değerle değiştirilir; /t/* iç rotalarına
- *    doğrudan erişim kapalıdır.
+ * 2) Güvenlik: istemcinin gönderdiği `x-tenant-key` ve `x-request-surface`
+ *    başlıkları HER ZAMAN sunucuda hesaplanan değerle değiştirilir; /t/* iç
+ *    rotalarına doğrudan erişim kapalıdır.
+ * 2b) Yüzey ayrımı (resolveRequestSurface): kiracı alan adında KARAY konsolu
+ *    (/platform, /api/platform) ve KARAY sayfası (/karay) 404'tür.
  * 3) /admin, /platform ve /onizleme: Supabase oturum çerezleri yenilenir,
  *    oturum yoksa giriş sayfasına yönlendirilir. Yetki (rol/izin) kontrolü
  *    ayrıca sunucuda ve veritabanında (RLS) yapılır — proxy tek başına
@@ -30,6 +33,14 @@ function hostConfig(): TenantHostConfig {
 
 function isUnder(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+/** Bu adreste böyle bir yüzey yok: sade 404 (oturum yenilenmez, çerez yazılmaz) */
+function notFound(): NextResponse {
+  return new NextResponse('Not found', {
+    status: 404,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' },
+  });
 }
 
 function privateHeaders(response: NextResponse): NextResponse {
@@ -73,22 +84,26 @@ async function withSession(request: NextRequest, requestHeaders: Headers, rewrit
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const host = request.headers.get('host');
+  const surfaceConfig = karayHostConfigFromEnv(process.env);
 
-  // İç kiracı rotaları yalnızca yeniden yazma ile kullanılabilir
-  if (isUnder(pathname, '/t')) {
-    return new NextResponse('Not found', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
-  }
+  // Yüzey kararı (KARAY ↔ kiracı) oturum çerezlerine dokunulmadan ÖNCE verilir: kiracı
+  // alan adında /platform, /api/platform ve /karay hiç işlenmez, çerez yazılmaz.
+  const route = resolveRequestSurface(pathname, host, surfaceConfig);
+  if (route.kind === 'not-found') return notFound();
 
-  const tenantKey = tenantKeyForHost(request.headers.get('host'), hostConfig());
+  const tenantKey = tenantKeyForHost(host, hostConfig());
   const requestHeaders = new Headers(request.headers);
+  // İstemcinin gönderdiği değerler her zaman sunucuda hesaplananla değiştirilir
   requestHeaders.set(TENANT_HEADER, tenantKey);
+  requestHeaders.set(SURFACE_HEADER, hostSurface(host, surfaceConfig));
 
   // Yönetim paneli ve süper admin: oturum zorunlu (giriş/şifre sayfaları hariç)
-  if (isUnder(pathname, '/admin') || isUnder(pathname, '/platform')) {
+  if (route.kind === 'panel') {
     const { response, hasUser } = await withSession(request, requestHeaders, null);
     if (!hasUser && !PUBLIC_AUTH_PATHS.has(pathname)) {
       // Platform (KARAY) ve ofis paneli ayrı giriş sayfalarına sahiptir
-      if (isUnder(pathname, '/platform')) return privateHeaders(NextResponse.redirect(new URL('/platform/giris', request.url)));
+      if (route.area === 'platform') return privateHeaders(NextResponse.redirect(new URL('/platform/giris', request.url)));
       const loginUrl = new URL('/admin/giris', request.url);
       const next = pathname + request.nextUrl.search;
       if (next !== '/admin') loginUrl.searchParams.set('next', next);
@@ -98,19 +113,10 @@ export async function proxy(request: NextRequest) {
   }
 
   // API rotaları yeniden yazılmaz; kiracı başlığı güvenilir değerle iletilir
-  if (isUnder(pathname, '/api')) {
+  if (route.kind === 'api' || route.kind === 'karay') {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
-
-  // KARAY şirket/ürün sayfası: yalnızca platform adreslerinde (kiracı alan adında açılmaz)
-  const karay = karayHostKind(request.headers.get('host'), {
-    karayHosts: karayHostsFromEnv(process.env.KARAY_HOSTS),
-    platformRootDomain: process.env.PLATFORM_ROOT_DOMAIN || undefined,
-  });
-  if (karay && isUnder(pathname, '/karay')) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
-  }
-  if (karay === 'dedicated') {
+  if (route.kind === 'karay-rewrite') {
     // KARAY'a ayrılmış alan adında kök ve diğer yollar KARAY sayfasına gider
     const target = request.nextUrl.clone();
     target.pathname = `/karay${pathname === '/' ? '' : pathname}`;

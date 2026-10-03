@@ -57,28 +57,94 @@ export function tenantKeyForHost(rawHost: string | null | undefined, config: Ten
 }
 
 /**
- * KARAY'ın herkese açık şirket/ürün sayfası (/karay) hangi adreslerde sunulur?
+ * Alan adının yüzeyi — KARAY ile kiracıların (emlak ofislerinin) ayrıldığı TEK yer.
  *
- * KARAY sayfası bir kiracının (emlak ofisinin) alan adında AÇILMAZ: ofisin sitesinde
- * platform sahibinin tanıtımı görünmez. Sunulduğu adresler:
- *  - KARAY_HOSTS listesindeki alan adları (ör. karay.com.tr, www.karay.com.tr) —
- *    bu alan adlarında kök adres (/) da KARAY sayfasıdır;
- *  - KARAY_HOSTS tanımlı değilse yalnızca geliştirme/demo adresleri (localhost,
- *    IP, *.vercel.app) ve platform kök alan adı (PLATFORM_ROOT_DOMAIN).
+ *  - karay:  KARAY_HOSTS listesindeki alan adları (KARAY'ın kendi alan adı)
+ *  - shared: platform kök alan adı (PLATFORM_ROOT_DOMAIN ve www), geliştirme ve
+ *            önizleme adresleri (localhost, *.localhost, IP, *.vercel.app)
+ *  - tenant: diğer her şey — kiracıların özel alan adları ve {slug}.{kök} alt alan adları
+ *
+ * KARAY yüzeyleri (/platform konsolu, /karay sayfası) yalnızca karay/shared alan
+ * adlarında açılır; kiracı alan adında yalnızca kiracı sitesi ve ofis paneli (/admin)
+ * vardır. Alan adı boşsa kiracı sayılır (kapalı varsayılan).
  */
+export type HostSurface = 'karay' | 'shared' | 'tenant';
+
 export interface KarayHostConfig {
   karayHosts: string[];
   platformRootDomain?: string;
 }
 
-export function karayHostKind(rawHost: string | null | undefined, config: KarayHostConfig): 'dedicated' | 'shared' | null {
+function isDevOrPreviewHost(host: string): boolean {
+  return host === 'localhost' || host.endsWith('.localhost') || IPV4.test(host) || host.startsWith('[') || host.endsWith('.vercel.app');
+}
+
+export function hostSurface(rawHost: string | null | undefined, config: KarayHostConfig): HostSurface {
   const host = normalizeHost(rawHost);
-  if (!host) return null;
-  if (config.karayHosts.includes(host)) return 'dedicated';
-  if (config.karayHosts.length > 0) return null;
+  if (!host) return 'tenant';
+  if (config.karayHosts.includes(host)) return 'karay';
   const root = config.platformRootDomain;
-  if (host === 'localhost' || IPV4.test(host) || host.endsWith('.vercel.app') || (root && (host === root || host === `www.${root}`))) return 'shared';
+  if (isDevOrPreviewHost(host) || (root && (host === root || host === `www.${root}`))) return 'shared';
+  return 'tenant';
+}
+
+/** Ortam değişkenlerinden yüzey yapılandırması (proxy ve sunucu aynı değeri kullanır) */
+export function karayHostConfigFromEnv(env: Record<string, string | undefined>): KarayHostConfig {
+  return { karayHosts: karayHostsFromEnv(env.KARAY_HOSTS), platformRootDomain: (env.PLATFORM_ROOT_DOMAIN || '').toLowerCase() || undefined };
+}
+
+/** KARAY platform konsolu (/platform) bu yüzeyde açılabilir mi? */
+export function platformConsoleAllowed(surface: HostSurface): boolean {
+  return surface !== 'tenant';
+}
+
+/**
+ * KARAY'ın herkese açık şirket/ürün sayfası (/karay) hangi adreslerde sunulur?
+ *  - 'dedicated': KARAY_HOSTS alan adı — kök adres (/) da KARAY sayfasıdır;
+ *  - 'shared': KARAY_HOSTS tanımlı değilken platform/geliştirme/önizleme adresleri (/karay yolunda);
+ *  - null: kiracı alan adı (açılmaz), ya da KARAY_HOSTS tanımlıyken diğer adresler.
+ */
+export function karayHostKind(rawHost: string | null | undefined, config: KarayHostConfig): 'dedicated' | 'shared' | null {
+  const surface = hostSurface(rawHost, config);
+  if (surface === 'karay') return 'dedicated';
+  if (surface === 'shared' && config.karayHosts.length === 0) return 'shared';
   return null;
+}
+
+/**
+ * Proxy'nin bir istek için vereceği karar. Yüzey ayrımı (KARAY ↔ kiracı) burada,
+ * oturum çerezlerine dokunulmadan ÖNCE verilir.
+ */
+export type RequestRoute =
+  | { kind: 'not-found' }
+  /** Oturum gerektiren paneller: KARAY konsolu veya ofis paneli */
+  | { kind: 'panel'; area: 'platform' | 'admin' }
+  | { kind: 'api' }
+  /** /karay yolu olduğu gibi sunulur */
+  | { kind: 'karay' }
+  /** KARAY'a ayrılmış alan adında yol /karay altına yeniden yazılır */
+  | { kind: 'karay-rewrite' }
+  /** Kiracı sitesi: /t/{anahtar}{yol} */
+  | { kind: 'tenant-site' };
+
+function isUnderPath(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+export function resolveRequestSurface(pathname: string, rawHost: string | null | undefined, config: KarayHostConfig): RequestRoute {
+  // İç kiracı rotaları yalnızca yeniden yazma ile kullanılabilir
+  if (isUnderPath(pathname, '/t')) return { kind: 'not-found' };
+  const surface = hostSurface(rawHost, config);
+
+  if (isUnderPath(pathname, '/platform')) return platformConsoleAllowed(surface) ? { kind: 'panel', area: 'platform' } : { kind: 'not-found' };
+  if (isUnderPath(pathname, '/api/platform')) return platformConsoleAllowed(surface) ? { kind: 'api' } : { kind: 'not-found' };
+  if (isUnderPath(pathname, '/admin')) return { kind: 'panel', area: 'admin' };
+  if (isUnderPath(pathname, '/api')) return { kind: 'api' };
+
+  const karay = karayHostKind(rawHost, config);
+  if (isUnderPath(pathname, '/karay')) return karay ? { kind: 'karay' } : { kind: 'not-found' };
+  if (karay === 'dedicated') return { kind: 'karay-rewrite' };
+  return { kind: 'tenant-site' };
 }
 
 export function karayHostsFromEnv(value: string | undefined): string[] {

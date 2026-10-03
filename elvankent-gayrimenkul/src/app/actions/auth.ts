@@ -17,6 +17,8 @@ import {
   sessionScopeValue,
   type SessionScope,
 } from '@/platform/auth/session';
+import { requestHostSurface } from '@/platform/tenant/config';
+import { platformConsoleAllowed } from '@/platform/tenant/host';
 import { getTenantFromRequest } from '@/platform/tenant/tenant';
 
 export interface AuthFormState {
@@ -64,6 +66,13 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
   if (!parsed.success) return { error: parsed.error.issues[0]?.message, email };
 
   const { ipHash } = await getRequestFingerprint();
+  const platformLogin = formData.get('scope') === 'platform';
+  // KARAY platform girişi kiracı (müşteri) alan adında yapılamaz: oturum hiç açılmaz,
+  // platform çerezi müşteri alan adına yazılmaz (proxy de /platform'u burada 404 yapar)
+  if (platformLogin && !platformConsoleAllowed(await requestHostSurface())) {
+    await logSecurityEvent({ orgId: null, action: 'auth.login_denied', metadata: { email: maskEmail(email), reason: 'platform_on_tenant_host' }, ipHash });
+    return { error: 'Bu adreste platform girişi yapılamaz.', email };
+  }
   const tenant = await getTenantFromRequest().catch(() => null);
   const supabase = await createSessionClient();
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
@@ -101,7 +110,6 @@ export async function signIn(_prev: AuthFormState, formData: FormData): Promise<
     })
     .map((m) => m.organization_id);
   const isSuperAdmin = profile?.is_super_admin ?? false;
-  const platformLogin = formData.get('scope') === 'platform';
 
   // Platform (KARAY) girişi yalnızca süper admin içindir; ofis kullanıcısı buradan giremez
   if (platformLogin && !isSuperAdmin) {
