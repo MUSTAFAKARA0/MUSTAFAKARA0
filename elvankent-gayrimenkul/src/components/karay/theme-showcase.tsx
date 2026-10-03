@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { LivePreview } from '@/components/site-preview/live-preview';
+import { LivePreview } from '@/theme-engine/preview/live-preview';
 import { cn } from '@/lib/utils';
 import type { SiteConfig } from '@/platform/site/schema';
-import { THEME_LIST, THEMES } from '@/platform/site/themes';
+import { THEME_LIST, THEMES } from '@/theme-engine/themes';
 
 /**
  * KARAY sayfasındaki tema vitrini. Önizleme, emlak ofisi sitelerinin kullandığı GERÇEK tema

@@ -29,12 +29,18 @@ const CASES = [
   ['alt katman (site-config) → site bileşeni', 'src/platform/site/__x.ts', "import { A } from '@/components/layout/site-header';", true],
   ['alt katman (modules) → arama bileşeni', 'src/modules/properties/__x.ts', "import { A } from '@/components/search/hero-search';", true],
   ['alt katman (ui) → ofis paneli', 'src/components/panel/__x.tsx', "import { A } from '@/components/admin/admin-shell';", true],
+  ['theme-engine → site-config', 'src/theme-engine/__x.ts', "import { A } from '@/platform/site/schema';", true],
+  ['theme-engine → site bileşeni', 'src/theme-engine/preview/__x.tsx', "import { A } from '@/components/layout/site-header';", true],
+  ['theme-engine → ofis paneli', 'src/theme-engine/__x.ts', "import { A } from '@/components/admin/ui';", true],
   ['göreli üst klasör yolu', 'src/components/layout/__x.tsx', "import { A } from '../admin/admin-shell';", true],
   // İzin verilenler
-  ['site-engine → ui / modules / site-config', 'src/components/layout/__x.tsx', "import { A } from '@/components/ui/button';\nimport { B } from '@/modules/properties/queries';\nimport { C } from '@/platform/site/themes';", false],
+  ['site-engine → ui / modules / theme-engine', 'src/components/layout/__x.tsx', "import { A } from '@/components/ui/button';\nimport { B } from '@/modules/properties/queries';\nimport { C } from '@/theme-engine/themes';", false],
   ['ofis paneli → ortak panel arayüzü', 'src/app/admin/(panel)/__x.tsx', "import { A } from '@/components/panel/ui';", false],
   ['KARAY konsolu → ortak panel arayüzü ve marka', 'src/app/platform/(konsol)/__x.tsx', "import { A } from '@/components/panel/audit-list';\nimport { B } from '@/components/brand/platform-wordmark';", false],
-  ['KARAY sayfası → tema önizlemesi', 'src/components/karay/__x.tsx', "import { A } from '@/components/site-preview/live-preview';", false],
+  ['KARAY sayfası → tema önizlemesi', 'src/components/karay/__x.tsx', "import { A } from '@/theme-engine/preview/live-preview';", false],
+  ['site-engine → theme-engine', 'src/app/t/[tenant]/__x.tsx', "import { applyTheme } from '@/theme-engine';", false],
+  ['site-config → theme-engine', 'src/platform/site/__x.ts', "import { A } from '@/theme-engine/settings';", false],
+  ['theme-engine → core / ui', 'src/theme-engine/__x.ts', "import { A } from '@/platform/branding/theme';\nimport { B } from '@/components/ui/button';", false],
 ];
 
 describe('Katman sınırları', () => {

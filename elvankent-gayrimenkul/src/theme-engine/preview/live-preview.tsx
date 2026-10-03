@@ -3,11 +3,26 @@
 import { useId, useMemo } from 'react';
 import { Heart, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { SiteConfig } from '@/platform/site/schema';
-import { resolveStyle, THEMES } from '@/platform/site/themes';
-import { siteCss } from '@/platform/site/tokens';
+import { applyTheme } from '@/theme-engine/runtime';
+import type { ThemeInput } from '@/theme-engine/types';
+import '@/theme-engine/css/themes.css';
 
 export type Brand = { primary_color: string | null; accent_color: string | null; logoUrl?: string | null; tagline?: string | null };
+
+/**
+ * Önizlemenin girdisi: tema verisi + örnek header'ın gösterdiği birkaç alan. Site
+ * yapılandırması (SiteConfig) bunu yapısal olarak karşılar; Theme Engine site
+ * yapılandırmasının tamamına bağımlı değildir.
+ */
+export interface ThemePreviewInput extends ThemeInput {
+  header: {
+    style?: 'light' | 'dark';
+    brand: 'auto' | 'logo' | 'logo-name' | 'name';
+    showTagline: boolean;
+    showFavorites: boolean;
+    cta?: { label: string; href: string };
+  };
+}
 
 /**
  * Canlı önizleme: seçilen tema/renk/yazı tipi/header/bileşen stilleriyle küçük bir site
@@ -26,7 +41,7 @@ export function LivePreview({
   variant = 'full',
   label = 'Canlı önizleme',
 }: {
-  config: SiteConfig;
+  config: ThemePreviewInput;
   brand: Brand;
   darkAllowed: boolean;
   name: string;
@@ -34,9 +49,11 @@ export function LivePreview({
   label?: string;
 }) {
   const id = useId().replace(/[^a-z0-9]/gi, '');
-  const css = useMemo(() => siteCss(config, brand, darkAllowed, `[data-live-preview="${id}"]`), [config, brand, darkAllowed, id]);
-  const theme = THEMES[config.theme];
-  const style = resolveStyle(config);
+  // Yayındaki siteyle AYNI çalışma zamanı: tema verisi → CSS değişkenleri + öznitelikler
+  const { css, attributes, style } = useMemo(
+    () => applyTheme(config, brand, darkAllowed, `[data-live-preview="${id}"]`),
+    [config, brand, darkAllowed, id],
+  );
   const h = config.header;
   const thumb = variant === 'thumb';
   const showLogo = Boolean(brand.logoUrl) && h.brand !== 'name';
@@ -64,11 +81,7 @@ export function LivePreview({
       <style>{css}</style>
       <div
         data-live-preview={id}
-        data-site-theme={theme.id}
-        data-site-card={style.card}
-        data-site-button={style.button}
-        data-site-footer={style.footer}
-        data-site-image={style.image}
+        {...attributes}
         className="pointer-events-none bg-background font-sans text-foreground select-none"
       >
         {/* Header */}

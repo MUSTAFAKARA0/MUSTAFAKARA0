@@ -1,4 +1,4 @@
-import type { ColorTokens } from '@/platform/site/schema';
+import type { ColorTokens } from '@/theme-engine/settings';
 
 /**
  * Hazır renk paletleri. Bir palet seçildiğinde TÜM tokenlar birbiriyle uyumlu olarak

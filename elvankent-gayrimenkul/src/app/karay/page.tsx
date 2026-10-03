@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 import { karaySiteUrl } from '@/modules/karay/site';
 import { getKarayProfile } from '@/modules/karay/profile';
 import { parseSiteConfig } from '@/platform/site/schema';
-import { THEME_LIST } from '@/platform/site/themes';
+import { THEME_LIST } from '@/theme-engine/themes';
 
 /*
  * KARAY şirket/ürün sayfası. İçerik yalnızca platformda GERÇEKTEN var olan özellikleri

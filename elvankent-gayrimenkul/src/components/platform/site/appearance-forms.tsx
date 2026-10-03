@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { LivePreview, type Brand } from '@/components/site-preview/live-preview';
+import { LivePreview, type Brand } from '@/theme-engine/preview/live-preview';
 import { Check, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -9,13 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Checkbox, Field, Input, Select } from '@/components/ui/form-controls';
 import { cn } from '@/lib/utils';
 import { SaveBar, useSectionSave } from '@/components/platform/site/site-actions';
-import { FONT_CATALOG } from '@/platform/site/font-catalog';
-import { PALETTES, findPalette } from '@/platform/site/palettes';
+import { FONT_CATALOG } from '@/theme-engine/typography/catalog';
+import { PALETTES, findPalette } from '@/theme-engine/palettes';
 import { FONT_IDS, type ColorTokens, type ColorsConfig, type FontId, type SiteConfig, type StyleConfig, type ThemeId, type TypographyConfig } from '@/platform/site/schema';
-import { resolveStyle, THEME_LIST, THEMES } from '@/platform/site/themes';
-import { resolveColors } from '@/platform/site/tokens';
+import { resolveStyle, THEME_LIST, THEMES } from '@/theme-engine/themes';
+import { resolveColors } from '@/theme-engine/tokens';
 
-export { LivePreview, type Brand } from '@/components/site-preview/live-preview';
+export { LivePreview, type Brand } from '@/theme-engine/preview/live-preview';
 
 function TwoColumn({ form, preview }: { form: React.ReactNode; preview: React.ReactNode }) {
   return (

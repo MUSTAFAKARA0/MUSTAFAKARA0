@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Toaster } from 'sonner';
 import { DemoNotice } from '@/components/common/demo-notice';
-import { fontVariables } from '@/platform/site/fonts';
+import { fontVariables } from '@/theme-engine/typography/fonts';
 import { VercelInsights } from '@/components/common/vercel-insights';
 import './globals.css';
 

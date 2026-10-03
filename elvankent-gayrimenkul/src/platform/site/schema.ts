@@ -1,4 +1,23 @@
 import { z } from 'zod';
+import {
+  colorsSchema,
+  colorTokensSchema,
+  headerStyleSchema,
+  hexColor,
+  styleSchema,
+  themeSchema,
+  typographySchema,
+  type ColorsConfig,
+  type ColorTokens,
+  type StyleConfig,
+  type TypographyConfig,
+} from '@/theme-engine/settings';
+
+// Tema ayarları Theme Engine'e aittir; site yapılandırması onları kendi belgesine katar.
+// Geriye uyumluluk için buradan da dışa aktarılır.
+import type { ThemeId } from '@/theme-engine/ids';
+export { THEME_IDS, FONT_IDS, type ThemeId, type FontId } from '@/theme-engine/ids';
+export { colorsSchema, colorTokensSchema, styleSchema, themeSchema, typographySchema, type ColorsConfig, type ColorTokens, type StyleConfig, type TypographyConfig };
 
 /**
  * Kiracı web sitesi yapılandırması (site_configs.draft / published).
@@ -12,7 +31,7 @@ import { z } from 'zod';
  * Bölümler taslakta ayrı ayrı kaydedilir (site_save_draft(org, bölüm, değer)).
  */
 
-const hex = z.string().regex(/^#[0-9a-f]{6}$/i, 'Renk #RRGGBB biçiminde olmalıdır.').transform((v) => v.toLowerCase());
+const hex = hexColor;
 const text = (max: number) => z.string().trim().max(max);
 const optionalText = (max: number) => text(max).optional().transform((v) => (v ? v : undefined));
 const id = z.string().regex(/^[a-z0-9-]{1,40}$/);
@@ -26,54 +45,13 @@ export const linkHref = z
     message: 'Bağlantı "/" ile başlayan site içi bir adres veya https:// ile başlayan bir adres olmalıdır.',
   });
 
-// --------------------------------------------------------------------------- Tema
-export const THEME_IDS = ['klasik', 'marble', 'atlas', 'prestij', 'kent', 'yalin', 'rezidans', 'doga', 'dergi', 'grafit'] as const;
-export type ThemeId = (typeof THEME_IDS)[number];
-export const themeSchema = z.enum(THEME_IDS);
-
-// --------------------------------------------------------------------------- Renkler
-export const colorTokensSchema = z.object({
-  primary: hex,
-  secondary: hex,
-  accent: hex,
-  background: hex,
-  surface: hex,
-  text: hex,
-  muted: hex,
-  border: hex,
-  success: hex,
-  warning: hex,
-  error: hex,
-});
-export type ColorTokens = z.infer<typeof colorTokensSchema>;
-
-export const colorsSchema = z.object({
-  /** brand: ofisin kendi ana/vurgu renklerinden türet (Şirket Ayarları) · preset · custom */
-  mode: z.enum(['brand', 'preset', 'custom']).default('brand'),
-  preset: z.string().max(40).optional(),
-  /** Açık / koyu görünüm (koyu yalnızca özellik bayrağı açıksa) */
-  scheme: z.enum(['light', 'dark']).default('light'),
-  tokens: colorTokensSchema.partial().optional(),
-});
-export type ColorsConfig = z.infer<typeof colorsSchema>;
-
-// --------------------------------------------------------------------------- Tipografi
-export const FONT_IDS = ['manrope', 'fraunces', 'inter', 'playfair', 'dm-sans', 'lora', 'cormorant', 'space-grotesk', 'outfit', 'newsreader'] as const;
-export type FontId = (typeof FONT_IDS)[number];
-export const typographySchema = z.object({
-  heading: z.enum(FONT_IDS).optional(),
-  body: z.enum(FONT_IDS).optional(),
-  headingWeight: z.union([z.literal(400), z.literal(500), z.literal(600), z.literal(700)]).optional(),
-  /** Genel yazı ölçeği (0.9 – 1.15) */
-  scale: z.number().min(0.9).max(1.15).optional(),
-});
-export type TypographyConfig = z.infer<typeof typographySchema>;
+// --------------------------------------------------------------------------- Tema, renkler, tipografi, bileşen stilleri → @/theme-engine/settings
 
 // --------------------------------------------------------------------------- Header
 export const headerSchema = z.object({
   sticky: z.boolean().default(true),
   /** light: açık zemin · dark: ikincil (koyu) renk zemin · boş: temanın varsayılanı */
-  style: z.enum(['light', 'dark']).optional(),
+  style: headerStyleSchema.optional(),
   height: z.enum(['compact', 'regular']).default('regular'),
   showPhone: z.boolean().default(true),
   showWhatsapp: z.boolean().default(false),
@@ -130,20 +108,6 @@ export const footerSchema = z.object({
   copyright: optionalText(160),
 });
 export type FooterConfig = z.infer<typeof footerSchema>;
-
-// --------------------------------------------------------------------------- Bileşen stilleri
-/**
- * Temanın varsayılanlarını kiracı bazında ezen bileşen stilleri (boş = temadan).
- * card: ilan/içerik kartları · button: düğme köşeleri · footer: alt bilgi zemini ·
- * hero: ana sayfa üst bölüm düzeni
- */
-export const styleSchema = z.object({
-  card: z.enum(['elevated', 'outline', 'flat']).optional(),
-  button: z.enum(['rounded', 'pill', 'square']).optional(),
-  footer: z.enum(['dark', 'light', 'brand']).optional(),
-  hero: z.enum(['overlay', 'centered', 'split']).optional(),
-});
-export type StyleConfig = z.infer<typeof styleSchema>;
 
 // --------------------------------------------------------------------------- Marka (taslak)
 /**

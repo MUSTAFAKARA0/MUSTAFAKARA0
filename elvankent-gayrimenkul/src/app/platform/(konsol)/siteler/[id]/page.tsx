@@ -8,8 +8,8 @@ import { SiteStatusForm } from '@/components/platform/site/status-form';
 import { formatDate } from '@/lib/format';
 import { getSiteOr404 } from '@/modules/platform/sites';
 import { requireSuperAdminPage } from '@/platform/auth/session';
-import { findPalette } from '@/platform/site/palettes';
-import { THEMES } from '@/platform/site/themes';
+import { findPalette } from '@/theme-engine/palettes';
+import { THEMES } from '@/theme-engine/themes';
 
 export const metadata: Metadata = { title: 'Site Kontrol Merkezi' };
 

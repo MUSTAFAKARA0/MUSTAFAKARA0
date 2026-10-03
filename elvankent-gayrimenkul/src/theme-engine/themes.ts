@@ -1,4 +1,5 @@
-import type { FontId, SiteConfig, ThemeId } from '@/platform/site/schema';
+import type { FontId, ThemeId } from '@/theme-engine/ids';
+import type { ThemeInput } from '@/theme-engine/types';
 
 /**
  * Tema kayıt sistemi. Her tema aynı sayfa/veri yapısını farklı SUNUMLA gösterir. Tema
@@ -208,7 +209,7 @@ export interface ResolvedStyle {
   image: ThemeDefinition['image'];
 }
 
-export function resolveStyle(config: Pick<SiteConfig, 'theme' | 'style'> & { header?: { style?: 'light' | 'dark' } }): ResolvedStyle {
+export function resolveStyle(config: Pick<ThemeInput, 'theme' | 'style' | 'header'>): ResolvedStyle {
   const theme = THEMES[config.theme];
   return {
     card: config.style.card ?? theme.card,

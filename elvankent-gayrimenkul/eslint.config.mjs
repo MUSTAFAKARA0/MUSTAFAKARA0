@@ -9,7 +9,7 @@ import nextTs from "eslint-config-next/typescript";
  *    ↓
  *   tenant-panel · karay-platform · site-engine · karay-public
  *    ↓
- *   site-config · theme-engine · modules
+ *   site-config · theme-engine · modules        (site-config → theme-engine; tersi yasak)
  *    ↓
  *   ui · core
  *
@@ -34,6 +34,12 @@ const ZONES = {
     files: ["src/app/karay/**", "src/components/karay/**", "src/modules/karay/**", "src/app/actions/karay.ts"],
     regex: "^@/(components/karay|app/karay|modules/karay)(/|$)|^@/app/actions/karay$",
     label: "KARAY tanıtım sayfası (karay-public)",
+  },
+  // Site yapılandırması (site oluşturucunun ürettiği/okuduğu veri: şema, yükleme, önizleme belirteci)
+  siteConfig: {
+    files: ["src/platform/site/**"],
+    regex: "^@/platform/site(/|$)",
+    label: "site yapılandırması (site-config)",
   },
   // Kiracıların herkese açık siteleri
   siteEngine: {
@@ -61,7 +67,7 @@ const LOWER_LAYERS = [
   "src/types/**",
   "src/platform/**",
   "src/modules/**",
-  "src/components/{ui,panel,brand,common,site-preview}/**",
+  "src/components/{ui,panel,brand,common}/**",
 ];
 
 const eslintConfig = defineConfig([
@@ -80,6 +86,12 @@ const eslintConfig = defineConfig([
     files: LOWER_LAYERS,
     ignores: ZONES.karayPublic.files,
     rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteEngine),
+  },
+  // Theme Engine: görsel sistem; site yapılandırmasının geri kalanını, site motorunu,
+  // panelleri ve KARAY kodunu bilmez (girdisi yalnızca ThemeInput verisidir)
+  {
+    files: ["src/theme-engine/**"],
+    rules: forbid(ZONES.siteConfig, ZONES.siteEngine, ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic),
   },
   // Kiracı sitesi: ofis paneli, KARAY konsolu ve KARAY sayfası kodu YOK
   { files: ZONES.siteEngine.files, rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic) },

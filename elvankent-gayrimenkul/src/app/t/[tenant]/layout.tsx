@@ -10,8 +10,8 @@ import { brandingUrl } from '@/modules/media/variants';
 import { baseOpenGraph, siteOgImage } from '@/modules/seo/og';
 import { MaintenancePage, PreviewBar } from '@/components/layout/site-status';
 import { getSiteView } from '@/platform/site/load';
-import { resolveStyle, THEMES } from '@/platform/site/themes';
-import { siteCss } from '@/platform/site/tokens';
+import { applyTheme } from '@/theme-engine';
+import '@/theme-engine/css/themes.css';
 import { requireTenant } from '@/platform/tenant/tenant';
 
 export async function generateMetadata({ params }: LayoutProps<'/t/[tenant]'>): Promise<Metadata> {
@@ -51,10 +51,9 @@ export default async function TenantLayout({ children, params }: LayoutProps<'/t
   const tenant = await requireTenant((await params).tenant);
   const [posts, regions, view] = await Promise.all([getPublishedPosts(tenant.id, 1), getRegionPages(tenant.id), getSiteView(tenant)]);
   const s = tenant.settings;
-  // Tema + palet + tipografi → CSS değişkenleri (yalnızca doğrulanmış değerler)
-  const css = siteCss(view.config, s, view.features.darkMode);
-  const theme = THEMES[view.config.theme];
-  const style = resolveStyle(view.config);
+  // Site Engine görsel sistemi kendisi çözmez: tema verisi (theme_id + ayarlar) Theme
+  // Engine'e verilir; dönen CSS değişkenleri ve öznitelikler olduğu gibi uygulanır.
+  const { css, attributes } = applyTheme(view.config, s, view.features.darkMode);
   const hasBlog = posts.length > 0 && view.features.blog;
   // Anahtar içerikten türetilir: ofis rengini değiştirdiğinde (sürüm aynı kalsa da) yeni stil yüklenir
   const styleKey = `site-${tenant.id}-${view.preview ? 'onizleme' : tenant.site.version}-${hashString(css)}`;
@@ -72,7 +71,7 @@ export default async function TenantLayout({ children, params }: LayoutProps<'/t
   }
 
   return (
-    <div data-site-theme={theme.id} data-site-card={style.card} data-site-button={style.button} data-site-footer={style.footer} data-site-image={style.image} className="contents">
+    <div {...attributes} className="contents">
       <style href={styleKey} precedence="high">
         {css}
       </style>

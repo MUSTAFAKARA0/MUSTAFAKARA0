@@ -1,8 +1,9 @@
 import { buildTheme, ensureContrast, foregroundFor, isDark, mixHex, safeColor } from '@/platform/branding/theme';
-import { FONT_CATALOG } from '@/platform/site/font-catalog';
-import { findPalette } from '@/platform/site/palettes';
-import type { ColorTokens, SiteConfig } from '@/platform/site/schema';
-import { THEMES } from '@/platform/site/themes';
+import { FONT_CATALOG } from '@/theme-engine/typography/catalog';
+import { findPalette } from '@/theme-engine/palettes';
+import type { ColorTokens } from '@/theme-engine/settings';
+import type { BrandColors, ThemeInput } from '@/theme-engine/types';
+import { THEMES } from '@/theme-engine/themes';
 
 /**
  * Site tasarım tokenları → CSS değişkenleri. Bileşenler renk/yazı tipi/köşe değerlerini
@@ -34,7 +35,7 @@ export interface ResolvedColors {
   scheme: 'light' | 'dark';
 }
 
-export function resolveColors(config: SiteConfig, brand: { primary_color: string | null; accent_color: string | null }, darkAllowed: boolean): ResolvedColors {
+export function resolveColors(config: ThemeInput, brand: BrandColors, darkAllowed: boolean): ResolvedColors {
   const c = config.colors;
   const preset = findPalette(c.preset);
   if (c.mode === 'brand' || !preset) {
@@ -62,7 +63,7 @@ const RADII: Record<'soft' | 'sharp' | 'medium' | 'round', Record<string, string
 };
 
 /** Tokenlardan tam CSS (seçici: kiracı sitesi kökü veya önizleme alanı) */
-export function siteCss(config: SiteConfig, brand: { primary_color: string | null; accent_color: string | null }, darkAllowed: boolean, selector = 'html:root'): string {
+export function siteCss(config: ThemeInput, brand: BrandColors, darkAllowed: boolean, selector = 'html:root'): string {
   const { tokens: raw, scheme } = resolveColors(config, brand, darkAllowed);
   // İkincil renk (footer ve koyu bloklar) beyaz metinle okunabilir koyulukta tutulur
   const t = { ...raw, secondary: ensureContrast(raw.secondary, '#ffffff', 7) };

@@ -19,7 +19,7 @@ import type { Tenant } from '@/platform/tenant/tenant';
 import { isHrefAvailable } from '@/platform/site/nav';
 import { cn } from '@/lib/utils';
 import type { SiteView } from '@/platform/site/load';
-import { resolveStyle } from '@/platform/site/themes';
+import { resolveStyle } from '@/theme-engine/themes';
 
 interface FooterRegion {
   slug: string;

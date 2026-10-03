@@ -20,7 +20,7 @@ const spaceGrotesk = Space_Grotesk({ subsets: ['latin', 'latin-ext'], variable: 
 const outfit = Outfit({ subsets: ['latin', 'latin-ext'], variable: '--font-outfit', display: 'optional', preload: false, weight: ['400', '500', '600', '700'] });
 const newsreader = Newsreader({ subsets: ['latin', 'latin-ext'], variable: '--font-newsreader', display: 'optional', preload: false, weight: ['400', '500', '600', '700'] });
 
-export { FONT_CATALOG } from '@/platform/site/font-catalog';
+export { FONT_CATALOG } from '@/theme-engine/typography/catalog';
 
 /** <html> sınıfları: yazı tipi değişkenlerini tanımlar (dosya indirmez) */
 export const fontVariables = [manrope, fraunces, inter, playfair, dmSans, lora, cormorant, spaceGrotesk, outfit, newsreader].map((f) => f.variable).join(' ');

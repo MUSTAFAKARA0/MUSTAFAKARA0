@@ -23,7 +23,7 @@ import { requireTenant } from '@/platform/tenant/tenant';
 import { Fragment } from 'react';
 import { getSiteView } from '@/platform/site/load';
 import { DEFAULT_HOME_SECTIONS, type HomeSectionConfig } from '@/platform/site/schema';
-import { resolveStyle } from '@/platform/site/themes';
+import { resolveStyle } from '@/theme-engine/themes';
 
 export const revalidate = 300;
 

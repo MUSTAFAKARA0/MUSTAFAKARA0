@@ -6,7 +6,7 @@ import { formatPhoneDisplay } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { brandingUrl } from '@/modules/media/variants';
 import type { SiteView } from '@/platform/site/load';
-import { resolveStyle } from '@/platform/site/themes';
+import { resolveStyle } from '@/theme-engine/themes';
 import type { Tenant } from '@/platform/tenant/tenant';
 
 /**

@@ -1,4 +1,4 @@
-import type { FontId } from '@/platform/site/schema';
+import type { FontId } from '@/theme-engine/ids';
 
 /** Yazı tipi kataloğu (yalnızca veri; yükleyiciler fonts.ts'te). CSS değişkenleri <html> üzerinde tanımlıdır. */
 export const FONT_CATALOG: Record<FontId, { name: string; cssVar: string; kind: 'serif' | 'sans' }> = {
