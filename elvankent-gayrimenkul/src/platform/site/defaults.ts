@@ -1,4 +1,4 @@
-import { mainNav } from '@/components/layout/nav';
+import { mainNav } from '@/platform/site/nav';
 import type { FooterConfig, NavItemConfig } from '@/platform/site/schema';
 
 /** Yapılandırılmamış siteler için yönetim ekranında gösterilen başlangıç menüsü (bugünkü site menüsü) */

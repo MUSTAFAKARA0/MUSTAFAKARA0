@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AdminPageHeader, Panel } from '@/components/admin/ui';
+import { AdminPageHeader, Panel } from '@/components/panel/ui';
 import { CreateOrgForm } from '@/components/platform/org-controls';
 import { listPlans } from '@/modules/platform/queries';
 import { requireSuperAdminPage } from '@/platform/auth/session';

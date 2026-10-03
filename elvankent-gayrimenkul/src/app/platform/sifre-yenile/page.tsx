@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
-import { AuthCard } from '@/components/admin/auth-card';
-import { PasswordForm } from '@/components/admin/password-form';
+import { AuthCard } from '@/components/panel/auth-card';
+import { PasswordForm } from '@/components/panel/password-form';
 import { getSessionUser } from '@/platform/auth/session';
 
 export const metadata: Metadata = { title: 'Yeni şifre belirle' };

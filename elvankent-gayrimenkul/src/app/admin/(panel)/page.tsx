@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/common/brand-icons';
 import { AreaChart, BarList } from '@/components/admin/charts';
-import { AdminPageHeader, EmptyPanel, ListingStatusBadge, Panel, StatCard } from '@/components/admin/ui';
+import { AdminPageHeader, EmptyPanel, ListingStatusBadge, Panel, StatCard } from '@/components/panel/ui';
 import { MediaImage } from '@/components/gallery/media-image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

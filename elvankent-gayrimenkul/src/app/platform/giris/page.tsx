@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { AuthCard } from '@/components/admin/auth-card';
-import { LoginForm } from '@/app/admin/giris/login-form';
+import { AuthCard } from '@/components/panel/auth-card';
+import { LoginForm } from '@/components/panel/login-form';
 import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 import { getMfaRequirement, getSessionScope, getSessionUser, mfaUrl } from '@/platform/auth/session';
 

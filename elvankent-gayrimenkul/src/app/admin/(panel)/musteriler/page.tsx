@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { Search, Users } from 'lucide-react';
 import { NewCustomerDialog } from '@/components/admin/crm/customer-form';
-import { AdminPageHeader, EmptyPanel } from '@/components/admin/ui';
+import { AdminPageHeader, EmptyPanel } from '@/components/panel/ui';
 import { Pagination } from '@/components/common/pagination';
 import { Button } from '@/components/ui/button';
 import { formatDate, formatPhoneDisplay } from '@/lib/format';

@@ -1,6 +1,6 @@
-import { Logo } from '@/components/layout/logo';
+import { Logo } from '@/components/brand/logo';
 import { HeaderActions, DesktopNav, MobileMenu } from '@/components/layout/header-client';
-import { isHrefAvailable, resolveNav } from '@/components/layout/nav';
+import { isHrefAvailable, resolveNav } from '@/platform/site/nav';
 import { telHref, whatsappHref } from '@/lib/contact-links';
 import { formatPhoneDisplay } from '@/lib/format';
 import { cn } from '@/lib/utils';

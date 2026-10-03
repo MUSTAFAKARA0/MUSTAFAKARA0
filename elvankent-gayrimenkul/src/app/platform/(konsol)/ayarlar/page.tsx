@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AdminPageHeader } from '@/components/admin/ui';
+import { AdminPageHeader } from '@/components/panel/ui';
 import { KarayProfileForm } from '@/components/platform/karay-forms';
 import { requireSuperAdminPage } from '@/platform/auth/session';
 

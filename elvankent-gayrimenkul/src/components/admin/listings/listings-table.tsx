@@ -21,7 +21,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { ListingStatusBadge } from '@/components/admin/ui';
+import { ListingStatusBadge } from '@/components/panel/ui';
 import { MediaImage } from '@/components/gallery/media-image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

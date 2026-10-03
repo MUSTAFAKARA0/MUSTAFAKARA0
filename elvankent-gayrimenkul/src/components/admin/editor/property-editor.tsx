@@ -4,7 +4,7 @@ import Link from '@/components/common/intent-link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, CheckCircle2, CloudOff, ExternalLink, Eye, Loader2, RefreshCw } from 'lucide-react';
-import { ListingStatusBadge } from '@/components/admin/ui';
+import { ListingStatusBadge } from '@/components/panel/ui';
 import { MediaManager } from '@/components/admin/media/media-manager';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';

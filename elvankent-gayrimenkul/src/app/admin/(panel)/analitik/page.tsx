@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { BarChart3, Eye, Heart, Inbox, MessageCircle, Phone, QrCode, Share2, Users } from 'lucide-react';
 import { AreaChart, BarList } from '@/components/admin/charts';
-import { AdminPageHeader, EmptyPanel, ListingStatusBadge, Panel, StatCard, TableWrap, td, th } from '@/components/admin/ui';
+import { AdminPageHeader, EmptyPanel, ListingStatusBadge, Panel, StatCard, TableWrap, td, th } from '@/components/panel/ui';
 import { formatNumber } from '@/lib/format';
 import { cn, firstParam, one } from '@/lib/utils';
 import { LEAD_SOURCE_LABELS } from '@/modules/crm/constants';

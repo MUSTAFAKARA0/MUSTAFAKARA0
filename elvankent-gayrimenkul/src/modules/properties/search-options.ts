@@ -1,5 +1,5 @@
 import 'server-only';
-import type { SearchOptions } from '@/components/search/types';
+import type { SearchOptions } from '@/modules/properties/search-types';
 import { getRegionCounts } from '@/modules/properties/queries';
 import { getTaxonomy } from '@/modules/properties/taxonomy';
 

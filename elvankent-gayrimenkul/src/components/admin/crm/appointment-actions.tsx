@@ -1,6 +1,6 @@
 'use client';
 
-import { ActionButton } from '@/components/admin/action-controls';
+import { ActionButton } from '@/components/panel/action-controls';
 import { updateAppointment } from '@/app/actions/admin-crm';
 import { APPOINTMENT_TRANSITIONS, type AppointmentStatus } from '@/modules/crm/constants';
 

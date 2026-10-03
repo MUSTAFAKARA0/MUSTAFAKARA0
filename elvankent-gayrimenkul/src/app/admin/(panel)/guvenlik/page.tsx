@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { ShieldCheck } from 'lucide-react';
-import { AuditList } from '@/components/admin/audit-list';
-import { AdminPageHeader, EmptyPanel, Panel } from '@/components/admin/ui';
+import { AuditList } from '@/components/panel/audit-list';
+import { AdminPageHeader, EmptyPanel, Panel } from '@/components/panel/ui';
 import { Pagination } from '@/components/common/pagination';
 import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/form-controls';

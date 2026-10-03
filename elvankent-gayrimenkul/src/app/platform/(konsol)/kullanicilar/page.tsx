@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Search, Users } from 'lucide-react';
-import { AdminPageHeader, EmptyPanel, Panel, TableWrap, td, th } from '@/components/admin/ui';
+import { AdminPageHeader, EmptyPanel, Panel, TableWrap, td, th } from '@/components/panel/ui';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/form-controls';
 import { formatDate, formatRelativeDate } from '@/lib/format';

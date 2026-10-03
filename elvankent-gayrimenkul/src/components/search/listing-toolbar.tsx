@@ -11,7 +11,7 @@ import { NumberInput } from '@/components/forms/number-input';
 import { FiltersPanel } from '@/components/search/filters-panel';
 import { FLAG_KEYS, FLAG_LABELS, fromDraft, toDraft, type FilterDraft } from '@/components/search/filter-state';
 import { useListingSearch } from '@/components/search/search-context';
-import type { SearchOptions } from '@/components/search/types';
+import type { SearchOptions } from '@/modules/properties/search-types';
 import { formatNumber } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import {

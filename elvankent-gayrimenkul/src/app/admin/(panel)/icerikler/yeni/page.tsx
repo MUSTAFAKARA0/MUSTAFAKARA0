@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { PostEditor } from '@/components/admin/content/post-editor';
-import { AdminPageHeader } from '@/components/admin/ui';
+import { AdminPageHeader } from '@/components/panel/ui';
 import { requirePagePermission } from '@/platform/auth/session';
 import { getTenant } from '@/platform/tenant/tenant';
 

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { CheckCircle2, Circle } from 'lucide-react';
-import { Panel } from '@/components/admin/ui';
+import { Panel } from '@/components/panel/ui';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { SiteStatusForm } from '@/components/platform/site/status-form';

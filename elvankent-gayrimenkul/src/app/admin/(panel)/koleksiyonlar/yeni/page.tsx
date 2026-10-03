@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { CollectionForm } from '@/components/admin/crm/collection-form';
-import { AdminPageHeader } from '@/components/admin/ui';
+import { AdminPageHeader } from '@/components/panel/ui';
 import { getPickerOptions } from '@/modules/crm/admin-queries';
 import { requireFeature, requirePagePermission } from '@/platform/auth/session';
 import { getTenant } from '@/platform/tenant/tenant';

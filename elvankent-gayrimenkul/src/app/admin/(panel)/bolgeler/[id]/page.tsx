@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { RegionEditor } from '@/components/admin/content/region-editor';
-import { AdminPageHeader } from '@/components/admin/ui';
+import { AdminPageHeader } from '@/components/panel/ui';
 import { getAdminRegion } from '@/modules/content/admin-queries';
 import { getTaxonomy } from '@/modules/properties/taxonomy';
 import { requirePagePermission } from '@/platform/auth/session';

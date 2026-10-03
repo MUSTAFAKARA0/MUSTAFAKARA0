@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { AuthCard } from '@/components/admin/auth-card';
+import { AuthCard } from '@/components/panel/auth-card';
 import { MfaCodeForm, MfaEnrollForm } from '@/components/admin/mfa/mfa-forms';
 import { signOut, signOutPlatform } from '@/app/actions/auth';
 import { firstParam } from '@/lib/utils';

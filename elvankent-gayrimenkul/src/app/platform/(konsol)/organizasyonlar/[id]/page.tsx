@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ExternalLink, Globe, Trash2 } from 'lucide-react';
-import { ActionButton, AutoSaveSelect } from '@/components/admin/action-controls';
-import { AuditList } from '@/components/admin/audit-list';
-import { AdminPageHeader, EmptyPanel, Panel } from '@/components/admin/ui';
+import { ActionButton, AutoSaveSelect } from '@/components/panel/action-controls';
+import { AuditList } from '@/components/panel/audit-list';
+import { AdminPageHeader, EmptyPanel, Panel } from '@/components/panel/ui';
 import { DomainForm, PlanForm } from '@/components/platform/org-controls';
 import { Badge } from '@/components/ui/badge';
 import { vercelDnsRecords } from '@/modules/domains/provider';

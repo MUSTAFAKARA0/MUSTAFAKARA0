@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { BrandingImageField } from '@/components/admin/branding-image-field';
+import { removeBrandingImage } from '@/app/actions/admin-settings';
+import { BrandingImageField } from '@/components/panel/branding-image-field';
 import { CompanyForm } from '@/components/admin/settings/company-form';
-import { AdminPageHeader } from '@/components/admin/ui';
+import { AdminPageHeader } from '@/components/panel/ui';
 import { parseOpeningHours } from '@/modules/content/hours';
 import { publicMapConfig } from '@/modules/maps/providers';
 import { brandingUrl } from '@/modules/media/variants';
@@ -58,13 +59,13 @@ export default async function CompanySettingsPage() {
         defaultCenter={city ? { lat: Number(city.latitude), lng: Number(city.longitude) } : { lat: 39.0, lng: 35.0 }}
         branding={
           <div className="grid gap-6 md:grid-cols-2">
-            <BrandingImageField
+            <BrandingImageField removeAction={removeBrandingImage}
               kind="logo"
               label="Logo"
               url={brandingUrl(s.logo_url)}
               hint="PNG (şeffaf zemin önerilir), JPG, WEBP veya AVIF. En fazla 1200×480 px'e küçültülür. Yüklenmezse şirket adı yazı olarak gösterilir."
             />
-            <BrandingImageField
+            <BrandingImageField removeAction={removeBrandingImage}
               kind="favicon"
               label="Site simgesi (favicon)"
               url={brandingUrl(s.favicon_url)}

@@ -5,7 +5,7 @@ import { ChoiceChip, SegmentedControl } from '@/components/ui/choice';
 import { Input, Label, Select } from '@/components/ui/form-controls';
 import { NumberInput } from '@/components/forms/number-input';
 import { FLAG_LABELS, type FilterDraft, type FlagKey } from '@/components/search/filter-state';
-import type { SearchOptions } from '@/components/search/types';
+import type { SearchOptions } from '@/modules/properties/search-types';
 import {
   CATEGORY_LABELS,
   DEED_STATUS_OPTIONS,

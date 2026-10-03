@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { History, RotateCcw } from 'lucide-react';
-import { ActionButton } from '@/components/admin/action-controls';
-import { AuditList } from '@/components/admin/audit-list';
-import { EmptyPanel, Panel } from '@/components/admin/ui';
+import { ActionButton } from '@/components/panel/action-controls';
+import { AuditList } from '@/components/panel/audit-list';
+import { EmptyPanel, Panel } from '@/components/panel/ui';
 import { Badge } from '@/components/ui/badge';
 import { rollbackSite } from '@/app/actions/site-builder';
 import { formatDateTime } from '@/lib/format';

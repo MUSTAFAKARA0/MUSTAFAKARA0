@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { LivePreview, type Brand } from '@/components/platform/site/live-preview';
+import { LivePreview, type Brand } from '@/components/site-preview/live-preview';
 import { Check, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -15,7 +15,7 @@ import { FONT_IDS, type ColorTokens, type ColorsConfig, type FontId, type SiteCo
 import { resolveStyle, THEME_LIST, THEMES } from '@/platform/site/themes';
 import { resolveColors } from '@/platform/site/tokens';
 
-export { LivePreview, type Brand } from '@/components/platform/site/live-preview';
+export { LivePreview, type Brand } from '@/components/site-preview/live-preview';
 
 function TwoColumn({ form, preview }: { form: React.ReactNode; preview: React.ReactNode }) {
   return (

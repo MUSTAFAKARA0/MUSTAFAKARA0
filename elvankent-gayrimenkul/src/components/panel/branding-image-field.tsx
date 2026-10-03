@@ -7,10 +7,10 @@ import { ImagePlus, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Progress } from '@/components/ui/progress';
-import { removeBrandingImage } from '@/app/actions/admin-settings';
 import { cn } from '@/lib/utils';
 
 type Kind = 'logo' | 'logo_mobile' | 'favicon' | 'hero' | 'og';
+type RemoveResult = { ok: true; message?: string } | { ok: false; error: string };
 
 /** Güvenli SVG yalnızca logo ve simge türlerinde kabul edilir (sunucuda denetlenip PNG'ye çevrilir) */
 const SVG_KINDS: Kind[] = ['logo', 'logo_mobile', 'favicon'];
@@ -20,7 +20,7 @@ const SVG_KINDS: Kind[] = ['logo', 'logo_mobile', 'favicon'];
  * kodlanır (PNG/JPEG) ve ayar kaydedilir. Başarılı olunca sayfa tazelenir.
  * `orgId` verilirse KARAY platform uç noktası kullanılır (süper admin, seçilen kiracı).
  */
-async function removePlatformImage(orgId: string, kind: Kind): Promise<{ ok: true; message?: string } | { ok: false; error: string }> {
+async function removePlatformImage(orgId: string, kind: Kind): Promise<RemoveResult> {
   try {
     const res = await fetch(`/api/platform/branding?orgId=${encodeURIComponent(orgId)}&kind=${kind}`, { method: 'DELETE' });
     const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
@@ -39,6 +39,7 @@ export function BrandingImageField({
   disabled,
   stacked,
   orgId,
+  removeAction,
 }: {
   kind: Kind;
   label: string;
@@ -50,6 +51,11 @@ export function BrandingImageField({
   stacked?: boolean;
   /** KARAY Web Sitesi Yönetimi: hedef kiracı (sunucuda süper admin yetkisiyle doğrulanır) */
   orgId?: string;
+  /**
+   * Ofis paneli: görseli kaldıran sunucu işlemi (sayfadan verilir). Ortak panel bileşeni
+   * ofis veya KARAY işlemlerini kendisi içe aktarmaz (katman sınırı).
+   */
+  removeAction?: (kind: 'logo' | 'favicon' | 'hero' | 'og') => Promise<RemoveResult>;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -135,7 +141,11 @@ export function BrandingImageField({
         description="Sitede varsayılan görünüm kullanılır. Daha sonra yeni bir görsel yükleyebilirsiniz."
         confirmLabel="Kaldır"
         onConfirm={async () => {
-          const res = orgId ? await removePlatformImage(orgId, kind) : kind === 'logo_mobile' ? { ok: false as const, error: 'Geçersiz görsel türü.' } : await removeBrandingImage(kind);
+          const res: RemoveResult = orgId
+            ? await removePlatformImage(orgId, kind)
+            : kind === 'logo_mobile' || !removeAction
+              ? { ok: false, error: 'Geçersiz görsel türü.' }
+              : await removeAction(kind);
           if (!res.ok) {
             toast.error(res.error);
             return false;

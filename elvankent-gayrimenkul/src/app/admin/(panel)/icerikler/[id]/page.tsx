@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { PostEditor } from '@/components/admin/content/post-editor';
-import { AdminPageHeader } from '@/components/admin/ui';
+import { AdminPageHeader } from '@/components/panel/ui';
 import { getAdminPost } from '@/modules/content/admin-queries';
 import { requirePagePermission } from '@/platform/auth/session';
 import { getTenant } from '@/platform/tenant/tenant';

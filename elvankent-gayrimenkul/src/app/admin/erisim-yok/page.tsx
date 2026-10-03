@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { LogOut } from 'lucide-react';
-import { AuthCard } from '@/components/admin/auth-card';
+import { AuthCard } from '@/components/panel/auth-card';
 import { Button } from '@/components/ui/button';
 import { signOut } from '@/app/actions/auth';
 

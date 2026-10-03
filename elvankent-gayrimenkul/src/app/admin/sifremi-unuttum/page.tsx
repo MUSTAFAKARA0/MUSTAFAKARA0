@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { AuthCard } from '@/components/admin/auth-card';
+import { AuthCard } from '@/components/panel/auth-card';
 import { firstParam } from '@/lib/utils';
-import { ResetRequestForm } from './reset-request-form';
+import { ResetRequestForm } from '@/components/panel/reset-request-form';
 
 export const metadata: Metadata = { title: 'Şifremi unuttum' };
 

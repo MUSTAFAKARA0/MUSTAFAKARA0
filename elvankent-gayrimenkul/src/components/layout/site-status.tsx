@@ -1,4 +1,4 @@
-import { Logo } from '@/components/layout/logo';
+import { Logo } from '@/components/brand/logo';
 import { telHref } from '@/lib/contact-links';
 import { formatPhoneDisplay } from '@/lib/format';
 import { brandingUrl } from '@/modules/media/variants';

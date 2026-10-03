@@ -9,14 +9,14 @@ import {
   XIcon,
   YoutubeIcon,
 } from '@/components/common/brand-icons';
-import { Logo } from '@/components/layout/logo';
+import { Logo } from '@/components/brand/logo';
 import { CookiePreferencesLink } from '@/components/layout/site-extras';
 import { telHref, whatsappHref } from '@/lib/contact-links';
 import { formatPhoneDisplay } from '@/lib/format';
 import { formatOpeningHours, parseOpeningHours } from '@/modules/content/hours';
 import { brandingUrl } from '@/modules/media/variants';
 import type { Tenant } from '@/platform/tenant/tenant';
-import { isHrefAvailable } from '@/components/layout/nav';
+import { isHrefAvailable } from '@/platform/site/nav';
 import { cn } from '@/lib/utils';
 import type { SiteView } from '@/platform/site/load';
 import { resolveStyle } from '@/platform/site/themes';

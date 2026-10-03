@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { ExternalLink, Globe, Trash2 } from 'lucide-react';
-import { ActionButton } from '@/components/admin/action-controls';
-import { Panel } from '@/components/admin/ui';
+import { ActionButton } from '@/components/panel/action-controls';
+import { Panel } from '@/components/panel/ui';
 import { DomainForm } from '@/components/platform/org-controls';
 import { Badge } from '@/components/ui/badge';
 import { removeDomain } from '@/app/actions/platform';

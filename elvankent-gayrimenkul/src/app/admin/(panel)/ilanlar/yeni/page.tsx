@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AdminPageHeader, Panel } from '@/components/admin/ui';
+import { AdminPageHeader, Panel } from '@/components/panel/ui';
 import { getTaxonomy } from '@/modules/properties/taxonomy';
 import type { PropertyCategory } from '@/modules/properties/constants';
 import { requirePagePermission } from '@/platform/auth/session';

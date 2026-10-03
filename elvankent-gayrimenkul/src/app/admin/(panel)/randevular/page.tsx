@@ -3,7 +3,7 @@ import Link from '@/components/common/intent-link';
 import { CalendarDays } from 'lucide-react';
 import { AppointmentActions } from '@/components/admin/crm/appointment-actions';
 import { NewAppointmentDialog } from '@/components/admin/crm/lead-controls';
-import { AdminPageHeader, EmptyPanel } from '@/components/admin/ui';
+import { AdminPageHeader, EmptyPanel } from '@/components/panel/ui';
 import { Badge } from '@/components/ui/badge';
 import { formatPhoneDisplay, formatTime, formatWeekday } from '@/lib/format';
 import { cn, firstParam } from '@/lib/utils';

@@ -1,6 +1,6 @@
 import Link from '@/components/common/intent-link';
-import { Logo } from '@/components/layout/logo';
-import { PlatformWordmark } from '@/components/platform/platform-wordmark';
+import { Logo } from '@/components/brand/logo';
+import { PlatformWordmark } from '@/components/brand/platform-wordmark';
 import { brandingUrl } from '@/modules/media/variants';
 import { PLATFORM_SCOPE, platformThemeCss } from '@/platform/branding/platform-brand';
 import { platformFont } from '@/platform/branding/platform-font';

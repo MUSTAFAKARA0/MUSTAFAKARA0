@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { ShieldCheck, Users } from 'lucide-react';
-import { AutoSaveSelect } from '@/components/admin/action-controls';
+import { AutoSaveSelect } from '@/components/panel/action-controls';
 import { MemberMenu, NewMemberDialog } from '@/components/admin/users/member-controls';
 import { MfaPolicyToggle } from '@/components/admin/mfa/mfa-policy';
-import { AdminPageHeader, EmptyPanel, Panel, TableWrap, td, th } from '@/components/admin/ui';
+import { AdminPageHeader, EmptyPanel, Panel, TableWrap, td, th } from '@/components/panel/ui';
 import { Badge } from '@/components/ui/badge';
 import { updateMemberRole } from '@/app/actions/admin-users';
 import { formatDate, formatRelativeDate } from '@/lib/format';

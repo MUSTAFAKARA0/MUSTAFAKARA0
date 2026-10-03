@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { RegionEditor } from '@/components/admin/content/region-editor';
-import { AdminPageHeader } from '@/components/admin/ui';
+import { AdminPageHeader } from '@/components/panel/ui';
 import { getTaxonomy } from '@/modules/properties/taxonomy';
 import { requirePagePermission } from '@/platform/auth/session';
 import { getTenant } from '@/platform/tenant/tenant';

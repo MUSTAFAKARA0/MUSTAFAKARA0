@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { ExternalLink, FileText, ImageIcon, Newspaper, PencilLine, Plus, RotateCcw, Scale, Search, Trash2 } from 'lucide-react';
-import { ActionButton } from '@/components/admin/action-controls';
-import { AdminPageHeader, EmptyPanel } from '@/components/admin/ui';
+import { ActionButton } from '@/components/panel/action-controls';
+import { AdminPageHeader, EmptyPanel } from '@/components/panel/ui';
 import { Pagination } from '@/components/common/pagination';
 import { MediaImage } from '@/components/gallery/media-image';
 import { Badge } from '@/components/ui/badge';

@@ -1,7 +1,7 @@
 import Link from '@/components/common/intent-link';
 import { ExternalLink, LogOut } from 'lucide-react';
 import { PlatformNav } from '@/components/platform/platform-nav';
-import { PlatformWordmark } from '@/components/platform/platform-wordmark';
+import { PlatformWordmark } from '@/components/brand/platform-wordmark';
 import { signOutPlatform } from '@/app/actions/auth';
 import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 import { requireSuperAdminPage } from '@/platform/auth/session';

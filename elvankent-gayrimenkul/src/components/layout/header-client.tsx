@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, SheetContent } from '@/components/ui/dialog';
 import { useCompare, useFavorites, useHydrated } from '@/hooks/use-local-list';
 import { cn } from '@/lib/utils';
-import type { NavItem } from '@/components/layout/nav';
+import type { NavItem } from '@/platform/site/nav';
 
 function isActive(pathname: string, item: NavItem): boolean {
   return (item.match ?? [item.href]).some((m) => pathname === m || pathname.startsWith(`${m}-`) || pathname.startsWith(`${m}/`));

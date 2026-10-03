@@ -29,7 +29,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
-import { Monogram } from '@/components/layout/logo';
+import { Monogram } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, SheetContent } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { LivePreview } from '@/components/platform/site/live-preview';
+import { LivePreview } from '@/components/site-preview/live-preview';
 import { cn } from '@/lib/utils';
 import type { SiteConfig } from '@/platform/site/schema';
 import { THEME_LIST, THEMES } from '@/platform/site/themes';

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Check, Plus, Save, Trash2, X } from 'lucide-react';
 import { TextAreaField, TextField } from '@/components/admin/editor/fields';
-import { Panel } from '@/components/admin/ui';
+import { Panel } from '@/components/panel/ui';
 import { LazyMap } from '@/components/maps/lazy-map';
 import { Button } from '@/components/ui/button';
 import { ChoiceChip } from '@/components/ui/choice';

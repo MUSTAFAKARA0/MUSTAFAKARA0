@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Clock, MapPin, Home } from 'lucide-react';
 import { MediaImage } from '@/components/gallery/media-image';
 import { HeroSearch } from '@/components/search/hero-search';
-import type { SearchOptions } from '@/components/search/types';
+import type { SearchOptions } from '@/modules/properties/search-types';
 import { formatOpeningHours, parseOpeningHours } from '@/modules/content/hours';
 import { brandingUrl } from '@/modules/media/variants';
 import type { PropertyCard } from '@/modules/properties/types';

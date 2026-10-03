@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { Inbox, Search } from 'lucide-react';
 import { NewLeadDialog } from '@/components/admin/crm/new-lead-dialog';
-import { AdminPageHeader, EmptyPanel } from '@/components/admin/ui';
+import { AdminPageHeader, EmptyPanel } from '@/components/panel/ui';
 import { Pagination } from '@/components/common/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

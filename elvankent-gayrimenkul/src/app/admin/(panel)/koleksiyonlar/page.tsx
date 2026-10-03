@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { Ban, ExternalLink, FolderHeart, Plus, RotateCcw, Trash2 } from 'lucide-react';
-import { ActionButton } from '@/components/admin/action-controls';
+import { ActionButton } from '@/components/panel/action-controls';
 import { CopyLinkButton } from '@/components/admin/crm/copy-link-button';
-import { AdminPageHeader, EmptyPanel } from '@/components/admin/ui';
+import { AdminPageHeader, EmptyPanel } from '@/components/panel/ui';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { deleteCollection, setCollectionRevoked } from '@/app/actions/admin-crm';

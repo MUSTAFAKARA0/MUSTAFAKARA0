@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { Menu } from 'lucide-react';
-import { PlatformWordmark } from '@/components/platform/platform-wordmark';
+import { PlatformWordmark } from '@/components/brand/platform-wordmark';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, SheetContent } from '@/components/ui/dialog';
 import { KARAY_NAV } from '@/modules/karay/nav';

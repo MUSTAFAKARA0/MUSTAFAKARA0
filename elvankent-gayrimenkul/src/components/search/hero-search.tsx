@@ -6,7 +6,7 @@ import { useId, useState, useTransition } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/choice';
-import type { SearchOptions } from '@/components/search/types';
+import type { SearchOptions } from '@/modules/properties/search-types';
 import { formatCompact } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { CATEGORY_LABELS, ROOM_FILTER_OPTIONS, type ListingType, type PropertyCategory, type RoomFilter } from '@/modules/properties/constants';

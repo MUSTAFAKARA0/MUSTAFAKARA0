@@ -13,7 +13,7 @@ import {
   TableWrap,
   td,
   th,
-} from "@/components/admin/ui";
+} from "@/components/panel/ui";
 import { PreviewButton } from "@/components/platform/site/site-actions";
 import { SiteRowMenu } from "@/components/platform/site/site-row-menu";
 import { Badge } from "@/components/ui/badge";

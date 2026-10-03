@@ -1,15 +1,15 @@
 import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { Check, Download, FlaskConical, Minus, Trash2 } from 'lucide-react';
-import { ActionButton } from '@/components/admin/action-controls';
-import { BrandingImageField } from '@/components/admin/branding-image-field';
+import { ActionButton } from '@/components/panel/action-controls';
+import { BrandingImageField } from '@/components/panel/branding-image-field';
 import { NotificationSettingsForm } from '@/components/admin/settings/notification-settings-form';
 import { SiteSettingsForm } from '@/components/admin/settings/site-settings-form';
-import { AdminPageHeader, Panel } from '@/components/admin/ui';
+import { AdminPageHeader, Panel } from '@/components/panel/ui';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { trashDemoListings } from '@/app/actions/admin-settings';
+import { trashDemoListings, removeBrandingImage } from '@/app/actions/admin-settings';
 import { formatBytes, formatDate, formatDateTime, formatNumber } from '@/lib/format';
 import { brandingUrl } from '@/modules/media/variants';
 import { isEmailConfigured } from '@/modules/notifications/email';
@@ -103,7 +103,7 @@ export default async function SettingsPage() {
                 }}
               />
               <div className="border-t border-border pt-6">
-                <BrandingImageField
+                <BrandingImageField removeAction={removeBrandingImage}
                   kind="hero"
                   label="Ana sayfa görseli"
                   url={brandingUrl(s?.hero_image_url)}

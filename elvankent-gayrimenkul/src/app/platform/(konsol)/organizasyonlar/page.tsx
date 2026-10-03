@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { Plus } from 'lucide-react';
-import { AdminPageHeader, Panel } from '@/components/admin/ui';
+import { AdminPageHeader, Panel } from '@/components/panel/ui';
 import { OrgTable } from '@/components/platform/org-table';
 import { Button } from '@/components/ui/button';
 import { listPlans, listPlatformOrgs } from '@/modules/platform/queries';

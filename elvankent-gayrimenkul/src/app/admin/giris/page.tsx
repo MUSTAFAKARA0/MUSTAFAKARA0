@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { AuthCard } from '@/components/admin/auth-card';
+import { AuthCard } from '@/components/panel/auth-card';
 import { firstParam } from '@/lib/utils';
 import { getMfaRequirement, getOrgContext, getSessionScope, getSessionUser, mfaUrl } from '@/platform/auth/session';
-import { LoginForm } from './login-form';
+import { LoginForm } from '@/components/panel/login-form';
 
 export const metadata: Metadata = { title: 'Giriş' };
 

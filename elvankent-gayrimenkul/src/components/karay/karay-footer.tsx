@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { PlatformWordmark } from '@/components/platform/platform-wordmark';
+import { PlatformWordmark } from '@/components/brand/platform-wordmark';
 import { KARAY_NAV } from '@/modules/karay/nav';
 import { KARAY_LEGAL } from '@/modules/karay/legal';
 import type { KarayProfile } from '@/modules/karay/profile';

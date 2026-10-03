@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import { Building2, Plus, Trash2 } from 'lucide-react';
 import { ListingsFilters } from '@/components/admin/listings/listings-filters';
 import { ListingsTable } from '@/components/admin/listings/listings-table';
-import { AdminPageHeader, EmptyPanel } from '@/components/admin/ui';
+import { AdminPageHeader, EmptyPanel } from '@/components/panel/ui';
 import { Pagination } from '@/components/common/pagination';
 import { Button } from '@/components/ui/button';
 import { formatNumber } from '@/lib/format';

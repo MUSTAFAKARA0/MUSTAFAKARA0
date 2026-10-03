@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { CollectionForm } from '@/components/admin/crm/collection-form';
 import { CopyLinkButton } from '@/components/admin/crm/copy-link-button';
-import { AdminPageHeader } from '@/components/admin/ui';
+import { AdminPageHeader } from '@/components/panel/ui';
 import { formatDate, formatRelativeDate } from '@/lib/format';
 import { getCollection, getPickerOptions } from '@/modules/crm/admin-queries';
 import { requirePagePermission } from '@/platform/auth/session';

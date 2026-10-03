@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { Building2, HardDrive, Home, Inbox, Plus, Users } from 'lucide-react';
-import { AdminPageHeader, Panel, StatCard } from '@/components/admin/ui';
+import { AdminPageHeader, Panel, StatCard } from '@/components/panel/ui';
 import { OrgTable } from '@/components/platform/org-table';
 import { Button } from '@/components/ui/button';
 import { formatBytes, formatNumber } from '@/lib/format';
 import { listPlans, listPlatformOrgs } from '@/modules/platform/queries';
 import { listAuditLogs } from '@/modules/audit/queries';
-import { AuditList } from '@/components/admin/audit-list';
+import { AuditList } from '@/components/panel/audit-list';
 import { requireSuperAdminPage } from '@/platform/auth/session';
 import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 import { cn } from '@/lib/utils';

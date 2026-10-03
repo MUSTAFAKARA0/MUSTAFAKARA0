@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { ShieldCheck, ShieldOff } from 'lucide-react';
-import { ActionButton } from '@/components/admin/action-controls';
-import { AdminPageHeader, Panel } from '@/components/admin/ui';
-import { PasswordForm } from '@/components/admin/password-form';
+import { ActionButton } from '@/components/panel/action-controls';
+import { AdminPageHeader, Panel } from '@/components/panel/ui';
+import { PasswordForm } from '@/components/panel/password-form';
 import { ProfileForm } from '@/components/admin/profile-form';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

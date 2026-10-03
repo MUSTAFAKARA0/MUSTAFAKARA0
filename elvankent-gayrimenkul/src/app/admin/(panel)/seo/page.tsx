@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
 import { ArrowRight, ExternalLink, Search, Trash2, Waypoints } from 'lucide-react';
-import { ActionButton } from '@/components/admin/action-controls';
-import { BrandingImageField } from '@/components/admin/branding-image-field';
+import { ActionButton } from '@/components/panel/action-controls';
+import { removeBrandingImage } from '@/app/actions/admin-settings';
+import { BrandingImageField } from '@/components/panel/branding-image-field';
 import { RedirectDialog } from '@/components/admin/seo/redirect-dialog';
 import { SeoSettingsForm } from '@/components/admin/seo/seo-settings-form';
-import { AdminPageHeader, EmptyPanel, Panel, TableWrap, td, th } from '@/components/admin/ui';
+import { AdminPageHeader, EmptyPanel, Panel, TableWrap, td, th } from '@/components/panel/ui';
 import { Pagination } from '@/components/common/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -123,7 +124,7 @@ export default async function SeoPage({ searchParams }: PageProps<'/admin/seo'>)
 
         <aside className="space-y-6">
           <Panel title="Paylaşım görseli" description="WhatsApp, Facebook, LinkedIn ve X'te site bağlantınız paylaşıldığında gösterilir.">
-            <BrandingImageField
+            <BrandingImageField removeAction={removeBrandingImage}
               kind="og"
               label="Site paylaşım görseli"
               url={ogUrl}

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { Panel } from '@/components/admin/ui';
-import { BrandingImageField } from '@/components/admin/branding-image-field';
+import { Panel } from '@/components/panel/ui';
+import { BrandingImageField } from '@/components/panel/branding-image-field';
 import { BrandForm } from '@/components/platform/site/brand-form';
 import { brandingUrl } from '@/modules/media/variants';
 import { getSiteOr404 } from '@/modules/platform/sites';

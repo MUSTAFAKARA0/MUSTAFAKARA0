@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { Building2, SearchX, Users } from 'lucide-react';
-import { AdminPageHeader, EmptyPanel, ListingStatusBadge, Panel } from '@/components/admin/ui';
+import { AdminPageHeader, EmptyPanel, ListingStatusBadge, Panel } from '@/components/panel/ui';
 import { formatListingPrice, formatPhoneDisplay } from '@/lib/format';
 import { firstParam } from '@/lib/utils';
 import type { CurrencyCode, ListingStatus, ListingType } from '@/modules/properties/constants';

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { Inbox, Mail, MapPin, Phone } from 'lucide-react';
-import { AdminPageHeader, EmptyPanel } from '@/components/admin/ui';
+import { AdminPageHeader, EmptyPanel } from '@/components/panel/ui';
 import { KarayLeadEditor } from '@/components/platform/karay-forms';
 import { LEAD_STATUS } from '@/modules/karay/lead-status';
 import { Badge } from '@/components/ui/badge';

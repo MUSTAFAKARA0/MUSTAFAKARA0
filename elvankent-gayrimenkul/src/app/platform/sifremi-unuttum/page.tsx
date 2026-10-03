@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import { AuthCard } from '@/components/admin/auth-card';
-import { ResetRequestForm } from '@/app/admin/sifremi-unuttum/reset-request-form';
+import { AuthCard } from '@/components/panel/auth-card';
+import { ResetRequestForm } from '@/components/panel/reset-request-form';
 import { firstParam } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Şifremi unuttum' };
