@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
 /**
- * Yüzey ayrımı (KARAY ↔ kiracı alan adı) — SURF-01…08.
+ * Yüzey ayrımı (KARAY ↔ kiracı alan adı) — SURF-01…09.
  *
  * Kiracı (müşteri) alan adında yalnızca kiracı sitesi ve ofis paneli (/admin) vardır;
  * KARAY konsolu (/platform, /api/platform) ve KARAY sayfası (/karay) 404'tür ve KARAY
@@ -215,6 +215,27 @@ test('SURF-08: kiracı sitesi telefonda çalışır; KARAY bağlantısı yoktur'
   await expect(page.locator('a[href*="/platform"], a[href*="/karay"]')).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
   await ctx.close();
+});
+
+test('SURF-09: white-label — müşteri sitesinde ve ofis panelinde başka müşterinin adı görünmez', async ({ page }) => {
+  const { data: other } = await service!.from('organizations').select('name, slug').eq('is_default', true).single();
+  const forbidden = [other!.name, other!.slug].filter((x) => x && x.length > 3);
+  // Herkese açık site (iletişim formu örnek metinleri dahil)
+  for (const p of ['/', '/iletisim', '/satilik', '/degerleme']) {
+    const res = await raw(tenantHost(), p);
+    for (const word of forbidden) expect(res.body.toLowerCase(), `${p}: ${word}`).not.toContain(word.toLowerCase());
+  }
+  // Ofis paneli (örnek metinler, ipuçları)
+  await page.goto(`${SITE}/admin/giris`);
+  await page.getByLabel('E-posta').fill(S.user!.email);
+  await page.getByLabel('Şifre', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Giriş yap' }).click();
+  await expect(page).toHaveURL(new RegExp(`^${SITE}/admin`));
+  for (const p of ['/admin', '/admin/sirket', '/admin/ilanlar/yeni', '/admin/icerikler/yeni', '/admin/bolgeler/yeni', '/admin/seo']) {
+    await page.goto(`${SITE}${p}`);
+    const html = (await page.content()).toLowerCase();
+    for (const word of forbidden) expect(html, `${p}: ${word}`).not.toContain(word.toLowerCase());
+  }
 });
 
 async function loginPlatform(page: Page) {

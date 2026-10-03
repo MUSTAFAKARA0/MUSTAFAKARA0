@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { SURFACE_HEADER } from '@/platform/tenant/surface-header';
-import { defaultHostsFromSiteUrl, hostSurface, karayHostConfigFromEnv, resolveRequestSurface, tenantKeyForHost, type TenantHostConfig } from '@/platform/tenant/host';
+import { DEFAULT_TENANT_KEY, defaultHostsFromSiteUrl, hostSurface, karayHostConfigFromEnv, resolveRequestSurface, tenantKeyForHost, type TenantHostConfig } from '@/platform/tenant/host';
 
 /**
  * İstek yönlendirici (Next.js 16 proxy, Node.js çalışma zamanı).
@@ -25,7 +25,8 @@ const PUBLIC_AUTH_PATHS = new Set(['/admin/giris', '/admin/sifremi-unuttum', '/a
 
 function hostConfig(): TenantHostConfig {
   return {
-    defaultSlug: process.env.DEFAULT_TENANT_SLUG || 'elvankent',
+    // Kodda kiracı adı yok: env'de tanımlı değilse veritabanındaki varsayılan kiracı (is_default)
+    defaultSlug: process.env.DEFAULT_TENANT_SLUG?.trim() || DEFAULT_TENANT_KEY,
     platformRootDomain: process.env.PLATFORM_ROOT_DOMAIN || undefined,
     defaultHosts: defaultHostsFromSiteUrl(process.env.NEXT_PUBLIC_SITE_URL),
   };

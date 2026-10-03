@@ -4,7 +4,7 @@
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hostSurface, karayHostConfigFromEnv, karayHostKind, resolveRequestSurface, tenantKeyForHost } from '../../src/platform/tenant/host.ts';
+import { DEFAULT_TENANT_KEY, hostSurface, isValidTenantKey, karayHostConfigFromEnv, karayHostKind, resolveRequestSurface, tenantKeyForHost } from '../../src/platform/tenant/host.ts';
 
 const plain = karayHostConfigFromEnv({});
 const withRoot = karayHostConfigFromEnv({ PLATFORM_ROOT_DOMAIN: 'karayapp.com' });
@@ -89,5 +89,17 @@ describe('Kiracı çözümleme değişmedi', () => {
     assert.equal(tenantKeyForHost('ofis1.karayapp.com', cfg), 'ofis1');
     assert.equal(tenantKeyForHost('localhost:3000', cfg), 'varsayilan');
     assert.equal(tenantKeyForHost('www.ornek.com', cfg), 'varsayilan');
+  });
+});
+
+describe('Varsayılan kiracı kodda yazılı değil', () => {
+  test('DEFAULT_TENANT_SLUG yoksa ayrılmış anahtar üretilir; gerçek bir slug veya alan adıyla çakışmaz', () => {
+    const cfg = { defaultSlug: DEFAULT_TENANT_KEY, defaultHosts: [] };
+    assert.equal(tenantKeyForHost('localhost:3000', cfg), DEFAULT_TENANT_KEY);
+    assert.equal(tenantKeyForHost('proje.vercel.app', cfg), DEFAULT_TENANT_KEY);
+    assert.equal(tenantKeyForHost('ornekemlak.com', cfg), 'ornekemlak.com');
+    assert.equal(isValidTenantKey(DEFAULT_TENANT_KEY), true);
+    assert.equal(/^[a-z0-9]+(-[a-z0-9]+)*$/.test(DEFAULT_TENANT_KEY), false);
+    assert.equal(isValidTenantKey('_x'), false);
   });
 });

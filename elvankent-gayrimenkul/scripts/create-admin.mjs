@@ -6,12 +6,12 @@
  * Kullanım:
  *   npm run create-admin -- ornek@eposta.com                        (güçlü şifre üretir, bir kez gösterir)
  *   npm run create-admin -- ornek@eposta.com 'Güçlü-Bir-Şifre-123'
- *   npm run create-admin -- ornek@eposta.com 'Şifre' --org=elvankent --role=owner --name="Ad Soyad"
+ *   npm run create-admin -- ornek@eposta.com 'Şifre' --org=ornek-ofis --role=owner --name="Ad Soyad"
  *   npm run create-admin -- ornek@eposta.com 'Şifre' --super-admin          (platform yöneticisi)
  *   npm run create-admin -- ornek@eposta.com 'Şifre' --super-admin --no-org (yalnızca platform)
  *
  * Seçenekler:
- *   --org=<kısa-ad>   Üye yapılacak organizasyon (varsayılan: DEFAULT_TENANT_SLUG veya "elvankent")
+ *   --org=<kısa-ad>   Üye yapılacak organizasyon (varsayılan: DEFAULT_TENANT_SLUG, yoksa varsayılan işaretli organizasyon)
  *   --role=<rol>      owner | admin | agent | editor | viewer (varsayılan: owner)
  *   --name=<ad>       Profil adı
  *   --super-admin     Platform süper admin yetkisi verir (/platform)
@@ -65,7 +65,8 @@ if (!password || password.length < 10 || !/[a-zA-ZçğıöşüÇĞİÖŞÜ]/.tes
 }
 const role = typeof flags.role === 'string' ? flags.role : 'owner';
 if (!ROLES.includes(role)) fail(`Geçersiz rol: ${role}. Seçenekler: ${ROLES.join(', ')}`);
-const orgSlug = typeof flags.org === 'string' ? flags.org : process.env.DEFAULT_TENANT_SLUG || 'elvankent';
+// --org verilmezse DEFAULT_TENANT_SLUG, o da yoksa varsayılan olarak işaretli organizasyon (is_default)
+const orgSlug = typeof flags.org === 'string' ? flags.org : process.env.DEFAULT_TENANT_SLUG?.trim() || null;
 const fullName = typeof flags.name === 'string' ? flags.name.trim().slice(0, 100) : null;
 
 const supabase = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
@@ -108,9 +109,9 @@ if (profileError) fail(`Profil güncellenemedi: ${profileError.message}`);
 if (flags['super-admin']) console.info('• Platform süper admin yetkisi verildi (/platform).');
 
 if (!flags['no-org']) {
-  const { data: org, error: orgError } = await supabase.from('organizations').select('id, name').eq('slug', orgSlug).maybeSingle();
+  const { data: org, error: orgError } = await (orgSlug ? supabase.from('organizations').select('id, name').eq('slug', orgSlug) : supabase.from('organizations').select('id, name').eq('is_default', true)).maybeSingle();
   if (orgError) fail(`Organizasyon okunamadı: ${orgError.message}`);
-  if (!org) fail(`"${orgSlug}" kısa adlı organizasyon bulunamadı. --org=<kısa-ad> ile belirtin.`);
+  if (!org) fail(orgSlug ? `"${orgSlug}" kısa adlı organizasyon bulunamadı. --org=<kısa-ad> ile belirtin.` : 'Varsayılan organizasyon bulunamadı. --org=<kısa-ad> ile belirtin.');
   const { error: memberError } = await supabase
     .from('organization_members')
     .upsert({ organization_id: org.id, user_id: user.id, role, status: 'active' }, { onConflict: 'organization_id,user_id' });

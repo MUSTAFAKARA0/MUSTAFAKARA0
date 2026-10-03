@@ -122,7 +122,7 @@ export function Logo({ name, logoUrl, mobileLogoUrl, tone = 'dark', className, h
   ) : (
     <span className="flex min-w-0 flex-col leading-none">
       <span className={cn('truncate font-display text-[1.28rem] font-semibold tracking-tight', light ? 'text-inverse-foreground' : 'text-foreground')}>{first}</span>
-      {/* Kelime arası boşluk (ekran okuyucu ve metin olarak "Elvankent Gayrimenkul"; esnek kutuda görünmez) */}
+      {/* Kelime arası boşluk (ekran okuyucu ve metin olarak "Ofis Adı"; esnek kutuda görünmez) */}
       {rest.length > 0 && ' '}
       {rest.length > 0 && (
         <span className={cn('mt-[5px] truncate text-[9.5px] font-bold tracking-[0.3em] uppercase', light ? 'text-inverse-foreground/70' : 'text-muted-foreground')}>

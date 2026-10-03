@@ -18,10 +18,10 @@ import {
  * İlan arama sorgusu. URL ile birebir senkronizedir (paylaşılabilir,
  * yer imine eklenebilir). Parametreler Türkçe ve kısadır:
  *
- *   /ilanlar?tip=satilik&ilce=etimesgut&mahalle=elvankent&oda=3%2B1,4%2B1
+ *   /ilanlar?tip=satilik&ilce=cankaya&mahalle=kizilay&oda=3%2B1,4%2B1
  *           &fiyat_min=3000000&fiyat_max=6000000&kredi=1&sirala=fiyat-artan
  *
- * Bu tip, ileride doğal dil araması ("Elvankent'te 3+1, 4 milyon civarı")
+ * Bu tip, ileride doğal dil araması ("Kızılay'da 3+1, 4 milyon civarı")
  * eklendiğinde ayrıştırıcının üreteceği yapıdır (bkz. modules/search).
  */
 export interface ListingQuery {
@@ -57,7 +57,7 @@ export interface ListingQuery {
   page: number;
 }
 
-/** URL yolunda sabitlenen alanlar (ör. /satilik-daire, /ankara-etimesgut) */
+/** URL yolunda sabitlenen alanlar (ör. /satilik-daire, /ankara-cankaya) */
 export type ListingPreset = Pick<ListingQuery, 'listingType' | 'category' | 'types' | 'city' | 'district' | 'neighborhood'>;
 
 type SearchParams = Record<string, string | string[] | undefined>;

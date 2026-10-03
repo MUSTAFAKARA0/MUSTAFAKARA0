@@ -115,7 +115,7 @@ export function CollectionForm({ initial, customers, properties, siteBase }: { i
       <div className="space-y-6">
         <section className="space-y-4 rounded-2xl border border-border bg-surface p-5 shadow-xs sm:p-6">
           <Field label="Başlık" htmlFor="col-title" required hint="Müşterinin göreceği başlık">
-            <Input id="col-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} required placeholder="ör. Ayşe Hanım için Elvankent 3+1 seçkisi" />
+            <Input id="col-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} required placeholder="ör. Ayşe Hanım için 3+1 seçkisi" />
           </Field>
           <Field label="Mesaj" htmlFor="col-message" optional>
             <Textarea id="col-message" value={message} onChange={(e) => setMessage(e.target.value)} rows={4} maxLength={2000} />

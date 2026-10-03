@@ -133,9 +133,9 @@ export function CompanyForm({
           {branding}
           <div className="grid gap-5 md:grid-cols-2">
             <TextField label="Şirket adı" name="display_name" required value={v.display_name} onChange={(x) => set('display_name', x)} maxLength={80} errors={errors} />
-            <TextField label="Slogan" name="tagline" value={v.tagline} onChange={(x) => set('tagline', x)} maxLength={160} errors={errors} placeholder="ör. Elvankent ve çevresinde güvenilir gayrimenkul danışmanlığı" />
+            <TextField label="Slogan" name="tagline" value={v.tagline} onChange={(x) => set('tagline', x)} maxLength={160} errors={errors} placeholder="ör. Bölgenizde güvenilir gayrimenkul danışmanlığı" />
             <TextField label="Ticari unvan" name="legal_name" value={v.legal_name} onChange={(x) => set('legal_name', x)} maxLength={160} errors={errors} hint="KVKK ve yasal metinlerde kullanılır." />
-            <TextField label="Hizmet bölgesi" name="service_area" value={v.service_area} onChange={(x) => set('service_area', x)} maxLength={160} errors={errors} placeholder="ör. Etimesgut, Elvankent ve Eryaman" />
+            <TextField label="Hizmet bölgesi" name="service_area" value={v.service_area} onChange={(x) => set('service_area', x)} maxLength={160} errors={errors} placeholder="ör. hizmet verdiğiniz ilçe ve semtler" />
           </div>
           <TextAreaField label="Tanıtım metni" name="description" value={v.description} onChange={(x) => set('description', x)} maxLength={2000} rows={4} errors={errors} hint="Site altbilgisinde ve arama motoru açıklamasında kullanılır. Doğrulanamayan iddialar (en iyi, 1 numara vb.) kullanmayın." />
         </div>

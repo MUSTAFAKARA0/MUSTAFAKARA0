@@ -35,10 +35,12 @@ export async function createSessionClient(): Promise<DB> {
  * işlemleri için kullanılır (form kaydı, olay kaydı, güvenlik logu, kullanıcı
  * oluşturma, zamanlanmış temizlik). Anahtar tanımlı değilse null döner.
  */
-export function createServiceClient(): DB | null {
+export function createServiceClient(cache?: { tags: string[]; revalidateSeconds: number }): DB | null {
   if (!serverEnv.supabaseServiceRoleKey || !publicEnv.supabaseUrl) return null;
   return createClient<Database>(publicEnv.supabaseUrl, serverEnv.supabaseServiceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    // İsteğe bağlı önbellek: yalnızca herkese açık, kullanıcıya özel olmayan sonuçlar için
+    ...(cache ? { global: { fetch: (input, init) => fetch(input, { ...init, next: { revalidate: cache.revalidateSeconds, tags: cache.tags } }) } } : {}),
   });
 }
 

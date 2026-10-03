@@ -133,7 +133,7 @@ export function LeadForm({ kind, property, compact, className }: LeadFormProps) 
             <Input
               id={fid('valuationLocation')}
               name="valuationLocation"
-              placeholder="ör. Elvankent Mah., Etimesgut"
+              placeholder="ör. mahalle ve ilçe"
               maxLength={160}
               defaultValue={v.valuationLocation}
               aria-invalid={Boolean(err.valuationLocation)}

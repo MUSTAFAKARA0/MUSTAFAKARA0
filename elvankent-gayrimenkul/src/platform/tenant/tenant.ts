@@ -5,8 +5,8 @@ import { notFound } from 'next/navigation';
 import { cacheTags } from '@/lib/cache-tags';
 import { isSupabaseConfigured, publicEnv } from '@/lib/env';
 import { serverEnv } from '@/lib/server-env';
-import { createPublicClient } from '@/lib/supabase/server';
-import { isValidTenantKey, tenantKeyForHost } from '@/platform/tenant/host';
+import { createPublicClient, createServiceClient } from '@/lib/supabase/server';
+import { DEFAULT_TENANT_KEY, isValidTenantKey, tenantKeyForHost } from '@/platform/tenant/host';
 import { tenantHostConfig } from '@/platform/tenant/config';
 import type { Tables } from '@/types/supabase';
 import { parseFeatureOverrides, type FeatureOverrides, type SiteStatus } from '@/platform/site/schema';
@@ -124,11 +124,28 @@ async function findOrg(supabase: ReturnType<typeof createPublicClient>, key: str
   return org;
 }
 
+/**
+ * Varsayılan kiracının slug'ı: DEFAULT_TENANT_SLUG tanımlı değilse veritabanında
+ * varsayılan olarak işaretli kiracı (organizations.is_default, en fazla bir tane).
+ * Herkese açık anahtarla kiracı listesi okunamadığı için sunucu anahtarıyla, yalnızca
+ * slug sütunu okunur; sonuç kiracı önbellek etiketiyle 5 dk saklanır.
+ */
+async function defaultTenantSlug(): Promise<string | null> {
+  const service = createServiceClient({ tags: [cacheTags.tenants], revalidateSeconds: 300 });
+  if (!service) return null; // SUPABASE_SERVICE_ROLE_KEY yoksa varsayılan kiracı için DEFAULT_TENANT_SLUG gerekir
+  const { data, error } = await service.from('organizations').select('slug').eq('is_default', true).eq('status', 'active').maybeSingle();
+  // Geçici veritabanı hatası 404'e dönüşmez (findOrg ile aynı davranış)
+  if (error) throw new Error(`Varsayılan site bilgisi yüklenemedi: ${error.message}`);
+  return data?.slug ?? null;
+}
+
 async function loadTenant(key: string): Promise<Tenant | null> {
   if (!isSupabaseConfigured() || !isValidTenantKey(key)) return null;
   const supabase = createPublicClient([cacheTags.tenants], 300);
 
-  const org = await findOrg(supabase, key);
+  const lookupKey = key === DEFAULT_TENANT_KEY ? await defaultTenantSlug() : key;
+  if (!lookupKey) return null;
+  const org = await findOrg(supabase, lookupKey);
   if (!org || org.status !== 'active') return null;
 
   const orgClient = createPublicClient([cacheTags.tenants, cacheTags.org(org.id)], 300);
@@ -197,7 +214,9 @@ export async function requireTenant(rawKey: string): Promise<Tenant> {
 /** Bulunulan alan adının kiracı anahtarı (proxy'nin hesapladığı değer; istemci başlığı proxy'de silinir) */
 export async function getTenantKeyFromRequest(): Promise<string> {
   const h = await headers();
-  return h.get('x-tenant-key') ?? tenantKeyForHost(h.get('x-forwarded-host') ?? h.get('host'), tenantHostConfig());
+  const key = h.get('x-tenant-key') ?? tenantKeyForHost(h.get('x-forwarded-host') ?? h.get('host'), tenantHostConfig());
+  // Varsayılan kiracı anahtarı gerçek slug'a çözülür (oturum bağlamı ofisi adresine göre seçer)
+  return key === DEFAULT_TENANT_KEY ? ((await defaultTenantSlug()) ?? key) : key;
 }
 
 /** Yeniden yazılmamış rotalar (yönetim paneli, not-found) için Host başlığından kiracı. */

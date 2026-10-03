@@ -33,7 +33,7 @@ export function regionListingPath(city: string, district?: string | null, neighb
   return `/${[city, district, neighborhood].filter(Boolean).join('-')}`;
 }
 
-/** "ankara-etimesgut-elvankent" → il/ilçe/mahalle (slug'lar tire içerebildiği için tüm bölmeler denenir) */
+/** "ankara-cankaya-kizilay" → il/ilçe/mahalle (slug'lar tire içerebildiği için tüm bölmeler denenir) */
 export function resolveRegionSlug(slug: string, tax: Taxonomy): ResolvedRegion | null {
   for (const city of tax.cities) {
     if (slug === city.slug) return { city, name: city.name, fullName: city.name, path: regionListingPath(city.slug) };
@@ -67,8 +67,8 @@ const lower = (s: string) => s.toLocaleLowerCase('tr-TR');
  * Tek segmentli listeleme yollarını çözer:
  *   /ilanlar, /satilik, /kiralik, /konut, /ticari, /arsa, /diger,
  *   /satilik-konut, /kiralik-ticari, /satilik-daire, /kiralik-ofis …
- *   /ankara, /ankara-etimesgut, /ankara-etimesgut-elvankent (bölge filtreleri)
- * `serviceArea`: kiracının hizmet bölgesi metni (ör. "Etimesgut ve Ankara genelinde").
+ *   /ankara, /ankara-cankaya, /ankara-cankaya-kizilay (bölge filtreleri)
+ * `serviceArea`: kiracının hizmet bölgesi metni (ör. "Çankaya ve Ankara genelinde").
  */
 export async function resolveListingRoute(slug: string, serviceArea: string | null): Promise<ListingRoute | null> {
   const path = `/${slug}`;

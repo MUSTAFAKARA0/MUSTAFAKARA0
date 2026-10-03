@@ -43,7 +43,7 @@ Sunucu fonksiyonları veritabanıyla aynı bölgede çalışmalıdır: her panel
 | `SITE_ENV` | evet | `production` (değilse site noindex kalır; build sırasında okunur, değişince yeniden dağıtın) |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | evet | canlı proje |
 | `NEXT_PUBLIC_SITE_URL` | evet | `https://elvankentgayrimenkul.com` |
-| `DEFAULT_TENANT_SLUG` | evet | `elvankent` |
+| `DEFAULT_TENANT_SLUG` | isteğe bağlı | `elvankent` — tanımsızsa veritabanındaki varsayılan kiracı (`is_default`) kullanılır |
 | `IP_HASH_SALT`, `CRON_SECRET` | evet | 32+ karakter rastgele (gizli) |
 | `EMAIL_PROVIDER`, `RESEND_API_KEY`, `EMAIL_FROM` | evet | talep bildirimleri (docs/OPERATIONS.md) |
 | `SENTRY_DSN` veya `ERROR_WEBHOOK_URL` | önerilir | hata iletimi |

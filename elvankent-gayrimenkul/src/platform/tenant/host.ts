@@ -27,8 +27,16 @@ export function normalizeHost(host: string | null | undefined): string {
   return host.trim().toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '');
 }
 
+/**
+ * Varsayılan kiracı için ayrılmış anahtar: DEFAULT_TENANT_SLUG tanımlı değilse proxy bu
+ * anahtarı üretir ve sunucu varsayılan kiracıyı veritabanındaki `organizations.is_default`
+ * işaretinden bulur. Kod içinde hiçbir kiracının adı/slug'ı yazılmaz. Geçerli bir slug
+ * veya alan adı olamaz (alt çizgi), dolayısıyla gerçek bir kiracıyla çakışmaz.
+ */
+export const DEFAULT_TENANT_KEY = '_';
+
 export function isValidTenantKey(key: string): boolean {
-  return (SLUG.test(key) && key.length <= 40) || (HOSTNAME.test(key) && key.length <= 253);
+  return key === DEFAULT_TENANT_KEY || (SLUG.test(key) && key.length <= 40) || (HOSTNAME.test(key) && key.length <= 253);
 }
 
 export function tenantKeyForHost(rawHost: string | null | undefined, config: TenantHostConfig): string {

@@ -46,7 +46,7 @@ export function StepBasics() {
             counter
             errors={errors}
             disabled={readOnly}
-            hint="Örnek: “Elvankent’te site içinde, güney cepheli satılık 3+1 daire”. Yayın için en az 10 karakter."
+            hint="Örnek: “Site içinde, güney cepheli satılık 3+1 daire”. Yayın için en az 10 karakter."
           />
           <div className="grid gap-5 sm:grid-cols-2">
             <div>

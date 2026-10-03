@@ -5,7 +5,7 @@
  * Kullanım:
  *   npm run prelaunch                  (.env.local ile; demo/test ortamı kontrolü)
  *   npm run prelaunch -- --production  (production kuralları: demo ilan, hukuki onay vb. HATA sayılır)
- *   npm run prelaunch -- --org=elvankent
+ *   npm run prelaunch -- --org=ornek-ofis
  *
  * Çıkış kodu: kritik hata varsa 1 (CI veya dağıtım betiğinde kapı olarak kullanılabilir).
  * Gizli değerler ekrana yazılmaz; yalnızca tanımlı olup olmadıkları raporlanır.
@@ -22,7 +22,8 @@ const flags = Object.fromEntries(
     }),
 );
 const production = Boolean(flags.production);
-const orgSlug = typeof flags.org === 'string' ? flags.org : process.env.DEFAULT_TENANT_SLUG || 'elvankent';
+// --org verilmezse DEFAULT_TENANT_SLUG, o da yoksa varsayılan olarak işaretli organizasyon (is_default)
+const orgSlug = typeof flags.org === 'string' ? flags.org : process.env.DEFAULT_TENANT_SLUG?.trim() || null;
 
 const results = [];
 const add = (level, area, message) => results.push({ level, area, message });
@@ -59,9 +60,9 @@ const url = env('NEXT_PUBLIC_SUPABASE_URL');
 const key = env('SUPABASE_SERVICE_ROLE_KEY');
 if (url && key) {
   const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data: org, error } = await db.from('organizations').select('id, name, status').eq('slug', orgSlug).maybeSingle();
+  const { data: org, error } = await (orgSlug ? db.from('organizations').select('id, name, status').eq('slug', orgSlug) : db.from('organizations').select('id, name, status').eq('is_default', true)).maybeSingle();
   if (error) add('error', 'veritabanı', `Bağlantı/şema hatası: ${error.message} (V2 migration'ları uygulandı mı?)`);
-  else if (!org) add('error', 'veritabanı', `"${orgSlug}" organizasyonu bulunamadı`);
+  else if (!org) add('error', 'veritabanı', orgSlug ? `"${orgSlug}" organizasyonu bulunamadı` : 'varsayılan organizasyon (is_default) bulunamadı');
   else {
     if (org.status !== 'active') add('error', 'veritabanı', `Organizasyon durumu: ${org.status}`);
 
@@ -97,7 +98,7 @@ if (url && key) {
 
 // ---------------------------------------------------------------- Rapor
 const icon = { error: '✗', warn: '!', info: '·' };
-console.info(`\nCanlıya çıkış kontrolü — ${production ? 'PRODUCTION kuralları' : 'demo/test kuralları'} — organizasyon: ${orgSlug}\n`);
+console.info(`\nCanlıya çıkış kontrolü — ${production ? 'PRODUCTION kuralları' : 'demo/test kuralları'} — organizasyon: ${orgSlug ?? 'varsayılan (is_default)'}\n`);
 for (const level of ['error', 'warn', 'info']) {
   for (const r of results.filter((x) => x.level === level)) console.info(`  ${icon[level]} [${r.area}] ${r.message}`);
 }

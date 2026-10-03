@@ -141,7 +141,7 @@ export function RegionEditor({ initial, locations, siteBase, siteHost }: { initi
             }}
             maxLength={80}
             errors={errors}
-            placeholder="ör. Elvankent"
+            placeholder="ör. Merkez Mahallesi"
           />
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label="İl" htmlFor="region-city" required error={errors.city_id}>

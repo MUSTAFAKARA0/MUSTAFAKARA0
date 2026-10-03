@@ -6,7 +6,7 @@ const TR_MAP: Record<string, string> = {
 /**
  * Türkçe metni URL dostu slug'a çevirir (veritabanındaki public.slugify ile
  * aynı kurallar). Uzun metinler kelime sınırında kısaltılır.
- *   "Elvankent 3+1 Satılık Daire" → "elvankent-3-1-satilik-daire"
+ *   "Kızılay 3+1 Satılık Daire" → "kizilay-3-1-satilik-daire"
  */
 export function slugify(input: string, maxLength = 120): string {
   const slug = input

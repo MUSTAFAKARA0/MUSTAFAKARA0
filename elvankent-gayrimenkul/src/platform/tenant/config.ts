@@ -2,12 +2,12 @@ import 'server-only';
 import { publicEnv } from '@/lib/env';
 import { serverEnv } from '@/lib/server-env';
 import { headers } from 'next/headers';
-import { defaultHostsFromSiteUrl, type HostSurface, type TenantHostConfig } from '@/platform/tenant/host';
+import { DEFAULT_TENANT_KEY, defaultHostsFromSiteUrl, type HostSurface, type TenantHostConfig } from '@/platform/tenant/host';
 import { SURFACE_HEADER } from '@/platform/tenant/surface-header';
 
 export function tenantHostConfig(): TenantHostConfig {
   return {
-    defaultSlug: serverEnv.defaultTenantSlug,
+    defaultSlug: serverEnv.defaultTenantSlug || DEFAULT_TENANT_KEY,
     platformRootDomain: serverEnv.platformRootDomain || undefined,
     defaultHosts: defaultHostsFromSiteUrl(publicEnv.siteUrl),
   };

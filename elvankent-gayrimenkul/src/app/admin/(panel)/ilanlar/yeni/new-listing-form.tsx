@@ -52,7 +52,7 @@ export function NewListingForm({ types }: { types: { id: number; name: string; c
         htmlFor="title"
         error={err.title}
         required
-        hint="Sonradan değiştirebilirsiniz. Örnek: “Elvankent’te site içinde satılık 3+1 daire”"
+        hint="Sonradan değiştirebilirsiniz. Örnek: “Site içinde satılık 3+1 daire”"
       >
         <Input id="title" name="title" required minLength={3} maxLength={120} autoFocus aria-invalid={Boolean(err.title)} />
       </Field>

@@ -5,7 +5,7 @@ import { buildTheme, themeCss } from '@/platform/branding/theme';
  *
  * Hiyerarşi:
  *   KARAY (platform sahibi, SaaS altyapı sağlayıcısı)
- *     └─ Kiracılar (müşteri emlak ofisleri): Elvankent Gayrimenkul, …
+ *     └─ Kiracılar (müşteri emlak ofisleri): her biri kendi markası ve alan adıyla
  *
  * Kiracı markası (logo, renk, şirket bilgisi) organization_settings tablosunda ve
  * yalnızca o kiracının sitesinde / ofis panelinde kullanılır. Bu dosyadaki platform

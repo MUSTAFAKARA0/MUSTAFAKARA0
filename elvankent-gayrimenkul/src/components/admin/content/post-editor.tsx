@@ -166,7 +166,7 @@ export function PostEditor({ initial, siteBase, siteHost, canUpload }: { initial
             maxLength={140}
             counter
             errors={errors}
-            placeholder="ör. Elvankent'te ev alırken nelere dikkat edilmeli?"
+            placeholder="ör. Ev alırken nelere dikkat edilmeli?"
           />
           <TextAreaField
             label="Özet"

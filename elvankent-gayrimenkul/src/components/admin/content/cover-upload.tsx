@@ -144,7 +144,7 @@ export function CoverUpload({ value, onChange, disabled, aspect = 'aspect-[16/9]
             disabled={disabled}
             onChange={(e) => setAlt(e.target.value)}
             onBlur={() => void saveAlt()}
-            placeholder="ör. Elvankent'te parka bakan konut sitesi"
+            placeholder="ör. Parka bakan konut sitesi"
             className="h-10"
           />
         </>

@@ -145,7 +145,7 @@ export function NewLeadDialog({ customers, properties, members }: { customers: O
               <NumberInput id="nl-bmax" value={budgetMax} onValueChange={setBudgetMax} placeholder="₺" />
             </Field>
             <Field label="İstenen bölge" htmlFor="nl-loc" optional>
-              <Input id="nl-loc" name="desired_location" maxLength={160} placeholder="ör. Elvankent, Eryaman" />
+              <Input id="nl-loc" name="desired_location" maxLength={160} placeholder="ör. istenen mahalle veya ilçe" />
             </Field>
             <Field label="Sorumlu" htmlFor="nl-assigned" optional>
               <Select id="nl-assigned" name="assigned_to" defaultValue="">

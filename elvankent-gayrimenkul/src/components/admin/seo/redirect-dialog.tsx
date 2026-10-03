@@ -78,7 +78,7 @@ export function RedirectDialog({ initial }: { initial?: { id: number; fromPath: 
           <Field label="Eski adres" htmlFor="rd-from" required error={errors.from_path} hint="Sitenizdeki yol; ör. /eski-ilanlar/ev-123">
             <Input id="rd-from" name="from_path" defaultValue={initial?.fromPath} maxLength={400} placeholder="/eski-sayfa" autoComplete="off" spellCheck={false} required />
           </Field>
-          <Field label="Yeni adres" htmlFor="rd-to" required error={errors.to_path} hint="Yalnızca site içi adres; ör. /satilik veya /ilan/elvankent-3-1-daire">
+          <Field label="Yeni adres" htmlFor="rd-to" required error={errors.to_path} hint="Yalnızca site içi adres; ör. /satilik veya /ilan/ornek-3-1-daire">
             <Input id="rd-to" name="to_path" defaultValue={initial?.toPath} maxLength={400} placeholder="/satilik" autoComplete="off" spellCheck={false} required />
           </Field>
           <Field label="Yönlendirme türü" htmlFor="rd-type" error={errors.status_code}>
