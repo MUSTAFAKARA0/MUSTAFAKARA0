@@ -118,6 +118,9 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ['lucide-react'],
+    // Yüzey başına ayrı kök layout (kiracı sitesi, ofis paneli, KARAY platformu, KARAY sayfası)
+    // olduğundan hiçbir rotayla eşleşmeyen adreslerin 404'ü app/global-not-found.tsx'tir.
+    globalNotFound: true,
   },
   async headers() {
     // Production dışındaki ortamlar (demo, önizleme, yerel) dizine eklenmez. İstisna: KARAY'ın

@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from 'next';
+import { RootDocument, rootViewport } from '@/components/common/root-document';
 import { KarayFooter } from '@/components/karay/karay-footer';
 import { KarayHeader } from '@/components/karay/karay-header';
 import { karaySiteUrl } from '@/modules/karay/site';
 import { getKarayProfile } from '@/modules/karay/profile';
 import { PLATFORM_BRAND, PLATFORM_SCOPE, platformThemeCss } from '@/platform/branding/platform-brand';
 import { platformFont } from '@/platform/branding/platform-font';
+import '@/app/globals.css';
 
 const DEFAULT_TITLE = 'KARAY · Gayrimenkul Teknolojileri ve SaaS Platformu';
 const DEFAULT_DESCRIPTION =
@@ -21,6 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const title = profile.seoTitle || DEFAULT_TITLE;
   const description = profile.seoDescription || DEFAULT_DESCRIPTION;
   return {
+    formatDetection: { telephone: false },
     metadataBase: new URL(base.origin),
     title: { default: title, template: `%s | ${PLATFORM_BRAND.name}` },
     description,
@@ -47,21 +50,24 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export const viewport: Viewport = { themeColor: '#ffffff' };
+export const viewport: Viewport = rootViewport('#ffffff');
 
 export default async function KarayLayout({ children }: LayoutProps<'/karay'>) {
   const profile = await getKarayProfile();
   return (
-    <div className={`${PLATFORM_SCOPE} ${platformFont.className} karay-site min-h-dvh bg-white text-foreground`}>
-      <style href="platform-theme" precedence="high">
-        {platformThemeCss(platformFont.style.fontFamily)}
-      </style>
-      <a href="#icerik" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow">
-        İçeriğe geç
-      </a>
-      <KarayHeader />
-      <main id="icerik">{children}</main>
-      <KarayFooter profile={profile} />
-    </div>
+    // KARAY sayfası örnek (demo) veri içermez: demo şeridi gösterilmez
+    <RootDocument demoNotice={false}>
+      <div className={`${PLATFORM_SCOPE} ${platformFont.className} karay-site min-h-dvh bg-white text-foreground`}>
+        <style href="platform-theme" precedence="high">
+          {platformThemeCss(platformFont.style.fontFamily)}
+        </style>
+        <a href="#icerik" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:shadow">
+          İçeriğe geç
+        </a>
+        <KarayHeader />
+        <main id="icerik">{children}</main>
+        <KarayFooter profile={profile} />
+      </div>
+    </RootDocument>
   );
 }

@@ -248,6 +248,65 @@ test('SURF-09: white-label — müşteri sitesinde ve ofis panelinde başka mü�
   }
 });
 
+/** Sayfadaki tema/yazı tipi varlıkları: tema CSS kuralı, yüklenen @font-face aileleri, ön yüklenen yazı tipleri */
+async function surfaceAssets(page: Page) {
+  return page.evaluate(() => {
+    const families = new Map<string, string>();
+    let themeRules = 0;
+    const walk = (rules: CSSRuleList, s: CSSStyleSheet) => {
+      for (const r of Array.from(rules)) {
+        if (r instanceof CSSFontFaceRule) {
+          const family = r.style.getPropertyValue('font-family').replace(/["']/g, '');
+          for (const m of r.cssText.matchAll(/url\("?([^")]+)"?\)/g)) families.set(new URL(m[1], s.href ?? location.href).pathname, family);
+        } else if ('selectorText' in r && /\[data-site-(card|button|theme)/.test((r as CSSStyleRule).selectorText)) themeRules++;
+        if ('cssRules' in r && (r as CSSGroupingRule).cssRules) walk((r as CSSGroupingRule).cssRules, s);
+      }
+    };
+    for (const s of Array.from(document.styleSheets)) {
+      try {
+        walk(s.cssRules, s);
+      } catch {}
+    }
+    const preloaded = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="preload"][as="font"]')).map((l) => families.get(new URL(l.href).pathname) ?? '?');
+    const html = getComputedStyle(document.documentElement);
+    return {
+      themeRules,
+      faces: [...new Set(families.values())],
+      preloaded,
+      catalogVars: ['--font-inter', '--font-playfair', '--font-lora', '--font-newsreader'].filter((v) => html.getPropertyValue(v).trim()),
+      siteThemeOutsidePreview: document.querySelectorAll('[data-site-theme]:not([data-live-preview] [data-site-theme]):not([data-live-preview])').length,
+    };
+  });
+}
+
+test('SURF-11: kök layout ayrımı — KARAY ve ofis panelinde kiracı tema CSS\'i ve tema yazı tipleri yüklenmez', async ({ page }) => {
+  const THEME_FONTS = /Manrope|Fraunces|Inter|Playfair|DM Sans|Lora|Cormorant|Space Grotesk|Outfit|Newsreader/;
+  // KARAY platformu (giriş ve konsol): yalnızca Poppins
+  await page.goto('/platform/giris');
+  for (const where of ['giris', 'konsol']) {
+    if (where === 'konsol') await loginPlatform(page);
+    const a = await surfaceAssets(page);
+    expect(a.themeRules, where).toBe(0);
+    expect(a.catalogVars, where).toEqual([]);
+    expect(a.siteThemeOutsidePreview, where).toBe(0);
+    expect(a.faces.filter((f) => THEME_FONTS.test(f)), where).toEqual([]);
+    expect(a.preloaded.length, where).toBeGreaterThan(0);
+    for (const f of a.preloaded) expect(f, where).toMatch(/Poppins/);
+  }
+  // Ofis paneli: temel yazı tipleri (Manrope, Fraunces) var; tema kataloğu ve tema CSS'i yok
+  await page.goto(`${SITE}/admin/giris`);
+  const office = await surfaceAssets(page);
+  expect(office.themeRules).toBe(0);
+  expect(office.catalogVars).toEqual([]);
+  expect(office.faces.filter((f) => THEME_FONTS.test(f) && !/Manrope|Fraunces/.test(f))).toEqual([]);
+  // Kiracı sitesi: tema CSS'i ve katalog yazı tipi değişkenleri yüklü, tema veriden uygulanmış
+  await page.goto(`${SITE}/`);
+  const site = await surfaceAssets(page);
+  expect(site.themeRules).toBeGreaterThan(0);
+  expect(site.catalogVars.length).toBe(4);
+  expect(site.siteThemeOutsidePreview).toBeGreaterThan(0);
+});
+
 async function loginPlatform(page: Page) {
   await page.goto('/platform/giris');
   await page.getByLabel('E-posta').fill(adminEmail!);

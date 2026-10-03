@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { AuthCard } from '@/components/panel/auth-card';
+import { PlatformAuthCard } from '@/components/panel/platform-auth-card';
 import { LoginForm } from '@/components/panel/login-form';
 import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 import { getMfaRequirement, getSessionScope, getSessionUser, mfaUrl } from '@/platform/auth/session';
@@ -17,7 +17,7 @@ export default async function PlatformLoginPage() {
     redirect('/platform');
   }
   return (
-    <AuthCard brand="platform" title={PLATFORM_BRAND.consoleName} description="Platform yöneticisi hesabınızla giriş yapın.">
+    <PlatformAuthCard title={PLATFORM_BRAND.consoleName} description="Platform yöneticisi hesabınızla giriş yapın.">
       {session && (
         // Ofis panelinden açılmış oturum platforma geçemez: şifreyle yeniden giriş gerekir
         <p role="status" className="mb-5 rounded-xl bg-info-soft px-3.5 py-2.5 text-sm text-info">
@@ -25,6 +25,6 @@ export default async function PlatformLoginPage() {
         </p>
       )}
       <LoginForm next="/platform" scope="platform" />
-    </AuthCard>
+    </PlatformAuthCard>
   );
 }

@@ -3,7 +3,6 @@ import {
   colorsSchema,
   colorTokensSchema,
   headerStyleSchema,
-  hexColor,
   styleSchema,
   themeSchema,
   typographySchema,
@@ -31,7 +30,6 @@ export { colorsSchema, colorTokensSchema, styleSchema, themeSchema, typographySc
  * Bölümler taslakta ayrı ayrı kaydedilir (site_save_draft(org, bölüm, değer)).
  */
 
-const hex = hexColor;
 const text = (max: number) => z.string().trim().max(max);
 const optionalText = (max: number) => text(max).optional().transform((v) => (v ? v : undefined));
 const id = z.string().regex(/^[a-z0-9-]{1,40}$/);

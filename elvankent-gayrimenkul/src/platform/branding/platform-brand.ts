@@ -50,14 +50,16 @@ export const PLATFORM_BRAND = {
 
 /**
  * Platform temasının CSS'i. Seçici, platform kapsayıcısına (ve açılır menüler /
- * diyaloglar body altına taşındığı için, kapsayıcı sayfadayken body'ye) uygulanır;
+ * diyaloglar body altına taşındığı için, kapsayıcı sayfadayken belge köküne) uygulanır.
+ * Kök gerekir: `--font-sans` gibi türetilmiş değişkenler :root'ta çözülür, body'de
+ * verilen `--font-sans-face` portallara ulaşmaz;
  * sayfadan ayrılınca hiçbir yeri etkilemez. Yazı tipi platformda Poppins'tir
  * (kiracıların yazı tipleri platformda kullanılmaz).
  */
 export const PLATFORM_SCOPE = 'platform-scope';
 
 export function platformThemeCss(fontFamily: string): string {
-  const selector = `.${PLATFORM_SCOPE},body:has(.${PLATFORM_SCOPE})`;
+  const selector = `.${PLATFORM_SCOPE},:root:has(.${PLATFORM_SCOPE})`;
   const font = fontFamily.replace(/[^\w\s,'"-]/g, '');
   return `${themeCss(buildTheme(PLATFORM_BRAND.primaryColor, PLATFORM_BRAND.accentColor), selector)}${selector}{--font-sans-face:${font};--font-display-face:${font};--background:${PLATFORM_BRAND.pageBackground};}`;
 }

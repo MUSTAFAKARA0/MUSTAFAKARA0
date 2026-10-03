@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { AuthCard } from '@/components/panel/auth-card';
+import { PlatformAuthCard } from '@/components/panel/platform-auth-card';
 import { MfaCodeForm, MfaEnrollForm } from '@/components/admin/mfa/mfa-forms';
 import { signOut, signOutPlatform } from '@/app/actions/auth';
 import { firstParam } from '@/lib/utils';
@@ -32,9 +33,12 @@ export default async function MfaPage({ searchParams }: PageProps<'/admin/dogrul
     </form>
   );
 
+  // KARAY girişinden gelen doğrulama KARAY çerçevesiyle, ofis girişi ofis markasıyla gösterilir
+  const Card = brand === 'platform' ? PlatformAuthCard : AuthCard;
+
   if (requirement === 'challenge') {
     return (
-      <AuthCard brand={brand} title="Doğrulama kodu" description="Hesabınız iki adımlı doğrulama ile korunuyor.">
+      <Card title="Doğrulama kodu" description="Hesabınız iki adımlı doğrulama ile korunuyor.">
         <MfaCodeForm next={next} />
         <p className="mt-5 text-[12.5px] leading-relaxed text-muted-foreground">
           {brand === 'platform'
@@ -42,15 +46,15 @@ export default async function MfaPage({ searchParams }: PageProps<'/admin/dogrul
             : 'Telefonunuza erişemiyorsanız ofis sahibinden iki adımlı doğrulamanızı sıfırlamasını isteyin.'}
         </p>
         {signOutLink}
-      </AuthCard>
+      </Card>
     );
   }
   if (requirement === 'enroll' || voluntarySetup) {
     return (
-      <AuthCard brand={brand} title="İki adımlı doğrulama" description="Şifrenize ek olarak telefonunuzdaki uygulamanın ürettiği kod istenir.">
+      <Card title="İki adımlı doğrulama" description="Şifrenize ek olarak telefonunuzdaki uygulamanın ürettiği kod istenir.">
         <MfaEnrollForm next={next} required={requirement === 'enroll'} />
         {signOutLink}
-      </AuthCard>
+      </Card>
     );
   }
   redirect(next);

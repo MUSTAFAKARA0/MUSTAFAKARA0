@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
-import { AuthCard } from '@/components/panel/auth-card';
+import { PlatformAuthCard } from '@/components/panel/platform-auth-card';
 import { PasswordForm } from '@/components/panel/password-form';
 import { getSessionUser } from '@/platform/auth/session';
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: 'Yeni şifre belirle' };
 export default async function PlatformResetPasswordPage() {
   const session = await getSessionUser();
   return (
-    <AuthCard brand="platform" title="Yeni şifre belirleyin" description={session ? session.user.email : undefined}>
+    <PlatformAuthCard title="Yeni şifre belirleyin" description={session ? session.user.email : undefined}>
       {session ? (
         <PasswordForm onDoneHref="/platform/giris" onDoneLabel="Platform girişine git" />
       ) : (
@@ -24,6 +24,6 @@ export default async function PlatformResetPasswordPage() {
           </Link>
         </div>
       )}
-    </AuthCard>
+    </PlatformAuthCard>
   );
 }

@@ -11,7 +11,6 @@ import { baseOpenGraph, siteOgImage } from '@/modules/seo/og';
 import { MaintenancePage, PreviewBar } from '@/components/layout/site-status';
 import { getSiteView } from '@/platform/site/load';
 import { applyTheme } from '@/theme-engine';
-import '@/theme-engine/css/themes.css';
 import { requireTenant } from '@/platform/tenant/tenant';
 
 export async function generateMetadata({ params }: LayoutProps<'/t/[tenant]'>): Promise<Metadata> {

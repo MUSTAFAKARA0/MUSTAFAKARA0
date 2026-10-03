@@ -9,6 +9,9 @@ import { Cormorant_Garamond, DM_Sans, Fraunces, Inter, Lora, Manrope, Newsreader
  * seçildiğinde yüklenir. "optional": yazı tipi ilk görüntülemeye yetişmezse o sayfada yedek
  * yazı tipi kalır (düzen kayması/CLS olmaz), sonraki sayfalarda önbellekten kullanılır.
  */
+// Varsayılan (Klasik) tema yazı tipleri. Ofis panelinin temel yazı tipleriyle aynı aile,
+// ancak bilerek ayrı tanım (components/ui/base-fonts.ts): modül paylaşılırsa paketleyici
+// iki yüzeyin yazı tipi CSS'ini aynı parçaya birleştirir ve panel tüm tema kataloğunu yükler.
 const manrope = Manrope({ subsets: ['latin', 'latin-ext'], variable: '--font-manrope', display: 'optional' });
 const fraunces = Fraunces({ subsets: ['latin', 'latin-ext'], variable: '--font-fraunces', display: 'optional', weight: ['400', '500', '600'] });
 const inter = Inter({ subsets: ['latin', 'latin-ext'], variable: '--font-inter', display: 'optional', preload: false, weight: ['400', '500', '600', '700'] });
@@ -22,5 +25,8 @@ const newsreader = Newsreader({ subsets: ['latin', 'latin-ext'], variable: '--fo
 
 export { FONT_CATALOG } from '@/theme-engine/typography/catalog';
 
-/** <html> sınıfları: yazı tipi değişkenlerini tanımlar (dosya indirmez) */
+/**
+ * Tüm katalog yazı tiplerinin değişken sınıfları (dosya indirmez; yalnızca kullanılan
+ * yazı tipi indirilir). Yalnızca kiracı sitesi kökü ve tema önizlemesi kullanır.
+ */
 export const fontVariables = [manrope, fraunces, inter, playfair, dmSans, lora, cormorant, spaceGrotesk, outfit, newsreader].map((f) => f.variable).join(' ');

@@ -5,6 +5,7 @@ import { Heart, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { applyTheme } from '@/theme-engine/runtime';
 import type { ThemeInput } from '@/theme-engine/types';
+import { fontVariables } from '@/theme-engine/typography/fonts';
 import '@/theme-engine/css/themes.css';
 
 export type Brand = { primary_color: string | null; accent_color: string | null; logoUrl?: string | null; tagline?: string | null };
@@ -77,7 +78,9 @@ export function LivePreview({
   );
   const photo = 'bg-[linear-gradient(160deg,#c9d3d6,#98a6ab)]';
   return (
-    <div aria-label={label} role="img" className="overflow-hidden rounded-2xl border border-border shadow-sm">
+    // Önizleme, tema CSS'ini ve yazı tipi kataloğunu kendisi getirir: KARAY platformu ve
+    // KARAY sayfasının kökleri bunları yüklemez (yalnızca önizlemenin bulunduğu sayfalar yükler)
+    <div aria-label={label} role="img" className={`${fontVariables} overflow-hidden rounded-2xl border border-border shadow-sm`}>
       <style>{css}</style>
       <div
         data-live-preview={id}
