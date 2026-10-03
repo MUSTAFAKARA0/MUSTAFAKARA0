@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { RootDocument, rootViewport } from '@/components/common/root-document';
+import { RootDocument, rootMetadata, rootViewport } from '@/components/common/root-document';
 import { PLATFORM_BRAND, PLATFORM_SCOPE, platformThemeCss } from '@/platform/branding/platform-brand';
 import { platformFont } from '@/platform/branding/platform-font';
 import '@/app/globals.css';
@@ -7,7 +7,7 @@ import '@/app/globals.css';
 const title = `${PLATFORM_BRAND.name} · ${PLATFORM_BRAND.consoleName}`;
 
 export const metadata: Metadata = {
-  formatDetection: { telephone: false },
+  ...rootMetadata,
   title: { default: title, template: `%s | ${title}` },
   applicationName: `${PLATFORM_BRAND.name} ${PLATFORM_BRAND.product}`,
   robots: { index: false, follow: false, nocache: true },

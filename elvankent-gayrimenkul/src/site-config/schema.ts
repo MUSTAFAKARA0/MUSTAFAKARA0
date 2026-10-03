@@ -73,7 +73,7 @@ export const navigationSchema = z.array(navItemSchema).max(12);
 export type NavItemConfig = z.infer<typeof navItemSchema>;
 
 // --------------------------------------------------------------------------- Ana sayfa
-export const HOME_SECTION_TYPES = ['hero', 'showcase', 'categories', 'latest', 'regions', 'process', 'owner_cta', 'text', 'blog', 'contact'] as const;
+export const HOME_SECTION_TYPES = ['hero', 'showcase', 'categories', 'latest', 'regions', 'process', 'owner_cta', 'text', 'blog', 'contact', 'stats', 'spotlight'] as const;
 export type HomeSectionType = (typeof HOME_SECTION_TYPES)[number];
 export const homeSectionSchema = z.object({
   id,
@@ -94,6 +94,8 @@ export const DEFAULT_HOME_SECTIONS: HomeSectionConfig[] = (
   ['hero', 'showcase', 'categories', 'latest', 'regions', 'process', 'owner_cta', 'blog', 'contact'] as const
 ).map((type) => homeSectionSchema.parse({ id: type.replace('_', '-'), type }));
 export type HomeSectionConfig = z.infer<typeof homeSectionSchema>;
+/** Varsayılan sıraya ek olarak eklenebilen bölümler (Site Factory kompozisyonları da kullanır) */
+export const OPTIONAL_HOME_SECTIONS: HomeSectionConfig[] = (['stats', 'spotlight'] as const).map((type) => homeSectionSchema.parse({ id: type, type }));
 
 // --------------------------------------------------------------------------- Footer
 const footerLink = z.object({ id, label: text(40).min(1), href: linkHref, visible: z.boolean().default(true) });

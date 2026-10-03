@@ -27,7 +27,9 @@ function specs(p: PropertyCardData): string[] {
 }
 
 /**
- * İlan kartı. Tüm kart tıklanabilir (başlıktaki bağlantı kartı kaplar);
+ * İlan kartı. Düzen varyantları (standart, görsel üstü, editoryal, yatay) aynı işaretlemeyi
+ * pc-* kancalarıyla yeniden yerleştirir (Theme Engine › design-css.ts); yalnızca sitenin
+ * seçtiği düzenin CSS'i sayfaya yazılır. Tüm kart tıklanabilir (başlıktaki bağlantı kartı kaplar);
  * favori ve karşılaştır butonları üstte kalır. Hover animasyonu yalnızca
  * dekoratiftir; mobilde hiçbir işlev hover'a bağlı değildir.
  */
@@ -45,8 +47,8 @@ export function PropertyCard({
   const href = `/ilan/${p.slug}`;
   const inactive = p.status !== 'published';
   return (
-    <article className={cn('card-lift group relative flex flex-col rounded-[1.25rem] p-2', className)}>
-      <div className="site-media relative aspect-[4/3] overflow-hidden rounded-[0.875rem] bg-surface-muted">
+    <article className={cn('property-card card-lift group relative flex flex-col rounded-[1.25rem] p-2', className)}>
+      <div className="pc-media site-media relative aspect-[4/3] overflow-hidden rounded-[0.875rem] bg-surface-muted">
         {p.cover ? (
           <MediaImage
             media={p.cover}
@@ -63,22 +65,22 @@ export function PropertyCard({
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Fotoğraf yok</div>
         )}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 scrim-bottom opacity-80" aria-hidden />
+        <div className="pc-scrim pointer-events-none absolute inset-x-0 bottom-0 h-20 scrim-bottom opacity-80" aria-hidden />
         <PropertyBadges property={p} className="absolute top-3 left-3 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-1.5" />
         <FavoriteButton propertyId={p.id} title={p.title} className="absolute top-3 right-3" />
-        <span className="absolute bottom-3 left-3 rounded-full bg-white/92 px-2.5 py-1 text-[11.5px] font-bold text-foreground backdrop-blur">
+        <span className="pc-type absolute bottom-3 left-3 rounded-full bg-white/92 px-2.5 py-1 text-[11.5px] font-bold text-foreground backdrop-blur">
           {LISTING_TYPE_LABELS[p.listingType]} · {p.typeName}
         </span>
         {p.imageCount > 1 && (
-          <span className="numeric absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[11.5px] font-semibold text-white backdrop-blur">
+          <span className="pc-count numeric absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[11.5px] font-semibold text-white backdrop-blur">
             <Camera className="size-3.5" aria-hidden /> {p.imageCount}
           </span>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col px-2 pt-3.5 pb-1">
-        <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
-          <p className="numeric text-[1.3rem] leading-tight font-bold tracking-tight text-primary-ink">
+      <div className="pc-body flex flex-1 flex-col px-2 pt-3.5 pb-1">
+        <div className="pc-pricebox flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+          <p className="pc-price numeric text-[1.3rem] leading-tight font-bold tracking-tight text-primary-ink">
             {formatListingPrice(p.price, p.currency, p.listingType)}
           </p>
           {p.hasPriceDrop && p.pricePrevious && (
@@ -87,18 +89,18 @@ export function PropertyCard({
             </p>
           )}
         </div>
-        <h3 className="mt-1.5 line-clamp-2 text-[15px] leading-snug font-semibold text-foreground">
+        <h3 className="pc-title mt-1.5 line-clamp-2 text-[15px] leading-snug font-semibold text-foreground">
           <Link href={href} className="rounded-sm after:absolute after:inset-0 after:z-[1] after:rounded-[1.25rem] after:content-['']">
             {p.title}
             <LinkPendingOverlay />
           </Link>
         </h3>
-        <p className="mt-1.5 flex items-center gap-1 text-[13.5px] text-muted-foreground">
+        <p className="pc-location mt-1.5 flex items-center gap-1 text-[13.5px] text-muted-foreground">
           <MapPin className="size-3.5 shrink-0" aria-hidden />
           <span className="line-clamp-1">{propertyLocation(p)}</span>
         </p>
         {specs(p).length > 0 && (
-          <ul className="mt-3.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 border-t border-border pt-3 text-[13px] font-medium text-foreground/80">
+          <ul className="pc-specs mt-3.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 border-t border-border pt-3 text-[13px] font-medium text-foreground/80">
             {specs(p).map((s, i) => (
               <li key={s} className="flex items-center gap-2.5">
                 {i > 0 && <span className="size-1 rounded-full bg-border-strong" aria-hidden />}
@@ -107,8 +109,8 @@ export function PropertyCard({
             ))}
           </ul>
         )}
-        <div className="mt-auto flex items-center justify-between gap-2 pt-2.5">
-          <p className="line-clamp-1 text-[12.5px] text-muted-foreground">{p.highlights.join(' · ')}</p>
+        <div className="pc-footer mt-auto flex items-center justify-between gap-2 pt-2.5">
+          <p className="pc-highlights line-clamp-1 text-[12.5px] text-muted-foreground">{p.highlights.join(' · ')}</p>
           <CompareToggle propertyId={p.id} variant="text" className="-mr-2 shrink-0" />
         </div>
       </div>

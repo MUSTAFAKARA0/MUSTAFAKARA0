@@ -1,4 +1,4 @@
-import type { FontId, ThemeId } from '@/theme-engine/ids';
+import type { CardLayout, CardSurface, FontId, FooterLayout, HeaderLayout, HeroLayout, MotionLevel, ThemeId } from '@/theme-engine/ids';
 import type { ThemeInput } from '@/theme-engine/types';
 
 /**
@@ -199,24 +199,36 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
 
 export const THEME_LIST = Object.values(THEMES);
 
-/** Kiracının etkin bileşen stilleri: tema varsayılanı + Tema › Bileşen stilleri ayarları */
+/**
+ * Sitenin çözülmüş tasarım manifesti (bileşen kısmı): tema varsayılanı + Tema › Bileşen
+ * stilleri ayarları. Site Engine yalnızca bunu okur; katalog (Site Factory) runtime'a girmez.
+ * Mevcut temaların varsayılanları (classic/standard/none) bugünkü görünümün aynısıdır.
+ */
 export interface ResolvedStyle {
-  card: ThemeDefinition['card'];
-  hero: ThemeDefinition['hero'];
+  card: CardSurface;
+  cardLayout: CardLayout;
+  hero: HeroLayout;
   button: ThemeDefinition['button'];
   footer: ThemeDefinition['footer'];
+  footerLayout: FooterLayout;
   header: ThemeDefinition['header'];
+  headerLayout: HeaderLayout;
   image: ThemeDefinition['image'];
+  motion: MotionLevel;
 }
 
 export function resolveStyle(config: Pick<ThemeInput, 'theme' | 'style' | 'header'>): ResolvedStyle {
   const theme = THEMES[config.theme];
   return {
     card: config.style.card ?? theme.card,
+    cardLayout: config.style.cardLayout ?? 'standard',
     hero: config.style.hero ?? theme.hero,
     button: config.style.button ?? theme.button,
     footer: config.style.footer ?? theme.footer,
+    footerLayout: config.style.footerLayout ?? 'classic',
     header: config.header?.style ?? theme.header,
+    headerLayout: config.style.headerLayout ?? 'classic',
     image: theme.image,
+    motion: config.style.motion ?? 'none',
   };
 }

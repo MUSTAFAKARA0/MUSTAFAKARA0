@@ -6,6 +6,7 @@ import { parseSiteConfig, type FeatureOverrides, type SiteConfig, type SiteStatu
 import { PREVIEW_COOKIE, verifyPreviewToken } from '@/site-config/preview';
 import { applyBrandDraft, hasBrandDraft } from '@/site-config/brand';
 import { requireTenant, type Tenant } from '@/platform/tenant/tenant';
+import { resolveStyle, type ResolvedStyle } from '@/theme-engine/themes';
 
 /** Kiracı sitesinin o istekteki görünümü */
 export interface SiteView {
@@ -13,6 +14,8 @@ export interface SiteView {
   status: SiteStatus;
   maintenanceMessage: string | null;
   features: SiteFeatures;
+  /** Theme Engine'in çözdüğü bileşen biçimleri (header, hero, kart, düğme, footer): Site Engine bunları yalnızca okur */
+  style: ResolvedStyle;
   /** Taslak önizleniyor mu (yalnızca geçerli önizleme belirteciyle) */
   preview: boolean;
 }
@@ -39,8 +42,10 @@ function siteFeatures(o: FeatureOverrides): SiteFeatures {
 
 /** Yalnızca yayındaki sürüm (önizleme çerezine bakmaz): site haritası gibi çıktılar için */
 export function publishedSiteView(tenant: Tenant): SiteView {
+  const config = parseSiteConfig(tenant.site.published);
   return {
-    config: parseSiteConfig(tenant.site.published),
+    config,
+    style: resolveStyle(config),
     status: tenant.site.status,
     maintenanceMessage: tenant.site.maintenanceMessage,
     features: siteFeatures(tenant.site.overrides),
@@ -93,8 +98,10 @@ export const getSiteView = cache(async (tenant: Tenant): Promise<SiteView> => {
   const draft = await loadPreviewDraft(tenant.id);
   const raw: unknown = draft ?? tenant.site.published;
   const preview = draft !== null;
+  const config = parseSiteConfig(raw);
   return {
-    config: parseSiteConfig(raw),
+    config,
+    style: resolveStyle(config),
     status: tenant.site.status,
     maintenanceMessage: tenant.site.maintenanceMessage,
     features: siteFeatures(tenant.site.overrides),

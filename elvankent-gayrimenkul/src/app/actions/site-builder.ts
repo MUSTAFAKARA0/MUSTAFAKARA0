@@ -10,6 +10,9 @@ import { requireSuperAdmin } from '@/platform/auth/session';
 import { createPreviewToken } from '@/site-config/preview';
 import { FEATURE_KEYS, SECTION_SCHEMAS, parseSiteConfig, type BrandDraft, type BrandField, type SiteSection } from '@/site-config/schema';
 import { getTenant } from '@/platform/tenant/tenant';
+import { getSiteAdmin } from '@/modules/platform/sites';
+import { compileDesign } from '@/site-factory/compile';
+import { findDesignFamily } from '@/site-factory/families';
 import type { Json } from '@/types/supabase';
 
 /**
@@ -52,6 +55,40 @@ export async function saveSiteSection(orgId: string, section: SiteSection, value
     revalidatePath(`/platform/siteler/${orgId}`, 'layout');
     return null;
   }, 'Taslağa kaydedildi. Canlı sitede görünmesi için "Değişiklikleri yayınla"ya basın.');
+}
+
+/**
+ * Site Factory: seçilen tasarım ailesini taslağa derler (tema, renk sistemi, tipografi,
+ * yapısal parçalar, ana sayfa kompozisyonu). Aile kimliği kapalı katalogdan çözülür; bilinmeyen
+ * kimlik reddedilir. Canlı site değişmez — önizleme ve yayın mevcut akışla yapılır.
+ */
+export async function applyDesignFamily(orgId: string, familyId: string): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    assertOrg(orgId);
+    const family = typeof familyId === 'string' ? findDesignFamily(familyId) : null;
+    if (!family) throw new ActionError('Geçersiz tasarım ailesi.');
+    const session = await requireSuperAdmin();
+    const site = await getSiteAdmin(session, orgId);
+    if (!site) throw new ActionError('Site bulunamadı.');
+    const compiled = compileDesign(family, site.draft);
+    // Bölümler sırayla yazılır; biri başarısız olursa yazılanlar eski taslak değerlerine döndürülür
+    // (yarım uygulanmış aile taslakta kalmaz)
+    const written: (keyof typeof compiled)[] = [];
+    try {
+      for (const section of ['theme', 'colors', 'typography', 'style', 'home'] as const) {
+        const { error } = await session.supabase.rpc('site_save_draft', { p_org: orgId, p_section: section, p_value: compiled[section] as Json });
+        assertNoDbError(error);
+        written.push(section);
+      }
+    } catch (e) {
+      for (const section of written) {
+        await session.supabase.rpc('site_save_draft', { p_org: orgId, p_section: section, p_value: (site.draftRaw[section] ?? null) as Json });
+      }
+      throw e;
+    }
+    revalidatePath(`/platform/siteler/${orgId}`, 'layout');
+    return null;
+  }, 'Tasarım ailesi taslağa uygulandı. Önizleyip "Değişiklikleri yayınla"ya basın.');
 }
 
 export async function publishSite(orgId: string, note?: string): Promise<ActionResult<{ version: number }>> {

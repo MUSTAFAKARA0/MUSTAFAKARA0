@@ -31,7 +31,8 @@ function NavLink({ item, children, ...props }: { item: NavItem; children: React.
   );
 }
 
-export function DesktopNav({ items }: { items: NavItem[] }) {
+/** placement: inline (logo ile aynı satır) · row (ortalı logolu header'da ayrı menü satırı) */
+export function DesktopNav({ items, placement = 'inline' }: { items: NavItem[]; placement?: 'inline' | 'row' }) {
   const pathname = usePathname();
   return (
     <nav aria-label="Ana menü" className="hidden lg:block">
@@ -52,7 +53,7 @@ export function DesktopNav({ items }: { items: NavItem[] }) {
               >
                 {item.label}
                 {hasChildren && <ChevronDown className="size-3.5 opacity-60" aria-hidden />}
-                {active && <span className="absolute inset-x-3 -bottom-[17px] h-[2px] rounded-full bg-primary" aria-hidden />}
+                {active && <span className={cn('absolute inset-x-3 h-[2px] rounded-full bg-primary', placement === 'row' ? '-bottom-[9px]' : '-bottom-[17px]')} aria-hidden />}
               </NavLink>
               {hasChildren && (
                 // Alt menü: fareyle üzerine gelince veya klavyeyle odaklanınca açılır

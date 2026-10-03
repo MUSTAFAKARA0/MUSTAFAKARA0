@@ -11,7 +11,7 @@
  *   settings            zod şemaları → '@/theme-engine/settings'
  *   typography/fonts    next/font yükleyicileri → '@/theme-engine/typography/fonts'
  *   preview             istemci önizleme bileşeni → '@/theme-engine/preview/live-preview'
- *   css/themes.css      tema sunum kuralları (site kökü ve önizleme içe aktarır)
+ *   design-css.ts       seçilmiş tema/varyant sunum kuralları (applyTheme satır içi yazar)
  */
 export { THEME_IDS, FONT_IDS, type ThemeId, type FontId } from '@/theme-engine/ids';
 export { THEMES, THEME_LIST, resolveStyle, type ThemeDefinition, type ResolvedStyle } from '@/theme-engine/themes';

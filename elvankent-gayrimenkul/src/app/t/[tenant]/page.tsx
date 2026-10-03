@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { JsonLd } from '@/components/common/json-ld';
 import { Hero } from '@/components/home/hero';
+import { SpotlightSection, StatsSection } from '@/components/home/design-sections';
 import {
   BlogSection,
   CategorySection,
@@ -19,11 +20,9 @@ import { getInventoryCounts, getLatestProperties, getRegionCounts, getShowcasePr
 import { getSearchOptions } from '@/modules/properties/search-options';
 import type { PropertyCard } from '@/modules/properties/types';
 import { organizationJsonLd, websiteJsonLd } from '@/modules/seo/jsonld';
-import { requireSiteTenant } from '@/site-config/load';
 import { Fragment } from 'react';
-import { getSiteView } from '@/site-config/load';
+import { getSiteView, requireSiteTenant } from '@/site-config/load';
 import { DEFAULT_HOME_SECTIONS, type HomeSectionConfig } from '@/site-config/schema';
-import { resolveStyle } from '@/theme-engine/themes';
 
 export const revalidate = 300;
 
@@ -75,13 +74,14 @@ export default async function HomePage({ params }: PageProps<'/t/[tenant]'>) {
   }
 
   const view = await getSiteView(tenant);
+  const heroSpot = showcase[0] ?? latestPool[0] ?? null;
   const sections = view.config.home?.sections ?? DEFAULT_HOME_SECTIONS;
   const seo = view.config.seo;
   const render = (sec: HomeSectionConfig) => {
     const o: SectionOverride = { eyebrow: sec.eyebrow, title: sec.title, description: sec.description, ctaLabel: sec.ctaLabel, ctaHref: sec.ctaHref };
     switch (sec.type) {
       case 'hero':
-        return <Hero tenant={tenant} options={options} spotlight={showcase[0] ?? latestPool[0] ?? null} publishedCount={inventory.total} variant={resolveStyle(view.config).hero} o={o} />;
+        return <Hero tenant={tenant} options={options} spotlight={heroSpot} publishedCount={inventory.total} variant={view.style.hero} o={o} />;
       case 'showcase':
         return <ShowcaseSection items={showcase} o={o} />;
       case 'categories':
@@ -100,6 +100,11 @@ export default async function HomePage({ params }: PageProps<'/t/[tenant]'>) {
         return view.features.blog && view.config.pages.blog?.visible !== false ? <BlogSection posts={posts} o={o} /> : null;
       case 'contact':
         return <ContactBand tenant={tenant} o={o} whatsapp={view.features.whatsapp} />;
+      case 'stats':
+        return <StatsSection inventory={inventory} regionCount={view.config.pages.bolgeler?.visible === false ? 0 : regions.length} o={o} />;
+      case 'spotlight':
+        // Hero'nun görselindeki ilandan farklı bir ilan (yoksa aynısı)
+        return <SpotlightSection property={[...showcase, ...latestPool].find((p) => p.id !== heroSpot?.id && p.cover) ?? heroSpot} o={o} />;
     }
   };
 

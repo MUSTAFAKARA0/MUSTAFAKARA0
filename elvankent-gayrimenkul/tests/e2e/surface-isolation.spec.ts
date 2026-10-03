@@ -293,16 +293,25 @@ test('SURF-11: kök layout ayrımı — KARAY ve ofis panelinde kiracı tema CSS
     expect(a.preloaded.length, where).toBeGreaterThan(0);
     for (const f of a.preloaded) expect(f, where).toMatch(/Poppins/);
   }
+  // KARAY sayfası: tema vitrini önizlemesi tema CSS'ini yalnızca önizleme kapsayıcısında
+  // kullanır; kiracı yazı tipleri önceden yüklenmez, sayfanın kendisi tema almaz
+  await page.goto('/karay');
+  const karay = await surfaceAssets(page);
+  expect(karay.siteThemeOutsidePreview).toBe(0);
+  expect(karay.catalogVars).toEqual([]);
+  expect(karay.preloaded.length).toBeGreaterThan(0);
+  for (const f of karay.preloaded) expect(f, 'karay').toMatch(/Poppins/);
   // Ofis paneli: temel yazı tipleri (Manrope, Fraunces) var; tema kataloğu ve tema CSS'i yok
   await page.goto(`${SITE}/admin/giris`);
   const office = await surfaceAssets(page);
   expect(office.themeRules).toBe(0);
   expect(office.catalogVars).toEqual([]);
   expect(office.faces.filter((f) => THEME_FONTS.test(f) && !/Manrope|Fraunces/.test(f))).toEqual([]);
-  // Kiracı sitesi: tema CSS'i ve katalog yazı tipi değişkenleri yüklü, tema veriden uygulanmış
+  // Kiracı sitesi: katalog yazı tipi değişkenleri yüklü, tema veriden uygulanmış. Tema sunum CSS'i
+  // global değildir (Site Factory izolasyonu): varsayılan Klasik site için hiçbir tema/varyant kuralı yazılmaz.
   await page.goto(`${SITE}/`);
   const site = await surfaceAssets(page);
-  expect(site.themeRules).toBeGreaterThan(0);
+  expect(site.themeRules).toBe(0);
   expect(site.catalogVars.length).toBe(4);
   expect(site.siteThemeOutsidePreview).toBeGreaterThan(0);
 });

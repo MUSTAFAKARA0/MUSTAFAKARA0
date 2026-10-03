@@ -9,6 +9,8 @@ import { brandingUrl } from '@/modules/media/variants';
 import type { PropertyCard } from '@/modules/properties/types';
 import type { Tenant } from '@/platform/tenant/tenant';
 import type { SectionOverride } from '@/components/home/sections';
+import { CinematicHero, EditorialHero, ShowcaseHero, type HeroContent } from '@/components/home/hero-variants';
+import type { HeroLayout } from '@/theme-engine/ids';
 import { cn } from '@/lib/utils';
 
 /**
@@ -28,8 +30,8 @@ export function Hero({
   options: SearchOptions;
   spotlight: PropertyCard | null;
   publishedCount: number;
-  /** Tema düzeni: overlay (Klasik) · centered (Marble) · split (Atlas) */
-  variant?: 'overlay' | 'centered' | 'split';
+  /** Hero düzeni (sitenin tasarım manifesti): overlay · centered · split · cinematic · editorial · showcase */
+  variant?: HeroLayout;
   o?: SectionOverride;
 }) {
   const s = tenant.settings;
@@ -45,6 +47,24 @@ export function Hero({
     officeArea ? { icon: MapPin, text: `Ofis: ${officeArea}` } : null,
     hours[0] ? { icon: Clock, text: hours[0] } : null,
   ].filter((x): x is { icon: typeof Home; text: string } => x !== null);
+
+  // Premium düzenler (Site Factory): aynı veri, farklı görsel hiyerarşi
+  if (variant === 'cinematic' || variant === 'editorial' || variant === 'showcase') {
+    const content: HeroContent = {
+      eyebrow: s.service_area ? (o?.eyebrow ?? s.display_name) : null,
+      title,
+      subtitle,
+      locationLabel: officeArea || s.service_area || null,
+      trust,
+      options,
+      spotlight,
+      heroImage,
+      publishedCount,
+    };
+    if (variant === 'cinematic') return <CinematicHero c={content} />;
+    if (variant === 'editorial') return <EditorialHero c={content} />;
+    return <ShowcaseHero c={content} />;
+  }
 
   const image = heroImage ? (
     <Image src={heroImage} alt="" fill preload sizes="(min-width: 1024px) 50vw, 100vw" className="object-cover" />

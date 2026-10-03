@@ -31,10 +31,25 @@ function TwoColumn({ form, preview }: { form: React.ReactNode; preview: React.Re
 
 // --------------------------------------------------------------------------- Tema
 const STYLE_OPTIONS: { key: keyof StyleConfig; label: string; options: [string, string][] }[] = [
-  { key: 'hero', label: 'Ana sayfa üst bölüm (hero)', options: [['overlay', 'Fotoğraf üzerinde arama'], ['centered', 'Ortalanmış başlık'], ['split', 'Bölünmüş (metin + görsel)']] },
-  { key: 'card', label: 'İlan kartları', options: [['elevated', 'Gölgeli'], ['outline', 'Çizgili'], ['flat', 'Düz zemin']] },
+  {
+    key: 'hero',
+    label: 'Ana sayfa üst bölüm (hero)',
+    options: [
+      ['overlay', 'Fotoğraf üzerinde arama'],
+      ['centered', 'Ortalanmış başlık'],
+      ['split', 'Bölünmüş (metin + görsel)'],
+      ['cinematic', 'Sinematik (tam genişlik, yüzen arama)'],
+      ['editorial', 'Editoryal (asimetrik, büyük tipografi)'],
+      ['showcase', 'İlan öncelikli vitrin'],
+    ],
+  },
+  { key: 'headerLayout', label: 'Üst bilgi (header) düzeni', options: [['classic', 'Klasik'], ['centered', 'Ortalı logo, ayrı menü satırı'], ['floating', 'Yüzen (ayrık, yarı saydam)']] },
+  { key: 'card', label: 'İlan kartı yüzeyi', options: [['elevated', 'Gölgeli'], ['outline', 'Çizgili'], ['flat', 'Düz zemin'], ['bezel', 'Çift çerçeve']] },
+  { key: 'cardLayout', label: 'İlan kartı düzeni', options: [['standard', 'Standart'], ['overlay', 'Görsel üstü'], ['editorial', 'Editoryal (kutusuz)'], ['horizontal', 'Yatay']] },
   { key: 'button', label: 'Düğmeler', options: [['rounded', 'Yuvarlatılmış'], ['pill', 'Hap (tam yuvarlak)'], ['square', 'Keskin köşeli']] },
   { key: 'footer', label: 'Alt bilgi (footer) zemini', options: [['dark', 'Koyu'], ['light', 'Açık'], ['brand', 'Marka rengi']] },
+  { key: 'footerLayout', label: 'Alt bilgi (footer) düzeni', options: [['classic', 'Klasik (sütunlar)'], ['contact', 'İletişim öncelikli'], ['minimal', 'Minimal (tek satır)']] },
+  { key: 'motion', label: 'Hareket dili', options: [['none', 'Yok'], ['subtle', 'Ölçülü (kaydırınca beliren bölümler)'], ['expressive', 'Belirgin (+ hero ve kart girişleri)']] },
 ];
 
 export function ThemeForm({ orgId, draft, brand, darkAllowed, name }: { orgId: string; draft: SiteConfig; brand: Brand; darkAllowed: boolean; name: string }) {

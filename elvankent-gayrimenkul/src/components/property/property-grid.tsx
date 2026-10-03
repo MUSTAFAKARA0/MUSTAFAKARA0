@@ -22,7 +22,7 @@ export function PropertyGrid({
   return (
     <ul
       className={cn(
-        'grid gap-x-6 gap-y-10 sm:grid-cols-2',
+        'listing-grid grid gap-x-6 gap-y-10 sm:grid-cols-2',
         columns === 3 && 'xl:grid-cols-3',
         columns === 4 && 'lg:grid-cols-3 xl:grid-cols-4',
         className,

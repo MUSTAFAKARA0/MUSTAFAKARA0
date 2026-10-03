@@ -9,9 +9,8 @@ import { getPublishedPosts, getRegionPages } from '@/modules/content/queries';
 import { brandingUrl } from '@/modules/media/variants';
 import { baseOpenGraph, siteOgImage } from '@/modules/seo/og';
 import { MaintenancePage, PreviewBar } from '@/components/layout/site-status';
-import { getSiteView } from '@/site-config/load';
+import { getSiteView, requireSiteTenant } from '@/site-config/load';
 import { applyTheme } from '@/theme-engine';
-import { requireSiteTenant } from '@/site-config/load';
 
 export async function generateMetadata({ params }: LayoutProps<'/t/[tenant]'>): Promise<Metadata> {
   const tenant = await requireSiteTenant((await params).tenant);

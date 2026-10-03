@@ -5,8 +5,7 @@ import { Heart, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { applyTheme } from '@/theme-engine/runtime';
 import type { ThemeInput } from '@/theme-engine/types';
-import { fontVariables } from '@/theme-engine/typography/fonts';
-import '@/theme-engine/css/themes.css';
+import { previewFontVariables } from '@/theme-engine/preview/preview-fonts';
 
 export type Brand = { primary_color: string | null; accent_color: string | null; logoUrl?: string | null; tagline?: string | null };
 
@@ -80,7 +79,7 @@ export function LivePreview({
   return (
     // Önizleme, tema CSS'ini ve yazı tipi kataloğunu kendisi getirir: KARAY platformu ve
     // KARAY sayfasının kökleri bunları yüklemez (yalnızca önizlemenin bulunduğu sayfalar yükler)
-    <div aria-label={label} role="img" className={`${fontVariables} overflow-hidden rounded-2xl border border-border shadow-sm`}>
+    <div aria-label={label} role="img" className={`${previewFontVariables} overflow-hidden rounded-2xl border border-border shadow-sm`}>
       <style>{css}</style>
       <div
         data-live-preview={id}
@@ -88,7 +87,8 @@ export function LivePreview({
         className="pointer-events-none bg-background font-sans text-foreground select-none"
       >
         {/* Header */}
-        <div data-header-style={style.header} className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-2.5 text-foreground">
+        <div className="site-header">
+        <div data-header-style={style.header} className={`site-header-bar flex items-center gap-3 border-b border-border bg-surface px-4 py-2.5 text-foreground ${style.headerLayout === 'centered' ? 'flex-col justify-center' : 'justify-between'}`}>
           <span className="flex min-w-0 items-center gap-2">
             {showLogo ? (
               // eslint-disable-next-line @next/next/no-img-element -- depolamadaki logo (önizleme)
@@ -111,6 +111,7 @@ export function LivePreview({
               {h.cta?.label ?? 'Bize ulaşın'}
             </Button>
           </span>
+        </div>
         </div>
         {/* Hero */}
         {style.hero === 'overlay' && (
@@ -137,17 +138,50 @@ export function LivePreview({
             <div className="col-span-2">{search}</div>
           </div>
         )}
+        {style.hero === 'cinematic' && (
+          <div className="relative">
+            <div className="hero-media relative bg-[linear-gradient(160deg,#4b5a61,#1d2427)] px-4 pt-12 pb-12 text-white">
+              <p className="inline-flex rounded-full bg-white/15 px-2 py-0.5 text-[9px] font-semibold tracking-[0.16em] uppercase ring-1 ring-white/25">Ankara · Çankaya</p>
+              <h3 className="mt-2 font-display text-[1.85rem] leading-[1]">Size uygun gayrimenkulü bulun.</h3>
+            </div>
+            <div className="relative z-10 mx-3 -mt-6 rounded-2xl bg-surface/80 p-1 shadow-lg">{search}</div>
+          </div>
+        )}
+        {style.hero === 'editorial' && (
+          <div className="grid grid-cols-[1.25fr_1fr] items-end gap-3 px-4 pt-6 pb-4">
+            <div className="min-w-0">
+              <p className="eyebrow eyebrow-line">{name}</p>
+              <h3 className="mt-2 font-display text-[1.6rem] leading-[1.02]">Size uygun gayrimenkulü bulun.</h3>
+              <p className="mt-2 border-t border-border pt-1.5 text-[10px] text-muted-foreground"><span className="font-display text-[15px] text-foreground">24</span> yayında ilan</p>
+            </div>
+            <div className={`site-media aspect-[4/5] rounded-xl ${photo}`} />
+            <div className="col-span-2">{search}</div>
+          </div>
+        )}
+        {style.hero === 'showcase' && (
+          <div className="px-4 pt-5 pb-4">
+            <h3 className="font-display text-[1.35rem] leading-[1.05]">Size uygun gayrimenkulü bulun.</h3>
+            <div className="relative mt-3">
+              <div className={`site-media aspect-[16/9] rounded-xl ${photo}`} />
+              <div className="relative z-10 mx-2 -mt-5 rounded-xl bg-surface p-2.5 shadow-md ring-1 ring-black/5">
+                <p className="text-[13px] font-bold text-primary-ink">₺4.250.000</p>
+                <p className="truncate text-[11px] font-semibold">Bahçeli 3+1 daire</p>
+              </div>
+            </div>
+            <div className="mt-3">{search}</div>
+          </div>
+        )}
         {/* Kartlar */}
         <div className="px-4 pb-4">
           <p className="eyebrow eyebrow-line">Öne çıkanlar</p>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {[1, 2].map((i) => (
-              <div key={i} className="card-lift overflow-hidden rounded-2xl border border-border bg-surface">
-                <div className={`site-media aspect-[4/3] ${photo}`} />
-                <div className="p-2.5">
-                  <p className="text-[14px] font-bold text-primary-ink">₺{i === 1 ? '4.250.000' : '18.500 / ay'}</p>
-                  <p className="truncate text-[11.5px] font-semibold">{i === 1 ? 'Satılık 3+1 daire' : 'Kiralık 2+1 daire'}</p>
-                  <p className="text-[10.5px] text-muted-foreground">3+1 · 125 m² · 4. kat</p>
+              <div key={i} className="property-card card-lift relative flex flex-col overflow-hidden rounded-2xl border border-border bg-surface">
+                <div className={`pc-media site-media aspect-[4/3] ${photo}`} />
+                <div className="pc-body flex flex-col p-2.5">
+                  <p className="pc-price text-[14px] font-bold text-primary-ink">₺{i === 1 ? '4.250.000' : '18.500 / ay'}</p>
+                  <p className="pc-title truncate text-[11.5px] font-semibold">{i === 1 ? 'Satılık 3+1 daire' : 'Kiralık 2+1 daire'}</p>
+                  <p className="pc-location text-[10.5px] text-muted-foreground">3+1 · 125 m² · 4. kat</p>
                 </div>
               </div>
             ))}

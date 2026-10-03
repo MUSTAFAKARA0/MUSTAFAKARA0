@@ -28,3 +28,6 @@ export function RootDocument({ children, fontClassName, demoNotice = true }: { c
 export function rootViewport(themeColor: string) {
   return { width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor } as const;
 }
+
+/** Kök layout'ların ortak meta verisi (her yüzey kendi meta verisine yayar) */
+export const rootMetadata = { formatDetection: { telephone: false } } as const;

@@ -32,8 +32,10 @@ const selectClass =
 /**
  * Ana sayfa arama kutusu: satılık/kiralık, konum, tip, oda ve bütçe.
  * Sonuç sayfası URL ile senkronize olduğundan arama paylaşılabilir.
+ * tone: "photo" (varsayılan; fotoğraf/koyu zemin üzerinde) · "surface" (açık zemin; premium
+ * hero düzenleri) — yalnızca sekme ve alt satır renkleri değişir.
  */
-export function HeroSearch({ options }: { options: SearchOptions }) {
+export function HeroSearch({ options, tone = 'photo' }: { options: SearchOptions; tone?: 'photo' | 'surface' }) {
   const id = useId();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -67,7 +69,7 @@ export function HeroSearch({ options }: { options: SearchOptions }) {
     <form onSubmit={submit} role="search" aria-label="Gayrimenkul ara" className="w-full">
       <SegmentedControl<ListingType>
         label="İlan türü"
-        tone="glass"
+        tone={tone === 'photo' ? 'glass' : 'default'}
         value={listingType}
         onValueChange={(v) => {
           setListingType(v);
@@ -143,8 +145,8 @@ export function HeroSearch({ options }: { options: SearchOptions }) {
           </Button>
         </div>
       </div>
-      <p className="mt-3 text-[13.5px] text-white/80">
-        <Link href="/ilanlar" className="inline-flex items-center gap-1.5 font-semibold text-white underline-offset-4 hover:underline">
+      <p className={cn('mt-3 text-[13.5px]', tone === 'photo' ? 'text-white/80' : 'text-muted-foreground')}>
+        <Link href="/ilanlar" className={cn('inline-flex items-center gap-1.5 font-semibold underline-offset-4 hover:underline', tone === 'photo' ? 'text-white' : 'text-foreground')}>
           <SlidersHorizontal className="size-4" aria-hidden /> Detaylı arama
         </Link>
         <span className="mx-2 opacity-50" aria-hidden>

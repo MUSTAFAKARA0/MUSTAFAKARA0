@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { RootDocument, rootViewport } from '@/components/common/root-document';
+import { RootDocument, rootMetadata, rootViewport } from '@/components/common/root-document';
 import { KarayFooter } from '@/components/karay/karay-footer';
 import { KarayHeader } from '@/components/karay/karay-header';
 import { karaySiteUrl } from '@/modules/karay/site';
@@ -23,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const title = profile.seoTitle || DEFAULT_TITLE;
   const description = profile.seoDescription || DEFAULT_DESCRIPTION;
   return {
-    formatDetection: { telephone: false },
+    ...rootMetadata,
     metadataBase: new URL(base.origin),
     title: { default: title, template: `%s | ${PLATFORM_BRAND.name}` },
     description,

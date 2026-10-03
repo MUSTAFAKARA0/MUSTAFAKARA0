@@ -13,8 +13,9 @@
  */
 :root {
   /* Yazı tipleri (varsayılan; kiracı yapılandırması değiştirebilir) */
-  --font-sans-face: var(--font-manrope);
-  --font-display-face: var(--font-fraunces);
+  /* Yedekler: yazı tipi değişkeni tanımlı olmayan köklerde (global 404) sistem yazı tipi */
+  --font-sans-face: var(--font-manrope, ui-sans-serif);
+  --font-display-face: var(--font-fraunces, ui-serif);
 
   /* Marka (kiracıya göre değişir) */
   --primary: #0e4d45;
@@ -408,7 +409,7 @@
 /*
  * Başlık ağırlığı tokenı: panellerde varsayılan 400; kiracı sitesinde tema/tipografi
  * ayarı --site-heading-weight ile değiştirir. Tema sunum kuralları Theme Engine'dedir
- * (src/theme-engine/css/themes.css; yalnızca kiracı sitesi ve tema önizlemesi yükler).
+ * (src/theme-engine/design-css.ts; yalnızca sitenin seçtiği tema/varyant kuralları satır içi yazılır).
  */
 @layer components {
   h1.font-display,

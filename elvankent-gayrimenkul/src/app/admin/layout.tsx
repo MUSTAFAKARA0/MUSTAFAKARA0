@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from 'next';
-import { RootDocument, rootViewport } from '@/components/common/root-document';
+import { RootDocument, rootMetadata, rootViewport } from '@/components/common/root-document';
 import { baseFontVariables } from '@/components/ui/base-fonts';
 import { buildTheme, themeCss } from '@/platform/branding/theme';
 import { getTenantFromRequest } from '@/platform/tenant/tenant';
 import '@/app/globals.css';
 
 export const metadata: Metadata = {
-  formatDetection: { telephone: false },
+  ...rootMetadata,
   title: { default: 'Yönetim Paneli', template: '%s | Yönetim Paneli' },
   robots: { index: false, follow: false, nocache: true },
   referrer: 'same-origin',

@@ -29,6 +29,7 @@ import {
 } from "@/components/platform/site/site-actions";
 import {
   DEFAULT_HOME_SECTIONS,
+  OPTIONAL_HOME_SECTIONS,
   PAGE_KEYS,
   type FooterConfig,
   type HeaderConfig,
@@ -573,6 +574,8 @@ const SECTION_NAMES: Record<HomeSectionType, string> = {
   text: "Metin bölümü",
   blog: "Blog / Rehber",
   contact: "İletişim",
+  stats: "Rakamlar (gerçek ilan sayıları)",
+  spotlight: "Seçilmiş ilan (editoryal)",
 };
 
 export function HomeForm({
@@ -590,7 +593,7 @@ export function HomeForm({
     JSON.stringify(sections) !== JSON.stringify(start) || initial === null;
   const update = (i: number, patch: Partial<HomeSectionConfig>) =>
     setSections((l) => l.map((s, j) => (j === i ? { ...s, ...patch } : s)));
-  const missing = DEFAULT_HOME_SECTIONS.filter(
+  const missing = [...DEFAULT_HOME_SECTIONS, ...OPTIONAL_HOME_SECTIONS].filter(
     (d) => !sections.some((s) => s.type === d.type),
   );
   return (

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { FONT_IDS, THEME_IDS } from '@/theme-engine/ids';
+import { CARD_LAYOUTS, CARD_SURFACES, FONT_IDS, FOOTER_LAYOUTS, HEADER_LAYOUTS, HERO_LAYOUTS, MOTION_LEVELS, THEME_IDS } from '@/theme-engine/ids';
 
 /**
  * Tema ayarlarının şeması (theme_id + theme_settings). Site yapılandırması
@@ -56,15 +56,26 @@ export type TypographyConfig = z.infer<typeof typographySchema>;
 
 // --------------------------------------------------------------------------- Bileşen stilleri
 /**
+ * Yapısal tasarım seçenekleri: sitenin TASARIM MANİFESTİ'nin bileşen kısmı. Değerler kapalı
+ * listelerdir (enum); Site Engine her değeri sabit bir bileşen/CSS parçasıyla eşler — kullanıcı
+ * verisiyle bileşen adı, dosya yolu veya CSS üretilemez. Boş alan = temanın varsayılanı.
+ */
+
+/**
  * Temanın varsayılanlarını kiracı bazında ezen bileşen stilleri (boş = temadan).
- * card: ilan/içerik kartları · button: düğme köşeleri · footer: alt bilgi zemini ·
- * hero: ana sayfa üst bölüm düzeni
+ * card: kart yüzeyi · cardLayout: kart düzeni · button: düğme köşeleri · footer: alt bilgi
+ * zemini · footerLayout: alt bilgi düzeni · hero: ana sayfa üst bölüm düzeni ·
+ * headerLayout: üst bilgi düzeni · motion: hareket dili
  */
 export const styleSchema = z.object({
-  card: z.enum(['elevated', 'outline', 'flat']).optional(),
+  card: z.enum(CARD_SURFACES).optional(),
+  cardLayout: z.enum(CARD_LAYOUTS).optional(),
   button: z.enum(['rounded', 'pill', 'square']).optional(),
   footer: z.enum(['dark', 'light', 'brand']).optional(),
-  hero: z.enum(['overlay', 'centered', 'split']).optional(),
+  footerLayout: z.enum(FOOTER_LAYOUTS).optional(),
+  hero: z.enum(HERO_LAYOUTS).optional(),
+  headerLayout: z.enum(HEADER_LAYOUTS).optional(),
+  motion: z.enum(MOTION_LEVELS).optional(),
 });
 export type StyleConfig = z.infer<typeof styleSchema>;
 
