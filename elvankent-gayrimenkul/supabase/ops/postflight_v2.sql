@@ -4,6 +4,8 @@
 -- Migration'lardan hemen sonra, siteyi yayına almadan ÖNCE çalıştırın.
 -- "durum" sütununda HATA varsa yayına almayın; geri dönüş planını uygulayın
 -- (docs/PRODUCTION_MIGRATION.md). Sayıları preflight_v1.sql çıktısıyla karşılaştırın.
+-- Sonradan eklenen tablolara (site_configs, platform_*) yalnızca dinamik sorguyla
+-- (query_to_xml) erişilir: migration uygulanmamışsa betik durmaz, ilgili satır HATA yazar.
 -- =============================================================================
 with expected_tables(name) as (
   values ('organizations'), ('organization_members'), ('organization_settings'), ('organization_domains'), ('plans'),
@@ -85,13 +87,12 @@ checks as (
   union all
   select 16, 'Web sitesi yapılandırması (her ofis için site kaydı)',
          case when to_regclass('public.site_configs') is null then 'tablo yok'
-              else (select count(*)::text from public.organizations o
-                     where not exists (select 1 from public.site_configs c where c.organization_id = o.id)) || ' kayıtsız ofis' end,
+              else (xpath('/row/n/text()', query_to_xml('select count(*) as n from public.organizations o where not exists (select 1 from public.site_configs c where c.organization_id = o.id)', false, true, '')))[1]::text::int::text || ' kayıtsız ofis' end,
          case when to_regclass('public.site_configs') is null then 'HATA: 20260930000002_site_builder.sql uygulanmamış'
-              when (select relrowsecurity from pg_class where oid = 'public.site_configs'::regclass)
-               and (select relrowsecurity from pg_class where oid = 'public.site_config_revisions'::regclass)
+              when (select relrowsecurity from pg_class where oid = to_regclass('public.site_configs'))
+               and (select relrowsecurity from pg_class where oid = to_regclass('public.site_config_revisions'))
                and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'public_site_config')
-               and not exists (select 1 from public.organizations o where not exists (select 1 from public.site_configs c where c.organization_id = o.id))
+               and (xpath('/row/n/text()', query_to_xml('select count(*) as n from public.organizations o where not exists (select 1 from public.site_configs c where c.organization_id = o.id)', false, true, '')))[1]::text::int = 0
               then 'TAMAM' else 'HATA' end
   union all
   select 17, 'Marka taslak → yayın akışı (site_apply_brand)',
@@ -102,12 +103,12 @@ checks as (
   union all
   select 18, 'KARAY şirket bilgileri ve KARAY talepleri (platform_settings, platform_leads)',
          case when to_regclass('public.platform_leads') is null then 'tablo yok'
-              else (select count(*)::text from public.platform_settings) || ' ayar satırı' end,
+              else (xpath('/row/n/text()', query_to_xml('select count(*) as n from public.platform_settings', false, true, '')))[1]::text::int::text || ' ayar satırı' end,
          case when to_regclass('public.platform_settings') is null or to_regclass('public.platform_leads') is null
               then 'HATA: 20261002000001_karay_platform.sql uygulanmamış'
-              when (select relrowsecurity from pg_class where oid = 'public.platform_settings'::regclass)
-               and (select relrowsecurity from pg_class where oid = 'public.platform_leads'::regclass)
-               and (select count(*) from public.platform_settings) = 1
+              when (select relrowsecurity from pg_class where oid = to_regclass('public.platform_settings'))
+               and (select relrowsecurity from pg_class where oid = to_regclass('public.platform_leads'))
+               and (xpath('/row/n/text()', query_to_xml('select count(*) as n from public.platform_settings', false, true, '')))[1]::text::int = 1
                and not has_function_privilege('anon', 'public.submit_platform_lead(text, text, text, text, text, text, text, boolean, text, text)', 'execute')
                and has_function_privilege('anon', 'public.public_platform_profile()', 'execute')
               then 'TAMAM' else 'HATA' end
