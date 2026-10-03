@@ -30,7 +30,7 @@ function TwoColumn({ form, preview }: { form: React.ReactNode; preview: React.Re
 }
 
 // --------------------------------------------------------------------------- Tema
-const STYLE_OPTIONS: { key: keyof StyleConfig; label: string; options: [string, string][] }[] = [
+const STYLE_OPTIONS: { key: Exclude<keyof StyleConfig, 'slots' | 'origin'>; label: string; options: [string, string][] }[] = [
   {
     key: 'hero',
     label: 'Ana sayfa üst bölüm (hero)',

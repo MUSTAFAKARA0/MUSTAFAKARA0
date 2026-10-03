@@ -1,5 +1,22 @@
 import { z } from 'zod';
-import { CARD_LAYOUTS, CARD_SURFACES, FONT_IDS, FOOTER_LAYOUTS, HEADER_LAYOUTS, HERO_LAYOUTS, MOTION_LEVELS, THEME_IDS } from '@/theme-engine/ids';
+import {
+  AGENT_SECTIONS,
+  CARD_LAYOUTS,
+  CARD_SURFACES,
+  FONT_IDS,
+  FOOTER_LAYOUTS,
+  GALLERY_LAYOUTS,
+  GRID_LAYOUTS,
+  HEADER_LAYOUTS,
+  HERO_LAYOUTS,
+  LISTING_DETAIL_LAYOUTS,
+  MAP_LIST_LAYOUTS,
+  MOTION_LEVELS,
+  NAVIGATION_STYLES,
+  SEARCH_STYLES,
+  TESTIMONIAL_SECTIONS,
+  THEME_IDS,
+} from '@/theme-engine/ids';
 
 /**
  * Tema ayarlarının şeması (theme_id + theme_settings). Site yapılandırması
@@ -76,6 +93,31 @@ export const styleSchema = z.object({
   hero: z.enum(HERO_LAYOUTS).optional(),
   headerLayout: z.enum(HEADER_LAYOUTS).optional(),
   motion: z.enum(MOTION_LEVELS).optional(),
+  /** Tek uygulamalı paket slotları (bkz. ids.ts); manifest eksiksiz olsun diye saklanır */
+  slots: z
+    .object({
+      navigation: z.enum(NAVIGATION_STYLES).optional(),
+      grid: z.enum(GRID_LAYOUTS).optional(),
+      search: z.enum(SEARCH_STYLES).optional(),
+      listingDetail: z.enum(LISTING_DETAIL_LAYOUTS).optional(),
+      gallery: z.enum(GALLERY_LAYOUTS).optional(),
+      mapList: z.enum(MAP_LIST_LAYOUTS).optional(),
+      agents: z.enum(AGENT_SECTIONS).optional(),
+      testimonials: z.enum(TESTIMONIAL_SECTIONS).optional(),
+    })
+    .optional(),
+  /**
+   * Manifestin kaynağı (yalnızca kayıt): site tipi, tasarım ailesi ve ana sayfa kompozisyonu
+   * kimlikleri. Site Engine bunu OKUMAZ (katalogdan bağımsız çizer); Site Factory önizleme ve
+   * yeniden derlemede kullanır. Biçim kontrolü burada, kimliğin katalogda olması Site Factory'de.
+   */
+  origin: z
+    .object({
+      siteType: z.string().regex(/^[a-z0-9-]{1,40}$/),
+      family: z.string().regex(/^[a-z0-9-]{1,40}$/),
+      homepage: z.string().regex(/^[a-z0-9-]{1,40}$/).optional(),
+    })
+    .optional(),
 });
 export type StyleConfig = z.infer<typeof styleSchema>;
 

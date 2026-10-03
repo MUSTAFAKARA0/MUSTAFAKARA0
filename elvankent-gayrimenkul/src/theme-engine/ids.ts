@@ -23,3 +23,18 @@ export type CardLayout = (typeof CARD_LAYOUTS)[number];
 export type HeaderLayout = (typeof HEADER_LAYOUTS)[number];
 export type FooterLayout = (typeof FOOTER_LAYOUTS)[number];
 export type MotionLevel = (typeof MOTION_LEVELS)[number];
+
+/**
+ * Tasarım paketi slotları (design package). Her slot sitenin manifestinde kapalı bir listeden
+ * seçilir. Bugün tek uygulaması olan slotlar 'standard' ile başlar; yeni bir varyant = buraya
+ * kimlik + Site Engine'de bileşen/CSS parçası (yalnızca seçen siteye gider). 'none' = bu sürümde
+ * bileşen yok (ör. müşteri yorumları gerçek veri gerektirir; uydurma içerik gösterilmez).
+ */
+export const NAVIGATION_STYLES = ['standard'] as const;
+export const GRID_LAYOUTS = ['standard'] as const;
+export const SEARCH_STYLES = ['standard'] as const;
+export const LISTING_DETAIL_LAYOUTS = ['standard'] as const;
+export const GALLERY_LAYOUTS = ['standard'] as const;
+export const MAP_LIST_LAYOUTS = ['standard'] as const;
+export const AGENT_SECTIONS = ['none'] as const;
+export const TESTIMONIAL_SECTIONS = ['none'] as const;
