@@ -24,6 +24,13 @@ export default async function Page({ params }: PageProps<'/platform/siteler/[id]
   ]);
   const orgId = site.org.id;
   const rows = revisions.data ?? [];
+  // Yayınlayan: işlem kaydındaki site.published / site.rolled_back (sürüm numarasıyla eşleşir; ek sorgu yok)
+  const publisher = new Map<number, string>();
+  for (const l of logs.rows) {
+    const m = (l.metadata ?? {}) as { version?: number; new_version?: number };
+    const v = l.action === 'site.published' ? m.version : l.action === 'site.rolled_back' ? m.new_version : undefined;
+    if (typeof v === 'number' && l.actor_label && !publisher.has(v)) publisher.set(v, l.actor_label);
+  }
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
       <Panel title="Yayın sürümleri" description="Her yayın yeni bir sürüm oluşturur. Geri yükleme, seçilen sürümü yeni bir sürüm olarak yayınlar; geçmiş silinmez." bodyClassName="p-0 sm:p-0">
@@ -43,7 +50,10 @@ export default async function Page({ params }: PageProps<'/platform/siteler/[id]
                       </Badge>
                     )}
                   </p>
-                  <p className="text-[12.5px] text-muted-foreground">{formatDateTime(r.created_at)}</p>
+                  <p className="text-[12.5px] text-muted-foreground">
+                    {formatDateTime(r.created_at)}
+                    {publisher.get(r.version) ? ` · ${publisher.get(r.version)}` : ''}
+                  </p>
                 </div>
                 {r.version !== site.version && (
                   <ActionButton

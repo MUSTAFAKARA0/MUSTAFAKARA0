@@ -64,6 +64,12 @@ export const PALETTES: PalettePreset[] = [
     tokens: { primary: '#4f6b3a', secondary: '#1e2419', accent: '#b89a64', background: '#f7f6f0', surface: '#fffefa', text: '#1e2419', muted: '#5f6655', border: '#e3e1d3', ...status },
   },
   {
+    id: 'graphite-teal',
+    name: 'Grafit (antrasit · camgöbeği)',
+    scheme: 'light',
+    tokens: { primary: '#0f766e', secondary: '#161a1f', accent: '#0ea5b7', background: '#f4f5f6', surface: '#ffffff', text: '#15191e', muted: '#545c66', border: '#dde1e5', ...status },
+  },
+  {
     id: 'night',
     name: 'Gece (koyu)',
     scheme: 'dark',

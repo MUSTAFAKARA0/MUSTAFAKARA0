@@ -46,7 +46,7 @@ export function PropertyCard({
   const inactive = p.status !== 'published';
   return (
     <article className={cn('card-lift group relative flex flex-col rounded-[1.25rem] p-2', className)}>
-      <div className="relative aspect-[4/3] overflow-hidden rounded-[0.875rem] bg-surface-muted">
+      <div className="site-media relative aspect-[4/3] overflow-hidden rounded-[0.875rem] bg-surface-muted">
         {p.cover ? (
           <MediaImage
             media={p.cover}

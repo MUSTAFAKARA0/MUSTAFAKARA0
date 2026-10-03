@@ -56,7 +56,7 @@ export function Hero({
     // Atlas: metin + arama solda, görsel sağda (telefonda görsel üstte)
     return (
       <section aria-labelledby="hero-baslik" className="container-page pt-3 sm:pt-5">
-        <div className="grid overflow-hidden rounded-[1.75rem] border border-border bg-surface lg:grid-cols-[1.05fr_1fr]">
+        <div className="site-media grid overflow-hidden rounded-[1.75rem] border border-border bg-surface lg:grid-cols-[1.05fr_1fr]">
           <div className="relative order-first min-h-[260px] bg-primary sm:min-h-[340px] lg:order-last lg:min-h-[560px]">{image}</div>
           <div className="flex flex-col justify-center px-5 py-8 sm:px-10 sm:py-12 lg:px-12">
             {s.service_area && <p className="eyebrow eyebrow-line">{o?.eyebrow ?? s.display_name}</p>}
@@ -85,7 +85,7 @@ export function Hero({
   const centered = variant === 'centered';
   return (
     <section aria-labelledby="hero-baslik" className="container-page pt-3 sm:pt-5">
-      <div className="relative isolate flex min-h-[600px] items-end overflow-hidden rounded-[1.75rem] bg-primary sm:min-h-[620px] lg:min-h-[680px]">
+      <div className="site-media relative isolate flex min-h-[600px] items-end overflow-hidden rounded-[1.75rem] bg-primary sm:min-h-[620px] lg:min-h-[680px]">
         {heroImage ? (
           <Image src={heroImage} alt="" fill preload sizes="(min-width: 1312px) 1248px, 100vw" className="-z-10 object-cover" />
         ) : spotlight?.cover ? (

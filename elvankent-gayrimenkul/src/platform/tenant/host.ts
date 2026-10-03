@@ -56,6 +56,38 @@ export function tenantKeyForHost(rawHost: string | null | undefined, config: Ten
   return HOSTNAME.test(host) ? host : config.defaultSlug;
 }
 
+/**
+ * KARAY'ın herkese açık şirket/ürün sayfası (/karay) hangi adreslerde sunulur?
+ *
+ * KARAY sayfası bir kiracının (emlak ofisinin) alan adında AÇILMAZ: ofisin sitesinde
+ * platform sahibinin tanıtımı görünmez. Sunulduğu adresler:
+ *  - KARAY_HOSTS listesindeki alan adları (ör. karay.com.tr, www.karay.com.tr) —
+ *    bu alan adlarında kök adres (/) da KARAY sayfasıdır;
+ *  - KARAY_HOSTS tanımlı değilse yalnızca geliştirme/demo adresleri (localhost,
+ *    IP, *.vercel.app) ve platform kök alan adı (PLATFORM_ROOT_DOMAIN).
+ */
+export interface KarayHostConfig {
+  karayHosts: string[];
+  platformRootDomain?: string;
+}
+
+export function karayHostKind(rawHost: string | null | undefined, config: KarayHostConfig): 'dedicated' | 'shared' | null {
+  const host = normalizeHost(rawHost);
+  if (!host) return null;
+  if (config.karayHosts.includes(host)) return 'dedicated';
+  if (config.karayHosts.length > 0) return null;
+  const root = config.platformRootDomain;
+  if (host === 'localhost' || IPV4.test(host) || host.endsWith('.vercel.app') || (root && (host === root || host === `www.${root}`))) return 'shared';
+  return null;
+}
+
+export function karayHostsFromEnv(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((h) => normalizeHost(h))
+    .filter((h) => HOSTNAME.test(h) || h === 'localhost');
+}
+
 /** NEXT_PUBLIC_SITE_URL'den varsayılan alan adlarını üretir (www dahil). */
 export function defaultHostsFromSiteUrl(siteUrl: string | undefined): string[] {
   if (!siteUrl) return [];

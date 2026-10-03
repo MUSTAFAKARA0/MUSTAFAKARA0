@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { defaultHostsFromSiteUrl, tenantKeyForHost, type TenantHostConfig } from '@/platform/tenant/host';
+import { defaultHostsFromSiteUrl, karayHostKind, karayHostsFromEnv, tenantKeyForHost, type TenantHostConfig } from '@/platform/tenant/host';
 
 /**
  * İstek yönlendirici (Next.js 16 proxy, Node.js çalışma zamanı).
@@ -100,6 +100,21 @@ export async function proxy(request: NextRequest) {
   // API rotaları yeniden yazılmaz; kiracı başlığı güvenilir değerle iletilir
   if (isUnder(pathname, '/api')) {
     return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // KARAY şirket/ürün sayfası: yalnızca platform adreslerinde (kiracı alan adında açılmaz)
+  const karay = karayHostKind(request.headers.get('host'), {
+    karayHosts: karayHostsFromEnv(process.env.KARAY_HOSTS),
+    platformRootDomain: process.env.PLATFORM_ROOT_DOMAIN || undefined,
+  });
+  if (karay && isUnder(pathname, '/karay')) {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+  if (karay === 'dedicated') {
+    // KARAY'a ayrılmış alan adında kök ve diğer yollar KARAY sayfasına gider
+    const target = request.nextUrl.clone();
+    target.pathname = `/karay${pathname === '/' ? '' : pathname}`;
+    return NextResponse.rewrite(target, { request: { headers: requestHeaders } });
   }
 
   const destination = request.nextUrl.clone();

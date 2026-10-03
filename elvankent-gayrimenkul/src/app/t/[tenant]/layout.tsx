@@ -72,7 +72,7 @@ export default async function TenantLayout({ children, params }: LayoutProps<'/t
   }
 
   return (
-    <div data-site-theme={theme.id} data-site-card={style.card} data-site-button={style.button} data-site-footer={style.footer} className="contents">
+    <div data-site-theme={theme.id} data-site-card={style.card} data-site-button={style.button} data-site-footer={style.footer} data-site-image={style.image} className="contents">
       <style href={styleKey} precedence="high">
         {css}
       </style>

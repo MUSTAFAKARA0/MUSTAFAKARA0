@@ -119,6 +119,8 @@ function tsType(pgType, typtype, isArray) {
   else if (['text', 'varchar', 'bpchar', 'uuid', 'date', 'time', 'timetz', 'timestamp', 'timestamptz',
     'interval', 'inet', 'citext', 'bytea', 'name', 'regprocedure'].includes(pgType)) base = 'string';
   else if (pgType === 'void') base = 'undefined';
+  // setof <tablo> / <tablo> döndüren fonksiyonlar: tablonun satır tipi
+  else if (typtype === 'c' && tables.has(pgType)) base = `Database["public"]["Tables"]["${pgType}"]["Row"]`;
   else base = 'unknown';
   return isArray ? `${base}[]` : base;
 }

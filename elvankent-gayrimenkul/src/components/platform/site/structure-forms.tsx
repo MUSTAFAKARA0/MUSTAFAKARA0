@@ -186,11 +186,12 @@ export function HeaderForm({
             <Field label="Görünüm" htmlFor="h-style">
               <Select
                 id="h-style"
-                value={h.style}
+                value={h.style ?? ""}
                 onChange={(e) =>
-                  set("style", e.target.value as HeaderConfig["style"])
+                  set("style", (e.target.value || undefined) as HeaderConfig["style"])
                 }
               >
+                <option value="">Temadan</option>
                 <option value="light">Açık zemin</option>
                 <option value="dark">Koyu zemin (ikincil renk)</option>
               </Select>

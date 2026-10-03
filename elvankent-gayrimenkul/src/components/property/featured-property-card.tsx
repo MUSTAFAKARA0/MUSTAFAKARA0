@@ -21,7 +21,7 @@ export function FeaturedPropertyCard({ property: p }: { property: PropertyCard }
     .slice(0, 4);
 
   return (
-    <article className="card-lift group relative grid overflow-hidden rounded-[1.5rem] lg:grid-cols-[1.45fr_1fr]">
+    <article className="site-media card-lift group relative grid overflow-hidden rounded-[1.5rem] lg:grid-cols-[1.45fr_1fr]">
       <div className="relative aspect-[4/3] overflow-hidden bg-surface-muted lg:aspect-auto lg:min-h-[440px]">
         {p.cover && (
           <MediaImage

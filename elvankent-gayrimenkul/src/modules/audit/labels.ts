@@ -18,7 +18,7 @@ export const AUDIT_CATEGORIES: Record<AuditCategory, { label: string; prefixes: 
   crm: { label: 'Müşteri ilişkileri', prefixes: ['collection.', 'customer.', 'lead.'] },
   media: { label: 'Medya', prefixes: ['media.'] },
   data: { label: 'Veri dışa aktarma', prefixes: ['data.'] },
-  platform: { label: 'Platform', prefixes: ['organization.', 'plan.', 'subscription.'] },
+  platform: { label: 'Platform', prefixes: ['organization.', 'plan.', 'subscription.', 'platform.'] },
   site: { label: 'Web sitesi', prefixes: ['site.', 'domain.'] },
 };
 
@@ -80,7 +80,7 @@ const money = (v: unknown, currency: unknown) =>
 
 const SITE_SECTION_LABELS: Record<string, string> = {
   theme: 'Tema', colors: 'Renkler', typography: 'Tipografi', header: 'Header', navigation: 'Menü', home: 'Ana sayfa',
-  footer: 'Footer', pages: 'Sayfalar', seo: 'SEO',
+  footer: 'Footer', pages: 'Sayfalar', seo: 'SEO', brand: 'Marka', style: 'Bileşen stilleri',
 };
 const SITE_STATUS_LABELS: Record<string, string> = { active: 'Yayında', maintenance: 'Bakımda', draft: 'Yayında değil' };
 function featureDiff(oldV: unknown, newV: unknown): string | null {
@@ -152,7 +152,12 @@ export function describeAudit(row: AuditRow): { text: string; detail: string | n
     case 'site.draft_saved':
       return {
         text: `Web sitesi taslağını düzenledi${target ? ` (${SITE_SECTION_LABELS[String(row.target_label)] ?? row.target_label})` : ''}`,
-        detail: m.old !== undefined && m.new !== undefined && (m.old || m.new) ? `Tema: ${m.old ?? 'Klasik'} → ${m.new}` : null,
+        detail:
+          Array.isArray(m.fields) && m.fields.length
+            ? fieldList(m.fields)
+            : m.old !== undefined && m.new !== undefined && (m.old || m.new)
+              ? `Tema: ${m.old ?? 'Klasik'} → ${m.new}`
+              : null,
         tone: 'neutral',
       };
     case 'site.published':
@@ -205,6 +210,10 @@ export function describeAudit(row: AuditRow): { text: string; detail: string | n
       return { text: `${target} organizasyonunun durumunu değiştirdi`, detail: m.from || m.to ? `${m.from ?? ''} → ${m.to ?? ''}` : null, tone: 'warning' };
     case 'plan.updated':
       return { text: `${target} planını güncelledi`, detail: null, tone: 'neutral' };
+    case 'platform.lead_updated':
+      return { text: 'KARAY talebinin durumunu güncelledi', detail: m.old_status || m.new_status ? `${m.old_status ?? ''} → ${m.new_status ?? ''}` : null, tone: 'neutral' };
+    case 'platform.settings_updated':
+      return { text: 'KARAY şirket ayarlarını güncelledi', detail: null, tone: 'neutral' };
     case 'subscription.changed':
       return { text: 'Abonelik planını değiştirdi', detail: m.plan ? `Plan: ${m.plan}` : null, tone: 'neutral' };
     default:

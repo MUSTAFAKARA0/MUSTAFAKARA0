@@ -6,6 +6,7 @@ import { formatPhoneDisplay } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { brandingUrl } from '@/modules/media/variants';
 import type { SiteView } from '@/platform/site/load';
+import { resolveStyle } from '@/platform/site/themes';
 import type { Tenant } from '@/platform/tenant/tenant';
 
 /**
@@ -18,12 +19,14 @@ export function SiteHeader({ tenant, hasBlog, view }: { tenant: Tenant; hasBlog:
   const nav = resolveNav(view, hasBlog);
   const phone = telHref(s.phone);
   const whatsapp = view.features.whatsapp ? whatsappHref(s.whatsapp ?? s.phone, 'Merhaba, bilgi almak istiyorum.') : null;
-  const dark = h.style === 'dark';
+  // Header zemini: Header ayarı boşsa temanın varsayılanı
+  const headerStyle = resolveStyle(view.config).header;
+  const dark = headerStyle === 'dark';
   const cta = h.cta && isHrefAvailable(h.cta.href, view, hasBlog) ? h.cta : null;
   const mobileLogo = brandingUrl(s.logo_mobile_url);
   return (
     <header
-      data-header-style={h.style}
+      data-header-style={headerStyle}
       className={cn(
         'top-0 z-40 border-b border-border/80 bg-surface/95 text-foreground backdrop-blur supports-[backdrop-filter]:bg-surface/85',
         h.sticky ? 'sticky' : 'relative',

@@ -473,6 +473,130 @@
   --inverse-foreground: var(--primary-fg);
 }
 
+/*
+ * Tema karakterleri (KARAY Web Sitesi Yönetimi › Tema). Renkler tokenlardan gelir; burada
+ * yalnızca temaya özgü SUNUM farkları var: başlık harf aralığı/biçimi, üst etiket (eyebrow)
+ * stili, kart ve görsel işleme. Katmansız: Tailwind yardımcılarından önce gelir; yalnızca
+ * kiracı sitesi kapsayıcısında ve canlı önizlemede ([data-site-theme]) geçerlidir.
+ */
+/* Görsel işleme: köşesiz · ince çerçeve · organik (büyük yuvarlak) */
+[data-site-image='square'] .site-media {
+  border-radius: 0;
+}
+[data-site-image='organic'] .site-media {
+  border-radius: 2rem;
+}
+[data-site-image='frame'] .site-media::after {
+  content: '';
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgb(255 255 255 / 0.6);
+  pointer-events: none;
+  z-index: 2;
+}
+/* Prestij: ince, geniş aralıklı serif; altın çizgili etiket */
+[data-site-theme='prestij'] :is(h1, h2).font-display {
+  letter-spacing: 0.005em;
+}
+[data-site-theme='prestij'] .eyebrow {
+  letter-spacing: 0.32em;
+  font-weight: 600;
+}
+[data-site-theme='prestij'] .eyebrow-line::before {
+  width: 3rem;
+  height: 1px;
+  background: var(--accent);
+}
+[data-site-theme='prestij'] .btn {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.8em;
+}
+/* Kent: sıkı grotesk başlık, blok etiket */
+[data-site-theme='kent'] :is(h1, h2, h3).font-display {
+  letter-spacing: -0.03em;
+}
+[data-site-theme='kent'] .eyebrow {
+  display: inline-flex;
+  padding: 0.3em 0.6em;
+  background: var(--accent);
+  color: var(--accent-fg);
+  letter-spacing: 0.08em;
+}
+[data-site-theme='kent'] .eyebrow-line::before {
+  display: none;
+}
+/* Yalın: tek aile, sade etiket, çizgisiz */
+[data-site-theme='yalin'] :is(h1, h2).font-display {
+  letter-spacing: -0.035em;
+}
+[data-site-theme='yalin'] .eyebrow {
+  letter-spacing: 0.02em;
+  text-transform: none;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+[data-site-theme='yalin'] .eyebrow-line::before {
+  display: none;
+}
+[data-site-theme='yalin'] .card-lift {
+  border-color: transparent;
+}
+/* Rezidans: güçlü serif, derin gölge */
+[data-site-theme='rezidans'] :is(h1, h2).font-display {
+  letter-spacing: -0.015em;
+}
+[data-site-theme='rezidans'] .card-lift {
+  box-shadow: 0 2px 4px rgb(20 26 24 / 0.05), 0 18px 40px -18px rgb(20 26 24 / 0.35);
+}
+[data-site-theme='rezidans'] .eyebrow-line::before {
+  width: 2.25rem;
+  background: var(--accent);
+}
+/* Doğa: yumuşak, noktalı etiket */
+[data-site-theme='doga'] .eyebrow {
+  letter-spacing: 0.1em;
+}
+[data-site-theme='doga'] .eyebrow-line::before {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--accent);
+}
+/* Dergi: editoryal başlık, ince çizgili kart, alt çizgili etiket */
+[data-site-theme='dergi'] :is(h1, h2).font-display {
+  letter-spacing: -0.01em;
+  font-style: italic;
+}
+[data-site-theme='dergi'] .eyebrow {
+  letter-spacing: 0.18em;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 0.2em;
+}
+[data-site-theme='dergi'] .eyebrow-line::before {
+  display: none;
+}
+[data-site-theme='dergi'] .card-lift {
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+}
+/* Grafit: geometrik, kalın vurgu çizgisi */
+[data-site-theme='grafit'] :is(h1, h2).font-display {
+  letter-spacing: -0.025em;
+}
+[data-site-theme='grafit'] .eyebrow-line::before {
+  width: 1.25rem;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+/* KARAY şirket sayfası örnek (demo) veri içermez: demo şeridi orada gösterilmez */
+body:has(.karay-site) .demo-notice {
+  display: none;
+}
+
 /* Leaflet harita uyumu */
 .leaflet-container {
   font-family: var(--font-sans);

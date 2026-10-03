@@ -155,6 +155,7 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           created_at: string
+          code: string | null
         }
         Insert: {
           id?: number
@@ -163,6 +164,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           created_at?: string
+          code?: string | null
         }
         Update: {
           id?: number
@@ -171,6 +173,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           created_at?: string
+          code?: string | null
         }
         Relationships: []
       }
@@ -351,6 +354,7 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           created_at: string
+          code: string | null
         }
         Insert: {
           id?: number
@@ -360,6 +364,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           created_at?: string
+          code?: string | null
         }
         Update: {
           id?: number
@@ -369,6 +374,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           created_at?: string
+          code?: string | null
         }
         Relationships: [
           {
@@ -690,6 +696,7 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           created_at: string
+          code: string | null
         }
         Insert: {
           id?: number
@@ -699,6 +706,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           created_at?: string
+          code?: string | null
         }
         Update: {
           id?: number
@@ -708,6 +716,7 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           created_at?: string
+          code?: string | null
         }
         Relationships: [
           {
@@ -910,64 +919,6 @@ export type Database = {
           },
         ]
       }
-      site_configs: {
-        Row: {
-          organization_id: string
-          draft: Json
-          published: Json
-          published_version: number
-          has_unpublished_changes: boolean
-          site_status: string
-          maintenance_message: string | null
-          feature_overrides: Json
-          draft_updated_at: string | null
-          draft_updated_by: string | null
-          published_at: string | null
-          published_by: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          organization_id: string
-          draft?: Json
-          published?: Json
-          published_version?: number
-          has_unpublished_changes?: boolean
-          site_status?: string
-          maintenance_message?: string | null
-          feature_overrides?: Json
-        }
-        Update: {
-          draft?: Json
-          published?: Json
-          site_status?: string
-          maintenance_message?: string | null
-          feature_overrides?: Json
-        }
-        Relationships: []
-      }
-      site_config_revisions: {
-        Row: {
-          id: string
-          organization_id: string
-          version: number
-          config: Json
-          note: string | null
-          created_by: string | null
-          created_at: string
-        }
-        Insert: {
-          organization_id: string
-          version: number
-          config: Json
-          note?: string | null
-          created_by?: string | null
-        }
-        Update: {
-          note?: string | null
-        }
-        Relationships: []
-      }
       organization_settings: {
         Row: {
           organization_id: string
@@ -977,9 +928,6 @@ export type Database = {
           description: string | null
           service_area: string | null
           logo_url: string | null
-          logo_mobile_url: string | null
-          maps_url: string | null
-          short_name: string | null
           favicon_url: string | null
           primary_color: string
           accent_color: string
@@ -1010,6 +958,9 @@ export type Database = {
           default_location_precision: Database["public"]["Enums"]["location_precision"]
           updated_by: string | null
           updated_at: string
+          short_name: string | null
+          logo_mobile_url: string | null
+          maps_url: string | null
         }
         Insert: {
           organization_id: string
@@ -1019,9 +970,6 @@ export type Database = {
           description?: string | null
           service_area?: string | null
           logo_url?: string | null
-          logo_mobile_url?: string | null
-          maps_url?: string | null
-          short_name?: string | null
           favicon_url?: string | null
           primary_color?: string
           accent_color?: string
@@ -1052,6 +1000,9 @@ export type Database = {
           default_location_precision?: Database["public"]["Enums"]["location_precision"]
           updated_by?: string | null
           updated_at?: string
+          short_name?: string | null
+          logo_mobile_url?: string | null
+          maps_url?: string | null
         }
         Update: {
           organization_id?: string
@@ -1061,9 +1012,6 @@ export type Database = {
           description?: string | null
           service_area?: string | null
           logo_url?: string | null
-          logo_mobile_url?: string | null
-          maps_url?: string | null
-          short_name?: string | null
           favicon_url?: string | null
           primary_color?: string
           accent_color?: string
@@ -1094,6 +1042,9 @@ export type Database = {
           default_location_precision?: Database["public"]["Enums"]["location_precision"]
           updated_by?: string | null
           updated_at?: string
+          short_name?: string | null
+          logo_mobile_url?: string | null
+          maps_url?: string | null
         }
         Relationships: [
           {
@@ -1245,6 +1196,129 @@ export type Database = {
           sort_order?: number
           created_at?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_leads: {
+        Row: {
+          id: string
+          created_at: string
+          kind: string
+          full_name: string
+          email: string | null
+          phone: string | null
+          company: string | null
+          city: string | null
+          message: string | null
+          kvkk_consent: boolean
+          status: string
+          note: string | null
+          handled_by: string | null
+          handled_at: string | null
+          ip_hash: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          kind?: string
+          full_name: string
+          email?: string | null
+          phone?: string | null
+          company?: string | null
+          city?: string | null
+          message?: string | null
+          kvkk_consent: boolean
+          status?: string
+          note?: string | null
+          handled_by?: string | null
+          handled_at?: string | null
+          ip_hash?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          kind?: string
+          full_name?: string
+          email?: string | null
+          phone?: string | null
+          company?: string | null
+          city?: string | null
+          message?: string | null
+          kvkk_consent?: boolean
+          status?: string
+          note?: string | null
+          handled_by?: string | null
+          handled_at?: string | null
+          ip_hash?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      platform_settings: {
+        Row: {
+          id: boolean
+          company_name: string
+          tagline: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          whatsapp: string | null
+          address: string | null
+          city: string | null
+          website_url: string | null
+          linkedin_url: string | null
+          instagram_url: string | null
+          x_url: string | null
+          youtube_url: string | null
+          seo_title: string | null
+          seo_description: string | null
+          indexable: boolean
+          lead_notify_emails: string[]
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: boolean
+          company_name?: string
+          tagline?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          whatsapp?: string | null
+          address?: string | null
+          city?: string | null
+          website_url?: string | null
+          linkedin_url?: string | null
+          instagram_url?: string | null
+          x_url?: string | null
+          youtube_url?: string | null
+          seo_title?: string | null
+          seo_description?: string | null
+          indexable?: boolean
+          lead_notify_emails?: string[]
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: boolean
+          company_name?: string
+          tagline?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          whatsapp?: string | null
+          address?: string | null
+          city?: string | null
+          website_url?: string | null
+          linkedin_url?: string | null
+          instagram_url?: string | null
+          x_url?: string | null
+          youtube_url?: string | null
+          seo_title?: string | null
+          seo_description?: string | null
+          indexable?: boolean
+          lead_notify_emails?: string[]
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -1986,6 +2060,103 @@ export type Database = {
         }
         Relationships: []
       }
+      site_config_revisions: {
+        Row: {
+          id: string
+          organization_id: string
+          version: number
+          config: Json
+          note: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          version: number
+          config: Json
+          note?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          version?: number
+          config?: Json
+          note?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_config_revisions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_configs: {
+        Row: {
+          organization_id: string
+          draft: Json
+          published: Json
+          published_version: number
+          has_unpublished_changes: boolean
+          site_status: string
+          maintenance_message: string | null
+          feature_overrides: Json
+          draft_updated_at: string | null
+          draft_updated_by: string | null
+          published_at: string | null
+          published_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          draft?: Json
+          published?: Json
+          published_version?: number
+          has_unpublished_changes?: boolean
+          site_status?: string
+          maintenance_message?: string | null
+          feature_overrides?: Json
+          draft_updated_at?: string | null
+          draft_updated_by?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          organization_id?: string
+          draft?: Json
+          published?: Json
+          published_version?: number
+          has_unpublished_changes?: boolean
+          site_status?: string
+          maintenance_message?: string | null
+          feature_overrides?: Json
+          draft_updated_at?: string | null
+          draft_updated_by?: string | null
+          published_at?: string | null
+          published_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_configs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           id: string
@@ -2173,96 +2344,6 @@ export type Database = {
           custom_domain_enabled: boolean
         }[]
       }
-      session_context: {
-        Args: {
-          p_preferred_org?: string
-          p_host_key?: string
-        }
-        Returns: Json
-      }
-      public_site_config: {
-        Args: {
-          p_org: string
-        }
-        Returns: {
-          published: Json
-          published_version: number
-          site_status: string
-          maintenance_message: string | null
-          feature_overrides: Json
-        }[]
-      }
-      platform_sites: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          organization_id: string
-          slug: string
-          name: string
-          org_status: Database["public"]["Enums"]["org_status"]
-          is_default: boolean
-          site_status: string
-          published_version: number
-          has_unpublished_changes: boolean
-          published_at: string | null
-          draft_updated_at: string | null
-          theme: string
-          primary_domain: string | null
-          logo_url: string | null
-        }[]
-      }
-      site_save_draft: {
-        Args: { p_org: string; p_section: string; p_value: Json }
-        Returns: undefined
-      }
-      site_publish: {
-        Args: { p_org: string; p_note?: string }
-        Returns: number
-      }
-      site_rollback: {
-        Args: { p_org: string; p_version: number }
-        Returns: number
-      }
-      site_discard_draft: {
-        Args: { p_org: string }
-        Returns: undefined
-      }
-      site_set_status: {
-        Args: { p_org: string; p_status: string; p_message?: string }
-        Returns: undefined
-      }
-      site_set_features: {
-        Args: { p_org: string; p_overrides: Json }
-        Returns: undefined
-      }
-      public_tenant: {
-        Args: {
-          p_slug?: string
-          p_hostname?: string
-        }
-        Returns: {
-          id: string
-          slug: string
-          name: string
-          is_default: boolean
-          reference_prefix: string
-          status: Database["public"]["Enums"]["org_status"]
-        }[]
-      }
-      public_tenant_domains: {
-        Args: {
-          p_org: string
-        }
-        Returns: {
-          hostname: string
-          is_primary: boolean
-        }[]
-      }
-      public_tenant_settings: {
-        Args: {
-          p_org: string
-        }
-        Returns: Database["public"]["Tables"]["organization_settings"]["Row"][]
-      }
       org_usage: {
         Args: {
           p_org: string
@@ -2331,6 +2412,32 @@ export type Database = {
         }
         Returns: undefined
       }
+      platform_sites: {
+        Args: never
+        Returns: {
+          organization_id: string
+          slug: string
+          name: string
+          org_status: Database["public"]["Enums"]["org_status"]
+          is_default: boolean
+          site_status: string
+          published_version: number
+          has_unpublished_changes: boolean
+          published_at: string
+          draft_updated_at: string
+          theme: string
+          primary_domain: string
+          logo_url: string
+        }[]
+      }
+      platform_update_lead: {
+        Args: {
+          p_id: string
+          p_status: string
+          p_note?: string
+        }
+        Returns: undefined
+      }
       platform_update_plan: {
         Args: {
           p_id: string
@@ -2360,6 +2467,67 @@ export type Database = {
           last_sign_in_at: string
           memberships: Json
         }[]
+      }
+      public_platform_profile: {
+        Args: never
+        Returns: {
+          company_name: string
+          tagline: string
+          contact_email: string
+          contact_phone: string
+          whatsapp: string
+          address: string
+          city: string
+          website_url: string
+          linkedin_url: string
+          instagram_url: string
+          x_url: string
+          youtube_url: string
+          seo_title: string
+          seo_description: string
+          indexable: boolean
+        }[]
+      }
+      public_site_config: {
+        Args: {
+          p_org: string
+        }
+        Returns: {
+          published: Json
+          published_version: number
+          site_status: string
+          maintenance_message: string
+          feature_overrides: Json
+        }[]
+      }
+      public_tenant: {
+        Args: {
+          p_slug?: string
+          p_hostname?: string
+        }
+        Returns: {
+          id: string
+          slug: string
+          name: string
+          is_default: boolean
+          reference_prefix: string
+          status: Database["public"]["Enums"]["org_status"]
+        }[]
+      }
+      public_tenant_domains: {
+        Args: {
+          p_org: string
+        }
+        Returns: {
+          hostname: string
+          is_primary: boolean
+        }[]
+      }
+      public_tenant_settings: {
+        Args: {
+          p_org: string
+        }
+        Returns: Database["public"]["Tables"]["organization_settings"]["Row"][]
       }
       purge_old_audit_logs: {
         Args: {
@@ -2409,6 +2577,13 @@ export type Database = {
         Args: never
         Returns: string
       }
+      session_context: {
+        Args: {
+          p_preferred_org?: string
+          p_host_key?: string
+        }
+        Returns: Json
+      }
       set_property_cover: {
         Args: {
           p_media_id: string
@@ -2431,6 +2606,66 @@ export type Database = {
           id: string
           score: number
         }[]
+      }
+      site_apply_brand: {
+        Args: {
+          p_org: string
+          p_brand: Json
+        }
+        Returns: undefined
+      }
+      site_brand_columns: {
+        Args: never
+        Returns: string[]
+      }
+      site_brand_snapshot: {
+        Args: {
+          p_org: string
+        }
+        Returns: Json
+      }
+      site_discard_draft: {
+        Args: {
+          p_org: string
+        }
+        Returns: undefined
+      }
+      site_publish: {
+        Args: {
+          p_org: string
+          p_note?: string
+        }
+        Returns: number
+      }
+      site_rollback: {
+        Args: {
+          p_org: string
+          p_version: number
+        }
+        Returns: number
+      }
+      site_save_draft: {
+        Args: {
+          p_org: string
+          p_section: string
+          p_value: Json
+        }
+        Returns: undefined
+      }
+      site_set_features: {
+        Args: {
+          p_org: string
+          p_overrides: Json
+        }
+        Returns: undefined
+      }
+      site_set_status: {
+        Args: {
+          p_org: string
+          p_status: string
+          p_message?: string
+        }
+        Returns: undefined
       }
       slugify: {
         Args: {
@@ -2462,6 +2697,21 @@ export type Database = {
           p_intent: Database["public"]["Enums"]["lead_intent"]
           p_details: Json
           p_appointment_at: string
+          p_kvkk_consent: boolean
+          p_ip_hash: string
+          p_user_agent: string
+        }
+        Returns: string
+      }
+      submit_platform_lead: {
+        Args: {
+          p_kind: string
+          p_full_name: string
+          p_email: string
+          p_phone: string
+          p_company: string
+          p_city: string
+          p_message: string
           p_kvkk_consent: boolean
           p_ip_hash: string
           p_user_agent: string

@@ -107,7 +107,7 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 960, 1440, 2048, 2880],
     imageSizes: [160, 320, 480],
     remotePatterns,
-    localPatterns: [{ pathname: '/demo/**' }, { pathname: '/og-default.png' }, { pathname: '/placeholder-property.svg' }],
+    localPatterns: [{ pathname: '/demo/**' }, { pathname: '/karay/**' }, { pathname: '/og-default.png' }, { pathname: '/placeholder-property.svg' }],
     // Yerel Supabase ile geliştirme/test için (canlıda kapalı kalmalı)
     dangerouslyAllowLocalIP: process.env.NEXT_IMAGE_ALLOW_LOCAL_IP === '1',
   },
@@ -120,9 +120,14 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react'],
   },
   async headers() {
-    // Production dışındaki ortamlar (demo, önizleme, yerel) hiçbir yanıtta dizine eklenmez
+    // Production dışındaki ortamlar (demo, önizleme, yerel) dizine eklenmez. İstisna: KARAY'ın
+    // kendi şirket sayfası (/karay) — dizinlenme KARAY ayarlarından (sayfanın robots etiketi)
+    // yönetilir; kiracı (demo) sitelerinin noindex kuralı değişmez.
     const robots = isIndexable() ? [] : [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }];
-    return [{ source: '/:path*', headers: [...securityHeaders, ...robots] }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      ...(robots.length ? [{ source: '/:path((?!karay(?:/|$)).*)', headers: robots }] : []),
+    ];
   },
   async redirects() {
     // Kalıcı (308) yönlendirmeler: eski site ve V1 adresleri.

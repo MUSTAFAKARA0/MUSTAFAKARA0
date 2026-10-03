@@ -8,6 +8,8 @@ export const cacheTags = {
   tenants: 'tenants',
   /** Platform geneli referans veriler: il/ilçe/mahalle, emlak tipleri, özellikler */
   taxonomy: 'taxonomy',
+  /** KARAY (platform sahibi) kurumsal profili — kiracı etiketlerinden ayrı */
+  karay: 'karay',
   /** Organizasyon ayarları ve markası */
   org: (orgId: string) => `org:${orgId}`,
   properties: (orgId: string) => `org:${orgId}:properties`,

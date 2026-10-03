@@ -63,7 +63,7 @@ export function CategorySection({ tiles, o }: { tiles: CategoryTile[]; o?: Secti
             <li key={t.href}>
               <Link
                 href={t.href}
-                className="group relative flex aspect-[4/5] items-end overflow-hidden rounded-2xl bg-surface-inverse p-5 shadow-md ring-1 ring-black/5 transition-shadow duration-500 hover:shadow-lg sm:aspect-[3/4]"
+                className="site-media group relative flex aspect-[4/5] items-end overflow-hidden rounded-2xl bg-surface-inverse p-5 shadow-md ring-1 ring-black/5 transition-shadow duration-500 hover:shadow-lg sm:aspect-[3/4]"
               >
                 {t.image && (
                   <MediaImage
@@ -225,7 +225,7 @@ export function BlogSection({ posts, o }: { posts: PostSummary[]; o?: SectionOve
         {posts.slice(0, 3).map((p) => (
           <li key={p.id}>
             <Link href={`/blog/${p.slug}`} className="group block">
-              <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-surface-muted shadow-sm transition-shadow duration-500 group-hover:shadow-md">
+              <div className="site-media relative aspect-[16/10] overflow-hidden rounded-2xl bg-surface-muted shadow-sm transition-shadow duration-500 group-hover:shadow-md">
                 {p.cover && (
                   <MediaImage media={p.cover} alt="" fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover transition duration-700 group-hover:scale-[1.03]" />
                 )}

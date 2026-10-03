@@ -8,4 +8,8 @@ export const FONT_CATALOG: Record<FontId, { name: string; cssVar: string; kind: 
   playfair: { name: 'Playfair Display', cssVar: '--font-playfair', kind: 'serif' },
   'dm-sans': { name: 'DM Sans', cssVar: '--font-dm-sans', kind: 'sans' },
   lora: { name: 'Lora', cssVar: '--font-lora', kind: 'serif' },
+  cormorant: { name: 'Cormorant Garamond', cssVar: '--font-cormorant', kind: 'serif' },
+  'space-grotesk': { name: 'Space Grotesk', cssVar: '--font-space-grotesk', kind: 'sans' },
+  outfit: { name: 'Outfit', cssVar: '--font-outfit', kind: 'sans' },
+  newsreader: { name: 'Newsreader', cssVar: '--font-newsreader', kind: 'serif' },
 };

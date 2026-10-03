@@ -54,8 +54,9 @@ function stripUndefined<T extends object>(o: T): Partial<T> {
   return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
 
-const RADII: Record<'soft' | 'sharp' | 'medium', Record<string, string>> = {
+const RADII: Record<'soft' | 'sharp' | 'medium' | 'round', Record<string, string>> = {
   soft: {},
+  round: { lg: '0.85rem', xl: '1.1rem', '2xl': '1.45rem', '3xl': '2rem' },
   medium: { lg: '0.4rem', xl: '0.55rem', '2xl': '0.75rem', '3xl': '1rem' },
   sharp: { lg: '0.2rem', xl: '0.25rem', '2xl': '0.3rem', '3xl': '0.4rem' },
 };

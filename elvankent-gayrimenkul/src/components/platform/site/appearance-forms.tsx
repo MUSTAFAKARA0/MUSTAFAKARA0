@@ -1,140 +1,21 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
-import { Check, Heart, Search } from 'lucide-react';
+import { useId, useState } from 'react';
+import { LivePreview, type Brand } from '@/components/platform/site/live-preview';
+import { Check, Eye } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Field, Input, Select } from '@/components/ui/form-controls';
+import { Checkbox, Field, Input, Select } from '@/components/ui/form-controls';
 import { cn } from '@/lib/utils';
 import { SaveBar, useSectionSave } from '@/components/platform/site/site-actions';
 import { FONT_CATALOG } from '@/platform/site/font-catalog';
 import { PALETTES, findPalette } from '@/platform/site/palettes';
 import { FONT_IDS, type ColorTokens, type ColorsConfig, type FontId, type SiteConfig, type StyleConfig, type ThemeId, type TypographyConfig } from '@/platform/site/schema';
 import { resolveStyle, THEME_LIST, THEMES } from '@/platform/site/themes';
-import { resolveColors, siteCss } from '@/platform/site/tokens';
+import { resolveColors } from '@/platform/site/tokens';
 
-export type Brand = { primary_color: string | null; accent_color: string | null; logoUrl?: string | null; tagline?: string | null };
-
-/**
- * Canlı önizleme: seçilen tema/renk/yazı tipi/header/bileşen stilleriyle küçük bir site
- * örneği. Gerçek sitenin AYNI token üreticisini (siteCss) ve aynı CSS kancalarını
- * (data-site-*, card-lift, btn, site-footer) kullanır; ayrı bir sahte stil sistemi yoktur.
- * Kaydedilmemiş değerler tarayıcıda hesaplanır.
- */
-export function LivePreview({ config, brand, darkAllowed, name }: { config: SiteConfig; brand: Brand; darkAllowed: boolean; name: string }) {
-  const id = useId().replace(/[^a-z0-9]/gi, '');
-  const css = useMemo(() => siteCss(config, brand, darkAllowed, `[data-live-preview="${id}"]`), [config, brand, darkAllowed, id]);
-  const theme = THEMES[config.theme];
-  const style = resolveStyle(config);
-  const h = config.header;
-  const showLogo = Boolean(brand.logoUrl) && h.brand !== 'name';
-  const showName = !showLogo || h.brand === 'logo-name';
-  const search = (
-    <div className="flex items-center gap-2 rounded-2xl bg-surface p-1.5 pl-3 text-left text-foreground shadow-md">
-      <span className="min-w-0 flex-1">
-        <span className="block text-[9px] font-bold tracking-wider text-muted-foreground uppercase">Konum</span>
-        <span className="block truncate text-[12px] font-semibold">Tüm bölgeler</span>
-      </span>
-      <span className="hidden min-w-0 flex-1 sm:block">
-        <span className="block text-[9px] font-bold tracking-wider text-muted-foreground uppercase">Tip</span>
-        <span className="block truncate text-[12px] font-semibold">Daire</span>
-      </span>
-      <Button size="sm" tabIndex={-1}>
-        <Search /> Ara
-      </Button>
-    </div>
-  );
-  return (
-    <div aria-label="Canlı önizleme" className="overflow-hidden rounded-2xl border border-border shadow-sm">
-      <style>{css}</style>
-      <div
-        data-live-preview={id}
-        data-site-theme={theme.id}
-        data-site-card={style.card}
-        data-site-button={style.button}
-        data-site-footer={style.footer}
-        className="bg-background font-sans text-foreground"
-      >
-        {/* Header */}
-        <div data-header-style={h.style} className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-2.5 text-foreground">
-          <span className="flex min-w-0 items-center gap-2">
-            {showLogo ? (
-              // eslint-disable-next-line @next/next/no-img-element -- depolamadaki logo (önizleme)
-              <img src={brand.logoUrl!} alt="" className="h-7 w-auto max-w-[110px] object-contain" />
-            ) : (
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary font-display text-[11px] font-semibold text-primary-fg">
-                {name.slice(0, 1).toLocaleUpperCase('tr-TR')}
-              </span>
-            )}
-            {showName && (
-              <span className="min-w-0 leading-tight">
-                <span className="block truncate font-display text-[13.5px] font-semibold">{name}</span>
-                {h.showTagline && brand.tagline && <span className="block truncate text-[10px] text-muted-foreground">{brand.tagline}</span>}
-              </span>
-            )}
-          </span>
-          <span className="flex items-center gap-1.5">
-            {h.showFavorites && <Heart className="size-4 text-foreground/70" aria-hidden />}
-            <Button size="xs" tabIndex={-1}>
-              {h.cta?.label ?? 'Bize ulaşın'}
-            </Button>
-          </span>
-        </div>
-        {/* Hero */}
-        {style.hero === 'overlay' && (
-          <div className="relative m-3 overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#5b6b72,#2b3438)] px-4 pt-8 pb-4 text-white">
-            <p className="text-[9.5px] font-bold tracking-[0.2em] text-white/75 uppercase">{name}</p>
-            <h3 className="mt-1.5 font-display text-[1.45rem] leading-[1.1]">Size uygun gayrimenkulü bulun.</h3>
-            <div className="mt-4">{search}</div>
-          </div>
-        )}
-        {style.hero === 'centered' && (
-          <div className="px-4 pt-7 pb-5 text-center">
-            <p className="eyebrow justify-center">{name}</p>
-            <h3 className="mx-auto mt-2 max-w-xs font-display text-[1.5rem] leading-[1.1]">Size uygun gayrimenkulü bulun.</h3>
-            <div className="mx-auto mt-4 max-w-sm">{search}</div>
-          </div>
-        )}
-        {style.hero === 'split' && (
-          <div className="grid grid-cols-[1.2fr_1fr] items-center gap-3 px-4 pt-6 pb-4">
-            <div className="min-w-0">
-              <p className="eyebrow eyebrow-line">{name}</p>
-              <h3 className="mt-2 font-display text-[1.3rem] leading-[1.1]">Size uygun gayrimenkulü bulun.</h3>
-            </div>
-            <div className="aspect-[4/3] rounded-xl bg-[linear-gradient(135deg,#8c9aa1,#4b585e)]" />
-            <div className="col-span-2">{search}</div>
-          </div>
-        )}
-        {/* Kartlar */}
-        <div className="px-4 pb-4">
-          <p className="eyebrow eyebrow-line">Öne çıkanlar</p>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            {[1, 2].map((i) => (
-              <div key={i} className="card-lift overflow-hidden rounded-2xl border border-border bg-surface">
-                <div className="aspect-[4/3] bg-[linear-gradient(160deg,#c9d3d6,#98a6ab)]" />
-                <div className="p-2.5">
-                  <p className="text-[14px] font-bold text-primary-ink">₺{i === 1 ? '4.250.000' : '18.500 / ay'}</p>
-                  <p className="truncate text-[11.5px] font-semibold">{i === 1 ? 'Satılık 3+1 daire' : 'Kiralık 2+1 daire'}</p>
-                  <p className="text-[10.5px] text-muted-foreground">3+1 · 125 m² · 4. kat</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          {/* Çağrı bandı */}
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-surface-inverse px-4 py-4 text-inverse-foreground">
-            <p className="font-display text-[14px] leading-snug">Mülkünüzü satmak mı istiyorsunuz?</p>
-            <Button size="xs" variant="inverse" tabIndex={-1}>
-              Değerleme talebi
-            </Button>
-          </div>
-        </div>
-        {/* Footer */}
-        <div className="site-footer bg-surface-inverse px-4 py-3 text-[11px] text-inverse-foreground/80">
-          <span className="font-semibold text-inverse-foreground">{name}</span> · © {new Date().getFullYear()} · KVKK · Gizlilik
-        </div>
-      </div>
-    </div>
-  );
-}
+export { LivePreview, type Brand } from '@/components/platform/site/live-preview';
 
 function TwoColumn({ form, preview }: { form: React.ReactNode; preview: React.ReactNode }) {
   return (
@@ -159,78 +40,144 @@ const STYLE_OPTIONS: { key: keyof StyleConfig; label: string; options: [string, 
 export function ThemeForm({ orgId, draft, brand, darkAllowed, name }: { orgId: string; draft: SiteConfig; brand: Brand; darkAllowed: boolean; name: string }) {
   const [theme, setTheme] = useState<ThemeId>(draft.theme);
   const [style, setStyle] = useState<StyleConfig>(draft.style);
+  const [usePalette, setUsePalette] = useState(false);
+  const [previewing, setPreviewing] = useState<ThemeId | null>(null);
   const themeSave = useSectionSave(orgId, 'theme');
   const styleSave = useSectionSave(orgId, 'style');
+  const colorsSave = useSectionSave(orgId, 'colors');
   const themeDirty = theme !== draft.theme;
   const styleDirty = JSON.stringify(style) !== JSON.stringify(draft.style);
+  const paletteColors: ColorsConfig = { mode: 'preset', preset: THEMES[theme].palette, scheme: 'light' };
+  const colors = usePalette ? paletteColors : draft.colors;
   const themeDefaults = resolveStyle({ theme, style: {} });
+  const previewConfig = (id: ThemeId): SiteConfig => ({ ...draft, theme: id, style: id === theme ? style : draft.style, colors: usePalette ? { mode: 'preset', preset: THEMES[id].palette, scheme: 'light' } : draft.colors });
   return (
-    <TwoColumn
-      form={
-        <>
-          <fieldset>
-            <legend className="mb-3 text-[14px] font-semibold">Site teması</legend>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {THEME_LIST.map((t) => {
-                const selected = theme === t.id;
-                return (
-                  <label
-                    key={t.id}
-                    className={cn('relative cursor-pointer rounded-2xl border bg-surface p-4 transition', selected ? 'border-primary ring-2 ring-primary/20' : 'border-border hover:border-border-strong')}
-                  >
-                    <input type="radio" name="theme" value={t.id} checked={selected} onChange={() => setTheme(t.id)} className="sr-only" />
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="text-[15px] font-bold">{t.name}</span>
-                      {selected && <Check className="size-4 text-primary" aria-hidden />}
-                    </span>
-                    <span className="mt-1 block text-[13px] leading-relaxed text-muted-foreground">{t.description}</span>
-                    <span className="mt-2 block text-[12px] text-muted-foreground">
-                      {FONT_CATALOG[t.fonts.heading].name} / {FONT_CATALOG[t.fonts.body].name}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-          <fieldset className="mt-8">
-            <legend className="mb-1 text-[14px] font-semibold">Bileşen stilleri</legend>
-            <p className="mb-4 text-[13px] text-muted-foreground">Boş bırakılan seçenek temanın varsayılanını kullanır. Tema değişse de buradaki seçimleriniz korunur.</p>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {STYLE_OPTIONS.map((o) => (
-                <Field key={o.key} label={o.label} htmlFor={`style-${o.key}`}>
-                  <Select
-                    id={`style-${o.key}`}
-                    value={style[o.key] ?? ''}
-                    onChange={(e) => setStyle((x) => ({ ...x, [o.key]: e.target.value || undefined }))}
-                  >
-                    <option value="">Temadan ({o.options.find(([v]) => v === themeDefaults[o.key as keyof typeof themeDefaults])?.[1] ?? '—'})</option>
-                    {o.options.map(([v, l]) => (
-                      <option key={v} value={v}>
-                        {l}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              ))}
-            </div>
-          </fieldset>
-          <p className="mt-4 text-[13px] text-muted-foreground">Tema ve stiller yalnızca görünümü değiştirir; ilanlar, müşteriler, adresler (URL) ve SEO verileri aynı kalır.</p>
-          <SaveBar
-            pending={themeSave.pending || styleSave.pending}
-            dirty={themeDirty || styleDirty}
-            onSave={async () => {
-              if (themeDirty && !(await themeSave.save(theme))) return;
-              if (styleDirty) await styleSave.save(style);
-            }}
-            onReset={() => {
-              setTheme(draft.theme);
-              setStyle(draft.style);
-            }}
+    <div className="space-y-8">
+      <section aria-labelledby="tema-galerisi">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="tema-galerisi" className="text-[15px] font-bold">
+              Tema galerisi <span className="font-medium text-muted-foreground">({THEME_LIST.length} tema)</span>
+            </h2>
+            <p className="mt-1 text-[13px] text-muted-foreground">Her tema farklı yazı tipi, köşe, kart, header, hero, düğme ve footer karakterine sahiptir. Önizlemeler gerçek tema motoruyla, bu sitenin marka bilgileriyle çizilir.</p>
+          </div>
+          <Checkbox
+            checked={usePalette}
+            onChange={(e) => setUsePalette(e.target.checked)}
+            label="Temanın önerilen paletini de uygula"
+            description="Kapalıyken sitenin mevcut renkleri korunur."
           />
-        </>
-      }
-      preview={<LivePreview config={{ ...draft, theme, style }} brand={brand} darkAllowed={darkAllowed} name={name} />}
-    />
+        </div>
+        <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+          {THEME_LIST.map((t) => {
+            const selected = theme === t.id;
+            const current = draft.theme === t.id;
+            return (
+              <li key={t.id} className={cn('flex flex-col overflow-hidden rounded-2xl border bg-surface transition', selected ? 'border-primary ring-2 ring-primary/25' : 'border-border')}>
+                <div className="h-56 overflow-hidden border-b border-border bg-surface-muted">
+                  <div className="origin-top-left scale-[0.62] [width:161%]">
+                    <LivePreview config={previewConfig(t.id)} brand={brand} darkAllowed={darkAllowed} name={name} variant="thumb" label={`${t.name} teması önizlemesi`} />
+                  </div>
+                </div>
+                <div className="flex flex-1 flex-col p-4">
+                  <p className="flex flex-wrap items-center gap-2">
+                    <span className="text-[15px] font-bold">{t.name}</span>
+                    {current && <Badge variant="neutral">Taslakta</Badge>}
+                    {selected && !current && <Badge variant="info">Seçildi</Badge>}
+                  </p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{t.description}</p>
+                  <p className="mt-2 text-[12px] text-muted-foreground">
+                    <span className="font-semibold text-foreground/80">Uygun:</span> {t.audience} · {FONT_CATALOG[t.fonts.heading].name} / {FONT_CATALOG[t.fonts.body].name}
+                  </p>
+                  <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                    <Button type="button" size="sm" variant={selected ? 'soft' : 'primary'} aria-pressed={selected} aria-label={`${t.name} temasını seç`} onClick={() => setTheme(t.id)}>
+                      {selected ? (
+                        <>
+                          <Check /> Seçili
+                        </>
+                      ) : (
+                        'Bu temayı seç'
+                      )}
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" aria-label={`${t.name} temasını önizle`} onClick={() => setPreviewing(t.id)}>
+                      <Eye /> Önizle
+                    </Button>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <details className="group rounded-2xl border border-border bg-surface p-5">
+        <summary className="cursor-pointer list-none text-[15px] font-bold marker:hidden">
+          İleri ayarlar: bileşen stilleri <span className="font-medium text-muted-foreground">(isteğe bağlı)</span>
+        </summary>
+        <p className="mt-2 text-[13px] text-muted-foreground">Boş bırakılan seçenek temanın varsayılanını kullanır. Renk, yazı tipi ve header için ilgili sekmeleri kullanın.</p>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {STYLE_OPTIONS.map((o) => (
+            <Field key={o.key} label={o.label} htmlFor={`style-${o.key}`}>
+              <Select id={`style-${o.key}`} value={style[o.key] ?? ''} onChange={(e) => setStyle((x) => ({ ...x, [o.key]: e.target.value || undefined }))}>
+                <option value="">Temadan ({o.options.find(([v]) => v === themeDefaults[o.key as keyof typeof themeDefaults])?.[1] ?? '—'})</option>
+                {o.options.map(([v, l]) => (
+                  <option key={v} value={v}>
+                    {l}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ))}
+        </div>
+      </details>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
+        <p className="text-[13px] text-muted-foreground">Tema ve stiller yalnızca görünümü değiştirir; ilanlar, müşteriler, adresler (URL) ve SEO verileri aynı kalır. Kaydedince taslağa yazılır; &quot;Önizle&quot; ile sitede görüp yayınlayın.</p>
+        <div className="min-w-0 lg:row-span-2">
+          <p className="mb-2 text-[12.5px] font-semibold tracking-wide text-muted-foreground uppercase">Seçili tema önizlemesi</p>
+          <LivePreview config={{ ...draft, theme, style, colors }} brand={brand} darkAllowed={darkAllowed} name={name} />
+        </div>
+      </div>
+
+      <SaveBar
+        pending={themeSave.pending || styleSave.pending || colorsSave.pending}
+        dirty={themeDirty || styleDirty || usePalette}
+        onSave={async () => {
+          if (themeDirty && !(await themeSave.save(theme))) return;
+          if (styleDirty && !(await styleSave.save(style))) return;
+          if (usePalette && (await colorsSave.save(paletteColors))) setUsePalette(false);
+        }}
+        onReset={() => {
+          setTheme(draft.theme);
+          setStyle(draft.style);
+          setUsePalette(false);
+        }}
+      />
+
+      <Dialog open={previewing !== null} onOpenChange={(o) => !o && setPreviewing(null)}>
+        {previewing && (
+          <DialogContent size="lg" title={`${THEMES[previewing].name} teması`} description={THEMES[previewing].audience}>
+            <div className="mt-4">
+              <LivePreview config={previewConfig(previewing)} brand={brand} darkAllowed={darkAllowed} name={name} label={`${THEMES[previewing].name} teması tam önizleme`} />
+            </div>
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setPreviewing(null)}>
+                Kapat
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setTheme(previewing);
+                  setPreviewing(null);
+                }}
+              >
+                <Check /> Bu temayı seç
+              </Button>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
+    </div>
   );
 }
 

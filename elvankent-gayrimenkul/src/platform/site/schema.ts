@@ -27,7 +27,7 @@ export const linkHref = z
   });
 
 // --------------------------------------------------------------------------- Tema
-export const THEME_IDS = ['klasik', 'marble', 'atlas'] as const;
+export const THEME_IDS = ['klasik', 'marble', 'atlas', 'prestij', 'kent', 'yalin', 'rezidans', 'doga', 'dergi', 'grafit'] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 export const themeSchema = z.enum(THEME_IDS);
 
@@ -58,7 +58,7 @@ export const colorsSchema = z.object({
 export type ColorsConfig = z.infer<typeof colorsSchema>;
 
 // --------------------------------------------------------------------------- Tipografi
-export const FONT_IDS = ['manrope', 'fraunces', 'inter', 'playfair', 'dm-sans', 'lora'] as const;
+export const FONT_IDS = ['manrope', 'fraunces', 'inter', 'playfair', 'dm-sans', 'lora', 'cormorant', 'space-grotesk', 'outfit', 'newsreader'] as const;
 export type FontId = (typeof FONT_IDS)[number];
 export const typographySchema = z.object({
   heading: z.enum(FONT_IDS).optional(),
@@ -72,8 +72,8 @@ export type TypographyConfig = z.infer<typeof typographySchema>;
 // --------------------------------------------------------------------------- Header
 export const headerSchema = z.object({
   sticky: z.boolean().default(true),
-  /** light: açık zemin · dark: ikincil (koyu) renk zemin */
-  style: z.enum(['light', 'dark']).default('light'),
+  /** light: açık zemin · dark: ikincil (koyu) renk zemin · boş: temanın varsayılanı */
+  style: z.enum(['light', 'dark']).optional(),
   height: z.enum(['compact', 'regular']).default('regular'),
   showPhone: z.boolean().default(true),
   showWhatsapp: z.boolean().default(false),

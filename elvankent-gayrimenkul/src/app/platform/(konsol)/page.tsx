@@ -6,6 +6,8 @@ import { OrgTable } from '@/components/platform/org-table';
 import { Button } from '@/components/ui/button';
 import { formatBytes, formatNumber } from '@/lib/format';
 import { listPlans, listPlatformOrgs } from '@/modules/platform/queries';
+import { listAuditLogs } from '@/modules/audit/queries';
+import { AuditList } from '@/components/admin/audit-list';
 import { requireSuperAdminPage } from '@/platform/auth/session';
 import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 import { cn } from '@/lib/utils';
@@ -14,7 +16,21 @@ export const metadata: Metadata = { title: 'Genel bakış' };
 
 export default async function PlatformOverviewPage() {
   const session = await requireSuperAdminPage();
-  const [orgs, plans, { data: users }] = await Promise.all([listPlatformOrgs(session), listPlans(session), session.supabase.rpc('platform_users', { p_limit: 500 })]);
+  const [orgs, plans, { data: users }, { data: sitesData }, leadsRes, logs] = await Promise.all([
+    listPlatformOrgs(session),
+    listPlans(session),
+    session.supabase.rpc('platform_users', { p_limit: 500 }),
+    session.supabase.rpc('platform_sites'),
+    session.supabase.from('platform_leads').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+    listAuditLogs(session.supabase, { page: 1 }),
+  ]);
+  const sites = sitesData ?? [];
+  const liveSites = sites.filter((x) => x.org_status === 'active' && x.site_status === 'active').length;
+  const pausedSites = sites.filter((x) => x.org_status === 'active' && x.site_status !== 'active');
+  const pendingDrafts = sites.filter((x) => x.has_unpublished_changes);
+  const withDomain = sites.filter((x) => x.primary_domain).length;
+  const newLeads = leadsRes.error ? null : (leadsRes.count ?? 0);
+  const orgNames = new Map(orgs.map((o) => [o.id, o.name]));
   const sum = (key: 'property_count' | 'published_count' | 'storage_bytes' | 'leads_30d' | 'member_count') => orgs.reduce((acc, o) => acc + Number(o[key] ?? 0), 0);
   const active = orgs.filter((o) => o.status === 'active').length;
   const userCount = users?.length ?? 0;
@@ -71,6 +87,67 @@ export default async function PlatformOverviewPage() {
         <StatCard label="İlan" value={formatNumber(sum('property_count'))} icon={Home} hint={`${formatNumber(sum('published_count'))} yayında`} />
         <StatCard label="Depolama" value={formatBytes(sum('storage_bytes'))} icon={HardDrive} hint="orijinaller + boyutlar" />
         <StatCard label="Talep (30 gün)" value={formatNumber(sum('leads_30d'))} icon={Inbox} />
+      </div>
+      <div className="mt-6 grid gap-6 xl:grid-cols-3">
+        <Panel title="Web siteleri" description="Yayın, bakım ve taslak durumu (gerçek kayıtlar)">
+          <dl className="grid grid-cols-2 gap-4 text-[14px]">
+            <div>
+              <dt className="text-[12.5px] text-muted-foreground">Yayında</dt>
+              <dd className="numeric mt-1 text-2xl font-semibold">{formatNumber(liveSites)}</dd>
+            </div>
+            <div>
+              <dt className="text-[12.5px] text-muted-foreground">Bakımda / yayında değil</dt>
+              <dd className="numeric mt-1 text-2xl font-semibold">{formatNumber(pausedSites.length)}</dd>
+            </div>
+            <div>
+              <dt className="text-[12.5px] text-muted-foreground">Yayınlanmamış taslak</dt>
+              <dd className="numeric mt-1 text-2xl font-semibold">{formatNumber(pendingDrafts.length)}</dd>
+            </div>
+            <div>
+              <dt className="text-[12.5px] text-muted-foreground">Özel alan adı bağlı</dt>
+              <dd className="numeric mt-1 text-2xl font-semibold">
+                {formatNumber(withDomain)} / {formatNumber(sites.length)}
+              </dd>
+            </div>
+          </dl>
+          {pendingDrafts.length > 0 && (
+            <ul className="mt-4 space-y-1.5 border-t border-border pt-4 text-[13.5px]">
+              {pendingDrafts.slice(0, 5).map((x) => (
+                <li key={x.organization_id}>
+                  <Link href={`/platform/siteler/${x.organization_id}`} className="font-semibold hover:underline">
+                    {x.name}
+                  </Link>{' '}
+                  <span className="text-muted-foreground">· taslak bekliyor</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+        <Panel title="KARAY talepleri" description="KARAY sayfasındaki formdan gelen emlak ofisi adayları">
+          {newLeads === null ? (
+            <p className="text-sm text-muted-foreground">Talep kaydı henüz kurulmamış (migration 20261002000001).</p>
+          ) : (
+            <>
+              <p className="numeric text-3xl font-semibold">{formatNumber(newLeads)}</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">yeni (henüz yanıtlanmamış) talep</p>
+              <Button asChild variant="outline" size="sm" className="mt-4">
+                <Link href="/platform/talepler">Talepleri aç</Link>
+              </Button>
+            </>
+          )}
+        </Panel>
+        <Panel title="Son işlemler" description="Tüm platform ve müşteri ofislerinde" bodyClassName="p-0 sm:p-0">
+          {logs.rows.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-muted-foreground">Henüz kayıt yok.</p>
+          ) : (
+            <AuditList rows={logs.rows.slice(0, 6)} orgNames={orgNames} linkTargets={false} />
+          )}
+          <div className="border-t border-border px-5 py-3">
+            <Link href="/platform/kayitlar" className="text-[13px] font-semibold text-primary-ink hover:underline">
+              Tüm kayıtlar →
+            </Link>
+          </div>
+        </Panel>
       </div>
       <Panel className="mt-6" title="Müşteri ofisleri (organizasyonlar)" bodyClassName="p-0 sm:p-0">
         <OrgTable orgs={orgs} plans={new Map(plans.map((p) => [p.id, p.name]))} />
