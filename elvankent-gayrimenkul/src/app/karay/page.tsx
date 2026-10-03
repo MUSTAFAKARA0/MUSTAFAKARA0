@@ -23,6 +23,7 @@ import { ThemeShowcase } from '@/components/karay/theme-showcase';
 import { Button } from '@/components/ui/button';
 import { karaySiteUrl } from '@/modules/karay/site';
 import { getKarayProfile } from '@/modules/karay/profile';
+import { parseSiteConfig } from '@/platform/site/schema';
 import { THEME_LIST } from '@/platform/site/themes';
 
 /*
@@ -268,7 +269,7 @@ export default async function KarayPage() {
             </p>
           </div>
           <div className="mt-12">
-            <ThemeShowcase />
+            <ThemeShowcase baseConfig={parseSiteConfig({})} />
           </div>
         </div>
       </section>

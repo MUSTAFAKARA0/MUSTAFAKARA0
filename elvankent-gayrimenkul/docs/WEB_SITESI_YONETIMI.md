@@ -12,7 +12,7 @@ KARAY süper admin panelinin iki görevi vardır: **platform yönetimi** (organi
 | --- | --- | --- |
 | Genel | Taslak özeti, yayın bilgisi, site durumu (Yayında / Bakım / Yayında değil) | Durum anında |
 | Marka | Logo, mobil logo, site simgesi, paylaşım ve ana sayfa görseli; ad, kısa ad, unvan, slogan, açıklama, iletişim, harita bağlantısı, sosyal hesaplar, ana/vurgu rengi | Taslak (yayınlanınca ofis ayarlarına uygulanır; "Taslakta" işaretli alanlar yayınlanmamıştır) |
-| Tema | Klasik / Marble / Atlas + bileşen stilleri: hero düzeni, ilan kartı, düğme köşeleri, footer zemini (canlı önizlemeli) | Taslak |
+| Tema | 10 tema galerisi (Klasik, Marble, Atlas, Prestij, Kent, Yalın, Rezidans, Doğa, Dergi, Grafit); her kartta küçük önizleme, **Önizle** ile tam örnek sayfa (header, hero/arama, ilan kartı, ilan detayı, CTA, footer). İsteğe bağlı "temanın önerilen paletini de uygula". Gelişmiş: kart, düğme, footer, hero bileşen stilleri | Taslak |
 | Renkler | Ofis marka renkleri / 9 hazır palet (Lüks Konut, Modern Şehir, Doğal Yaşam dahil) / özel renkler (11 tasarım belirteci), koyu palet (bayrakla) | Taslak |
 | Tipografi | Sınırlı yazı tipi listesi, başlık kalınlığı, ölçek | Taslak |
 | Header | Marka alanı (otomatik / yalnızca logo / logo + ad / yalnızca ad, slogan), masaüstü (görünüm, yükseklik, yapışkan, telefon/WhatsApp/favori, çağrı düğmesi) ve mobil ayrı; canlı önizlemeli | Taslak |

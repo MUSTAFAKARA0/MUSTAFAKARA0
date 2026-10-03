@@ -139,7 +139,7 @@ export function LivePreview({
           {!thumb && (
             <>
               {/* İlan detayı */}
-              <div className="mt-4 grid grid-cols-[1.3fr_1fr] gap-3 rounded-2xl border border-border bg-surface p-3">
+              <div className="mt-4 grid gap-3 sm:grid-cols-[1.3fr_1fr] rounded-2xl border border-border bg-surface p-3">
                 <div className={`site-media aspect-[4/3] rounded-xl ${photo}`} />
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold text-muted-foreground">İlan detayı</p>

@@ -56,7 +56,7 @@ const schema = z
 export async function submitKarayLead(_prev: KarayLeadState, formData: FormData): Promise<KarayLeadState> {
   const values: Record<string, string> = {};
   for (const [k, v] of formData.entries()) {
-    if (typeof v === 'string' && !['website', 'elapsed'].includes(k) && !k.startsWith('$')) values[k] = v.slice(0, 3000);
+    if (typeof v === 'string' && !['website', 'elapsed', 'kind-choice'].includes(k) && !k.startsWith('$')) values[k] = v.slice(0, 3000);
   }
   // Gizli alanı dolduran bot: başarılı gibi yanıt verilir, kayıt yapılmaz
   if (String(formData.get('website') ?? '').length > 0) {

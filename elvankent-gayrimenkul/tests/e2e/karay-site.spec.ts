@@ -211,7 +211,7 @@ test('KARAY-03: iletişim formu doğrular ve talebi KARAY talep kaydına yazar',
   // Boş gönderim: doğrulama hataları
   await page.waitForTimeout(2600);
   await form.getByRole('button', { name: 'Demo talebini gönder' }).click();
-  await expect(form.getByRole('alert')).toContainText('işaretli alanları');
+  await expect(form.getByRole('alert').filter({ hasText: 'işaretli alanları' })).toBeVisible();
   await expect(form.getByText('Adınızı ve soyadınızı yazın.')).toBeVisible();
 
   await form.getByLabel('Ad soyad').fill(LEAD_NAME);
@@ -395,6 +395,12 @@ test('KARAY-12: KARAY marka/iletişim ayarı kiracı sitelerine sızmaz', async 
   const b = await service!.from('organization_settings').select('email, display_name').eq('organization_id', S.bId!).single();
   expect(b.data!.email ?? '').not.toBe(KARAY_MAIL);
   expect(b.data!.display_name).toBe(B_NAME);
+
+  // Eski hâline (arayüzden: önbellek etiketi de yenilenir)
+  await page.getByLabel('E-posta').fill(String(S.settings!.contact_email ?? ''));
+  await page.getByRole('button', { name: 'Kaydet' }).click();
+  await expect(page.getByText('kaydedildi', { exact: false }).first()).toBeVisible();
+  await expect.poll(async () => (await page.request.get('/karay')).text(), { timeout: 15000 }).not.toContain(KARAY_MAIL);
 });
 
 test('KARAY-13: KARAY sayfası telefonda çalışır (menü, form, taşma yok)', async ({ browser }) => {
@@ -443,7 +449,9 @@ test('KARAY-16: KARAY rotası kiracı rotalarıyla karışmaz', async ({ browser
   await bLead.close();
   // Platform alanında /karay KARAY'dır; kiracı ana sayfası kiracıdır
   const k = await request.get('/karay');
-  expect(await k.text()).not.toContain('data-site-theme="' + S.elvTheme + '"');
+  const karayHtml = await k.text();
+  expect(karayHtml).not.toContain(S.elvName!);
+  expect(karayHtml).not.toContain(B_NAME);
   const home = await open(browser, '/');
   await expect(home.page.getByRole('link', { name: 'KARAY ana sayfa' })).toHaveCount(0);
   expect(await siteTheme(home.page)).toBe(S.elvTheme);
@@ -459,8 +467,10 @@ test('KARAY-17: kiracı kullanıcısı platforma (KARAY talepleri/ayarları dahi
   await page.getByRole('button', { name: 'Giriş yap' }).click();
   await expect(page).not.toHaveURL(/\/giris/);
   for (const p of ['/platform', '/platform/talepler', '/platform/ayarlar', `/platform/siteler/${S.bId}/tema`]) {
-    await page.goto(p);
-    await expect(page, p).toHaveURL(/\/platform\/giris$/);
+    // Ofis oturumuna platform alanı hiç yokmuş gibi davranır (404; varlığı da sızdırılmaz)
+    const res = await page.goto(p);
+    expect(res?.status(), p).toBe(404);
+    await expect(page.getByText('KARAY talepleri'), p).toHaveCount(0);
   }
   const settings = await S.eClient!.from('platform_settings').select('*');
   expect(settings.data ?? []).toHaveLength(0);
@@ -475,7 +485,8 @@ test('KARAY-18: platform kullanıcısı yetkisiz olarak kiracı verisine erişem
   const admin = createClient(url!, anonKey!, opts);
   const signIn = await admin.auth.signInWithPassword({ email: adminEmail!, password: adminPassword! });
   expect(signIn.error).toBeNull();
-  const member = await service!.from('organization_members').select('id').eq('organization_id', S.bId!).eq('user_id', signIn.data.user!.id);
+  const member = await service!.from('organization_members').select('user_id').eq('organization_id', S.bId!).eq('user_id', signIn.data.user!.id);
+  expect(member.error).toBeNull();
   expect(member.data).toHaveLength(0);
   expect((await admin.from('leads').select('id').eq('organization_id', S.bId!)).data ?? []).toHaveLength(0);
   expect((await admin.from('customers').select('id').eq('organization_id', S.bId!)).data ?? []).toHaveLength(0);

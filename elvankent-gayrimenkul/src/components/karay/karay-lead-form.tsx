@@ -16,7 +16,9 @@ export function KarayLeadForm() {
   const [state, action, pending] = useActionState<KarayLeadState, FormData>(submitKarayLead, { status: 'idle' });
   const [kind, setKind] = useState<'info' | 'demo'>('info');
   const started = useRef(0);
-  const [elapsed, setElapsed] = useState(0);
+  // Doldurma süresi gönderim anında gizli alana doğrudan yazılır: setState gönderimden
+  // önce işlenmeyeceği için FormData eski değeri okurdu.
+  const elapsedRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     started.current = Date.now();
     const sync = () => {
@@ -40,7 +42,9 @@ export function KarayLeadForm() {
   }
 
   return (
-    <form action={action} onSubmit={() => setElapsed(Date.now() - started.current)} className="space-y-4" noValidate>
+    <form action={action} onSubmit={() => {
+        if (elapsedRef.current) elapsedRef.current.value = String(Date.now() - started.current);
+      }} className="space-y-4" noValidate>
       <fieldset>
         <legend className="mb-2 text-[13px] font-semibold text-[#33415c]">Talep türü</legend>
         <div className="grid grid-cols-2 gap-2">
@@ -53,15 +57,17 @@ export function KarayLeadForm() {
             <label
               key={value}
               className={cn(
-                'flex min-h-12 cursor-pointer items-center justify-center rounded-xl border px-3 text-[14.5px] font-semibold transition',
+                'flex min-h-12 cursor-pointer items-center justify-center rounded-xl border px-3 text-[14.5px] font-semibold transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[#2f6bff]',
                 kind === value ? 'border-[#0b1b3a] bg-[#0b1b3a] text-white' : 'border-[#d7deea] bg-white text-[#33415c] hover:border-[#9aa8c0]',
               )}
             >
-              <input type="radio" name="kind" value={value} checked={kind === value} onChange={() => setKind(value)} className="sr-only" />
+              <input type="radio" name="kind-choice" value={value} checked={kind === value} onChange={() => setKind(value)} className="sr-only" />
               {label}
             </label>
           ))}
         </div>
+        {/* Gönderilen değer: form eylemi sonrası React radyo düğmelerini sıfırlar; seçim durumda tutulur */}
+        <input type="hidden" name="kind" value={kind} />
       </fieldset>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Ad soyad" htmlFor="k-name" required error={e.fullName}>
@@ -88,7 +94,7 @@ export function KarayLeadForm() {
         <label htmlFor="k-website">Web sitesi</label>
         <input id="k-website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
-      <input type="hidden" name="elapsed" value={elapsed} />
+      <input ref={elapsedRef} type="hidden" name="elapsed" defaultValue="0" />
       <Checkbox
         name="kvkk"
         defaultChecked={v.kvkk === 'on'}

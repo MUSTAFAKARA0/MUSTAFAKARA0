@@ -3,18 +3,19 @@
 import { useState } from 'react';
 import { LivePreview } from '@/components/platform/site/live-preview';
 import { cn } from '@/lib/utils';
-import { parseSiteConfig } from '@/platform/site/schema';
+import type { SiteConfig } from '@/platform/site/schema';
 import { THEME_LIST, THEMES } from '@/platform/site/themes';
 
 /**
  * KARAY sayfasındaki tema vitrini. Önizleme, emlak ofisi sitelerinin kullandığı GERÇEK tema
  * motoruyla (aynı tokenlar, aynı CSS) çizilir; örnek marka adı "Örnek Gayrimenkul"dür
  * (gerçek bir müşteri değildir). Her tema kendi önerilen paletiyle gösterilir.
+ * Varsayılan yapılandırma sunucuda üretilip verilir: şema doğrulayıcısı (zod) tarayıcıya gitmez.
  */
-export function ThemeShowcase() {
+export function ThemeShowcase({ baseConfig }: { baseConfig: SiteConfig }) {
   const [active, setActive] = useState(THEME_LIST[0].id);
   const theme = THEMES[active];
-  const config = { ...parseSiteConfig({}), theme: active, colors: { mode: 'preset' as const, preset: theme.palette, scheme: 'light' as const } };
+  const config: SiteConfig = { ...baseConfig, theme: active, colors: { mode: 'preset' as const, preset: theme.palette, scheme: 'light' as const } };
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,30rem)_minmax(0,1fr)] lg:items-start">
       <div role="radiogroup" aria-label="Tema seçin" className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">

@@ -99,5 +99,17 @@ checks as (
          case when exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'site_apply_brand')
                and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'site_brand_snapshot')
               then 'TAMAM' else 'HATA: 20261001000001_site_brand_publish.sql uygulanmamış' end
+  union all
+  select 18, 'KARAY şirket bilgileri ve KARAY talepleri (platform_settings, platform_leads)',
+         case when to_regclass('public.platform_leads') is null then 'tablo yok'
+              else (select count(*)::text from public.platform_settings) || ' ayar satırı' end,
+         case when to_regclass('public.platform_settings') is null or to_regclass('public.platform_leads') is null
+              then 'HATA: 20261002000001_karay_platform.sql uygulanmamış'
+              when (select relrowsecurity from pg_class where oid = 'public.platform_settings'::regclass)
+               and (select relrowsecurity from pg_class where oid = 'public.platform_leads'::regclass)
+               and (select count(*) from public.platform_settings) = 1
+               and not has_function_privilege('anon', 'public.submit_platform_lead(text, text, text, text, text, text, text, boolean, text, text)', 'execute')
+               and has_function_privilege('anon', 'public.public_platform_profile()', 'execute')
+              then 'TAMAM' else 'HATA' end
 )
 select sira, kontrol, deger, durum from checks order by sira;

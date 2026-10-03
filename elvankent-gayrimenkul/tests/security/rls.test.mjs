@@ -739,3 +739,95 @@ describe('Web sitesi yapılandırması (site_configs) ve oturum bağlamı', { sk
     assert.ok(a.error || a.data === null || a.data?.profile == null, 'anonim oturum bağlamı aldı');
   });
 });
+
+describe('KARAY şirket bilgileri ve KARAY talepleri (platform_settings, platform_leads)', { skip }, () => {
+  let platformAdmin;
+  const leadArgs = (over = {}) => ({
+    p_kind: 'demo',
+    p_full_name: `RLS KARAY Aday ${RUN}`,
+    p_email: `rls-karay-${RUN}@example.test`,
+    p_phone: '',
+    p_company: 'RLS Emlak',
+    p_city: '',
+    p_message: '',
+    p_kvkk_consent: true,
+    p_ip_hash: `rls-${RUN}`,
+    p_user_agent: 'node-test',
+    ...over,
+  });
+  before(async () => {
+    if (missing) return;
+    platformAdmin = await makeUser('karay');
+    assert.ifError((await service.from('profiles').update({ is_super_admin: true }).eq('id', platformAdmin.id)).error);
+  });
+  after(async () => {
+    if (missing) return;
+    await service.from('platform_leads').delete().like('ip_hash', `rls-${RUN}%`);
+  });
+
+  test('anonim ziyaretçi KARAY taleplerini ve ayar tablosunu okuyamaz; herkese açık profil bildirim adreslerini içermez', async () => {
+    assert.ok(denied(await anon.from('platform_leads').select('id')));
+    assert.ok(denied(await anon.from('platform_settings').select('*')));
+    const profile = await anon.rpc('public_platform_profile');
+    assert.ifError(profile.error);
+    const row = Array.isArray(profile.data) ? profile.data[0] : profile.data;
+    assert.ok(row && row.company_name, 'KARAY profili dönmedi');
+    assert.equal('lead_notify_emails' in row, false, 'bildirim adresleri herkese açık');
+    assert.equal('updated_by' in row, false);
+  });
+
+  test('talep yalnızca sunucu üzerinden eklenir: herkese açık anahtar ve kiracı kullanıcısı doğrudan ekleyemez', async () => {
+    assert.ok((await anon.rpc('submit_platform_lead', leadArgs())).error, 'anonim RPC ile talep eklendi');
+    assert.ok((await T.A.users.owner.client.rpc('submit_platform_lead', leadArgs())).error, 'kiracı sahibi RPC ile talep ekledi');
+    assert.ok((await anon.from('platform_leads').insert({ kind: 'info', full_name: 'x', email: 'x@example.test', kvkk_consent: true })).error);
+    assert.ok((await T.A.users.owner.client.from('platform_leads').insert({ kind: 'info', full_name: 'x', email: 'x@example.test', kvkk_consent: true })).error);
+  });
+
+  test('sunucu ekleme kuralları: onay, iletişim bilgisi ve IP özeti zorunlu; IP başına hız sınırı uygulanır', async () => {
+    assert.match((await service.rpc('submit_platform_lead', leadArgs({ p_kvkk_consent: false }))).error?.message ?? '', /consent_required/);
+    assert.match((await service.rpc('submit_platform_lead', leadArgs({ p_email: '', p_phone: '' }))).error?.message ?? '', /contact_required/);
+    assert.match((await service.rpc('submit_platform_lead', leadArgs({ p_ip_hash: '' }))).error?.message ?? '', /ip_required/);
+    const ip = `rls-${RUN}-limit`;
+    for (let i = 0; i < 3; i++) assert.ifError((await service.rpc('submit_platform_lead', leadArgs({ p_ip_hash: ip }))).error);
+    assert.match((await service.rpc('submit_platform_lead', leadArgs({ p_ip_hash: ip }))).error?.message ?? '', /rate_limited/);
+    const rows = await service.from('platform_leads').select('kind, status, kvkk_consent').eq('ip_hash', ip);
+    assert.equal(rows.data.length, 3);
+    assert.ok(rows.data.every((r) => r.kind === 'demo' && r.status === 'new' && r.kvkk_consent === true));
+  });
+
+  test('KARAY talebi hiçbir kiracının CRM kaydına düşmez', async () => {
+    const id = (await service.rpc('submit_platform_lead', leadArgs({ p_ip_hash: `rls-${RUN}-crm`, p_full_name: `RLS CRM Ayrım ${RUN}` }))).data;
+    assert.ok(id);
+    assert.equal((await service.from('customers').select('id').eq('full_name', `RLS CRM Ayrım ${RUN}`)).data.length, 0);
+    assert.equal((await service.from('leads').select('id').eq('id', id)).data.length, 0);
+  });
+
+  test('kiracı sahibi KARAY taleplerini ve ayarlarını göremez, değiştiremez; durum işlevini çağıramaz', async () => {
+    const id = (await service.rpc('submit_platform_lead', leadArgs({ p_ip_hash: `rls-${RUN}-own` }))).data;
+    const owner = T.A.users.owner.client;
+    assert.ok(denied(await owner.from('platform_leads').select('id').eq('id', id)));
+    assert.ok(denied(await owner.from('platform_settings').select('*')));
+    const upd = await owner.from('platform_settings').update({ company_name: 'Ele geçirildi' }).eq('id', true).select('id');
+    assert.ok(denied(upd));
+    assert.ok((await owner.rpc('platform_update_lead', { p_id: id, p_status: 'closed', p_note: 'x' })).error);
+    const leadUpd = await owner.from('platform_leads').update({ status: 'closed' }).eq('id', id).select('id');
+    assert.ok(denied(leadUpd));
+    assert.equal((await service.from('platform_leads').select('status').eq('id', id).single()).data.status, 'new');
+    assert.notEqual((await service.from('platform_settings').select('company_name').eq('id', true).single()).data.company_name, 'Ele geçirildi');
+  });
+
+  test('süper admin talepleri görür ve durumunu günceller; işlem denetim kaydına yazılır; geçersiz durum reddedilir', async () => {
+    const id = (await service.rpc('submit_platform_lead', leadArgs({ p_ip_hash: `rls-${RUN}-pa` }))).data;
+    const pa = platformAdmin.client;
+    const seen = await pa.from('platform_leads').select('id').eq('id', id);
+    assert.ifError(seen.error);
+    assert.equal(seen.data.length, 1);
+    assert.ifError((await pa.rpc('platform_update_lead', { p_id: id, p_status: 'qualified', p_note: 'RLS notu' })).error);
+    const row = (await service.from('platform_leads').select('status, note, handled_by').eq('id', id).single()).data;
+    assert.deepEqual({ status: row.status, note: row.note, handled_by: row.handled_by }, { status: 'qualified', note: 'RLS notu', handled_by: platformAdmin.id });
+    assert.ok((await pa.rpc('platform_update_lead', { p_id: id, p_status: 'hacked', p_note: '' })).error);
+    const audit = await service.from('audit_logs').select('action, organization_id').eq('action', 'platform.lead_updated').eq('actor_id', platformAdmin.id);
+    assert.ok(audit.data.length >= 1, 'denetim kaydı yok');
+    assert.ok(audit.data.every((a) => a.organization_id === null), 'KARAY işlemi bir kiracıya yazıldı');
+  });
+});

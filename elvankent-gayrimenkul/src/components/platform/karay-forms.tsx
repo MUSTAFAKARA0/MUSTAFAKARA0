@@ -6,14 +6,9 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox, Field, Input, Select, Textarea } from '@/components/ui/form-controls';
 import { SaveBar } from '@/components/platform/site/site-actions';
+import { LEAD_STATUS } from '@/modules/karay/lead-status';
 import { updateKarayLead, updateKarayProfile, type KarayProfileInput } from '@/app/actions/karay-admin';
 
-export const LEAD_STATUS: Record<string, { label: string; tone: 'info' | 'warning' | 'success' | 'neutral' }> = {
-  new: { label: 'Yeni', tone: 'info' },
-  contacted: { label: 'İletişime geçildi', tone: 'warning' },
-  qualified: { label: 'Görüşme / teklif', tone: 'success' },
-  closed: { label: 'Kapandı', tone: 'neutral' },
-};
 
 /** KARAY talebi: durum ve iç not (yalnızca süper admin) */
 export function KarayLeadEditor({ id, status, note }: { id: string; status: string; note: string | null }) {

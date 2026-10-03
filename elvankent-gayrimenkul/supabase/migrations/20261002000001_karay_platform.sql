@@ -140,7 +140,10 @@ begin
     raise exception 'contact_required' using errcode = '22023';
   end if;
   -- Hız sınırı: aynı IP özeti 10 dakikada 3, 24 saatte 10 talep; genel taşma: saatte 300
-  if p_ip_hash is not null and (
+  if nullif(btrim(p_ip_hash), '') is null then
+    raise exception 'ip_required' using errcode = '22023';
+  end if;
+  if (
        (select count(*) from public.platform_leads where ip_hash = p_ip_hash and created_at > now() - interval '10 minutes') >= 3
     or (select count(*) from public.platform_leads where ip_hash = p_ip_hash and created_at > now() - interval '24 hours') >= 10) then
     raise exception 'rate_limited' using errcode = 'P0001';
@@ -189,7 +192,10 @@ $$;
 revoke all on function public.public_platform_profile() from public;
 grant execute on function public.public_platform_profile() to anon, authenticated, service_role;
 revoke all on function public.submit_platform_lead(text, text, text, text, text, text, text, boolean, text, text) from public;
-grant execute on function public.submit_platform_lead(text, text, text, text, text, text, text, boolean, text, text) to anon, authenticated, service_role;
+revoke all on function public.submit_platform_lead(text, text, text, text, text, text, text, boolean, text, text) from anon, authenticated;
+-- Yalnızca sunucu (KARAY formu sunucu eylemi): gizli alan, süre ve doğrulama kontrolleri
+-- herkese açık anahtarla doğrudan çağrılarak atlanamaz
+grant execute on function public.submit_platform_lead(text, text, text, text, text, text, text, boolean, text, text) to service_role;
 revoke all on function public.platform_update_lead(uuid, text, text) from public, anon;
 grant execute on function public.platform_update_lead(uuid, text, text) to authenticated;
 

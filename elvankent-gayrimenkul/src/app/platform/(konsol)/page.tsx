@@ -88,7 +88,7 @@ export default async function PlatformOverviewPage() {
         <StatCard label="Depolama" value={formatBytes(sum('storage_bytes'))} icon={HardDrive} hint="orijinaller + boyutlar" />
         <StatCard label="Talep (30 gün)" value={formatNumber(sum('leads_30d'))} icon={Inbox} />
       </div>
-      <div className="mt-6 grid gap-6 xl:grid-cols-3">
+      <div className="mt-6 grid gap-6 xl:grid-cols-3 xl:items-start">
         <Panel title="Web siteleri" description="Yayın, bakım ve taslak durumu (gerçek kayıtlar)">
           <dl className="grid grid-cols-2 gap-4 text-[14px]">
             <div>
