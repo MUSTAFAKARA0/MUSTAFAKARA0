@@ -1,17 +1,11 @@
-import { hashString } from '@/lib/utils';
 import type { Metadata } from 'next';
-import { SiteFooter } from '@/components/layout/site-footer';
-import { SiteHeader } from '@/components/layout/site-header';
-import { CompareBar, CookieConsent, FloatingWhatsApp } from '@/components/layout/site-extras';
-import { whatsappHref } from '@/lib/contact-links';
 import { isIndexable } from '@/lib/site-env';
 import { getPublishedPosts, getRegionPages } from '@/modules/content/queries';
 import { brandingUrl } from '@/modules/media/variants';
 import { baseOpenGraph, siteOgImage } from '@/modules/seo/og';
-import { MaintenancePage, PreviewBar } from '@/components/layout/site-status';
+import { MaintenancePage } from '@/components/layout/site-status';
+import { SiteFrame, siteRuntime } from '@/components/site/site-frame';
 import { getSiteView, requireSiteTenant } from '@/site-config/load';
-import { applyTheme } from '@/theme-engine';
-import { fontPackageCss, fontPreloads, resolveFontIds } from '@/theme-engine/typography/font-css';
 
 export async function generateMetadata({ params }: LayoutProps<'/t/[tenant]'>): Promise<Metadata> {
   const tenant = await requireSiteTenant((await params).tenant);
@@ -49,61 +43,24 @@ export async function generateMetadata({ params }: LayoutProps<'/t/[tenant]'>): 
 export default async function TenantLayout({ children, params }: LayoutProps<'/t/[tenant]'>) {
   const tenant = await requireSiteTenant((await params).tenant);
   const [posts, regions, view] = await Promise.all([getPublishedPosts(tenant.id, 1), getRegionPages(tenant.id), getSiteView(tenant)]);
-  const s = tenant.settings;
-  // Site Engine görsel sistemi kendisi çözmez: tema verisi (theme_id + ayarlar) Theme
-  // Engine'e verilir; dönen CSS değişkenleri ve öznitelikler olduğu gibi uygulanır.
-  const { css, attributes } = applyTheme(view.config, s, view.features.darkMode);
+  // Site Engine görsel sistemi kendisi çözmez: tema verisi (theme_id + ayarlar) Theme Engine'e
+  // verilir (siteRuntime); dönen CSS, yazı tipi paketi ve öznitelikler olduğu gibi uygulanır.
+  const version = view.preview ? 'onizleme' : tenant.site.version;
   const hasBlog = posts.length > 0 && view.features.blog;
-  // Anahtar içerikten türetilir: ofis rengini değiştirdiğinde (sürüm aynı kalsa da) yeni stil yüklenir
-  const styleKey = `site-${tenant.id}-${view.preview ? 'onizleme' : tenant.site.version}-${hashString(css)}`;
-  // Tipografi paketi: yalnızca bu sitenin başlık/gövde yazı tipleri (katalogdaki diğerleri sayfaya girmez)
-  const fontIds = resolveFontIds(view.config);
-  // Ön yükleme bağlantıları React tarafından <head>'e taşınır ("optional" yazı tipi ilk çizime yetişir)
-  const fonts = (
-    <>
-      {fontPreloads(fontIds).map((href) => (
-        <link key={href} rel="preload" href={href} as="font" type="font/woff2" crossOrigin="anonymous" />
-      ))}
-      <style href={`site-fonts-${fontIds.join('-')}`} precedence="high">
-        {fontPackageCss(fontIds)}
-      </style>
-    </>
-  );
 
   // Bakım / yayında değil: ziyaretçiye bakım sayfası (panel ve önizleme etkilenmez)
   if (view.status !== 'active' && !view.preview) {
     return (
       <>
-        {fonts}
-        <style href={styleKey} precedence="high">
-          {css}
-        </style>
+        {siteRuntime(tenant, view, version).head}
         <MaintenancePage tenant={tenant} status={view.status} message={view.maintenanceMessage} />
       </>
     );
   }
 
   return (
-    <div {...attributes} className="contents">
-      {fonts}
-      <style href={styleKey} precedence="high">
-        {css}
-      </style>
-      {view.preview && <PreviewBar />}
-      <a
-        href="#icerik"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[60] focus:rounded-xl focus:bg-surface focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:shadow-md"
-      >
-        İçeriğe geç
-      </a>
-      <SiteHeader tenant={tenant} hasBlog={hasBlog} view={view} />
-      <main id="icerik" className="min-h-[60vh]">
-        {children}
-      </main>
-      <SiteFooter tenant={tenant} regions={regions.map((r) => ({ slug: r.slug, name: r.name }))} hasBlog={hasBlog} view={view} />
-      {view.features.whatsapp && <FloatingWhatsApp href={whatsappHref(s.whatsapp ?? s.phone, 'Merhaba, bilgi almak istiyorum.')} />}
-      {view.features.favorites && <CompareBar />}
-      <CookieConsent />
-    </div>
+    <SiteFrame tenant={tenant} view={view} hasBlog={hasBlog} regions={regions.map((r) => ({ slug: r.slug, name: r.name }))} version={version}>
+      {children}
+    </SiteFrame>
   );
 }

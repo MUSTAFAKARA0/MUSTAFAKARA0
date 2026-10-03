@@ -147,6 +147,8 @@ function routeFor(pathname: string, surface: HostSurface, config: KarayHostConfi
 
   if (isUnderPath(pathname, '/platform')) return platformConsoleAllowed(surface) ? { kind: 'panel', area: 'platform' } : { kind: 'not-found' };
   if (isUnderPath(pathname, '/api/platform')) return platformConsoleAllowed(surface) ? { kind: 'api' } : { kind: 'not-found' };
+  // KARAY site önizlemesi (Yeni Site Oluştur sihirbazı): konsolla aynı kural — kiracı alan adında yok
+  if (isUnderPath(pathname, '/site-onizleme')) return platformConsoleAllowed(surface) ? { kind: 'panel', area: 'platform' } : { kind: 'not-found' };
   if (isUnderPath(pathname, '/admin')) return { kind: 'panel', area: 'admin' };
   if (isUnderPath(pathname, '/api')) return { kind: 'api' };
 

@@ -41,7 +41,7 @@ describe('Kiracı (müşteri) alan adında yönlendirme', () => {
     assert.deepEqual(kind('/admin/giris', host), { kind: 'panel', area: 'admin' });
   });
   test('/platform, /platform/*, /api/platform/* ve /karay 404', () => {
-    for (const p of ['/platform', '/platform/giris', '/platform/talepler', '/platform/siteler/x/tema', '/api/platform/branding', '/karay', '/karay/yasal/kvkk', '/karay/sitemap.xml'])
+    for (const p of ['/platform', '/platform/giris', '/platform/talepler', '/platform/siteler/x/tema', '/api/platform/branding', '/karay', '/karay/yasal/kvkk', '/karay/sitemap.xml', '/site-onizleme', '/site-onizleme/x'])
       assert.deepEqual(kind(p, host, withKaray), { kind: 'not-found' }, p);
   });
   test('benzer ama farklı yollar etkilenmez (ör. /platformlar, /karaylar kiracı sayfasıdır)', () => {
@@ -72,6 +72,11 @@ describe('KARAY alan adlarında yönlendirme', () => {
     assert.deepEqual(kind('/platform', 'localhost:3000'), { kind: 'panel', area: 'platform' });
     assert.deepEqual(kind('/platform/giris', 'proje.vercel.app'), { kind: 'panel', area: 'platform' });
     assert.deepEqual(kind('/karay', 'localhost:3000'), { kind: 'karay' });
+  });
+  test('PREVIEW: KARAY site önizlemesi konsolla aynı yüzeyde ve oturumla açılır', () => {
+    assert.deepEqual(kind('/site-onizleme', 'karay.com.tr', withKaray), { kind: 'panel', area: 'platform' });
+    assert.deepEqual(kind('/site-onizleme', 'localhost:3000'), { kind: 'panel', area: 'platform' });
+    assert.deepEqual(kind('/site-onizlemeler', 'ornekemlak.com'), { kind: 'tenant-site' });
   });
   test('KARAY_HOSTS tanımlıyken /karay yalnızca KARAY alan adındadır (konsol önizlemede açık kalır)', () => {
     assert.deepEqual(kind('/karay', 'proje.vercel.app', withKaray), { kind: 'not-found' });

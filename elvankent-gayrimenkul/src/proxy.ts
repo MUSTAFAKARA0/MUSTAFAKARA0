@@ -141,6 +141,7 @@ export const config = {
     // Uygulama rotaları dosya uzantısıyla bitse bile (ör. /platform/x.png) proxy'den geçer:
     // yüzey ayrımı ve kiracı başlığı uzantı hilesiyle atlatılamaz
     '/platform/:path*',
+    '/site-onizleme/:path*',
     '/admin/:path*',
     '/api/:path*',
     '/karay/:path*',
