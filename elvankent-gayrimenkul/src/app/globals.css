@@ -1,0 +1,438 @@
+@import 'tailwindcss';
+
+/*
+ * ============================================================================
+ * Tasarım sistemi — token'lar
+ *
+ * Marka renkleri (primary / accent) kiracının şirket ayarlarından gelir ve
+ * layout'ta :root üzerine yazılır (src/platform/branding/theme.ts). Aşağıdaki
+ * değerler varsayılanlardır. Bileşenler asla ham renk kullanmaz; yalnızca bu
+ * anlamsal token'ları kullanır → başka bir ofise satıldığında logo + renk +
+ * tipografi tek yerden değişir.
+ * ============================================================================
+ */
+:root {
+  /* Yazı tipleri (varsayılan; kiracı yapılandırması değiştirebilir) */
+  --font-sans-face: var(--font-manrope);
+  --font-display-face: var(--font-fraunces);
+
+  /* Marka (kiracıya göre değişir) */
+  --primary: #0e4d45;
+  --primary-fg: #ffffff;
+  --primary-hover: #0c433c;
+  --primary-ink: #0e4d45;
+  --primary-soft: #eef4f3;
+  --accent: #b5813a;
+  --accent-fg: #141a18;
+  --accent-ink: #8a5f22;
+  --accent-soft: #f6efe4;
+
+  /* Nötr yüzeyler */
+  --background: #fbfaf8;
+  --surface: #ffffff;
+  --surface-muted: #f4f2ee;
+  --surface-sunken: #ece9e3;
+  --surface-inverse: #141a18;
+  --foreground: #141a18;
+  --muted-foreground: #5a605d;
+  --inverse-foreground: #f4f2ee;
+  --border: #e6e2da;
+  --border-strong: #d3cec3;
+  --ring: var(--primary);
+  --overlay: rgb(12 16 15 / 0.62);
+
+  /* Durum renkleri (beyaz üzerinde AA kontrast) */
+  --success: #1b7549;
+  --success-soft: #e7f4ed;
+  --warning: #945f06;
+  --warning-soft: #fcf1dc;
+  --danger: #b42318;
+  --danger-soft: #fcebe9;
+  --info: #1d5d88;
+  --info-soft: #e7f0f7;
+  --whatsapp: #15803d;
+  --whatsapp-hover: #126b34;
+}
+
+@theme inline {
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-inverse-foreground: var(--inverse-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-ring: var(--ring);
+  --color-overlay: var(--overlay);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-whatsapp: var(--whatsapp);
+  --color-whatsapp-hover: var(--whatsapp-hover);
+
+  --font-sans: var(--font-sans-face), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: var(--font-display-face), ui-serif, Georgia, serif;
+
+  /* Akışkan tipografi: mobilde hiçbir başlık taşmaz */
+  --text-display-2xl: clamp(2.375rem, 1.55rem + 3.4vw, 4.5rem);
+  --text-display-2xl--line-height: 1.03;
+  --text-display-2xl--letter-spacing: -0.025em;
+  --text-display-xl: clamp(2rem, 1.45rem + 2.3vw, 3.375rem);
+  --text-display-xl--line-height: 1.06;
+  --text-display-xl--letter-spacing: -0.02em;
+  --text-display-lg: clamp(1.625rem, 1.3rem + 1.4vw, 2.5rem);
+  --text-display-lg--line-height: 1.12;
+  --text-display-lg--letter-spacing: -0.015em;
+  --text-title: clamp(1.25rem, 1.15rem + 0.4vw, 1.5rem);
+  --text-title--line-height: 1.25;
+  --text-price: clamp(1.625rem, 1.35rem + 1.1vw, 2.25rem);
+  --text-price--line-height: 1.1;
+
+  --shadow-xs: 0 1px 2px rgb(20 26 24 / 0.05);
+  --shadow-sm: 0 1px 2px rgb(20 26 24 / 0.04), 0 2px 8px -2px rgb(20 26 24 / 0.07);
+  --shadow-md: 0 2px 4px rgb(20 26 24 / 0.04), 0 12px 28px -10px rgb(20 26 24 / 0.16);
+  --shadow-lg: 0 4px 8px rgb(20 26 24 / 0.04), 0 28px 56px -20px rgb(20 26 24 / 0.28);
+
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-fade-up: fade-up 0.4s var(--ease-premium);
+  --animate-scale-in: scale-in 0.18s var(--ease-premium);
+  --animate-slide-in-right: slide-in-right 0.3s var(--ease-premium);
+  --animate-slide-in-left: slide-in-left 0.3s var(--ease-premium);
+  --animate-slide-in-bottom: slide-in-bottom 0.3s var(--ease-premium);
+
+  @keyframes shimmer {
+    0% { background-position: -600px 0; }
+    100% { background-position: 600px 0; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes slide-in-right {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes slide-in-left {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes slide-in-bottom {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: 'ss01', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--primary-soft);
+    color: var(--primary-ink);
+  }
+  /* iOS'ta input odağında otomatik yakınlaştırmayı önlemek için 16px taban */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  @media (min-width: 768px) {
+    input,
+    select,
+    textarea {
+      font-size: 0.9375rem;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .container-page {
+    width: 100%;
+    max-width: 82rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  .container-narrow {
+    width: 100%;
+    max-width: 48rem;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 640px) {
+    .container-page,
+    .container-narrow {
+      padding-inline: 1.5rem;
+    }
+  }
+  @media (min-width: 1280px) {
+    .container-page {
+      padding-inline: 2rem;
+    }
+  }
+
+  /* Bölüm başlıklarının üstündeki küçük etiket */
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+  }
+
+  /* Etiketin önünde ince marka çizgisi (dekoratif) */
+  .eyebrow-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .eyebrow-line::before {
+    content: '';
+    width: 1.75rem;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), color-mix(in oklab, var(--accent) 30%, transparent));
+  }
+
+  /*
+   * Bölüm arka planları: marka renginden türetilen çok hafif ışıma.
+   * Renkler kiracının --primary / --accent değerinden gelir (white-label).
+   */
+  .bg-glow {
+    background:
+      radial-gradient(60rem 28rem at 100% 0%, color-mix(in oklab, var(--primary) 7%, transparent), transparent 70%),
+      radial-gradient(48rem 24rem at 0% 100%, color-mix(in oklab, var(--accent) 8%, transparent), transparent 70%),
+      var(--surface);
+  }
+  .bg-glow-soft {
+    background:
+      radial-gradient(50rem 26rem at 0% 0%, color-mix(in oklab, var(--accent) 7%, transparent), transparent 70%),
+      var(--background);
+  }
+  /* Koyu blok içinde renkli ışıma */
+  .glow-inverse {
+    background:
+      radial-gradient(36rem 22rem at 100% 0%, color-mix(in oklab, var(--primary) 55%, transparent), transparent 70%),
+      radial-gradient(30rem 20rem at 0% 100%, color-mix(in oklab, var(--accent) 28%, transparent), transparent 70%),
+      var(--surface-inverse);
+  }
+  /* İnce nokta deseni (dekoratif, koyu zemin) */
+  .dots-inverse {
+    background-image: radial-gradient(rgb(255 255 255 / 0.09) 1px, transparent 1px);
+    background-size: 18px 18px;
+    mask-image: linear-gradient(to left, #000, transparent 70%);
+  }
+
+  /* Kart: yumuşak gölge, hover'da hafif yükselme (yalnızca işaretçili cihazlar) */
+  .card-lift {
+    background: var(--surface);
+    border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+    box-shadow: 0 1px 2px rgb(20 26 24 / 0.04), 0 2px 8px -2px rgb(20 26 24 / 0.07);
+    transition:
+      transform 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+      box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.3s ease;
+  }
+  @media (hover: hover) {
+    .card-lift:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 8px rgb(20 26 24 / 0.04), 0 28px 56px -20px rgb(20 26 24 / 0.28);
+      border-color: color-mix(in oklab, var(--primary) 22%, var(--border));
+    }
+  }
+
+  .numeric {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface-muted) 0%, var(--surface-sunken) 50%, var(--surface-muted) 100%);
+    background-size: 1200px 100%;
+    animation: var(--animate-shimmer);
+    border-radius: 0.5rem;
+  }
+
+  /* Uzun metin içerik (sayfalar, blog, ilan açıklaması) */
+  .prose-content {
+    color: var(--foreground);
+    line-height: 1.75;
+    font-size: 1.0625rem;
+  }
+  .prose-content > * + * {
+    margin-top: 1rem;
+  }
+  .prose-content h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.375rem, 1.2rem + 0.6vw, 1.75rem);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin-top: 2.25rem;
+  }
+  .prose-content h3 {
+    font-weight: 700;
+    font-size: 1.125rem;
+    margin-top: 1.5rem;
+  }
+  .prose-content p,
+  .prose-content li {
+    color: color-mix(in oklab, var(--foreground) 82%, var(--background));
+  }
+  .prose-content ul,
+  .prose-content ol {
+    padding-left: 1.25rem;
+  }
+  .prose-content ul {
+    list-style: disc;
+  }
+  .prose-content ol {
+    list-style: decimal;
+  }
+  .prose-content li + li {
+    margin-top: 0.375rem;
+  }
+  .prose-content a {
+    color: var(--primary-ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .prose-content blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 1rem;
+    color: var(--muted-foreground);
+    font-style: italic;
+  }
+  .prose-content hr {
+    border-color: var(--border);
+    margin-block: 2rem;
+  }
+  .prose-content .table-scroll {
+    overflow-x: auto;
+  }
+  .prose-content table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+  }
+  .prose-content th,
+  .prose-content td {
+    text-align: left;
+    padding: 0.625rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .prose-content th {
+    font-weight: 700;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .safe-bottom {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  /* Görsel üstü okunabilirlik için nötr koyu perde (renkli gradient değil) */
+  .scrim-bottom {
+    background: linear-gradient(to top, rgb(10 14 13 / 0.72) 0%, rgb(10 14 13 / 0.28) 45%, rgb(10 14 13 / 0) 75%);
+  }
+  .scrim-hero {
+    background: linear-gradient(to top, rgb(10 14 13 / 0.78) 0%, rgb(10 14 13 / 0.35) 50%, rgb(10 14 13 / 0.18) 100%);
+  }
+}
+
+/*
+ * Başlık ağırlığı tokenı: panellerde varsayılan 400; kiracı sitesinde tema/tipografi
+ * ayarı --site-heading-weight ile değiştirir. Tema sunum kuralları Theme Engine'dedir
+ * (src/theme-engine/css/themes.css; yalnızca kiracı sitesi ve tema önizlemesi yükler).
+ */
+@layer components {
+  h1.font-display,
+  h2.font-display,
+  h3.font-display {
+    font-weight: var(--site-heading-weight, 400);
+  }
+}
+
+/* Leaflet harita uyumu */
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: var(--surface-muted);
+}
+.leaflet-control-attribution {
+  font-size: 10px;
+}
+
+/* Yazdırma (PDF broşür): gereksiz öğeleri gizle */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+}

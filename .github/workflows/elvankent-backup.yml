@@ -1,0 +1,87 @@
+# Elvankent Gayrimenkul — günlük yedek (veritabanı + fotoğraflar)
+#
+# Supabase'in kendi yedekleri Storage dosyalarını kapsamaz. Bu iş akışı her gece:
+#   1) veritabanının pg_dump yedeğini alır,
+#   2) Storage kovalarını (S3 uyumlu Supabase uç noktası üzerinden) sizin yedek
+#      deponuza (Cloudflare R2, Backblaze B2, AWS S3...) eşitler; silinen/değişen
+#      dosyalar tarihli "deleted" klasörüne taşınır,
+#   3) saklama süresi dolan yedekleri siler.
+#
+# ÇALIŞMASI İÇİN (bkz. elvankent-gayrimenkul/docs/BACKUP_RESTORE.md):
+#   Repository variables: ELVANKENT_BACKUP_ENABLED=true, BACKUP_BUCKET, (ops.) BACKUP_S3_PROVIDER, BACKUP_RETENTION_DAYS
+#   Repository secrets:   SUPABASE_DB_URL, SUPABASE_S3_ENDPOINT, SUPABASE_S3_REGION, SUPABASE_S3_ACCESS_KEY_ID,
+#                         SUPABASE_S3_SECRET_ACCESS_KEY, BACKUP_S3_ENDPOINT, BACKUP_S3_REGION,
+#                         BACKUP_S3_ACCESS_KEY_ID, BACKUP_S3_SECRET_ACCESS_KEY
+# Not: Zamanlanmış (schedule) iş akışları yalnızca deponun varsayılan dalında çalışır.
+name: elvankent-backup
+
+on:
+  schedule:
+    - cron: '23 1 * * *' # her gün 01:23 UTC (04:23 TR)
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elvankent-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    if: ${{ vars.ELVANKENT_BACKUP_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      BUCKET: ${{ vars.BACKUP_BUCKET }}
+      RETENTION_DAYS: ${{ vars.BACKUP_RETENTION_DAYS || '30' }}
+      # rclone uzakları ortam değişkenleriyle tanımlanır (anahtarlar yalnızca secrets'ta)
+      RCLONE_CONFIG_SUPA_TYPE: s3
+      RCLONE_CONFIG_SUPA_PROVIDER: Other
+      RCLONE_CONFIG_SUPA_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
+      RCLONE_CONFIG_SUPA_REGION: ${{ secrets.SUPABASE_S3_REGION }}
+      RCLONE_CONFIG_SUPA_ACCESS_KEY_ID: ${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}
+      RCLONE_CONFIG_SUPA_SECRET_ACCESS_KEY: ${{ secrets.SUPABASE_S3_SECRET_ACCESS_KEY }}
+      RCLONE_CONFIG_SUPA_FORCE_PATH_STYLE: 'true'
+      RCLONE_CONFIG_DEST_TYPE: s3
+      RCLONE_CONFIG_DEST_PROVIDER: ${{ vars.BACKUP_S3_PROVIDER || 'Other' }}
+      RCLONE_CONFIG_DEST_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+      RCLONE_CONFIG_DEST_REGION: ${{ secrets.BACKUP_S3_REGION }}
+      RCLONE_CONFIG_DEST_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+      RCLONE_CONFIG_DEST_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+    steps:
+      - name: Araçları kur (pg_dump 17, rclone)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common rclone
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          pg_dump --version && rclone version | head -1
+
+      - name: Veritabanı yedeği
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          STAMP=$(date -u +%Y-%m-%dT%H%MZ)
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          pg_dump "$SUPABASE_DB_URL" --format=custom --no-owner --no-privileges --file "db-$STAMP.dump"
+          pg_restore --list "db-$STAMP.dump" > /dev/null   # yedeğin okunabilir olduğunu doğrula
+          ls -lh "db-$STAMP.dump"
+          rclone copyto "db-$STAMP.dump" "dest:$BUCKET/db/db-$STAMP.dump" --s3-no-check-bucket
+
+      - name: Fotoğraf ve marka dosyaları (Storage)
+        run: |
+          set -euo pipefail
+          for b in media-originals media branding property-images; do
+            rclone sync "supa:$b" "dest:$BUCKET/storage/current/$b" \
+              --backup-dir "dest:$BUCKET/storage/deleted/$STAMP/$b" \
+              --s3-no-check-bucket --transfers 8 --checkers 16 --stats-one-line --stats 60s
+          done
+
+      - name: Saklama süresi
+        run: |
+          set -euo pipefail
+          rclone delete "dest:$BUCKET/db" --min-age "${RETENTION_DAYS}d"
+          rclone delete "dest:$BUCKET/storage/deleted" --min-age 90d
+          rclone rmdirs "dest:$BUCKET/storage/deleted" --leave-root || true

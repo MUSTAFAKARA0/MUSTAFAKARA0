@@ -1,0 +1,135 @@
+# Elvankent Gayrimenkul — sürekli entegrasyon
+#
+# quality  (her push / PR): kurulum, typecheck, lint, birim testleri, production build,
+#                           bağımlılık güvenlik taraması, gizli anahtar taraması
+# database (isteğe bağlı):  CI içinde yerel Supabase (Docker) kurar; tüm migration'ları
+#                           sıfırdan uygular, demo verisini yükler, güvenlik (RLS/MFA/kiracı
+#                           izolasyonu) ve Playwright E2E testlerini çalıştırır.
+#                           Açmak için: Settings › Variables › ELVANKENT_CI_DB_TESTS = true
+#
+# Production'a geçişi engellemek: main (veya production) dalı için branch protection'da
+# "quality" (ve açıldıysa "database") işlerini "required status check" yapın; Vercel'de
+# production dağıtımını yalnızca bu korumalı daldan yapın (docs/DEPLOYMENT_RUNBOOK.md).
+name: elvankent-ci
+
+on:
+  push:
+    paths: ['elvankent-gayrimenkul/**', '.github/workflows/elvankent-ci.yml']
+  pull_request:
+    paths: ['elvankent-gayrimenkul/**', '.github/workflows/elvankent-ci.yml']
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elvankent-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: elvankent-gayrimenkul
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Build veritabanına bağlanmaz; yer tutucu değerler yeterlidir (gizli değer değildir)
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_SITE_URL: https://ci.example.com
+      SITE_ENV: development
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: elvankent-gayrimenkul/package-lock.json
+      - run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: ESLint
+        run: npm run lint
+      - name: Birim testleri
+        run: npm run test:unit
+      - name: Demo SQL dosyaları migration'larla güncel mi
+        run: npm run demo:sql -- --check
+      - name: Production build
+        run: npm run build
+      - name: Bağımlılık güvenlik taraması (production bağımlılıkları, yüksek/kritik)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Gizli anahtar taraması (gitleaks)
+        working-directory: .
+        run: |
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/gitleaks_8.24.2_linux_x64.tar.gz | tar -xz gitleaks
+          # Proje klasörüne dokunan tüm commit'ler taranır (node_modules/.next değil)
+          ./gitleaks git . --log-opts="-- elvankent-gayrimenkul" --no-banner --redact --exit-code 1
+
+  database:
+    if: ${{ vars.ELVANKENT_CI_DB_TESTS == 'true' }}
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: elvankent-gayrimenkul/package-lock.json
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: npm ci
+      - name: Yerel Supabase (migration'lar sıfırdan uygulanır)
+        run: |
+          set -euo pipefail
+          # Demo seed'i açık onay ister; start sırasında otomatik çalışmasın diye kenara alınır
+          mv supabase/seed.sql /tmp/seed.sql
+          [ -f supabase/config.toml ] || supabase init --force
+          # TOTP MFA testleri için doğrulayıcıyı aç
+          sed -i '/^\[auth.mfa.totp\]/,/^\[/ { s/enroll_enabled = false/enroll_enabled = true/; s/verify_enabled = false/verify_enabled = true/ }' supabase/config.toml
+          supabase start -x studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor
+          supabase status -o env > /tmp/supa.env
+          set -a; . /tmp/supa.env; set +a
+          PGOPTIONS='-c app.allow_demo_seed=on' psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/seed.sql
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+            echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000"
+            echo "IP_HASH_SALT=ci-$(openssl rand -hex 16)"
+            echo "CRON_SECRET=ci-$(openssl rand -hex 32)"
+            echo "NEXT_IMAGE_ALLOW_LOCAL_IP=1"
+            echo "SITE_ENV=development"
+          } > .env.local
+      - name: Birim + güvenlik testleri (RLS, MFA, kiracı izolasyonu)
+        run: npm test
+      - name: E2E hazırlık (yönetici hesabı, build, sunucu)
+        run: |
+          set -euo pipefail
+          npm run create-admin -- e2e-admin@example.test 'E2e-Password-12345' --role=owner
+          npx playwright install --with-deps chromium
+          set -a; . ./.env.local; set +a
+          npm run build
+          (npm start > /tmp/next.log 2>&1 &)
+          npx --yes wait-on -t 60000 http://localhost:3000/api/health
+      - name: Playwright E2E
+        env:
+          E2E_ADMIN_EMAIL: e2e-admin@example.test
+          E2E_ADMIN_PASSWORD: E2e-Password-12345
+        run: npx playwright test
+      - name: Hata ayıklama çıktıları
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: |
+            elvankent-gayrimenkul/test-results
+            /tmp/next.log
+          retention-days: 7
