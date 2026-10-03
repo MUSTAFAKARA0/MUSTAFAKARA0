@@ -2,13 +2,13 @@ import type { Metadata } from 'next';
 import { CheckCircle2 } from 'lucide-react';
 import { PageHeader } from '@/components/common/page-header';
 import { LeadForm } from '@/components/forms/lead-form';
-import { requireTenant } from '@/platform/tenant/tenant';
-import { applyPageSeo, guardSitePage, sitePageSettings } from '@/platform/site/pages';
+import { requireSiteTenant } from '@/site-config/load';
+import { applyPageSeo, guardSitePage, sitePageSettings } from '@/site-config/pages';
 
 export const revalidate = 300;
 
 export async function generateMetadata({ params }: PageProps<'/t/[tenant]/degerleme'>): Promise<Metadata> {
-  const tenant = await requireTenant((await params).tenant);
+  const tenant = await requireSiteTenant((await params).tenant);
   return applyPageSeo(await sitePageSettings(tenant, 'degerleme'), {
     title: 'Gayrimenkul değerleme talebi',
     description: 'Satmak veya kiraya vermek istediğiniz gayrimenkulün bilgilerini paylaşın; bölgedeki güncel piyasa koşullarıyla birlikte değerlendirip size dönüş yapalım.',
@@ -27,7 +27,7 @@ const POINTS = [
  * gerçek bir veri modeli olmadan rakam vermek yanıltıcı olur.
  */
 export default async function ValuationPage({ params }: PageProps<'/t/[tenant]/degerleme'>) {
-  const tenant = await requireTenant((await params).tenant);
+  const tenant = await requireSiteTenant((await params).tenant);
   await guardSitePage(tenant, 'degerleme');
   return (
     <>

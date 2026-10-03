@@ -1,6 +1,6 @@
 import { cookies, draftMode } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
-import { PREVIEW_COOKIE, PREVIEW_MAX_AGE, verifyPreviewToken } from '@/platform/site/preview';
+import { PREVIEW_COOKIE, PREVIEW_MAX_AGE, verifyPreviewToken } from '@/site-config/preview';
 import { getTenantFromRequest } from '@/platform/tenant/tenant';
 
 /**

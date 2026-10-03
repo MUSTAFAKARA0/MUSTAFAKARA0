@@ -39,7 +39,7 @@ import {
   type PageSettings,
   type SeoConfig,
   type SiteConfig,
-} from "@/platform/site/schema";
+} from "@/site-config/schema";
 
 const newId = (prefix: string) =>
   `${prefix}-${Math.random().toString(36).slice(2, 8)}`;

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { SaveBar, useSectionSave } from '@/components/platform/site/site-actions';
 import { FONT_CATALOG } from '@/theme-engine/typography/catalog';
 import { PALETTES, findPalette } from '@/theme-engine/palettes';
-import { FONT_IDS, type ColorTokens, type ColorsConfig, type FontId, type SiteConfig, type StyleConfig, type ThemeId, type TypographyConfig } from '@/platform/site/schema';
+import { FONT_IDS, type ColorTokens, type ColorsConfig, type FontId, type SiteConfig, type StyleConfig, type ThemeId, type TypographyConfig } from '@/site-config/schema';
 import { resolveStyle, THEME_LIST, THEMES } from '@/theme-engine/themes';
 import { resolveColors } from '@/theme-engine/tokens';
 

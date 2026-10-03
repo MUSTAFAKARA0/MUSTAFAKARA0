@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { PageHeader } from '@/components/common/page-header';
 import { CompareView } from '@/components/property/compare-view';
-import { requireTenant } from '@/platform/tenant/tenant';
+import { requireSiteTenant } from '@/site-config/load';
 
 export const metadata: Metadata = {
   title: 'İlan karşılaştırma',
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ComparePage({ params }: PageProps<'/t/[tenant]/karsilastir'>) {
-  const tenant = await requireTenant((await params).tenant);
+  const tenant = await requireSiteTenant((await params).tenant);
   return (
     <>
       <PageHeader

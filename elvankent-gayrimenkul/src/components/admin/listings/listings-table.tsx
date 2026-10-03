@@ -22,7 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import { ListingStatusBadge } from '@/components/panel/ui';
-import { MediaImage } from '@/components/gallery/media-image';
+import { MediaImage } from '@/components/common/media-image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';

@@ -204,19 +204,5 @@ export function parseSiteConfig(raw: unknown): SiteConfig {
 }
 
 // --------------------------------------------------------------------------- Özellik bayrakları
-export const FEATURE_KEYS = ['crm', 'analytics', 'pdf', 'custom_domain', 'blog', 'valuation', 'whatsapp', 'favorites', 'advanced_seo', 'dark_mode'] as const;
-export type FeatureKey = (typeof FEATURE_KEYS)[number];
-export type FeatureOverrides = Partial<Record<FeatureKey, boolean>>;
-
-export function parseFeatureOverrides(raw: unknown): FeatureOverrides {
-  const out: FeatureOverrides = {};
-  if (raw && typeof raw === 'object') {
-    for (const k of FEATURE_KEYS) {
-      const v = (raw as Record<string, unknown>)[k];
-      if (typeof v === 'boolean') out[k] = v;
-    }
-  }
-  return out;
-}
-
-export type SiteStatus = 'active' | 'maintenance' | 'draft';
+// Kiracı çözümlemesinin (core) parçasıdır; geriye uyumluluk için buradan da dışa aktarılır.
+export { FEATURE_KEYS, parseFeatureOverrides, type FeatureKey, type FeatureOverrides, type SiteStatus } from '@/platform/tenant/site-state';

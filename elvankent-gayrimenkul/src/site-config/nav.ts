@@ -1,5 +1,5 @@
-import type { SiteView } from '@/platform/site/load';
-import type { NavItemConfig, PageKey } from '@/platform/site/schema';
+import type { SiteView } from '@/site-config/load';
+import type { NavItemConfig, PageKey } from '@/site-config/schema';
 
 export interface NavItem {
   href: string;

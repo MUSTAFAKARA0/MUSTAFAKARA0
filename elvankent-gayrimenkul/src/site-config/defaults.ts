@@ -1,5 +1,5 @@
-import { mainNav } from '@/platform/site/nav';
-import type { FooterConfig, NavItemConfig } from '@/platform/site/schema';
+import { mainNav } from '@/site-config/nav';
+import type { FooterConfig, NavItemConfig } from '@/site-config/schema';
 
 /** Yapılandırılmamış siteler için yönetim ekranında gösterilen başlangıç menüsü (bugünkü site menüsü) */
 export function defaultNavigation(): NavItemConfig[] {

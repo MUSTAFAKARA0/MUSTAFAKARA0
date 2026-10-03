@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { isUuid } from '@/lib/utils';
 import type { SessionUser } from '@/platform/auth/session';
-import { parseFeatureOverrides, parseSiteConfig, type FeatureOverrides, type SiteConfig, type SiteStatus } from '@/platform/site/schema';
-import { applyBrandDraft } from '@/platform/site/brand';
+import { parseFeatureOverrides, parseSiteConfig, type FeatureOverrides, type SiteConfig, type SiteStatus } from '@/site-config/schema';
+import { applyBrandDraft } from '@/site-config/brand';
 import type { OrgSettings } from '@/platform/tenant/tenant';
 import type { Enums } from '@/types/supabase';
 

@@ -1,11 +1,11 @@
 import { Logo } from '@/components/brand/logo';
 import { HeaderActions, DesktopNav, MobileMenu } from '@/components/layout/header-client';
-import { isHrefAvailable, resolveNav } from '@/platform/site/nav';
+import { isHrefAvailable, resolveNav } from '@/site-config/nav';
 import { telHref, whatsappHref } from '@/lib/contact-links';
 import { formatPhoneDisplay } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { brandingUrl } from '@/modules/media/variants';
-import type { SiteView } from '@/platform/site/load';
+import type { SiteView } from '@/site-config/load';
 import { resolveStyle } from '@/theme-engine/themes';
 import type { Tenant } from '@/platform/tenant/tenant';
 

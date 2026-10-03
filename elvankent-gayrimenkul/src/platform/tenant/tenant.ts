@@ -9,7 +9,7 @@ import { createPublicClient, createServiceClient } from '@/lib/supabase/server';
 import { DEFAULT_TENANT_KEY, isValidTenantKey, tenantKeyForHost } from '@/platform/tenant/host';
 import { tenantHostConfig } from '@/platform/tenant/config';
 import type { Tables } from '@/types/supabase';
-import { parseFeatureOverrides, type FeatureOverrides, type SiteStatus } from '@/platform/site/schema';
+import { parseFeatureOverrides, type FeatureOverrides, type SiteStatus } from '@/platform/tenant/site-state';
 
 export type OrgSettings = Tables<'organization_settings'>;
 
@@ -202,13 +202,11 @@ async function loadTenant(key: string): Promise<Tenant | null> {
 /** Kiracıyı anahtara göre getirir (istek başına tekilleştirilir, 5 dk önbellek). */
 export const getTenant = cache(loadTenant);
 
-/** Sayfalar için: kiracı yoksa / askıdaysa 404. */
+/** Kiracı yoksa / askıdaysa 404. Kiracı sitesi sayfaları site-config'in requireSiteTenant'ını kullanır (önizleme markası dahil). */
 export async function requireTenant(rawKey: string): Promise<Tenant> {
   const tenant = await getTenant(decodeURIComponent(rawKey));
   if (!tenant) notFound();
-  // KARAY önizlemesi açıksa taslak marka üste bindirilir (yalnızca o tarayıcıda)
-  const { withPreviewBrand } = await import('@/platform/site/load');
-  return withPreviewBrand(tenant);
+  return tenant;
 }
 
 /** Bulunulan alan adının kiracı anahtarı (proxy'nin hesapladığı değer; istemci başlığı proxy'de silinir) */

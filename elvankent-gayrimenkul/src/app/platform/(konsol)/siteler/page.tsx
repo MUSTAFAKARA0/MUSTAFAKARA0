@@ -23,7 +23,7 @@ import { ORG_STATUS_LABELS } from "@/modules/platform/queries";
 import { SITE_STATUS_META } from "@/modules/platform/sites";
 import { requireSuperAdminPage } from "@/platform/auth/session";
 import { THEMES } from "@/theme-engine/themes";
-import type { ThemeId } from "@/platform/site/schema";
+import type { ThemeId } from "@/site-config/schema";
 import { publicEnv } from "@/lib/env";
 import { serverEnv } from "@/lib/server-env";
 

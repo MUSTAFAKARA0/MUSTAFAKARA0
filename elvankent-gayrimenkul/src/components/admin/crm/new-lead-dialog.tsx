@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
-import { NumberInput } from '@/components/forms/number-input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/choice';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';

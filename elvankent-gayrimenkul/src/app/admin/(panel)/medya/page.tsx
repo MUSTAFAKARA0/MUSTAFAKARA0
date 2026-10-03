@@ -4,7 +4,7 @@ import { AlertTriangle, HardDrive, ImageIcon, Images, Loader2, Star, Trash2 } fr
 import { ActionButton } from '@/components/panel/action-controls';
 import { AdminPageHeader, EmptyPanel, StatCard } from '@/components/panel/ui';
 import { Pagination } from '@/components/common/pagination';
-import { MediaImage } from '@/components/gallery/media-image';
+import { MediaImage } from '@/components/common/media-image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input, Select } from '@/components/ui/form-controls';

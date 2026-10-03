@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { AlertCircle, GitCompareArrows, X } from 'lucide-react';
 import { EmptyState } from '@/components/common/empty-state';
-import { MediaImage } from '@/components/gallery/media-image';
+import { MediaImage } from '@/components/common/media-image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { getCompareDetails } from '@/app/actions/public';

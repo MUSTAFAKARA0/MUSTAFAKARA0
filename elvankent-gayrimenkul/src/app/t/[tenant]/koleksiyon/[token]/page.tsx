@@ -11,7 +11,7 @@ import { formatDate } from '@/lib/format';
 import { isSupabaseConfigured } from '@/lib/env';
 import { createAnonClient } from '@/lib/supabase/server';
 import { getPropertiesByIds } from '@/modules/properties/queries';
-import { requireTenant } from '@/platform/tenant/tenant';
+import { requireSiteTenant } from '@/site-config/load';
 
 // Her ziyaret sayılır ve süre/iptal durumu anında uygulanır → önbellek yok
 export const dynamic = 'force-dynamic';
@@ -45,7 +45,7 @@ async function loadCollection(token: string): Promise<CollectionResult> {
 
 export default async function CollectionPage({ params }: PageProps<'/t/[tenant]/koleksiyon/[token]'>) {
   const { tenant: key, token } = await params;
-  const tenant = await requireTenant(key);
+  const tenant = await requireSiteTenant(key);
   const collection = await loadCollection(token);
   // Başka bir ofisin seçkisi bu alan adında açılamaz
   if (collection.status === 'not_found' || collection.organization_id !== tenant.id) notFound();

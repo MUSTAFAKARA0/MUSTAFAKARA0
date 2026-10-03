@@ -19,10 +19,10 @@ import { getInventoryCounts, getLatestProperties, getRegionCounts, getShowcasePr
 import { getSearchOptions } from '@/modules/properties/search-options';
 import type { PropertyCard } from '@/modules/properties/types';
 import { organizationJsonLd, websiteJsonLd } from '@/modules/seo/jsonld';
-import { requireTenant } from '@/platform/tenant/tenant';
+import { requireSiteTenant } from '@/site-config/load';
 import { Fragment } from 'react';
-import { getSiteView } from '@/platform/site/load';
-import { DEFAULT_HOME_SECTIONS, type HomeSectionConfig } from '@/platform/site/schema';
+import { getSiteView } from '@/site-config/load';
+import { DEFAULT_HOME_SECTIONS, type HomeSectionConfig } from '@/site-config/schema';
 import { resolveStyle } from '@/theme-engine/themes';
 
 export const revalidate = 300;
@@ -34,7 +34,7 @@ function coverFor(cards: PropertyCard[], predicate: (c: PropertyCard) => boolean
 }
 
 export default async function HomePage({ params }: PageProps<'/t/[tenant]'>) {
-  const tenant = await requireTenant((await params).tenant);
+  const tenant = await requireSiteTenant((await params).tenant);
   const [showcase, latestPool, inventory, options, regions, regionCounts, posts] = await Promise.all([
     getShowcaseProperties(tenant.id, 4),
     getLatestProperties(tenant.id, 24),

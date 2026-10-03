@@ -3,18 +3,18 @@ import { ArrowUpRight, Clock, Mail, MapPin, Phone } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/common/brand-icons';
 import { PageHeader } from '@/components/common/page-header';
 import { LeadForm } from '@/components/forms/lead-form';
-import { LazyMap } from '@/components/maps/lazy-map';
+import { LazyMap } from '@/components/common/maps/lazy-map';
 import { telHref, whatsappHref } from '@/lib/contact-links';
 import { formatPhoneDisplay } from '@/lib/format';
 import { formatOpeningHours, parseOpeningHours } from '@/modules/content/hours';
 import { publicMapConfig } from '@/modules/maps/providers';
-import { requireTenant } from '@/platform/tenant/tenant';
-import { applyPageSeo, guardSitePage, sitePageSettings } from '@/platform/site/pages';
+import { requireSiteTenant } from '@/site-config/load';
+import { applyPageSeo, guardSitePage, sitePageSettings } from '@/site-config/pages';
 
 export const revalidate = 300;
 
 export async function generateMetadata({ params }: PageProps<'/t/[tenant]/iletisim'>): Promise<Metadata> {
-  const tenant = await requireTenant((await params).tenant);
+  const tenant = await requireSiteTenant((await params).tenant);
   return applyPageSeo(await sitePageSettings(tenant, 'iletisim'), {
     title: 'İletişim',
     description: `${tenant.settings.display_name} iletişim bilgileri: telefon, WhatsApp, e-posta, ofis adresi ve çalışma saatleri.`,
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: PageProps<'/t/[tenant]/iletis
 }
 
 export default async function ContactPage({ params }: PageProps<'/t/[tenant]/iletisim'>) {
-  const tenant = await requireTenant((await params).tenant);
+  const tenant = await requireSiteTenant((await params).tenant);
   await guardSitePage(tenant, 'iletisim');
   const s = tenant.settings;
   const phone = telHref(s.phone);

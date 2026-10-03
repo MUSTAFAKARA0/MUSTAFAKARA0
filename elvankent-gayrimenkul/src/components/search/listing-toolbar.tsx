@@ -7,7 +7,7 @@ import { ChoiceChip, SegmentedControl } from '@/components/ui/choice';
 import { Dialog, DialogTrigger, SheetContent } from '@/components/ui/dialog';
 import { Label, Select } from '@/components/ui/form-controls';
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { NumberInput } from '@/components/forms/number-input';
+import { NumberInput } from '@/components/ui/number-input';
 import { FiltersPanel } from '@/components/search/filters-panel';
 import { FLAG_KEYS, FLAG_LABELS, fromDraft, toDraft, type FilterDraft } from '@/components/search/filter-state';
 import { useListingSearch } from '@/components/search/search-context';

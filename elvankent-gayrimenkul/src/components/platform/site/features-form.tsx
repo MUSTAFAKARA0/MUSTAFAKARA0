@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { SaveBar } from '@/components/platform/site/site-actions';
 import { setSiteFeatures } from '@/app/actions/site-builder';
 import { cn } from '@/lib/utils';
-import type { FeatureKey, FeatureOverrides } from '@/platform/site/schema';
+import type { FeatureKey, FeatureOverrides } from '@/site-config/schema';
 
 export interface FeatureRow {
   key: FeatureKey;

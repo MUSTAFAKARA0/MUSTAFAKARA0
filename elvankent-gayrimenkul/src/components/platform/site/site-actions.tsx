@@ -10,7 +10,7 @@ import { Field, Input } from '@/components/ui/form-controls';
 import { cn } from '@/lib/utils';
 import { hasUnsavedChanges, useDirtyGuard } from '@/components/platform/site/dirty-guard';
 import { createSitePreviewLink, discardSiteDraft, publishSite, saveSiteSection } from '@/app/actions/site-builder';
-import type { SiteSection } from '@/platform/site/schema';
+import type { SiteSection } from '@/site-config/schema';
 
 type Size = 'xs' | 'sm' | 'md';
 

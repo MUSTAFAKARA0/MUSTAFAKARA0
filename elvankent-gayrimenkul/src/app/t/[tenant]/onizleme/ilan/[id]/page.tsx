@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { PropertyDetailView } from '@/components/property/property-detail-view';
 import { getPropertyForPreview } from '@/modules/properties/queries';
 import { getSessionUser } from '@/platform/auth/session';
-import { requireTenant } from '@/platform/tenant/tenant';
+import { requireSiteTenant } from '@/site-config/load';
 
 export const metadata: Metadata = {
   title: 'İlan önizleme',
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
  */
 export default async function PropertyPreviewPage({ params }: PageProps<'/t/[tenant]/onizleme/ilan/[id]'>) {
   const { tenant: key, id } = await params;
-  const tenant = await requireTenant(key);
+  const tenant = await requireSiteTenant(key);
   const session = await getSessionUser();
   if (!session) redirect(`/admin/giris?next=${encodeURIComponent(`/onizleme/ilan/${id}`)}`);
 

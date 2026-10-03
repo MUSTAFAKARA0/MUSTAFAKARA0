@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight, ArrowUpRight, Clock, Mail, MapPin, Phone } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/common/brand-icons';
-import { MediaImage } from '@/components/gallery/media-image';
+import { MediaImage } from '@/components/common/media-image';
 import { SectionHeading } from '@/components/home/section-heading';
 import { FeaturedPropertyCard } from '@/components/property/featured-property-card';
 import { PropertyGrid } from '@/components/property/property-grid';

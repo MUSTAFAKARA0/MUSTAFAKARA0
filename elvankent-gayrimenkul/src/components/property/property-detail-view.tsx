@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowDownRight, CalendarDays, EyeOff, Info, MapPin, PencilLine, RefreshCcw } from 'lucide-react';
 import { Breadcrumbs } from '@/components/common/breadcrumbs';
 import { PropertyGallery } from '@/components/gallery/property-gallery';
-import { LazyMap } from '@/components/maps/lazy-map';
+import { LazyMap } from '@/components/common/maps/lazy-map';
 import { PropertyBadges } from '@/components/property/property-badges';
 import { CompareToggle, FavoriteButton, ShareButton } from '@/components/property/property-actions';
 import { ContactPanel, MobileContactBar } from '@/components/property/contact-panel';

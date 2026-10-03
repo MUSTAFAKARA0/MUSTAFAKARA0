@@ -2,10 +2,10 @@ import 'server-only';
 import { cache } from 'react';
 import { cookies, draftMode } from 'next/headers';
 import { createServiceClient } from '@/lib/supabase/server';
-import { parseSiteConfig, type FeatureOverrides, type SiteConfig, type SiteStatus } from '@/platform/site/schema';
-import { PREVIEW_COOKIE, verifyPreviewToken } from '@/platform/site/preview';
-import { applyBrandDraft, hasBrandDraft } from '@/platform/site/brand';
-import type { Tenant } from '@/platform/tenant/tenant';
+import { parseSiteConfig, type FeatureOverrides, type SiteConfig, type SiteStatus } from '@/site-config/schema';
+import { PREVIEW_COOKIE, verifyPreviewToken } from '@/site-config/preview';
+import { applyBrandDraft, hasBrandDraft } from '@/site-config/brand';
+import { requireTenant, type Tenant } from '@/platform/tenant/tenant';
 
 /** Kiracı sitesinin o istekteki görünümü */
 export interface SiteView {
@@ -79,6 +79,14 @@ export async function withPreviewBrand(tenant: Tenant): Promise<Tenant> {
   const brand = parseSiteConfig(draft).brand;
   if (!hasBrandDraft(brand)) return tenant;
   return { ...tenant, settings: applyBrandDraft(tenant.settings, brand) };
+}
+
+/**
+ * Kiracı sitesi sayfaları için kiracı: yoksa / askıdaysa 404; KARAY önizlemesi açıksa
+ * taslak marka üste bindirilir (yalnızca o tarayıcıda).
+ */
+export async function requireSiteTenant(rawKey: string): Promise<Tenant> {
+  return withPreviewBrand(await requireTenant(rawKey));
 }
 
 export const getSiteView = cache(async (tenant: Tenant): Promise<SiteView> => {

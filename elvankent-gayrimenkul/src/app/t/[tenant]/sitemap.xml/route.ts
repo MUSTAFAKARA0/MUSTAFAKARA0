@@ -2,9 +2,9 @@ import { getPublishedPosts, getRegionPages } from '@/modules/content/queries';
 import { LISTING_TYPE_TO_SLUG, type ListingType } from '@/modules/properties/constants';
 import { getInventoryCounts, getRegionCounts, getSitemapProperties } from '@/modules/properties/queries';
 import { regionListingPath } from '@/modules/properties/routes';
-import { publishedSiteView } from '@/platform/site/load';
-import { isPageAvailable } from '@/platform/site/pages';
-import type { PageKey } from '@/platform/site/schema';
+import { publishedSiteView } from '@/site-config/load';
+import { isPageAvailable } from '@/site-config/pages';
+import type { PageKey } from '@/site-config/schema';
 import { getTenant, tenantUrl } from '@/platform/tenant/tenant';
 
 interface Entry {

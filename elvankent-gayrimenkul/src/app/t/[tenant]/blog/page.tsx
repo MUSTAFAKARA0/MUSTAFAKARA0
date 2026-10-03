@@ -5,13 +5,13 @@ import { ArrowRight, BookOpenText } from 'lucide-react';
 import { EmptyState } from '@/components/common/empty-state';
 import { PageHeader } from '@/components/common/page-header';
 import { Pagination } from '@/components/common/pagination';
-import { MediaImage } from '@/components/gallery/media-image';
+import { MediaImage } from '@/components/common/media-image';
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/format';
 import { firstParam, parsePositiveInt } from '@/lib/utils';
 import { getPostsPage, type PostSummary } from '@/modules/content/queries';
-import { requireTenant } from '@/platform/tenant/tenant';
-import { applyPageSeo, guardSitePage, sitePageSettings } from '@/platform/site/pages';
+import { requireSiteTenant } from '@/site-config/load';
+import { applyPageSeo, guardSitePage, sitePageSettings } from '@/site-config/pages';
 
 export const revalidate = 300;
 
@@ -20,7 +20,7 @@ function pageFrom(searchParams: Record<string, string | string[] | undefined>): 
 }
 
 export async function generateMetadata({ params, searchParams }: PageProps<'/t/[tenant]/blog'>): Promise<Metadata> {
-  const tenant = await requireTenant((await params).tenant);
+  const tenant = await requireSiteTenant((await params).tenant);
   const page = pageFrom(await searchParams);
   return applyPageSeo(page > 1 ? undefined : await sitePageSettings(tenant, 'blog'), {
     title: page > 1 ? `Gayrimenkul rehberi – Sayfa ${page}` : 'Gayrimenkul rehberi',
@@ -73,7 +73,7 @@ function PostCard({ post, featured = false }: { post: PostSummary; featured?: bo
 }
 
 export default async function BlogIndexPage({ params, searchParams }: PageProps<'/t/[tenant]/blog'>) {
-  const tenant = await requireTenant((await params).tenant);
+  const tenant = await requireSiteTenant((await params).tenant);
   await guardSitePage(tenant, 'blog');
   const page = pageFrom(await searchParams);
   const { items, pageCount } = await getPostsPage(tenant.id, page);

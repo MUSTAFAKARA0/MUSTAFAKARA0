@@ -1,7 +1,7 @@
 'use client';
 
 import { useId } from 'react';
-import { NumberInput } from '@/components/forms/number-input';
+import { NumberInput } from '@/components/ui/number-input';
 import { ChoiceChip } from '@/components/ui/choice';
 import { Field, Input, Select, Textarea } from '@/components/ui/form-controls';
 import { cn } from '@/lib/utils';

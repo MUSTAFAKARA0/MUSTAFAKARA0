@@ -16,7 +16,7 @@ import {
 import { WhatsAppIcon } from '@/components/common/brand-icons';
 import { AreaChart, BarList } from '@/components/admin/charts';
 import { AdminPageHeader, EmptyPanel, ListingStatusBadge, Panel, StatCard } from '@/components/panel/ui';
-import { MediaImage } from '@/components/gallery/media-image';
+import { MediaImage } from '@/components/common/media-image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDateTime, formatListingPrice, formatNumber, formatRelativeDate } from '@/lib/format';

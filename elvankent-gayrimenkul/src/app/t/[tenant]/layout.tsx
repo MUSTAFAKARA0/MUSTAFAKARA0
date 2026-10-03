@@ -9,12 +9,12 @@ import { getPublishedPosts, getRegionPages } from '@/modules/content/queries';
 import { brandingUrl } from '@/modules/media/variants';
 import { baseOpenGraph, siteOgImage } from '@/modules/seo/og';
 import { MaintenancePage, PreviewBar } from '@/components/layout/site-status';
-import { getSiteView } from '@/platform/site/load';
+import { getSiteView } from '@/site-config/load';
 import { applyTheme } from '@/theme-engine';
-import { requireTenant } from '@/platform/tenant/tenant';
+import { requireSiteTenant } from '@/site-config/load';
 
 export async function generateMetadata({ params }: LayoutProps<'/t/[tenant]'>): Promise<Metadata> {
-  const tenant = await requireTenant((await params).tenant);
+  const tenant = await requireSiteTenant((await params).tenant);
   const view = await getSiteView(tenant);
   const s = tenant.settings;
   const seo = view.config.seo;
@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: LayoutProps<'/t/[tenant]'>): 
 }
 
 export default async function TenantLayout({ children, params }: LayoutProps<'/t/[tenant]'>) {
-  const tenant = await requireTenant((await params).tenant);
+  const tenant = await requireSiteTenant((await params).tenant);
   const [posts, regions, view] = await Promise.all([getPublishedPosts(tenant.id, 1), getRegionPages(tenant.id), getSiteView(tenant)]);
   const s = tenant.settings;
   // Site Engine görsel sistemi kendisi çözmez: tema verisi (theme_id + ayarlar) Theme

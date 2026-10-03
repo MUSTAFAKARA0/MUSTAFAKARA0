@@ -7,8 +7,8 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { isUuid } from '@/lib/utils';
 import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/platform/actions';
 import { requireSuperAdmin } from '@/platform/auth/session';
-import { createPreviewToken } from '@/platform/site/preview';
-import { FEATURE_KEYS, SECTION_SCHEMAS, parseSiteConfig, type BrandDraft, type BrandField, type SiteSection } from '@/platform/site/schema';
+import { createPreviewToken } from '@/site-config/preview';
+import { FEATURE_KEYS, SECTION_SCHEMAS, parseSiteConfig, type BrandDraft, type BrandField, type SiteSection } from '@/site-config/schema';
 import { getTenant } from '@/platform/tenant/tenant';
 import type { Json } from '@/types/supabase';
 

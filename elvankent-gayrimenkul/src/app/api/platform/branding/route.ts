@@ -16,7 +16,7 @@ import {
 import { MEDIA_BUCKETS } from '@/modules/media/variants';
 import { logSecurityEvent } from '@/platform/audit';
 import { requireSuperAdmin } from '@/platform/auth/session';
-import { parseSiteConfig } from '@/platform/site/schema';
+import { parseSiteConfig } from '@/site-config/schema';
 import type { Json } from '@/types/supabase';
 
 type SessionDb = Awaited<ReturnType<typeof requireSuperAdmin>>['supabase'];

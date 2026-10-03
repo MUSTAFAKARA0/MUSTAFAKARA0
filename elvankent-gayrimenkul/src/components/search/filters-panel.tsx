@@ -3,7 +3,7 @@
 import { useId } from 'react';
 import { ChoiceChip, SegmentedControl } from '@/components/ui/choice';
 import { Input, Label, Select } from '@/components/ui/form-controls';
-import { NumberInput } from '@/components/forms/number-input';
+import { NumberInput } from '@/components/ui/number-input';
 import { FLAG_LABELS, type FilterDraft, type FlagKey } from '@/components/search/filter-state';
 import type { SearchOptions } from '@/modules/properties/search-types';
 import {

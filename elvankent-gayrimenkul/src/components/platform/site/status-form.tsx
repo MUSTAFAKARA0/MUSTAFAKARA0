@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Field, Select, Textarea } from '@/components/ui/form-controls';
 import { setSiteStatus } from '@/app/actions/site-builder';
-import type { SiteStatus } from '@/platform/site/schema';
+import type { SiteStatus } from '@/site-config/schema';
 
 /** Site durumu: yayında · bakım modu · yayında değil (ofis paneli her durumda çalışır) */
 export function SiteStatusForm({ orgId, status, message }: { orgId: string; status: SiteStatus; message: string | null }) {

@@ -3,7 +3,7 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { Loader2, Search, X } from 'lucide-react';
-import { NumberInput } from '@/components/forms/number-input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/form-controls';
 import { CATEGORY_LABELS, LISTING_TYPE_LABELS } from '@/modules/properties/constants';

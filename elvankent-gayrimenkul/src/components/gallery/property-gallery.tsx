@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import { useCallback, useRef, useState } from 'react';
 import { Expand, ImageOff, Images } from 'lucide-react';
-import { MediaImage } from '@/components/gallery/media-image';
+import { MediaImage } from '@/components/common/media-image';
 import { cn } from '@/lib/utils';
 import type { PropertyImage } from '@/modules/properties/types';
 

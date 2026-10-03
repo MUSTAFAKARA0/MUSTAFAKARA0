@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { CheckCircle2, Circle, Copy, ExternalLink, Eye, FileText, Heart, Phone, QrCode, Star, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { WhatsAppIcon } from '@/components/common/brand-icons';
-import { MediaImage } from '@/components/gallery/media-image';
+import { MediaImage } from '@/components/common/media-image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Switch } from '@/components/ui/form-controls';

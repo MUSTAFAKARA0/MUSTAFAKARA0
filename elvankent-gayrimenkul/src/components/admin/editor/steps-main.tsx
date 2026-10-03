@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { Info, MapPin } from 'lucide-react';
-import { LazyMap } from '@/components/maps/lazy-map';
+import { LazyMap } from '@/components/common/maps/lazy-map';
 import { SegmentedControl } from '@/components/ui/choice';
 import { Checkbox, Field, Input, Switch } from '@/components/ui/form-controls';
 import { useDistrictNeighborhoods } from '@/components/admin/use-neighborhoods';

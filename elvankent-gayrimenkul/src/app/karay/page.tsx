@@ -23,7 +23,7 @@ import { ThemeShowcase } from '@/components/karay/theme-showcase';
 import { Button } from '@/components/ui/button';
 import { karaySiteUrl } from '@/modules/karay/site';
 import { getKarayProfile } from '@/modules/karay/profile';
-import { parseSiteConfig } from '@/platform/site/schema';
+import { parseSiteConfig } from '@/site-config/schema';
 import { THEME_LIST } from '@/theme-engine/themes';
 
 /*

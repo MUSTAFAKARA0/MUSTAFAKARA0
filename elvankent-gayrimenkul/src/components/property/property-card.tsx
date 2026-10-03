@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Camera, MapPin } from 'lucide-react';
 import { LinkPendingOverlay } from '@/components/common/link-pending';
-import { MediaImage } from '@/components/gallery/media-image';
+import { MediaImage } from '@/components/common/media-image';
 import { PropertyBadges } from '@/components/property/property-badges';
 import { CompareToggle, FavoriteButton } from '@/components/property/property-actions';
 import { formatArea, formatListingPrice, formatNumber } from '@/lib/format';

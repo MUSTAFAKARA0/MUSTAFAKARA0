@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Check, Plus, Save, Trash2, X } from 'lucide-react';
 import { TextAreaField, TextField } from '@/components/admin/editor/fields';
 import { Panel } from '@/components/panel/ui';
-import { LazyMap } from '@/components/maps/lazy-map';
+import { LazyMap } from '@/components/common/maps/lazy-map';
 import { Button } from '@/components/ui/button';
 import { ChoiceChip } from '@/components/ui/choice';
 import { Field, Input } from '@/components/ui/form-controls';

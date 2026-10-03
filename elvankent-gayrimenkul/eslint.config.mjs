@@ -11,7 +11,7 @@ import nextTs from "eslint-config-next/typescript";
  *    ↓
  *   site-config · theme-engine · modules        (site-config → theme-engine; tersi yasak)
  *    ↓
- *   ui · core
+ *   ui · core                                    (site-config / theme-engine bilinmez)
  *
  * Bir bölgedeki dosya yalnızca kendi bölgesini ve ALT katmanları içe aktarabilir.
  * Kural ihlali CI'da hata verir; istisna eklemek yerine kodu doğru katmana taşıyın.
@@ -35,16 +35,23 @@ const ZONES = {
     regex: "^@/(components/karay|app/karay|modules/karay)(/|$)|^@/app/actions/karay$",
     label: "KARAY tanıtım sayfası (karay-public)",
   },
-  // Site yapılandırması (site oluşturucunun ürettiği/okuduğu veri: şema, yükleme, önizleme belirteci)
+  // Site yapılandırması: site oluşturucunun ürettiği, Site Engine'in okuduğu veri
+  // (şema, varsayılanlar, yayın/önizleme yükleme, menü/sayfa çözümleme)
   siteConfig: {
-    files: ["src/platform/site/**"],
-    regex: "^@/platform/site(/|$)",
+    files: ["src/site-config/**"],
+    regex: "^@/site-config(/|$)",
     label: "site yapılandırması (site-config)",
+  },
+  // Görsel sistem (temalar, belirteçler, paletler, yazı tipleri, tema CSS'i, önizleme)
+  themeEngine: {
+    files: ["src/theme-engine/**"],
+    regex: "^@/theme-engine(/|$)",
+    label: "Theme Engine",
   },
   // Kiracıların herkese açık siteleri
   siteEngine: {
-    files: ["src/app/t/**", "src/components/{layout,home,property,search,content,gallery,maps,forms}/**"],
-    regex: "^@/(components/(layout|home|property|search|content|gallery|maps|forms)|app/t)(/|$)",
+    files: ["src/app/t/**", "src/components/{layout,home,property,search,content,gallery,forms}/**"],
+    regex: "^@/(components/(layout|home|property|search|content|gallery|forms)|app/t)(/|$)",
     label: "kiracı sitesi (site-engine)",
   },
 };
@@ -55,20 +62,14 @@ const forbid = (...zones) => ({
     {
       patterns: zones.map((z) => ({
         regex: z.regex,
-        message: `Katman sınırı: bu bölge ${z.label} kodunu içe aktaramaz. Ortak kodu alt katmana (ui, core, modules, platform/site) taşıyın.`,
+        message: `Katman sınırı: bu bölge ${z.label} kodunu içe aktaramaz. Ortak kodu alt katmana (ui, core, modules, site-config) taşıyın.`,
       })),
     },
   ],
 });
 
-const LOWER_LAYERS = [
-  "src/lib/**",
-  "src/hooks/**",
-  "src/types/**",
-  "src/platform/**",
-  "src/modules/**",
-  "src/components/{ui,panel,brand,common}/**",
-];
+const CORE_UI = ["src/lib/**", "src/hooks/**", "src/types/**", "src/platform/**", "src/components/{ui,panel,brand,common}/**"];
+const LOWER_LAYERS = [...CORE_UI, "src/site-config/**", "src/modules/**"];
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -87,6 +88,11 @@ const eslintConfig = defineConfig([
     ignores: ZONES.karayPublic.files,
     rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteEngine),
   },
+  // Çekirdek ve ortak arayüz: site yapılandırmasını ve Theme Engine'i de bilmez
+  {
+    files: CORE_UI,
+    rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteEngine, ZONES.siteConfig, ZONES.themeEngine),
+  },
   // Theme Engine: görsel sistem; site yapılandırmasının geri kalanını, site motorunu,
   // panelleri ve KARAY kodunu bilmez (girdisi yalnızca ThemeInput verisidir)
   {
@@ -95,12 +101,13 @@ const eslintConfig = defineConfig([
   },
   // Kiracı sitesi: ofis paneli, KARAY konsolu ve KARAY sayfası kodu YOK
   { files: ZONES.siteEngine.files, rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic) },
-  // Ofis paneli ↛ KARAY konsolu / KARAY sayfası
-  { files: ZONES.tenantPanel.files, rules: forbid(ZONES.karayPlatform, ZONES.karayPublic) },
-  // KARAY konsolu ↛ ofis paneli
-  { files: ZONES.karayPlatform.files, rules: forbid(ZONES.tenantPanel) },
-  // KARAY sayfası ↛ ofis paneli / KARAY konsolu
-  { files: ZONES.karayPublic.files, rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform) },
+  // Ofis paneli ↛ KARAY konsolu / KARAY sayfası / kiracı sitesi bileşenleri
+  { files: ZONES.tenantPanel.files, rules: forbid(ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteEngine) },
+  // KARAY konsolu ↛ ofis paneli / kiracı sitesi bileşenleri (site oluşturucu yapılandırma üretir,
+  // siteyi Site Engine çizer; önizleme Theme Engine'in önizlemesiyle yapılır)
+  { files: ZONES.karayPlatform.files, rules: forbid(ZONES.tenantPanel, ZONES.siteEngine) },
+  // KARAY sayfası ↛ ofis paneli / KARAY konsolu / kiracı sitesi bileşenleri
+  { files: ZONES.karayPublic.files, rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.siteEngine) },
   // Sınırların göreli yollarla (../) aşılmaması için üst klasöre göreli içe aktarım kapalı
   {
     files: ["src/**/*.{ts,tsx}"],

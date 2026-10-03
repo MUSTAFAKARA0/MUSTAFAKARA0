@@ -1,4 +1,4 @@
-import type { BrandDraft } from '@/platform/site/schema';
+import type { BrandDraft } from '@/site-config/schema';
 import type { OrgSettings } from '@/platform/tenant/tenant';
 
 /**

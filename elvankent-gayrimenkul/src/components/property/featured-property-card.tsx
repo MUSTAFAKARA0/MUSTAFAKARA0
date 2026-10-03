@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight, Camera, MapPin } from 'lucide-react';
-import { MediaImage } from '@/components/gallery/media-image';
+import { MediaImage } from '@/components/common/media-image';
 import { PropertyBadges } from '@/components/property/property-badges';
 import { FavoriteButton } from '@/components/property/property-actions';
 import { propertyLocation } from '@/components/property/property-card';

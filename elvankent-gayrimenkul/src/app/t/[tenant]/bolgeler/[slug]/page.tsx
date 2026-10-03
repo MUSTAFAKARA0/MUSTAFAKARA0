@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronDown, Info } from 'lucide-react';
 import { PageHeader } from '@/components/common/page-header';
-import { LazyMap } from '@/components/maps/lazy-map';
+import { LazyMap } from '@/components/common/maps/lazy-map';
 import { PropertyGrid } from '@/components/property/property-grid';
 import { Button } from '@/components/ui/button';
 import { formatCompact, formatNumber } from '@/lib/format';
@@ -14,8 +14,8 @@ import { LISTING_TYPE_LABELS } from '@/modules/properties/constants';
 import { findRedirect, getRegionPriceStats, searchProperties } from '@/modules/properties/queries';
 import { followRedirect } from '@/modules/seo/redirects';
 import { regionListingPath } from '@/modules/properties/routes';
-import { requireTenant } from '@/platform/tenant/tenant';
-import { guardSitePage } from '@/platform/site/pages';
+import { requireSiteTenant } from '@/site-config/load';
+import { guardSitePage } from '@/site-config/pages';
 
 export const revalidate = 300;
 
@@ -25,7 +25,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<'/t/[tenant]/bolgeler/[slug]'>): Promise<Metadata> {
   const { tenant: key, slug } = await params;
-  const tenant = await requireTenant(key);
+  const tenant = await requireSiteTenant(key);
   const region = await getRegionPageBySlug(tenant.id, slug);
   if (!region) return { robots: { index: false } };
   const result = await searchProperties(tenant.id, { city: region.citySlug, district: region.districtSlug ?? undefined, neighborhood: region.neighborhoodSlug ?? undefined, sort: 'yeni', page: 1 }, 1);
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: PageProps<'/t/[tenant]/bolgel
 
 export default async function RegionPage({ params }: PageProps<'/t/[tenant]/bolgeler/[slug]'>) {
   const { tenant: key, slug } = await params;
-  const tenant = await requireTenant(key);
+  const tenant = await requireSiteTenant(key);
   await guardSitePage(tenant, 'bolgeler');
   const region = await getRegionPageBySlug(tenant.id, slug);
   if (!region) {

@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { ImagePlus, RefreshCw, Trash2, X } from 'lucide-react';
-import { MediaImage } from '@/components/gallery/media-image';
+import { MediaImage } from '@/components/common/media-image';
 import { prepareFile, startUpload, UploadError } from '@/components/admin/media/upload-engine';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form-controls';

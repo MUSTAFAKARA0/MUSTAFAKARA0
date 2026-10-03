@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { LivePreview } from '@/theme-engine/preview/live-preview';
 import { cn } from '@/lib/utils';
-import type { SiteConfig } from '@/platform/site/schema';
+import type { SiteConfig } from '@/site-config/schema';
 import { THEME_LIST, THEMES } from '@/theme-engine/themes';
 
 /**

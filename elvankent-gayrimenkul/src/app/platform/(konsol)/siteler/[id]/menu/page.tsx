@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { NavigationForm } from '@/components/platform/site/structure-forms';
-import { defaultNavigation } from '@/platform/site/defaults';
+import { defaultNavigation } from '@/site-config/defaults';
 import { getSiteOr404 } from '@/modules/platform/sites';
 import { requireSuperAdminPage } from '@/platform/auth/session';
 

@@ -3,7 +3,7 @@ import { FONT_IDS, THEME_IDS } from '@/theme-engine/ids';
 
 /**
  * Tema ayarlarının şeması (theme_id + theme_settings). Site yapılandırması
- * (src/platform/site/schema.ts) bu parçaları kendi belgesine katar; Theme Engine site
+ * (src/site-config/schema.ts) bu parçaları kendi belgesine katar; Theme Engine site
  * yapılandırmasının geri kalanını (menü, sayfalar, SEO…) bilmez.
  *
  * Not: zod içerir; tarayıcı paketine girmemesi için '@/theme-engine' (index) bunu

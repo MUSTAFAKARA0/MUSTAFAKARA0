@@ -2,7 +2,7 @@ import { Logo } from '@/components/brand/logo';
 import { telHref } from '@/lib/contact-links';
 import { formatPhoneDisplay } from '@/lib/format';
 import { brandingUrl } from '@/modules/media/variants';
-import type { SiteStatus } from '@/platform/site/schema';
+import type { SiteStatus } from '@/site-config/schema';
 import type { Tenant } from '@/platform/tenant/tenant';
 
 /** Bakım modu / henüz yayında olmayan site: ziyaretçiye sade bilgi sayfası (arama motorlarına kapalı) */

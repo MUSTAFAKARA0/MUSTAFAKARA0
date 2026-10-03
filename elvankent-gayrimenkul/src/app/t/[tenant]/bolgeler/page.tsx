@@ -6,13 +6,13 @@ import { PageHeader } from '@/components/common/page-header';
 import { getRegionPages } from '@/modules/content/queries';
 import { getRegionCounts } from '@/modules/properties/queries';
 import { regionListingPath } from '@/modules/properties/routes';
-import { requireTenant } from '@/platform/tenant/tenant';
-import { applyPageSeo, guardSitePage, sitePageSettings } from '@/platform/site/pages';
+import { requireSiteTenant } from '@/site-config/load';
+import { applyPageSeo, guardSitePage, sitePageSettings } from '@/site-config/pages';
 
 export const revalidate = 300;
 
 export async function generateMetadata({ params }: PageProps<'/t/[tenant]/bolgeler'>): Promise<Metadata> {
-  const tenant = await requireTenant((await params).tenant);
+  const tenant = await requireSiteTenant((await params).tenant);
   return applyPageSeo(await sitePageSettings(tenant, 'bolgeler'), {
     title: 'Bölgeler',
     description: `${tenant.settings.display_name} bölge rehberleri: güncel ilanlar ve yayındaki ilanlara göre fiyat aralıkları.`,
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: PageProps<'/t/[tenant]/bolgel
 }
 
 export default async function RegionsIndexPage({ params }: PageProps<'/t/[tenant]/bolgeler'>) {
-  const tenant = await requireTenant((await params).tenant);
+  const tenant = await requireSiteTenant((await params).tenant);
   await guardSitePage(tenant, 'bolgeler');
   const [regions, counts] = await Promise.all([getRegionPages(tenant.id), getRegionCounts(tenant.id)]);
   const districtTotals = new Map<string, { name: string; path: string; count: number }>();

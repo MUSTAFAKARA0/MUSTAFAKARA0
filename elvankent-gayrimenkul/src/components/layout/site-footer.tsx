@@ -16,9 +16,9 @@ import { formatPhoneDisplay } from '@/lib/format';
 import { formatOpeningHours, parseOpeningHours } from '@/modules/content/hours';
 import { brandingUrl } from '@/modules/media/variants';
 import type { Tenant } from '@/platform/tenant/tenant';
-import { isHrefAvailable } from '@/platform/site/nav';
+import { isHrefAvailable } from '@/site-config/nav';
 import { cn } from '@/lib/utils';
-import type { SiteView } from '@/platform/site/load';
+import type { SiteView } from '@/site-config/load';
 import { resolveStyle } from '@/theme-engine/themes';
 
 interface FooterRegion {

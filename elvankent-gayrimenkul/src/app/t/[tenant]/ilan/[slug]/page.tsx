@@ -10,7 +10,7 @@ import { findRedirect, getPublicPropertyBySlug, getSimilarProperties } from '@/m
 import { followRedirect } from '@/modules/seo/redirects';
 import { listingJsonLd } from '@/modules/seo/jsonld';
 import { baseOpenGraph, listingOgImage } from '@/modules/seo/og';
-import { requireTenant } from '@/platform/tenant/tenant';
+import { requireSiteTenant } from '@/site-config/load';
 
 export const revalidate = 300;
 
@@ -20,7 +20,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<'/t/[tenant]/ilan/[slug]'>): Promise<Metadata> {
   const { tenant: key, slug } = await params;
-  const tenant = await requireTenant(key);
+  const tenant = await requireSiteTenant(key);
   const p = await getPublicPropertyBySlug(tenant.id, slug);
   if (!p) return { title: 'İlan bulunamadı', robots: { index: false } };
   const location = [p.neighborhoodName, p.districtName, p.cityName].filter(Boolean).join(', ');
@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: PageProps<'/t/[tenant]/ilan/[
 
 export default async function PropertyPage({ params }: PageProps<'/t/[tenant]/ilan/[slug]'>) {
   const { tenant: key, slug } = await params;
-  const tenant = await requireTenant(key);
+  const tenant = await requireSiteTenant(key);
   const p = await getPublicPropertyBySlug(tenant.id, slug);
   if (!p) {
     const target = await findRedirect(tenant.id, `/ilan/${slug}`);

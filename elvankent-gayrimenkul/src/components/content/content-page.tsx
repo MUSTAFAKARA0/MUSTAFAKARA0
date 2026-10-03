@@ -5,15 +5,15 @@ import { formatDate } from '@/lib/format';
 import { getContentPage } from '@/modules/content/queries';
 import { Markdown, markdownToPlainText } from '@/modules/content/markdown';
 import type { PageKey } from '@/modules/content/default-pages';
-import { requireTenant } from '@/platform/tenant/tenant';
-import { applyPageSeo, guardSitePage, sitePageSettings } from '@/platform/site/pages';
-import type { PageKey as SitePageKey } from '@/platform/site/schema';
+import { requireSiteTenant } from '@/site-config/load';
+import { applyPageSeo, guardSitePage, sitePageSettings } from '@/site-config/pages';
+import type { PageKey as SitePageKey } from '@/site-config/schema';
 
 /** KARAY › Sayfalar ile yönetilen içerik sayfaları (yasal metinler her zaman yayındadır) */
 const MANAGED: Partial<Record<PageKey, SitePageKey>> = { about: 'hakkimizda', services: 'hizmetlerimiz' };
 
 export async function contentPageMetadata(tenantKey: string, key: PageKey): Promise<Metadata> {
-  const tenant = await requireTenant(tenantKey);
+  const tenant = await requireSiteTenant(tenantKey);
   const page = await getContentPage(tenant, key);
   const managed = MANAGED[key];
   const settings = managed ? await sitePageSettings(tenant, managed) : undefined;
@@ -26,7 +26,7 @@ export async function contentPageMetadata(tenantKey: string, key: PageKey): Prom
 
 /** Yönetim panelinden düzenlenebilen sayfalar (Hakkımızda, KVKK, gizlilik...) */
 export async function ContentPageView({ tenantKey, pageKey, children }: { tenantKey: string; pageKey: PageKey; children?: React.ReactNode }) {
-  const tenant = await requireTenant(tenantKey);
+  const tenant = await requireSiteTenant(tenantKey);
   const managed = MANAGED[pageKey];
   const settings = managed ? await guardSitePage(tenant, managed) : undefined;
   const page = await getContentPage(tenant, pageKey);

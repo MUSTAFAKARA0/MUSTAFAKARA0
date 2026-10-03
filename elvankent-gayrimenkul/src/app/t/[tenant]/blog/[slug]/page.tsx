@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { ArrowRight, Clock } from 'lucide-react';
 import { Breadcrumbs } from '@/components/common/breadcrumbs';
 import { JsonLd } from '@/components/common/json-ld';
-import { MediaImage } from '@/components/gallery/media-image';
+import { MediaImage } from '@/components/common/media-image';
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/format';
 import { markdownToPlainText, Markdown } from '@/modules/content/markdown';
@@ -14,8 +14,8 @@ import { findRedirect } from '@/modules/properties/queries';
 import { followRedirect } from '@/modules/seo/redirects';
 import { articleJsonLd } from '@/modules/seo/jsonld';
 import { baseOpenGraph, siteOgImage } from '@/modules/seo/og';
-import { requireTenant } from '@/platform/tenant/tenant';
-import { guardSitePage } from '@/platform/site/pages';
+import { requireSiteTenant } from '@/site-config/load';
+import { guardSitePage } from '@/site-config/pages';
 
 export const revalidate = 300;
 
@@ -25,7 +25,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps<'/t/[tenant]/blog/[slug]'>): Promise<Metadata> {
   const { tenant: key, slug } = await params;
-  const tenant = await requireTenant(key);
+  const tenant = await requireSiteTenant(key);
   const post = await getPostBySlug(tenant.id, slug);
   if (!post) return { title: 'Yazı bulunamadı', robots: { index: false } };
   const description = post.seoDescription ?? post.excerpt ?? markdownToPlainText(post.body, 160);
@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: PageProps<'/t/[tenant]/blog/[
 
 export default async function BlogPostPage({ params }: PageProps<'/t/[tenant]/blog/[slug]'>) {
   const { tenant: key, slug } = await params;
-  const tenant = await requireTenant(key);
+  const tenant = await requireSiteTenant(key);
   await guardSitePage(tenant, 'blog');
   const post = await getPostBySlug(tenant.id, slug);
   if (!post) {

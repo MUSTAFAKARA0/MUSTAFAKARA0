@@ -17,11 +17,11 @@ import { followRedirect } from '@/modules/seo/redirects';
 import { resolveListingRoute } from '@/modules/properties/routes';
 import { getSearchOptions } from '@/modules/properties/search-options';
 import { baseOpenGraph, siteOgImage } from '@/modules/seo/og';
-import { requireTenant } from '@/platform/tenant/tenant';
+import { requireSiteTenant } from '@/site-config/load';
 
 export async function generateMetadata({ params, searchParams }: PageProps<'/t/[tenant]/[slug]'>): Promise<Metadata> {
   const { tenant: key, slug } = await params;
-  const tenant = await requireTenant(key);
+  const tenant = await requireSiteTenant(key);
   const route = await resolveListingRoute(slug, tenant.settings.service_area);
   if (!route) return {};
   const query = parseListingQuery(await searchParams, route.preset);
@@ -42,7 +42,7 @@ export async function generateMetadata({ params, searchParams }: PageProps<'/t/[
 
 export default async function ListingPage({ params, searchParams }: PageProps<'/t/[tenant]/[slug]'>) {
   const { tenant: key, slug } = await params;
-  const tenant = await requireTenant(key);
+  const tenant = await requireSiteTenant(key);
   const route = await resolveListingRoute(slug, tenant.settings.service_area);
 
   if (!route) {

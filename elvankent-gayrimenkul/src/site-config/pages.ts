@@ -1,8 +1,8 @@
 import 'server-only';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getSiteView, type SiteView } from '@/platform/site/load';
-import type { PageKey, PageSettings } from '@/platform/site/schema';
+import { getSiteView, type SiteView } from '@/site-config/load';
+import type { PageKey, PageSettings } from '@/site-config/schema';
 import type { Tenant } from '@/platform/tenant/tenant';
 
 /** Sayfa sitede açık mı (KARAY › Sayfalar'dan gizlenmiş veya özelliği kapalıysa hayır) */
