@@ -50,8 +50,8 @@ export default async function OfficeDesignPreviewPage({ searchParams }: PageProp
         description="Tasarımı yayınlamadan sitenizin gerçek ilanları ve içerikleriyle görün. Önizleme hiçbir şeyi değiştirmez."
         actions={
           <Button asChild variant="outline" size="sm">
-            <Link href="/admin/tasarim">
-              <ArrowLeft /> Site tasarımı
+            <Link href="/admin/site/tasarim">
+              <ArrowLeft /> Site yönetimi › Tasarım
             </Link>
           </Button>
         }

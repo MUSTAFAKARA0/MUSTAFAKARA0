@@ -330,17 +330,23 @@ test('TEST-SITE-08: önemli işlemler denetim kaydına yazılır ve Geçmiş sek
   await expect(page.locator('ol').last().locator('li')).not.toHaveCount(0);
 });
 
-test('TEST-SITE-09: kiracı kullanıcısı Site Kontrol Merkezi’ne ve site_* işlemlerine erişemez', async ({ page }) => {
+test('TEST-SITE-09: kiracı kullanıcısı Site Kontrol Merkezi’ne ve KARAY site işlemlerine erişemez', async ({ page }) => {
   const c = S.userClient!;
-  // Sunucu (RLS + assert_super_admin): taslak yazma, yayın, durum, bayrak, geri alma reddedilir
-  expect((await c.rpc('site_save_draft', { p_org: S.orgId!, p_section: 'theme', p_value: 'atlas' })).error).not.toBeNull();
-  expect((await c.rpc('site_publish', { p_org: S.orgId! })).error).not.toBeNull();
+  // P0.1: taslak/yayın/geri alma ofise (settings.manage) YALNIZCA kendi sitesi için açıktır
+  // (ayrıntı: office-site.spec.ts, rls.test.mjs). Durum, özellik bayrakları ve platform işlemleri KARAY'a aittir.
+  const other = (await service!.from('organizations').select('id').neq('id', S.orgId!).eq('is_default', true).maybeSingle()).data?.id;
+  expect(other).toBeTruthy();
+  const before = (await service!.from('site_configs').select('draft, published, published_version').eq('organization_id', other!).single()).data;
+  expect((await c.rpc('site_save_draft', { p_org: other!, p_section: 'theme', p_value: 'atlas' })).error).not.toBeNull();
+  expect((await c.rpc('site_publish', { p_org: other! })).error).not.toBeNull();
+  expect((await c.rpc('site_rollback', { p_org: other!, p_version: 1 })).error).not.toBeNull();
+  expect((await c.rpc('site_discard_draft', { p_org: other! })).error).not.toBeNull();
+  expect((await service!.from('site_configs').select('draft, published, published_version').eq('organization_id', other!).single()).data).toEqual(before);
   expect((await c.rpc('site_set_status', { p_org: S.orgId!, p_status: 'maintenance' })).error).not.toBeNull();
   expect((await c.rpc('site_set_features', { p_org: S.orgId!, p_overrides: { crm: true } })).error).not.toBeNull();
-  expect((await c.rpc('site_rollback', { p_org: S.orgId!, p_version: 1 })).error).not.toBeNull();
   expect((await c.rpc('platform_sites')).error).not.toBeNull();
-  // Sürüm geçmişi yalnızca süper admin; doğrudan tablo yazımı yok
-  expect((await c.from('site_config_revisions').select('version').eq('organization_id', S.orgId!)).data ?? []).toEqual([]);
+  // Başka kiracının sürüm geçmişi okunamaz; doğrudan tablo yazımı yok
+  expect((await c.from('site_config_revisions').select('version').eq('organization_id', other!)).data ?? []).toEqual([]);
   const upd = await c.from('site_configs').update({ site_status: 'maintenance' }).eq('organization_id', S.orgId!).select('organization_id');
   expect(upd.data ?? []).toEqual([]);
   // Başka kiracının (Elvankent) site kaydı okunamaz

@@ -10,13 +10,13 @@ export type ActionResult<T = null> =
   | { ok: false; error: string; code?: string; fieldErrors?: Record<string, string[]> };
 
 export class ActionError extends Error {
-  constructor(
-    message: string,
-    public readonly code?: string,
-    public readonly fieldErrors?: Record<string, string[]>,
-  ) {
+  readonly code?: string;
+  readonly fieldErrors?: Record<string, string[]>;
+  constructor(message: string, code?: string, fieldErrors?: Record<string, string[]>) {
     super(message);
     this.name = 'ActionError';
+    this.code = code;
+    this.fieldErrors = fieldErrors;
   }
 }
 
@@ -72,6 +72,7 @@ const DB_MESSAGES: Record<string, string> = {
   neighborhood_district_mismatch: 'Seçilen mahalle bu ilçeye ait değil.',
   not_found: 'Kayıt bulunamadı.',
   forbidden: 'Bu işlem için yetkiniz yok.',
+  family_not_allowed: 'Bu tasarım ailesi siteniz için açık değil.',
 };
 
 export function mapDbError(error: DbErrorLike): string {

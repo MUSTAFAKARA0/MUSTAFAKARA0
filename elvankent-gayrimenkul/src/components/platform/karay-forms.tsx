@@ -5,7 +5,7 @@ import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Checkbox, Field, Input, Select, Textarea } from '@/components/ui/form-controls';
-import { SaveBar } from '@/components/platform/site/site-actions';
+import { SaveBar } from '@/components/site-editor/site-actions';
 import { LEAD_STATUS } from '@/modules/karay/lead-status';
 import { updateKarayLead, updateKarayProfile, type KarayProfileInput } from '@/app/actions/karay-admin';
 

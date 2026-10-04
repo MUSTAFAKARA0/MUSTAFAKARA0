@@ -25,7 +25,7 @@ export function FamilyAccessForm({ orgId, available, granted, families }: { orgI
         <KeyRound className="size-4.5 text-primary-ink" aria-hidden /> Ofisin seçebileceği tasarımlar
       </h2>
       <p className="mt-1 max-w-2xl text-[13.5px] text-muted-foreground">
-        Ofis yöneticisi kendi panelindeki <strong className="font-semibold text-foreground">Site tasarımı</strong> sayfasında yalnızca burada işaretli aileleri görür ve sitesine uygulayabilir.
+        Ofis yöneticisi kendi panelindeki <strong className="font-semibold text-foreground">Site yönetimi › Tasarım</strong> sekmesinde yalnızca burada işaretli aileleri görür ve sitesine uygulayabilir.
       </p>
       {!available ? (
         <p className="mt-4 rounded-xl bg-warning-soft p-3 text-[13.5px] text-warning">Bu özellik için 20261004000001_design_family_access migration&apos;ı veritabanına uygulanmalıdır.</p>

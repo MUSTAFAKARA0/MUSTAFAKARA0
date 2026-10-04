@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import { SaveBar } from '@/components/platform/site/site-actions';
+import { SaveBar } from '@/components/site-editor/site-actions';
 import { setSiteFeatures } from '@/app/actions/site-builder';
 import { cn } from '@/lib/utils';
 import type { FeatureKey, FeatureOverrides } from '@/site-config/schema';

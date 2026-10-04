@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { Panel } from '@/components/panel/ui';
 import { BrandingImageField } from '@/components/panel/branding-image-field';
-import { BrandForm } from '@/components/platform/site/brand-form';
+import { BrandForm } from '@/components/site-editor/brand-form';
 import { brandingUrl } from '@/modules/media/variants';
+import { brandValues } from '@/site-editor/brand-values';
 import { getSiteOr404 } from '@/modules/platform/sites';
 import { requireSuperAdminPage } from '@/platform/auth/session';
 
@@ -17,7 +18,6 @@ export default async function Page({ params }: PageProps<'/platform/siteler/[id]
   const s = site.brand;
   const pending = Object.keys(site.draft.brand);
   const pendingHint = (col: string) => (pending.includes(col) ? ' · Taslakta: yayınlanınca canlıya geçer.' : '');
-  const v = (x: string | null | undefined) => x ?? '';
   return (
     <div className="space-y-6">
       <Panel title="Logo ve görseller" description="Görseller taslağa yüklenir; önizlemede hemen, canlı sitede yayınlayınca görünür. Dosyalar sunucuda doğrulanır, yeniden kodlanır ve uygun boyuta küçültülür.">
@@ -37,30 +37,8 @@ export default async function Page({ params }: PageProps<'/platform/siteler/[id]
         </div>
       </Panel>
       <BrandForm
-        orgId={site.org.id}
         pendingFields={pending}
-        initial={{
-          display_name: s.display_name,
-          short_name: v(s.short_name),
-          legal_name: v(s.legal_name),
-          tagline: v(s.tagline),
-          description: v(s.description),
-          phone: v(s.phone),
-          whatsapp: v(s.whatsapp),
-          email: v(s.email),
-          address_line: v(s.address_line),
-          address_district: v(s.address_district),
-          address_city: v(s.address_city),
-          maps_url: v(s.maps_url),
-          instagram_url: v(s.instagram_url),
-          facebook_url: v(s.facebook_url),
-          x_url: v(s.x_url),
-          youtube_url: v(s.youtube_url),
-          linkedin_url: v(s.linkedin_url),
-          tiktok_url: v(s.tiktok_url),
-          primary_color: s.primary_color,
-          accent_color: s.accent_color,
-        }}
+        initial={brandValues(s)}
       />
     </div>
   );

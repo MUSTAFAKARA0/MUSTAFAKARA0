@@ -3,34 +3,21 @@
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
 import Link from '@/components/common/intent-link';
-import { confirmLeave } from '@/components/platform/site/dirty-guard';
+import { confirmLeave } from '@/components/site-editor/dirty-guard';
 import { cn } from '@/lib/utils';
 
-export const SITE_TABS = [
-  { slug: '', label: 'Genel' },
-  { slug: 'marka', label: 'Marka' },
-  { slug: 'tema', label: 'Tema' },
-  { slug: 'renkler', label: 'Renkler' },
-  { slug: 'tipografi', label: 'Tipografi' },
-  { slug: 'header', label: 'Header' },
-  { slug: 'ana-sayfa', label: 'Ana Sayfa' },
-  { slug: 'sayfalar', label: 'Sayfalar' },
-  { slug: 'menu', label: 'Menü' },
-  { slug: 'footer', label: 'Footer' },
-  { slug: 'seo', label: 'SEO' },
-  { slug: 'alan-adi', label: 'Domain' },
-  { slug: 'ozellikler', label: 'Özellikler' },
-  { slug: 'gecmis', label: 'Geçmiş' },
-] as const;
+export interface SiteTab {
+  slug: string;
+  label: string;
+}
 
 /**
- * Site Kontrol Merkezi sekmeleri. Etkin sekme dolgulu; yayınlanmamış değişikliği olan
+ * Site editörü sekmeleri (KARAY Site Kontrol Merkezi ve ofis /admin/site ortak). Etkin sekme dolgulu; yayınlanmamış değişikliği olan
  * sekmede turuncu nokta. Telefonda yatay kaydırılır (sayfa taşmaz) ve etkin sekme
  * görünür alana kaydırılır. Kaydedilmemiş form varken sekme değiştirmek onay ister.
  */
-export function SiteTabs({ orgId, pending }: { orgId: string; pending: string[] }) {
+export function SiteTabs({ base, tabs, pending }: { base: string; tabs: readonly SiteTab[]; pending: string[] }) {
   const pathname = usePathname();
-  const base = `/platform/siteler/${orgId}`;
   const activeRef = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
     activeRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -38,7 +25,7 @@ export function SiteTabs({ orgId, pending }: { orgId: string; pending: string[] 
   return (
     <nav aria-label="Site ayarları" className="scrollbar-none -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       <ul className="flex min-w-max gap-1 rounded-2xl border border-border bg-surface p-1 shadow-xs">
-        {SITE_TABS.map((t) => {
+        {tabs.map((t) => {
           const href = t.slug ? `${base}/${t.slug}` : base;
           const active = t.slug ? pathname.startsWith(href) : pathname === base;
           const isPending = pending.includes(t.slug);

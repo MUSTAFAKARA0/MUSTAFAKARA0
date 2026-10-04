@@ -14,7 +14,8 @@ import {
   td,
   th,
 } from "@/components/panel/ui";
-import { PreviewButton } from "@/components/platform/site/site-actions";
+import { PreviewButton } from "@/components/site-editor/site-actions";
+import { createSitePreviewLink } from "@/app/actions/site-builder";
 import { SiteRowMenu } from "@/components/platform/site/site-row-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -157,7 +158,7 @@ export default async function SitesPage() {
                     <td className={`${td} text-right`}>
                       <div className="flex justify-end gap-1.5">
                         {s.org_status === "active" && (
-                          <PreviewButton orgId={s.organization_id} size="xs" />
+                          <PreviewButton action={createSitePreviewLink.bind(null, s.organization_id)} size="xs" />
                         )}
                         <Button asChild size="xs">
                           <Link href={`/platform/siteler/${s.organization_id}`}>
@@ -220,7 +221,7 @@ export default async function SitesPage() {
                       </Link>
                     </Button>
                     {s.org_status === "active" && (
-                      <PreviewButton orgId={s.organization_id} size="sm" />
+                      <PreviewButton action={createSitePreviewLink.bind(null, s.organization_id)} size="sm" />
                     )}
                     <SiteRowMenu
                       orgId={s.organization_id}

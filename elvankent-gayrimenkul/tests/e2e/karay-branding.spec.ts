@@ -186,8 +186,9 @@ test('TEST-KARAY-03: Elvankent kullanıcısı KARAY Super Admin alanına erişem
   expect(api.status()).toBe(403);
   const c = S.eClient!;
   for (const [fn, args] of [
-    ['site_save_draft', { p_org: S.elvId!, p_section: 'brand', p_value: { display_name: 'Hack' } }],
-    ['site_publish', { p_org: S.elvId! }],
+    // P0.1: ofis (settings.manage) yalnızca KENDİ sitesinin taslağını/yayınını yönetir; başka kiracınınkini değil
+    ['site_save_draft', { p_org: S.bId!, p_section: 'brand', p_value: { display_name: 'Hack' } }],
+    ['site_publish', { p_org: S.bId! }],
     ['site_set_status', { p_org: S.elvId!, p_status: 'maintenance' }],
     ['platform_sites', {}],
     ['platform_organizations', {}],
@@ -291,7 +292,7 @@ test('TEST-KARAY-08: Taslaktaki marka (ad, renk, logo) canlı siteyi değiştirm
   await saveDraft(page);
   // Kontrol merkezi: yayınlanmamış değişiklik ve bölümleri görünür
   await page.goto(tabB());
-  await expect(page.getByText('Taslakta yayınlanmamış değişiklikler var')).toBeVisible();
+  await expect(page.getByText('Taslak değişiklikler var')).toBeVisible();
   await expect(page.getByText('Marka, Renkler, Header · önizleyip yayınlayın')).toBeVisible();
 
   const b = await liveB(browser);

@@ -644,17 +644,22 @@ describe('Web sitesi yapılandırması (site_configs) ve oturum bağlamı', { sk
       assert.ifError(rows.error);
       assert.deepEqual(rows.data.map((r) => r.organization_id), [T.A.orgId], `${role}: başka kiracının site kaydı göründü`);
       assert.ok(denied(await c.from('site_configs').update({ site_status: 'maintenance' }).eq('organization_id', T.A.orgId).select('organization_id')), `${role}: doğrudan yazabildi`);
-      assert.ok(denied(await c.from('site_config_revisions').select('version')), `${role}: sürüm geçmişi göründü`);
+      // Sürüm geçmişi: yalnızca site ayarı yetkisi olan roller (sahip, yönetici) ve yalnızca kendi ofisi
+      const rev = await c.from('site_config_revisions').select('organization_id');
+      if (role === 'owner' || role === 'admin') assert.ok(!rev.error && rev.data.every((r) => r.organization_id === T.A.orgId), `${role}: başka kiracının sürümü göründü`);
+      else assert.ok(denied(rev), `${role}: sürüm geçmişi göründü`);
     }
   });
 
-  test('kiracı sahibi site_* platform işlemlerini çağıramaz (kendi ofisi için bile)', async () => {
+  // P0.1: taslak/yayın/geri alma ofise (settings.manage) açıldı — yalnızca KENDİ sitesi için; ayrıntı
+  // "P0.1: ofis site yönetimi" bölümünde. Durum, özellikler ve platform işlemleri KARAY'a aittir.
+  test('kiracı sahibi KARAY işlemlerini (durum, özellik, platform) ve başka kiracının taslak/yayın işlemlerini çağıramaz', async () => {
     const ow = T.A.users.owner.client;
     for (const [fn, args] of [
-      ['site_save_draft', { p_org: T.A.orgId, p_section: 'theme', p_value: 'atlas' }],
-      ['site_publish', { p_org: T.A.orgId }],
-      ['site_rollback', { p_org: T.A.orgId, p_version: 1 }],
-      ['site_discard_draft', { p_org: T.A.orgId }],
+      ['site_save_draft', { p_org: T.B.orgId, p_section: 'theme', p_value: 'atlas' }],
+      ['site_publish', { p_org: T.B.orgId }],
+      ['site_rollback', { p_org: T.B.orgId, p_version: 1 }],
+      ['site_discard_draft', { p_org: T.B.orgId }],
       ['site_set_status', { p_org: T.A.orgId, p_status: 'maintenance' }],
       ['site_set_features', { p_org: T.A.orgId, p_overrides: { crm: true } }],
       ['platform_sites', {}],
@@ -917,5 +922,119 @@ describe('PERMISSION: tasarım ailesi yetkileri (design_family_settings, organiz
     // B kiracısının yayını etkilenmedi
     const b = (await service.from('site_configs').select('published').eq('organization_id', T.B.orgId).single()).data;
     assert.notEqual(b.published?.style?.origin?.family, 'sinematik-vitrin');
+  });
+});
+
+describe('P0.1: ofis site yönetimi (taslak → yayın → geri alma, kendi sitesi)', { skip }, () => {
+  let platformAdmin;
+  const site = async (org) => (await service.from('site_configs').select('draft, published, published_version, has_unpublished_changes').eq('organization_id', org).single()).data;
+  const style = (family) => ({ hero: 'cinematic', origin: { siteType: 'real-estate-office', family, homepage: 'family' } });
+  before(async () => {
+    if (missing) return;
+    platformAdmin = await makeUser('officesiteadmin');
+    assert.ifError((await service.from('profiles').update({ is_super_admin: true }).eq('id', platformAdmin.id)).error);
+    assert.ifError((await platformAdmin.client.rpc('platform_set_org_design_families', { p_org: T.A.orgId, p_families: ['sinematik-vitrin', 'editoryal-luks'] })).error);
+  });
+
+  test('settings.manage (sahip/yönetici) kendi sitesinin taslağını kaydeder; canlı site yayına kadar değişmez; yayınlar ve geri alır', async () => {
+    const ow = T.A.users.owner.client;
+    // Önce bekleyen başka değişiklik kalmasın
+    assert.ifError((await ow.rpc('site_discard_draft', { p_org: T.A.orgId })).error);
+    const before = await site(T.A.orgId);
+    const nav = [{ id: 'p01', label: 'P01 Menü', href: '/ilanlar', visible: true, children: [] }];
+    assert.ifError((await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'navigation', p_value: nav })).error);
+    let row = await site(T.A.orgId);
+    assert.deepEqual(row.draft.navigation, nav);
+    assert.deepEqual(row.published, before.published, 'taslak kaydı canlıyı değiştirdi');
+    assert.equal(row.has_unpublished_changes, true);
+    // Herkese açık yapılandırma hâlâ eski (yalnızca yayınlanan)
+    const pub = await anon.rpc('public_site_config', { p_org: T.A.orgId });
+    assert.notDeepEqual(pub.data[0].published?.navigation ?? null, nav, 'taslak herkese açık yapılandırmaya sızdı');
+    const v = await T.A.users.admin.client.rpc('site_publish', { p_org: T.A.orgId, p_note: 'ofis yayını' });
+    assert.ifError(v.error);
+    row = await site(T.A.orgId);
+    assert.equal(row.published_version, before.published_version + 1);
+    assert.deepEqual(row.published.navigation, nav);
+    // Sürüm geçmişi okunur ve geri alınır
+    const revs = await ow.from('site_config_revisions').select('version').eq('organization_id', T.A.orgId);
+    assert.ok(revs.data.some((r) => r.version === v.data));
+    if (before.published_version > 0) {
+      assert.ifError((await ow.rpc('site_rollback', { p_org: T.A.orgId, p_version: before.published_version })).error);
+      row = await site(T.A.orgId);
+      assert.deepEqual(row.published.navigation ?? null, before.published.navigation ?? null, 'geri alma eski menüyü getirmedi');
+    }
+    const logs = await service.from('audit_logs').select('action, actor_id').eq('organization_id', T.A.orgId).in('action', ['site.draft_saved', 'site.published']);
+    assert.ok(logs.data.some((l) => l.action === 'site.published' && l.actor_id === T.A.users.admin.id), 'ofis yayını denetime yazılmadı');
+  });
+
+  test('site ayarı yetkisi olmayan roller (danışman, editör, izleyici) taslak/yayın/geri alma yapamaz', async () => {
+    const before = await site(T.A.orgId);
+    for (const role of ['agent', 'editor', 'viewer']) {
+      const c = T.A.users[role].client;
+      assert.ok((await c.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'theme', p_value: 'atlas' })).error, `${role}: taslak yazdı`);
+      assert.ok((await c.rpc('site_publish', { p_org: T.A.orgId })).error, `${role}: yayınladı`);
+      assert.ok((await c.rpc('site_rollback', { p_org: T.A.orgId, p_version: 1 })).error, `${role}: geri aldı`);
+      assert.ok((await c.rpc('site_discard_draft', { p_org: T.A.orgId })).error, `${role}: taslağı sildi`);
+    }
+    const after = await site(T.A.orgId);
+    assert.deepEqual(after, before);
+  });
+
+  test('başka kiracının sitesi: kimlik değiştirilerek (organization_id manipülasyonu) okunamaz ve yazılamaz', async () => {
+    const before = await site(T.B.orgId);
+    for (const role of ['owner', 'admin']) {
+      const c = T.A.users[role].client;
+      assert.ok((await c.rpc('site_save_draft', { p_org: T.B.orgId, p_section: 'theme', p_value: 'atlas' })).error, `${role}: B'ye taslak yazdı`);
+      assert.ok((await c.rpc('site_publish', { p_org: T.B.orgId })).error, `${role}: B'yi yayınladı`);
+      assert.ok((await c.rpc('site_rollback', { p_org: T.B.orgId, p_version: 1 })).error, `${role}: B'yi geri aldı`);
+      assert.ok((await c.rpc('site_discard_draft', { p_org: T.B.orgId })).error, `${role}: B'nin taslağını sildi`);
+      assert.ok(denied(await c.from('site_configs').select('draft').eq('organization_id', T.B.orgId)), `${role}: B'nin taslağını okudu`);
+      assert.ok(denied(await c.from('site_config_revisions').select('version').eq('organization_id', T.B.orgId)), `${role}: B'nin sürümlerini okudu`);
+    }
+    // Üyeliği olmayan kullanıcı hiçbir siteyi düzenleyemez
+    assert.ok((await outsider.client.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'theme', p_value: 'atlas' })).error, 'üye olmayan taslak yazdı');
+    assert.ok((await anon.rpc('site_publish', { p_org: T.A.orgId })).error, 'anonim yayınladı');
+    assert.deepEqual(await site(T.B.orgId), before);
+  });
+
+  test('tasarım ailesi: ofis yalnızca izinli aileyi taslağa yazabilir; mevcut (KARAY atadığı) aile korunarak düzenlenebilir; KARAY her aileyi yazar', async () => {
+    const ow = T.A.users.owner.client;
+    assert.ifError((await ow.rpc('site_discard_draft', { p_org: T.A.orgId })).error);
+    const r1 = await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'style', p_value: style('kurumsal-portfoy') });
+    assert.ok(r1.error, 'izinsiz aile taslağa yazıldı');
+    assert.equal(r1.error.message, 'family_not_allowed');
+    assert.ifError((await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'style', p_value: style('sinematik-vitrin') })).error);
+    // Ailesiz görünüm ayarı serbesttir
+    assert.ifError((await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'style', p_value: { hero: 'split' } })).error);
+    // KARAY izinsiz bir aileyi atayabilir; ofis o aileyi koruyarak varyant değiştirebilir
+    assert.ifError((await platformAdmin.client.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'style', p_value: style('kurumsal-portfoy') })).error);
+    assert.ifError((await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'style', p_value: { ...style('kurumsal-portfoy'), hero: 'split' } })).error);
+    // İzinli ama global kapatılan aile de reddedilir (sitenin mevcut ailesi değilse)
+    assert.ifError((await ow.rpc('site_discard_draft', { p_org: T.A.orgId })).error);
+    const row = await site(T.A.orgId);
+    assert.notEqual(row.published?.style?.origin?.family, 'editoryal-luks');
+    assert.ifError((await platformAdmin.client.rpc('platform_set_design_family', { p_family: 'editoryal-luks', p_enabled: false })).error);
+    try {
+      const r2 = await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'style', p_value: style('editoryal-luks') });
+      assert.ok(r2.error, 'global kapalı aile taslağa yazıldı');
+    } finally {
+      await service.from('design_family_settings').delete().eq('family_id', 'editoryal-luks');
+    }
+    // Açılınca yazılabilir
+    assert.ifError((await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'style', p_value: style('editoryal-luks') })).error);
+    assert.ifError((await ow.rpc('site_discard_draft', { p_org: T.A.orgId })).error);
+  });
+
+  test('ofis KARAY platform işlemlerini çağıramaz: durum, özellikler, aile izinleri, global katalog, plan, süper admin', async () => {
+    for (const role of ['owner', 'admin']) {
+      const c = T.A.users[role].client;
+      assert.ok((await c.rpc('site_set_status', { p_org: T.A.orgId, p_status: 'maintenance' })).error, `${role}: durum değiştirdi`);
+      assert.ok((await c.rpc('site_set_features', { p_org: T.A.orgId, p_overrides: { crm: true } })).error, `${role}: özellik açtı`);
+      assert.ok((await c.rpc('platform_set_org_design_families', { p_org: T.A.orgId, p_families: ['kurumsal-portfoy'] })).error, `${role}: kendine aile izni verdi`);
+      assert.ok((await c.rpc('platform_set_design_family', { p_family: 'kurumsal-portfoy', p_enabled: false })).error, `${role}: global kataloğu değiştirdi`);
+      assert.ok(denied(await c.from('profiles').update({ is_super_admin: true }).eq('id', T.A.users[role].id).select('id')) || (await service.from('profiles').select('is_super_admin').eq('id', T.A.users[role].id).single()).data.is_super_admin === false, `${role}: süper admin oldu`);
+    }
+    const row = await service.from('site_configs').select('site_status, feature_overrides').eq('organization_id', T.A.orgId).single();
+    assert.equal(row.data.site_status, 'active');
   });
 });

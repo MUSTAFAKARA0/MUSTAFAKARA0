@@ -22,11 +22,11 @@ import { cn } from "@/lib/utils";
 import {
   LivePreview,
   type Brand,
-} from "@/components/platform/site/appearance-forms";
+} from "@/components/site-editor/appearance-forms";
 import {
   SaveBar,
   useSectionSave,
-} from "@/components/platform/site/site-actions";
+} from "@/components/site-editor/site-actions";
 import {
   DEFAULT_HOME_SECTIONS,
   OPTIONAL_HOME_SECTIONS,
@@ -121,11 +121,9 @@ function RowControls({
 
 // --------------------------------------------------------------------------- Header
 export function HeaderForm({
-  orgId,
   initial,
   preview,
 }: {
-  orgId: string;
   initial: HeaderConfig;
   preview: {
     draft: SiteConfig;
@@ -139,7 +137,7 @@ export function HeaderForm({
   const [cta, setCta] = useState(
     initial.cta ?? { label: "Değerleme talebi", href: "/degerleme" },
   );
-  const { save, pending } = useSectionSave(orgId, "header");
+  const { save, pending } = useSectionSave("header");
   const value = { ...h, cta: ctaOn ? cta : undefined };
   const dirty =
     JSON.stringify(value) !== JSON.stringify({ ...initial, cta: initial.cta });
@@ -400,17 +398,15 @@ function LinkEditor({
 }
 
 export function NavigationForm({
-  orgId,
   initial,
   defaults,
 }: {
-  orgId: string;
   initial: NavItemConfig[] | null;
   defaults: NavItemConfig[];
 }) {
   const start = initial ?? defaults;
   const [items, setItems] = useState<NavItemConfig[]>(start);
-  const { save, pending } = useSectionSave(orgId, "navigation");
+  const { save, pending } = useSectionSave("navigation");
   const dirty =
     JSON.stringify(items) !== JSON.stringify(start) || initial === null;
   const update = (i: number, patch: Partial<NavItemConfig>) =>
@@ -579,16 +575,14 @@ const SECTION_NAMES: Record<HomeSectionType, string> = {
 };
 
 export function HomeForm({
-  orgId,
   initial,
 }: {
-  orgId: string;
   initial: HomeSectionConfig[] | null;
 }) {
   const start = initial ?? DEFAULT_HOME_SECTIONS;
   const [sections, setSections] = useState<HomeSectionConfig[]>(start);
   const [open, setOpen] = useState<string | null>(null);
-  const { save, pending } = useSectionSave(orgId, "home");
+  const { save, pending } = useSectionSave("home");
   const dirty =
     JSON.stringify(sections) !== JSON.stringify(start) || initial === null;
   const update = (i: number, patch: Partial<HomeSectionConfig>) =>
@@ -803,16 +797,14 @@ export function HomeForm({
 
 // --------------------------------------------------------------------------- Footer
 export function FooterForm({
-  orgId,
   initial,
   defaults,
 }: {
-  orgId: string;
   initial: FooterConfig;
   defaults: NonNullable<FooterConfig["columns"]>;
 }) {
   const [f, setF] = useState<FooterConfig>(initial);
-  const { save, pending } = useSectionSave(orgId, "footer");
+  const { save, pending } = useSectionSave("footer");
   const columns = f.columns ?? [];
   const dirty = JSON.stringify(f) !== JSON.stringify(initial);
   const setColumns = (cols: NonNullable<FooterConfig["columns"]>) =>
@@ -1068,15 +1060,13 @@ const PAGE_META: Record<PageKey, { name: string; path: string }> = {
 };
 
 export function PagesForm({
-  orgId,
   initial,
 }: {
-  orgId: string;
   initial: Partial<Record<PageKey, PageSettings>>;
 }) {
   const [pages, setPages] = useState(initial);
   const [open, setOpen] = useState<PageKey | null>(null);
-  const { save, pending } = useSectionSave(orgId, "pages");
+  const { save, pending } = useSectionSave("pages");
   const dirty = JSON.stringify(pages) !== JSON.stringify(initial);
   const get = (k: PageKey): PageSettings =>
     pages[k] ?? {
@@ -1217,16 +1207,14 @@ export function PagesForm({
 
 // --------------------------------------------------------------------------- SEO
 export function SeoForm({
-  orgId,
   initial,
   fallback,
 }: {
-  orgId: string;
   initial: SeoConfig;
   fallback: { title: string; description: string };
 }) {
   const [s, setS] = useState<SeoConfig>(initial);
-  const { save, pending } = useSectionSave(orgId, "seo");
+  const { save, pending } = useSectionSave("seo");
   const dirty = JSON.stringify(s) !== JSON.stringify(initial);
   const title = s.title ?? fallback.title;
   const description = s.description ?? fallback.description;

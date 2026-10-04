@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { brandingUrl } from '@/modules/media/variants';
-import { HeaderForm } from '@/components/platform/site/structure-forms';
+import { HeaderForm } from '@/components/site-editor/structure-forms';
 import { getSiteOr404 } from '@/modules/platform/sites';
 import { requireSuperAdminPage } from '@/platform/auth/session';
 
@@ -11,7 +11,6 @@ export default async function Page({ params }: PageProps<'/platform/siteler/[id]
   const site = await getSiteOr404(session, (await params).id);
   return (
     <HeaderForm
-      orgId={site.org.id}
       initial={site.draft.header}
       preview={{
         draft: site.draft,

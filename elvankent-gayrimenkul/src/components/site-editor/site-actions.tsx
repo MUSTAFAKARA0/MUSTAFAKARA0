@@ -1,21 +1,52 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { createContext, useContext, useState, useTransition, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Eye, Rocket, Save, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Field, Input } from '@/components/ui/form-controls';
 import { cn } from '@/lib/utils';
-import { hasUnsavedChanges, useDirtyGuard } from '@/components/platform/site/dirty-guard';
-import { createSitePreviewLink, discardSiteDraft, publishSite, saveSiteSection } from '@/app/actions/site-builder';
+import { hasUnsavedChanges, useDirtyGuard } from '@/components/site-editor/dirty-guard';
+import type { ActionResult } from '@/platform/actions';
+import type { BrandInput } from '@/site-editor/brand-input';
 import type { SiteSection } from '@/site-config/schema';
 
 type Size = 'xs' | 'sm' | 'md';
 
+/**
+ * Site editörünün yazma işlemleri. Formlar (Header, Menü, Footer, Marka, Tasarım…) KARAY Site
+ * Builder ve ofis paneli /admin/site için AYNI bileşenlerdir; hangi sunucu işleminin çağrılacağını
+ * bu bağlam belirler:
+ *   KARAY  → app/actions/site-builder (süper admin; site kimliği sunucuda bağlanır: .bind(null, orgId))
+ *   ofis   → app/actions/admin-site   (settings.manage; organizasyon OTURUMDAN, istemciden alınmaz)
+ * Her iki yol da aynı servise (@/site-editor/service) ve aynı veritabanı fonksiyonlarına gider.
+ */
+export interface SiteEditorActions {
+  saveSection: (section: SiteSection, value: unknown) => Promise<ActionResult<null>>;
+  saveBrand: (input: BrandInput) => Promise<ActionResult<null>>;
+  applyFamily: (familyId: string) => Promise<ActionResult<null>>;
+}
+
+const SiteEditorContext = createContext<SiteEditorActions | null>(null);
+
+export function SiteEditorProvider({ actions, children }: { actions: SiteEditorActions; children: ReactNode }) {
+  return <SiteEditorContext.Provider value={actions}>{children}</SiteEditorContext.Provider>;
+}
+
+export function useSiteEditor(): SiteEditorActions {
+  const ctx = useContext(SiteEditorContext);
+  if (!ctx) throw new Error('SiteEditorProvider eksik');
+  return ctx;
+}
+
+type PreviewAction = (path: string) => Promise<ActionResult<{ url: string }>>;
+type PublishAction = (note: string) => Promise<ActionResult<{ version: number }>>;
+type DiscardAction = () => Promise<ActionResult<null>>;
+
 /** Taslak önizlemesini yeni sekmede açar (1 saat geçerli, yalnızca bu tarayıcıda) */
-export function PreviewButton({ orgId, size = 'sm', path = '/', label = 'Önizle' }: { orgId: string; size?: Size; path?: string; label?: string }) {
+export function PreviewButton({ action, size = 'sm', path = '/', label = 'Önizle' }: { action: PreviewAction; size?: Size; path?: string; label?: string }) {
   const [pending, setPending] = useState(false);
   return (
     <Button
@@ -26,7 +57,7 @@ export function PreviewButton({ orgId, size = 'sm', path = '/', label = 'Önizle
         // Sekme tıklama anında açılır (açılır pencere engelleyicisine takılmaz), adres sonra verilir
         const tab = window.open('about:blank', '_blank');
         setPending(true);
-        const res = await createSitePreviewLink(orgId, path);
+        const res = await action(path);
         setPending(false);
         if (!res.ok) {
           tab?.close();
@@ -41,7 +72,7 @@ export function PreviewButton({ orgId, size = 'sm', path = '/', label = 'Önizle
   );
 }
 
-export function PublishButton({ orgId, disabled, size = 'sm' }: { orgId: string; disabled?: boolean; size?: Size }) {
+export function PublishButton({ action, disabled, size = 'sm' }: { action: PublishAction; disabled?: boolean; size?: Size }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState('');
@@ -66,7 +97,7 @@ export function PublishButton({ orgId, disabled, size = 'sm' }: { orgId: string;
         description="Taslaktaki görünüm canlı siteye alınır ve yeni bir sürüm oluşturulur. Gerekirse Geçmiş sekmesinden önceki sürüme dönebilirsiniz."
         confirmLabel="Yayınla"
         onConfirm={async () => {
-          const res = await publishSite(orgId, note);
+          const res = await action(note);
           if (!res.ok) {
             toast.error(res.error);
             return false;
@@ -85,7 +116,7 @@ export function PublishButton({ orgId, disabled, size = 'sm' }: { orgId: string;
   );
 }
 
-export function DiscardDraftButton({ orgId, disabled }: { orgId: string; disabled?: boolean }) {
+export function DiscardDraftButton({ action, disabled }: { action: DiscardAction; disabled?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [, startTransition] = useTransition();
@@ -102,7 +133,7 @@ export function DiscardDraftButton({ orgId, disabled }: { orgId: string; disable
         confirmLabel="Geri al"
         destructive
         onConfirm={async () => {
-          const res = await discardSiteDraft(orgId);
+          const res = await action();
           if (!res.ok) {
             toast.error(res.error);
             return false;
@@ -117,14 +148,15 @@ export function DiscardDraftButton({ orgId, disabled }: { orgId: string; disable
 }
 
 /** Bölüm formlarının ortak kaydetme işlevi: taslağa yazar, sayfayı tazeler */
-export function useSectionSave(orgId: string, section: SiteSection) {
+export function useSectionSave(section: SiteSection) {
+  const { saveSection } = useSiteEditor();
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [, startTransition] = useTransition();
   async function save(value: unknown): Promise<boolean> {
     setPending(true);
     try {
-      const res = await saveSiteSection(orgId, section, value);
+      const res = await saveSection(section, value);
       if (!res.ok) {
         toast.error(res.error);
         return false;

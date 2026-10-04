@@ -8,7 +8,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox, Field, Input, Select } from '@/components/ui/form-controls';
 import { cn } from '@/lib/utils';
-import { SaveBar, useSectionSave } from '@/components/platform/site/site-actions';
+import { SaveBar, useSectionSave } from '@/components/site-editor/site-actions';
 import { FONT_CATALOG } from '@/theme-engine/typography/catalog';
 import { PALETTES, findPalette } from '@/theme-engine/palettes';
 import { FONT_IDS, type ColorTokens, type ColorsConfig, type FontId, type SiteConfig, type StyleConfig, type ThemeId, type TypographyConfig } from '@/site-config/schema';
@@ -52,14 +52,14 @@ const STYLE_OPTIONS: { key: Exclude<keyof StyleConfig, 'slots' | 'origin'>; labe
   { key: 'motion', label: 'Hareket dili', options: [['none', 'Yok'], ['subtle', 'Ölçülü (kaydırınca beliren bölümler)'], ['expressive', 'Belirgin (+ hero ve kart girişleri)']] },
 ];
 
-export function ThemeForm({ orgId, draft, brand, darkAllowed, name }: { orgId: string; draft: SiteConfig; brand: Brand; darkAllowed: boolean; name: string }) {
+export function ThemeForm({ draft, brand, darkAllowed, name }: { draft: SiteConfig; brand: Brand; darkAllowed: boolean; name: string }) {
   const [theme, setTheme] = useState<ThemeId>(draft.theme);
   const [style, setStyle] = useState<StyleConfig>(draft.style);
   const [usePalette, setUsePalette] = useState(false);
   const [previewing, setPreviewing] = useState<ThemeId | null>(null);
-  const themeSave = useSectionSave(orgId, 'theme');
-  const styleSave = useSectionSave(orgId, 'style');
-  const colorsSave = useSectionSave(orgId, 'colors');
+  const themeSave = useSectionSave('theme');
+  const styleSave = useSectionSave('style');
+  const colorsSave = useSectionSave('colors');
   const themeDirty = theme !== draft.theme;
   const styleDirty = JSON.stringify(style) !== JSON.stringify(draft.style);
   const paletteColors: ColorsConfig = { mode: 'preset', preset: THEMES[theme].palette, scheme: 'light' };
@@ -211,10 +211,10 @@ const TOKEN_LABELS: Record<keyof ColorTokens, string> = {
   error: 'Hata',
 };
 
-export function ColorsForm({ orgId, draft, brand, darkAllowed, name }: { orgId: string; draft: SiteConfig; brand: Brand; darkAllowed: boolean; name: string }) {
+export function ColorsForm({ draft, brand, darkAllowed, name }: { draft: SiteConfig; brand: Brand; darkAllowed: boolean; name: string }) {
   const initial = draft.colors;
   const [colors, setColors] = useState<ColorsConfig>(initial);
-  const { save, pending } = useSectionSave(orgId, 'colors');
+  const { save, pending } = useSectionSave('colors');
   const dirty = JSON.stringify(colors) !== JSON.stringify(initial);
   const resolved = resolveColors({ ...draft, colors }, brand, darkAllowed).tokens;
   const palettes = PALETTES.filter((p) => p.scheme === 'light' || darkAllowed);
@@ -335,10 +335,10 @@ export function ColorInput({ label, value, onChange }: { label: string; value: s
 }
 
 // --------------------------------------------------------------------------- Tipografi
-export function TypographyForm({ orgId, draft, brand, darkAllowed, name }: { orgId: string; draft: SiteConfig; brand: Brand; darkAllowed: boolean; name: string }) {
+export function TypographyForm({ draft, brand, darkAllowed, name }: { draft: SiteConfig; brand: Brand; darkAllowed: boolean; name: string }) {
   const initial = draft.typography;
   const [t, setT] = useState<TypographyConfig>(initial);
-  const { save, pending } = useSectionSave(orgId, 'typography');
+  const { save, pending } = useSectionSave('typography');
   const theme = THEMES[draft.theme];
   const dirty = JSON.stringify(t) !== JSON.stringify(initial);
   const fontOptions = (value: FontId | undefined, fallback: FontId, onChange: (v: FontId | undefined) => void, id: string) => (

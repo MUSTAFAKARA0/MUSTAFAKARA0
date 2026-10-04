@@ -17,6 +17,8 @@ site-preview                                  (KARAY gerçek önizlemesi; hiçbi
  ↓
 tenant-panel · karay-platform (site oluşturucu dahil) · site-engine · karay-public
  ↓
+site-editor                                   (ortak site düzenleyici: KARAY + ofis /admin/site; kiracı sitesi bilmez)
+ ↓
 site-factory                                  (karay-platform + ofis paneli sunucusu; site çalışma zamanına girmez)
  ↓
 site-config · theme-engine · modules          (site-config → theme-engine; tersi yasak)
@@ -31,6 +33,7 @@ ui · core                                     (site-config ve theme-engine'i bi
 | **site-engine** (kiracı siteleri) | `src/app/t`, `src/components/{layout,home,property,search,content,gallery,forms,site}` | yapılandırmayı **çizer**: ilan, arama, detay, menü, footer, iletişim, galeri, içerik, SEO çıktısı. `components/site` = **Site Renderer sözleşmesi** (`SiteFrame`, `SiteHome`): kiracı sitesi ve önizleme aynı bileşenleri kullanır |
 | **site-preview** (KARAY gerçek önizlemesi) | `src/app/site-onizleme`, `src/site-preview` | manifest + örnek veri → Site Renderer bileşenleri. Ayrı giriş noktası ve kök layout; yalnızca KARAY/paylaşılan alan adı + süper admin; hiçbir katman içe aktaramaz (kiracı paketine ve sihirbaz paketine girmez) |
 | **karay-public** (KARAY tanıtım sayfası) | `src/app/karay`, `src/components/karay`, `src/modules/karay`, `src/app/actions/karay.ts` | KARAY ürün/şirket sayfası |
+| **site-editor** (ortak site düzenleyici, P0.1) | `src/site-editor` (sunucu: `service.ts` taslak/yayın/geri alma, `preview-link.ts`, `cache.ts`, `families.ts`, `brand-input.ts`), `src/components/site-editor` (formlar, `SiteEditorProvider`, sekmeler, durum kartları, sürüm listesi) | KARAY Site Builder ile ofis `/admin/site`'ın **tek** kod kaynağı. Yetki ve organizasyon kaynağı çağıran işlemdedir (`actions/site-builder.ts`: süper admin + seçilen site; `actions/admin-site.ts`: settings.manage + oturumun ofisi). Panelleri, kiracı sitesini ve önizleme kodunu içe aktaramaz |
 | **site-factory** | `src/site-factory` | KARAY'ın iç tasarım kataloğu (`catalog/<aile>/`), site tipleri (`site-types.ts`), site manifesti ve derleyicisi (`manifest.ts › compileManifest`, `compile.ts › compileDesign`), yeni site bilgileri ve ilk yapılandırma (`site-info.ts › initialSiteSections`) |
 | **site-config** | `src/site-config` | yapılandırma belgesinin şeması (zod), varsayılanlar, yayın/önizleme okuması (`getSiteView`, `requireSiteTenant`), menü/sayfa çözümleme, önizleme belirteci, marka taslağı |
 | **theme-engine** | `src/theme-engine` | görsel sistem (aşağıda) |
@@ -45,6 +48,7 @@ ui · core                                     (site-config ve theme-engine'i bi
 - Bir dosya kendi katmanını ve **alt** katmanları içe aktarabilir; üst katmanları içe aktaramaz.
 - Kesin yasaklar: `site-engine | karay-public | core | ui | site-config | theme-engine → site-factory` (SITE-FACTORY-ISOLATION; ofis paneli yalnızca sunucuda, izinli aileler için kullanır), `herhangi bir katman → site-preview` (önizleme ayrı giriş noktası), `site-preview → paneller | KARAY arayüzü`, `site-engine → tenant-panel | karay-platform | karay-public`, `tenant-panel ↔ karay-platform`, `tenant-panel | karay-platform | karay-public → site-engine`, `karay-public → tenant-panel | karay-platform`, `theme-engine → site-config | site-engine | paneller | KARAY`, `core | ui → site-config | theme-engine`.
 - Üst klasöre göreli içe aktarım (`../`) kapalıdır; sınırlar `@/` yollarıyla denetlenir.
+- `site-editor` iki panelin de içe aktarabildiği ortak katmandır; kendisi panelleri (`tenant-panel`, `karay-platform`), `site-engine`, `karay-public` ve `site-preview`'ı içe aktaramaz; alt katmanlar ve `site-engine` de `site-editor`'ı içe aktaramaz.
 - Ortak panel bileşeni ofis/KARAY işlemlerini kendisi içe aktarmaz; gerekiyorsa işlem sayfadan prop olarak verilir (ör. `BrandingImageField removeAction`).
 - Kuralın kendisi `tests/unit/boundaries.test.mjs` ile test edilir.
 
@@ -53,8 +57,10 @@ Kural ihlali CI'da (`npm run lint`) hata verir. İstisna eklemek yerine kodu do�
 ## Veri akışı: Site Builder → site_config → Site Engine → Theme Engine
 
 ```
-KARAY konsolu (Site Builder: components/platform/site, actions/site-builder.ts)
-   ↓ yazar: site_save_draft / site_publish / site_rollback (assert_super_admin)
+KARAY konsolu (actions/site-builder.ts)  ·  ofis paneli /admin/site (actions/admin-site.ts)
+   ↓ aynı formlar (components/site-editor) + aynı servis (site-editor/service.ts)
+   ↓ yazar: site_save_draft / site_publish / site_rollback / site_discard_draft (assert_site_editor:
+   ↓        süper admin VEYA o ofiste settings.manage; ofiste aile = yalnızca izinli aile)
 site_configs.draft / published  +  site_config_revisions
    ↓ okur: site-config (public_site_config, aynı önbellekli kiracı çağrısı; önizlemede taslak)
 Site Engine (app/t/[tenant]/layout.tsx → getSiteView)
@@ -238,6 +244,29 @@ kenardan kenara görselle açıldığında saydamdır; kaydırınca mevcut `scro
 zemine geçer. Katalog (`site-factory/catalog`) derin dondurulmuştur: aile nesneleri çalışma
 zamanında değiştirilemez.
 
+## P0.1 — Ofis site yönetimi (`/admin/site`)
+
+Ofis (kiracı) sitesini KARAY'a ihtiyaç duymadan yönetir: Genel (kimlik, marka renkleri), Tasarım
+(yalnızca izinli aileler + tema/varyantlar), Ana Sayfa, Header, Footer, Menü, Sayfalar, SEO, İletişim,
+Alan Adı (yalnızca görüntüleme) ve Geçmiş (sürümler, geri yükleme). Üstte "Taslak değişiklikler var",
+"Önizle" ve "Değişiklikleri yayınla".
+
+- **Yeni taslak/yayın sistemi yoktur.** KARAY'ın `site_save_draft`, `site_publish`, `site_rollback`,
+  `site_discard_draft` fonksiyonları kullanılır; yalnızca yetki kontrolleri `assert_super_admin` →
+  `assert_site_editor(p_org)` oldu (migration `20261005000001_office_site_management.sql`; gövdeler aynı).
+- **Organizasyon istemciden alınmaz:** ofis işlemleri hiçbir kimlik parametresi almaz (`ctx.org.id`);
+  veritabanı aynı kontrolü oturumun üyeliğine karşı tekrar yapar (`has_org_permission`).
+- **Aile izni** iki katmanda: işlem (`selectableFamilies`) + veritabanı (`site_save_draft` `style` bölümünde
+  süper admin olmayan çağıran için `org_design_family_access`). Sitenin mevcut ailesi (KARAY atadıysa)
+  korunarak varyantlar düzenlenebilir. Sayfaya yalnızca izinli ailelerin verisi gider.
+- **KARAY'a kalanlar:** site durumu, özellik bayrakları, aile yetkileri ve global katalog, alan adı
+  ekleme/kaldırma, planlar, platform kullanıcıları.
+- **Önizleme = canlı:** aynı `createPreviewUrl` → `/api/site-preview` → `getSiteView` (taslak) → aynı Site Engine.
+- **Tek taslak:** KARAY ve ofis aynı taslağı düzenler; ofisin yayını KARAY'ın bekleyen taslak
+  değişikliklerini de yayınlar (sürüm geçmişinden geri alınabilir).
+- Eski `/admin/tasarim` (anında yayın) `/admin/site/tasarim`'e yönlenir; `site_apply_design` veritabanında
+  durur ama arayüz kullanmaz. Logo/görseller ve çalışma saatleri `/admin/sirket`'te kalır (anında yayın).
+
 ## Theme Engine (`src/theme-engine`)
 
 | Dosya | İçerik |
@@ -276,8 +305,8 @@ Her kökün kendi `not-found.tsx`'i vardır. `tests/e2e/surface-isolation.spec.t
 | --- | --- |
 | Kiracı oluşturma, abonelik, planlar | KARAY Platform (`app/platform`, `modules/platform`) |
 | İlan oluşturma, CRM, içerik, medya | Tenant Panel + `modules/*` |
-| Alan adı bağlama | bugün KARAY Platform (site → Alan adı sekmesi) + `modules/domains`; hedef: Tenant Platform (Aşama 3 kararı) |
-| Tema seçme, renk/yazı tipi ayarı | Site Builder (`components/platform/site`) → `site_configs` → Theme Engine |
+| Alan adı bağlama | KARAY Platform (site → Alan adı sekmesi) + `modules/domains`; ofis `/admin/site/alan-adi` yalnızca durumu ve DNS talimatını gösterir |
+| Tema seçme, renk/yazı tipi ayarı, header/footer/menü/sayfa/SEO | Site Editor (`components/site-editor` + `site-editor/service.ts`; KARAY ve ofis aynı kod) → `site_configs` → Theme Engine |
 | Yeni tema | Theme Engine (`themes.ts`, `ids.ts`, gerekirse `design-css.ts` parçası) — veri; müşteri kodu yok |
 | Yeni tasarım ailesi (tema + parçalar + kompozisyon) | Site Factory (`catalog/<aile>/index.ts` + `catalog/index.ts`) — veri |
 | Yeni site tipi (içerik/özellik mimarisi) | Site Factory (`site-types.ts`) — veri |

@@ -4,10 +4,10 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Check, Sparkles } from 'lucide-react';
-import { applyDesignFamily } from '@/app/actions/site-builder';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useSiteEditor } from '@/components/site-editor/site-actions';
 import { LivePreview, type Brand, type ThemePreviewInput } from '@/theme-engine/preview/live-preview';
 
 /** Sunucuda derlenmiş aile önizlemesi (katalog ve derleyici sunucuda kalır) */
@@ -28,7 +28,8 @@ export interface FamilyOption {
  * renk sistemi, tipografi, yapısal parçalar ve ana sayfa kompozisyonu bölümlerini derler;
  * canlı site, önizleme ve yayınla değişir. Kiracının metinleri, menüsü ve markası korunur.
  */
-export function DesignFamilyPicker({ orgId, families, brand, darkAllowed, name }: { orgId: string; families: FamilyOption[]; brand: Brand; darkAllowed: boolean; name: string }) {
+export function DesignFamilyPicker({ families, brand, darkAllowed, name }: { families: FamilyOption[]; brand: Brand; darkAllowed: boolean; name: string }) {
+  const { applyFamily } = useSiteEditor();
   const router = useRouter();
   const [confirming, setConfirming] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
@@ -37,7 +38,7 @@ export function DesignFamilyPicker({ orgId, families, brand, darkAllowed, name }
   async function apply(id: string) {
     setPending(id);
     try {
-      const res = await applyDesignFamily(orgId, id);
+      const res = await applyFamily(id);
       if (!res.ok) {
         toast.error(res.error);
         return;

@@ -11,6 +11,8 @@ import nextTs from "eslint-config-next/typescript";
  *    ↓
  *   tenant-panel · karay-platform · site-engine · karay-public
  *    ↓
+ *   site-editor                                  (ortak site düzenleyici: taslak/yayın servisi + formlar;
+ *    ↓                                            KARAY konsolu VE ofis paneli kullanır, kiracı sitesi bilmez)
  *   site-factory                                 (yalnızca KARAY konsolu; site çalışma zamanına girmez)
  *    ↓
  *   site-config · theme-engine · modules        (site-config → theme-engine; tersi yasak)
@@ -38,6 +40,14 @@ const ZONES = {
     files: ["src/app/karay/**", "src/components/karay/**", "src/modules/karay/**", "src/app/actions/karay.ts"],
     regex: "^@/(components/karay|app/karay|modules/karay)(/|$)|^@/app/actions/karay$",
     label: "KARAY tanıtım sayfası (karay-public)",
+  },
+  // Ortak site düzenleyici (P0.1): taslak → önizleme → yayın → geri alma servisi ve formlar. KARAY
+  // Site Builder ile ofis /admin/site AYNI kodu kullanır; yetki ve organizasyon kaynağı çağıran
+  // işlemdedir. Panel kodunu ve kiracı sitesini bilmez; kiracı sitesine girmez.
+  siteEditor: {
+    files: ["src/site-editor/**", "src/components/site-editor/**"],
+    regex: "^@/(site-editor|components/site-editor)(/|$)",
+    label: "ortak site düzenleyici (site-editor)",
   },
   // Site yapılandırması: site oluşturucunun ürettiği, Site Engine'in okuduğu veri
   // (şema, varsayılanlar, yayın/önizleme yükleme, menü/sayfa çözümleme)
@@ -107,24 +117,30 @@ const eslintConfig = defineConfig([
   {
     files: LOWER_LAYERS,
     ignores: ZONES.karayPublic.files,
-    rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteEngine, ZONES.siteFactory, ZONES.sitePreview),
+    rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteEngine, ZONES.siteFactory, ZONES.sitePreview, ZONES.siteEditor),
   },
   // Çekirdek ve ortak arayüz: site yapılandırmasını ve Theme Engine'i de bilmez
   {
     files: CORE_UI,
-    rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteEngine, ZONES.siteConfig, ZONES.themeEngine, ZONES.siteFactory, ZONES.sitePreview),
+    rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteEngine, ZONES.siteConfig, ZONES.themeEngine, ZONES.siteFactory, ZONES.sitePreview, ZONES.siteEditor),
   },
   // Theme Engine: görsel sistem; site yapılandırmasının geri kalanını, site motorunu,
   // panelleri ve KARAY kodunu bilmez (girdisi yalnızca ThemeInput verisidir)
   {
     files: ["src/theme-engine/**"],
-    rules: forbid(ZONES.siteConfig, ZONES.siteEngine, ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteFactory, ZONES.sitePreview),
+    rules: forbid(ZONES.siteConfig, ZONES.siteEngine, ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteFactory, ZONES.sitePreview, ZONES.siteEditor),
   },
   // Site Factory: katalog + derleyici. Theme Engine ve site-config'i kullanır; siteleri çizen
   // Site Engine'i, panelleri ve KARAY arayüzünü bilmez
   {
     files: ZONES.siteFactory.files,
-    rules: forbid(ZONES.siteEngine, ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic, ZONES.sitePreview),
+    rules: forbid(ZONES.siteEngine, ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic, ZONES.sitePreview, ZONES.siteEditor),
+  },
+  // Ortak site düzenleyici: Site Factory, site-config, Theme Engine ve alt katmanları kullanır;
+  // panelleri (ofis/KARAY), KARAY sayfasını, kiracı sitesi bileşenlerini ve önizleme kodunu bilmez
+  {
+    files: ZONES.siteEditor.files,
+    rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteEngine, ZONES.sitePreview),
   },
   // Kiracı sitesi: ofis paneli, KARAY konsolu ve KARAY sayfası kodu YOK
   // Kiracı sitesi sayfaları kiracıyı site-config üzerinden yükler (KARAY önizlemesinde taslak marka uygulanır)
@@ -137,6 +153,7 @@ const eslintConfig = defineConfig([
       ZONES.karayPublic,
       ZONES.siteFactory,
       ZONES.sitePreview,
+      ZONES.siteEditor,
     ),
   },
   // Ofis paneli ↛ KARAY konsolu / KARAY sayfası / kiracı sitesi bileşenleri. Site Factory'yi YALNIZCA
@@ -147,9 +164,9 @@ const eslintConfig = defineConfig([
   // siteyi Site Engine çizer; önizleme Theme Engine'in önizlemesiyle yapılır)
   { files: ZONES.karayPlatform.files, rules: forbid(ZONES.tenantPanel, ZONES.siteEngine, ZONES.sitePreview) },
   // Önizleme: Site Engine bileşenleri + Site Factory derleyicisi; panel/KARAY arayüzü yok
-  { files: ZONES.sitePreview.files, rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic) },
+  { files: ZONES.sitePreview.files, rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteEditor) },
   // KARAY sayfası ↛ ofis paneli / KARAY konsolu / kiracı sitesi bileşenleri
-  { files: ZONES.karayPublic.files, rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.siteEngine, ZONES.siteFactory, ZONES.sitePreview) },
+  { files: ZONES.karayPublic.files, rules: forbid(ZONES.tenantPanel, ZONES.karayPlatform, ZONES.siteEngine, ZONES.siteFactory, ZONES.sitePreview, ZONES.siteEditor) },
   // Sınırların göreli yollarla (../) aşılmaması için üst klasöre göreli içe aktarım kapalı
   {
     files: ["src/**/*.{ts,tsx}"],
