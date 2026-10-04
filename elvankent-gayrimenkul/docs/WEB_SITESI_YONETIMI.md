@@ -2,6 +2,12 @@
 
 KARAY süper admin panelinin iki görevi vardır: **platform yönetimi** (organizasyonlar, planlar, kullanıcılar, kayıtlar) ve her kiracı için **web sitesi / tema oluşturucu**. İlan, müşteri, talep gibi operasyonel işler ofisin kendi panelindedir (`/admin`); KARAY bunları yönetmez.
 
+## Yeni site oluşturma
+
+**Web Siteleri › Yeni site oluştur** (`/platform/siteler/yeni`): site bilgileri → site tipi → tasarım ailesi → tasarım seçenekleri → gerçek önizleme → onay. Oluşturma: organizasyon + sahip hesabı, site taslakta (ziyaretçiye kapalı) yapılandırılır, logo yüklenir, ilk sürüm yayınlanır ve istenirse site hemen yayına alınır. Ayrıntı: `docs/MIMARI_KATMANLAR.md › Yeni Site Oluştur`.
+
+**Tasarım kataloğu** (`/platform/siteler/tasarim-katalogu`): bütün aileler, global aç/kapat. **Site › Tema › Ofisin seçebileceği tasarımlar**: ofis yöneticisinin kendi panelindeki **Site tasarımı** (`/admin/tasarim`) sayfasında görebileceği aileler.
+
 ## Ekranlar
 
 `/platform/siteler` — tüm kiracı siteleri: durum, alan adı, tema, son yayın. Her satırda **Önizle**, **Yönet** ve ⋯ menüsü (Siteyi görüntüle, Site ayarları, Tema, Sayfalar, SEO, Alan adı, Gelişmiş, Yayından kaldır / bakım modu). Telefonda tablo yerine kart listesi.

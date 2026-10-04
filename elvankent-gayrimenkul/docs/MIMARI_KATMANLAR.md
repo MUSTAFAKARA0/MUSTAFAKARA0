@@ -11,11 +11,13 @@ Yapılmaz: müşteri başına klasör/repo (`customerA/`), müşteri başına te
 ## Katmanlar
 
 ```
-app (rotalar; dört ayrı kök layout)
+app (rotalar; beş ayrı kök layout)
+ ↓
+site-preview                                  (KARAY gerçek önizlemesi; hiçbir katman içe aktaramaz)
  ↓
 tenant-panel · karay-platform (site oluşturucu dahil) · site-engine · karay-public
  ↓
-site-factory                                  (yalnızca karay-platform; site çalışma zamanına girmez)
+site-factory                                  (karay-platform + ofis paneli sunucusu; site çalışma zamanına girmez)
  ↓
 site-config · theme-engine · modules          (site-config → theme-engine; tersi yasak)
  ↓
@@ -25,10 +27,11 @@ ui · core                                     (site-config ve theme-engine'i bi
 | Katman | Klasörler | Sorumluluk |
 | --- | --- | --- |
 | **tenant-panel** (ofis paneli) | `src/app/admin`, `src/components/admin`, `src/app/api/admin`, `src/app/actions/admin-*.ts` | ilan, CRM, içerik, medya, marka, alan adı, kullanıcılar |
-| **karay-platform** (KARAY konsolu + Site Builder) | `src/app/platform`, `src/components/platform` (`site/` = Site Builder formları), `src/app/api/platform`, `src/app/actions/{platform,site-builder,karay-admin}.ts` | kiracılar, planlar, site yapılandırması **üretimi** (taslak, yayın, sürümler) |
-| **site-engine** (kiracı siteleri) | `src/app/t`, `src/components/{layout,home,property,search,content,gallery,forms}` | yapılandırmayı **çizer**: ilan, arama, detay, menü, footer, iletişim, galeri, içerik, SEO çıktısı |
+| **karay-platform** (KARAY konsolu + Site Builder) | `src/app/platform`, `src/components/platform` (`site/` = Site Builder formları, `site-wizard/` = Yeni Site Oluştur), `src/app/api/platform`, `src/app/actions/{platform,site-builder,karay-admin,site-create}.ts` | kiracılar, planlar, yeni site oluşturma, site yapılandırması **üretimi** (taslak, yayın, sürümler), tasarım ailesi yetkileri |
+| **site-engine** (kiracı siteleri) | `src/app/t`, `src/components/{layout,home,property,search,content,gallery,forms,site}` | yapılandırmayı **çizer**: ilan, arama, detay, menü, footer, iletişim, galeri, içerik, SEO çıktısı. `components/site` = **Site Renderer sözleşmesi** (`SiteFrame`, `SiteHome`): kiracı sitesi ve önizleme aynı bileşenleri kullanır |
+| **site-preview** (KARAY gerçek önizlemesi) | `src/app/site-onizleme`, `src/site-preview` | manifest + örnek veri → Site Renderer bileşenleri. Ayrı giriş noktası ve kök layout; yalnızca KARAY/paylaşılan alan adı + süper admin; hiçbir katman içe aktaramaz (kiracı paketine ve sihirbaz paketine girmez) |
 | **karay-public** (KARAY tanıtım sayfası) | `src/app/karay`, `src/components/karay`, `src/modules/karay`, `src/app/actions/karay.ts` | KARAY ürün/şirket sayfası |
-| **site-factory** | `src/site-factory` | KARAY'ın iç tasarım kataloğu (tasarım aileleri) ve derleyicisi (`compileDesign`): seçimi sitenin manifestine (site_config bölümleri) dönüştürür |
+| **site-factory** | `src/site-factory` | KARAY'ın iç tasarım kataloğu (`catalog/<aile>/`), site tipleri (`site-types.ts`), site manifesti ve derleyicisi (`manifest.ts › compileManifest`, `compile.ts › compileDesign`), yeni site bilgileri ve ilk yapılandırma (`site-info.ts › initialSiteSections`) |
 | **site-config** | `src/site-config` | yapılandırma belgesinin şeması (zod), varsayılanlar, yayın/önizleme okuması (`getSiteView`, `requireSiteTenant`), menü/sayfa çözümleme, önizleme belirteci, marka taslağı |
 | **theme-engine** | `src/theme-engine` | görsel sistem (aşağıda) |
 | **modules** (alan servisleri) | `src/modules/*` | properties, crm, content, media, seo… (veri erişimi) |
@@ -40,7 +43,7 @@ ui · core                                     (site-config ve theme-engine'i bi
 ### Kurallar (ESLint ile zorunlu — `eslint.config.mjs`)
 
 - Bir dosya kendi katmanını ve **alt** katmanları içe aktarabilir; üst katmanları içe aktaramaz.
-- Kesin yasaklar: `site-engine | tenant-panel | karay-public | core | ui | site-config | theme-engine → site-factory` (SITE-FACTORY-ISOLATION), `site-engine → tenant-panel | karay-platform | karay-public`, `tenant-panel ↔ karay-platform`, `tenant-panel | karay-platform | karay-public → site-engine`, `karay-public → tenant-panel | karay-platform`, `theme-engine → site-config | site-engine | paneller | KARAY`, `core | ui → site-config | theme-engine`.
+- Kesin yasaklar: `site-engine | karay-public | core | ui | site-config | theme-engine → site-factory` (SITE-FACTORY-ISOLATION; ofis paneli yalnızca sunucuda, izinli aileler için kullanır), `herhangi bir katman → site-preview` (önizleme ayrı giriş noktası), `site-preview → paneller | KARAY arayüzü`, `site-engine → tenant-panel | karay-platform | karay-public`, `tenant-panel ↔ karay-platform`, `tenant-panel | karay-platform | karay-public → site-engine`, `karay-public → tenant-panel | karay-platform`, `theme-engine → site-config | site-engine | paneller | KARAY`, `core | ui → site-config | theme-engine`.
 - Üst klasöre göreli içe aktarım (`../`) kapalıdır; sınırlar `@/` yollarıyla denetlenir.
 - Ortak panel bileşeni ofis/KARAY işlemlerini kendisi içe aktarmaz; gerekiyorsa işlem sayfadan prop olarak verilir (ör. `BrandingImageField removeAction`).
 - Kuralın kendisi `tests/unit/boundaries.test.mjs` ile test edilir.
@@ -93,7 +96,32 @@ Theme Engine: applyTheme → tokenlar + designCss(tema, manifest) → YALNIZCA s
 
 **Güvenlik:** manifest değerleri kapalı listelerdir (zod enum). Bilinmeyen değer şemada reddedilir; veritabanına elle yazılmış olsa bile okuma sırasında varsayılana düşer. Bileşen ve CSS seçimi sabit eşleme tablolarıyla yapılır; kullanıcı verisinden dosya yolu, bileşen adı, dinamik import veya CSS metni üretilmez (`tests/unit/site-factory.test.mjs`, `tests/e2e/site-factory.spec.ts › SF-07`).
 
-**Bilinen sınır (yazı tipleri):** kiracı sitesi yalnızca kullandığı yazı tipi DOSYALARINI indirir, ancak katalogdaki 10 ailenin `@font-face` bildirimleri (≈54 KB sıkıştırılmamış CSS) next/font'un derleme zamanı yapısı nedeniyle her kiracı sayfasında bulunur. Tam ayrım için font hattının seçili tipografiye göre üretilmesi gerekir (karar maddesi).
+**Yazı tipleri (FONT-ISOLATION, Aşama D1):** kiracı sitesi yalnızca kendi başlık/gövde yazı tipinin `@font-face` bildirimlerini satır içi alır ve yalnızca o dosyaları önceden yükler (`theme-engine/typography/font-css.ts`; dosyalar `scripts/fonts/build-site-fonts.mjs` ile next/font'un kendi fonksiyonlarından üretilir, birebir aynı). Önceki "katalog genelinde @font-face" sınırı kaldırıldı (157 → 17 bildirim).
+
+## Yeni Site Oluştur (Aşama D)
+
+```
+KARAY › Web Siteleri › Yeni site oluştur (/platform/siteler/yeni)
+  1 Site bilgileri  (ad, firma, alan adı/alt alan adı, logo, iletişim, sosyal medya, temel SEO, sahip hesabı)
+  2 Site tipi       (İÇERİK ve ÖZELLİK mimarisi: site-types.ts — 5 tip)
+  3 Tasarım ailesi  (GÖRSEL dil: catalog/<aile>/ — 6 aile; global kapalı aile seçilemez)
+  4 Tasarım seçenekleri (hero, header, kart, footer, hareket, tipografi, renk, ana sayfa kompozisyonu)
+  5 Önizleme        (/site-onizleme: manifest + Site Renderer bileşenleri + örnek içerik, çerçevede)
+  6 Onay ve oluşturma → createSite → (logo) → publishNewSite
+```
+
+**Site manifesti:** `{ siteType, designFamily, palette?, variants: { hero, header, card, cardLayout, footer, motion, headingFont, bodyFont, homepage, navigation, grid, search, listingDetail, gallery, mapList, agents, testimonials } }` (kapalı şema, `manifest.ts`). Derlenmiş hâli sitenin mevcut `site_configs` bölümleridir; kaynağı `style.origin` içinde saklanır (migration gerekmedi). **Önizleme = kiracı:** önizleme ve `createSite` aynı fonksiyonu (`initialSiteSections`) kullanır; E2E testi önizleme ile oluşturulan sitenin tema öznitelikleri, hero/footer yapısı ve yazı tipi paketinin aynı olduğunu doğrular.
+
+**Katalog klasör sözleşmesi:** `src/site-factory/catalog/<aile-kimliği>/index.ts` → `export default defineFamily({ id: '<aile-kimliği>', … })` + `catalog/index.ts` kaydı. Yalnızca veri; React/CSS/bileşen içe aktaramaz. `tests/unit/site-catalog.test.mjs`: klasör = kayıt, kimlik = klasör adı, kiracı runtime içe aktarma grafiğinde Site Factory yok (yeni aile hiçbir kiracıyı etkileyemez), mevcut ailelerin derlenmiş çıktısı değişmez.
+
+**Yetkiler (Aşama D5, migration `20261004000001_design_family_access` — EK, yalnızca yerelde uygulandı):**
+
+| Kim | Ne yapar | Nerede |
+| --- | --- | --- |
+| KARAY admini | bütün aileleri görür, global açar/kapatır | `/platform/siteler/tasarim-katalogu` (`platform_set_design_family`) |
+| KARAY admini | kiracıya aile izni verir | Site › Tema › Ofisin seçebileceği tasarımlar (`platform_set_org_design_families`) |
+| Ofis yöneticisi (`settings.manage`) | yalnızca izinli ve açık aileleri görür, kendi sitesine uygular (yayınlanır) | `/admin/tasarim` (`site_apply_design`; yetki veritabanında) |
+| Kiracı sitesi | yalnızca kendi manifestini okur; izin tablolarını ve katalogu bilmez | — |
 
 ## Theme Engine (`src/theme-engine`)
 
@@ -136,7 +164,9 @@ Her kökün kendi `not-found.tsx`'i vardır. `tests/e2e/surface-isolation.spec.t
 | Alan adı bağlama | bugün KARAY Platform (site → Alan adı sekmesi) + `modules/domains`; hedef: Tenant Platform (Aşama 3 kararı) |
 | Tema seçme, renk/yazı tipi ayarı | Site Builder (`components/platform/site`) → `site_configs` → Theme Engine |
 | Yeni tema | Theme Engine (`themes.ts`, `ids.ts`, gerekirse `design-css.ts` parçası) — veri; müşteri kodu yok |
-| Yeni tasarım ailesi (tema + parçalar + kompozisyon) | Site Factory (`families.ts`) — veri |
+| Yeni tasarım ailesi (tema + parçalar + kompozisyon) | Site Factory (`catalog/<aile>/index.ts` + `catalog/index.ts`) — veri |
+| Yeni site tipi (içerik/özellik mimarisi) | Site Factory (`site-types.ts`) — veri |
+| Yeni müşteri sitesi | KARAY › Yeni site oluştur (veri; kod veya müşteri klasörü yok) |
 | Yeni yapısal parça (hero, header, kart, footer, bölüm) | Site Engine bileşeni + Theme Engine kimliği/CSS parçası; yalnızca seçen siteye gider |
 | Public ilan sayfası, arama, menü, footer | Site Engine |
 | Public site SEO çıktısı | Site Engine + Site Config (`seo` bölümü) + `modules/seo` |
@@ -146,11 +176,10 @@ Her kökün kendi `not-found.tsx`'i vardır. `tests/e2e/surface-isolation.spec.t
 
 ## Teknik borç
 
-- **LivePreview işaretlemesi temsilîdir.** Tema çalışma zamanını (`applyTheme`) ve tema CSS'ini gerçek siteyle paylaşır, ancak header/hero/kart/footer işaretlemesi gerçek Site Engine bileşenlerinin bir benzeridir. Gerçek bileşenler sunucu bileşenleridir ve kiracı verisi (ilanlar, ayarlar, bağlantılar) ister; ortak bir `SiteRenderer` sözleşmesi için bileşenlerin veriyi prop olarak alacak şekilde ayrılması gerekir. Tam ve gerçek önizleme bugün önizleme çerezi ile gerçek sitede mevcuttur.
+- **Tema galerisindeki LivePreview temsilîdir** (KARAY sayfası ve Site Builder tema kartları). Yeni site akışı artık gerçek önizleme (`/site-onizleme`, Site Renderer sözleşmesi) kullanır; galeri kartlarının da gerçek önizlemeye geçirilmesi sonraki aşamadır.
+- Paket slotlarından navigation, grid, search, listingDetail, gallery, mapList bugün tek uygulamalıdır ('standard'); agents ve testimonials için bileşen yoktur ('none' — müşteri yorumu gerçek veri gerektirir, uydurma içerik gösterilmez).
 - `experimental.globalNotFound` deneysel bir Next.js bayrağıdır (çok kök layout için gerekli).
 - `src/platform/` adı tarihseldir; içinde yalnızca core (auth, tenant, branding, audit) kalmıştır.
-- Yazı tipi bildirimleri katalog genelindedir (bkz. Site Factory › Bilinen sınır).
-- Site Factory aileleri bugün süper admin tarafından mevcut bir siteye uygulanır; "Yeni site oluştur" sihirbazı (kiracı seç → site tipi → aile → parçalar → önizleme → onay) henüz ayrı bir akış değildir.
 
 ## Yüzey ayrımı (alan adına göre)
 

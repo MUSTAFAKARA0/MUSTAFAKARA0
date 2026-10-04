@@ -1,7 +1,7 @@
 import type { SiteConfig } from '@/site-config/schema';
 import type { DesignFamily } from '@/site-factory/types';
 import { compileManifest, type CompiledManifest } from '@/site-factory/manifest';
-import { DEFAULT_SITE_TYPE } from '@/site-factory/site-types';
+import { DEFAULT_SITE_TYPE, findSiteType } from '@/site-factory/site-types';
 
 /**
  * SITE COMPILER — mevcut bir sitenin TASARIMINI değiştirir (Site Builder › Tasarım ailesi):
@@ -15,6 +15,7 @@ import { DEFAULT_SITE_TYPE } from '@/site-factory/site-types';
 export type CompiledDesign = CompiledManifest['design'];
 
 export function compileDesign(family: DesignFamily, current: SiteConfig): CompiledDesign {
-  const siteType = current.style.origin?.siteType ?? DEFAULT_SITE_TYPE;
+  // Kayıtlı kaynak katalogda yoksa (eski/elle değiştirilmiş kayıt) varsayılan tip kullanılır
+  const siteType = findSiteType(current.style.origin?.siteType ?? '')?.id ?? DEFAULT_SITE_TYPE;
   return compileManifest({ siteType, designFamily: family.id }, current).design;
 }

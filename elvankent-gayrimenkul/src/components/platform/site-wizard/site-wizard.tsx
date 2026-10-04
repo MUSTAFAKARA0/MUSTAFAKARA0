@@ -155,7 +155,7 @@ export function SiteWizard({ catalog }: { catalog: WizardCatalog }) {
       return;
     }
     setStep(to);
-    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    topRef.current?.scrollIntoView({ block: 'start' });
   }
 
   function chooseFamily(id: string) {
@@ -201,13 +201,13 @@ export function SiteWizard({ catalog }: { catalog: WizardCatalog }) {
     if (!pub.ok) warnings.push(`Site oluşturuldu ancak yayınlanamadı: ${pub.error}`);
     setCreating(null);
     setDone({ id: res.data.id, slug: res.data.slug, password: res.data.temporaryPassword, email: res.data.ownerEmail, warnings, published: pub.ok });
-    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    topRef.current?.scrollIntoView({ block: 'start' });
   }
 
   if (done) return <Result done={done} activate={activate} rootDomain={catalog.rootDomain} customDomain={domainMode === 'custom' ? customDomain.trim().toLowerCase() : null} />;
 
   return (
-    <div ref={topRef} className="grid scroll-mt-24 gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
+    <div ref={topRef} className="grid scroll-mt-24 grid-cols-1 gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
       <Stepper step={step} onGo={(i) => i < step && go(i)} />
       <div className="min-w-0 rounded-2xl border border-border bg-surface shadow-[0_1px_2px_rgb(0_0_0/0.04),0_12px_32px_-20px_rgb(0_0_0/0.18)]">
         <div className="border-b border-border px-5 py-4 sm:px-7">
@@ -282,7 +282,7 @@ export function SiteWizard({ catalog }: { catalog: WizardCatalog }) {
 
 function Stepper({ step, onGo }: { step: number; onGo: (i: number) => void }) {
   return (
-    <nav aria-label="Sihirbaz adımları" className="lg:sticky lg:top-24 lg:self-start">
+    <nav aria-label="Sihirbaz adımları" className="min-w-0 lg:sticky lg:top-24 lg:self-start">
       <ol className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:gap-1 lg:overflow-visible">
         {STEPS.map((s, i) => {
           const state = i < step ? 'done' : i === step ? 'current' : 'todo';
@@ -689,7 +689,7 @@ function PreviewStep({ manifest, info }: { manifest: object; info: Info }) {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-[13.5px] text-muted-foreground">Sitenin gerçek bileşenleriyle, seçilen paketle ve örnek içerikle çizilir. Oluşturulan site bu manifestin aynısını kullanır.</p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div role="radiogroup" aria-label="Cihaz" className="flex rounded-full bg-surface-muted p-1 ring-1 ring-border">
             {DEVICES.map((x) => (
               <button

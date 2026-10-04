@@ -216,5 +216,8 @@ describe('Site manifesti', () => {
     assert.equal(c.design.home.sections.find((s) => s.type === 'hero').title, 'Bizim başlık');
     assert.ok(c.design.home.sections.some((s) => s.id === 'metin-1' && s.enabled));
     assert.equal(findSiteType('project-builder').name, 'Proje / Müteahhit');
+    // Kayıtlı kaynakta bilinmeyen site tipi derlemeyi bozmaz (varsayılan tipe düşer)
+    const tampered = parseSiteConfig({ style: { origin: { siteType: 'olmayan-tip', family: 'klasik-guven' } } });
+    assert.equal(compileDesign(CATALOG[1], tampered).style.origin.siteType, 'real-estate-office');
   });
 });
