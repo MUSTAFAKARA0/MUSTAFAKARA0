@@ -20,7 +20,7 @@ const GALLERIES: Record<GalleryIslandId, LazyExoticComponent<ComponentType<Galle
 export function GalleryIsland({ id, images, title }: GalleryPatternProps & { id: GalleryIslandId }) {
   const Gallery = GALLERIES[id];
   return (
-    <Suspense fallback={<div className="aspect-[4/3] rounded-[1.5rem] bg-surface-muted md:aspect-[16/9]" aria-hidden />}>
+    <Suspense fallback={<div className="kp-gallery-fallback bg-surface-muted" aria-hidden />}>
       <Gallery images={images} title={title} />
     </Suspense>
   );

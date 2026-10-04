@@ -112,7 +112,8 @@ export default async function OfficeDesignPreviewPage({ searchParams }: PageProp
               key={`${family.id}-${surface.id}`}
               title={`${family.name} · ${surface.label} önizlemesi`}
               src={`/site-onizleme/ofis?${new URLSearchParams({ aile: family.id, s: surface.id })}`}
-              className={cn('mx-auto block h-[760px] border-0 bg-white', device.id === 'mobil' ? 'w-[390px] max-w-full' : 'w-full')}
+              className="mx-auto block max-w-full border-0 bg-white"
+              style={{ height: 760, width: device.id === 'mobil' ? 390 : '100%' }}
             />
           </div>
         </div>

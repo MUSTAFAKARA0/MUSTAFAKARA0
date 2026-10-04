@@ -120,6 +120,10 @@ const CARD_LAYOUT: Record<ResolvedStyle['cardLayout'], Fragment> = {
 const HEADER_LAYOUT: Record<ResolvedStyle['headerLayout'], Fragment> = {
   classic: {},
   centered: {},
+  // D7.4 desen düzenleri: sunumu desenin kendi CSS'idir (components/patterns/surface-css.ts)
+  transparent: {},
+  structured: {},
+  'search-bar': {},
   // Yüzen header: üstten ayrık, yarı saydam (yalnızca sabit öğede bulanıklık; kaydırılan içerikte yok)
   floating: {
     plain: `[data-site-header-layout='floating'] .site-header{background:transparent;border-color:transparent;backdrop-filter:none;padding-top:.625rem;pointer-events:none}[data-site-header-layout='floating'] .site-header-bar{pointer-events:auto;border:1px solid color-mix(in oklab,var(--foreground) 10%,transparent);border-radius:1.25rem;background:color-mix(in oklab,var(--surface) 88%,transparent);backdrop-filter:blur(14px);box-shadow:0 18px 40px -28px rgb(15 23 20 / .35);padding-inline:1rem}@media (min-width:1024px){[data-site-header-layout='floating'] .site-header-bar{border-radius:9999px;padding-inline:1.5rem}}`,

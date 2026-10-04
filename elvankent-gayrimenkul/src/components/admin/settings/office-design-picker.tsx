@@ -108,7 +108,7 @@ export function OfficeDesignPicker({ available, families, current }: { available
                     </Link>
                   </Button>
                   {active ? null : confirming === f.id ? (
-                    <div className="basis-full rounded-xl bg-surface-muted p-3">
+                    <div className="w-full rounded-xl bg-surface-muted p-3">
                       <p className="text-[13px]">Siteniz bu tasarımla hemen yayınlanır. İlanlarınız, metinleriniz ve markanız değişmez.</p>
                       <div className="mt-3 flex gap-2">
                         <Button size="sm" loading={pending === f.id} onClick={() => apply(f.id)}>

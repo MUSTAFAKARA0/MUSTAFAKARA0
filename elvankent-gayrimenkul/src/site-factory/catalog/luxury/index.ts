@@ -13,12 +13,12 @@ export default defineFamily({
   typography: { heading: 'cormorant', body: 'manrope' },
   style: {
     hero: 'immersive',
-    headerLayout: 'centered',
+    headerLayout: 'transparent',
     card: 'flat',
     cardLayout: 'editorial',
-    footerLayout: 'minimal',
+    footerLayout: 'editorial',
     motion: 'subtle',
-    slots: { grid: 'gallery-wide', listingDetail: 'immersive', gallery: 'fullscreen' },
+    slots: { grid: 'gallery-wide', listingDetail: 'immersive', gallery: 'fullscreen', interactions: ['scroll-header'] },
   },
   home: ['hero', 'spotlight', 'showcase', 'regions', 'contact'],
 });

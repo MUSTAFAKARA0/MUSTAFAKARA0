@@ -53,9 +53,9 @@ const contract = Object.fromEntries(SURFACE_CONTRACTS.map((c) => [c.surface, c])
 
 /** Ailenin beklenen yapısı (rapordaki tasarım kararlarıyla aynı) */
 const EXPECTED = {
-  luxury: { home: 'immersive', search: 'standard', listing: 'gallery-wide', 'property-detail': 'immersive', gallery: 'fullscreen', map: 'standard' },
-  architectural: { home: 'blueprint', search: 'standard', listing: 'ruled-index', 'property-detail': 'information-first', gallery: 'grid', map: 'standard' },
-  'map-first': { home: 'map-search', search: 'map-first', listing: 'map-results', 'property-detail': 'map-first', gallery: 'carousel', map: 'map-first' },
+  luxury: { navigation: 'transparent', footer: 'editorial', home: 'immersive', search: 'standard', listing: 'gallery-wide', 'property-detail': 'immersive', gallery: 'fullscreen', map: 'standard' },
+  architectural: { navigation: 'structured', footer: 'structured', home: 'blueprint', search: 'standard', listing: 'ruled-index', 'property-detail': 'information-first', gallery: 'grid', map: 'standard' },
+  'map-first': { navigation: 'search-bar', footer: 'discovery', home: 'map-search', search: 'map-first', listing: 'map-results', 'property-detail': 'map-first', gallery: 'carousel', map: 'map-first' },
 };
 
 describe('D7.3 aile × yüzey matrisi', () => {
@@ -84,14 +84,14 @@ describe('D7.3 aile × yüzey matrisi', () => {
   }
 
   test('aileler yalnızca renk değil: yapıları birbirinden ve standarttan farklı', () => {
-    const structural = ['home', 'search', 'listing', 'property-detail', 'gallery', 'map'];
+    const structural = ['navigation', 'footer', 'home', 'search', 'listing', 'property-detail', 'gallery', 'map'];
     const sig = Object.fromEntries(NEW.map((id) => [id, manifestSurfaces(manifest(id))]));
     for (const a of NEW) {
       const nonStandard = structural.filter((s) => !findPattern(contract[s].kind, sig[a][s]).legacy);
-      assert.ok(nonStandard.length >= 4, `${a}: en az 4 yüzey D7.3 deseni olmalı (${nonStandard})`);
+      assert.ok(nonStandard.length >= 6, `${a}: en az 4 yüzey D7.3 deseni olmalı (${nonStandard})`);
       for (const b of NEW.filter((x) => x !== a)) {
         const diff = structural.filter((s) => sig[a][s] !== sig[b][s]);
-        assert.ok(diff.length >= 4, `${a} ↔ ${b} yalnızca ${diff.length} yüzeyde farklı`);
+        assert.ok(diff.length >= 6, `${a} ↔ ${b} yalnızca ${diff.length} yüzeyde farklı`);
       }
     }
   });
@@ -208,6 +208,91 @@ describe('Sınırlar', () => {
       if (f.endsWith('README.md')) continue;
       const code = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
       for (const fam of ["'luxury'", "'architectural'", 'origin.family', 'designFamily']) assert.ok(!code.includes(fam), `${path.relative(SRC, f)}: ${fam}`);
+    }
+  });
+});
+
+describe('D7.4 Header ve Footer yüzeyleri', () => {
+  const pick = (id, variants = {}) => resolveSurfaces(viewOf(compileManifest(manifest(id, variants), base()).design));
+  const LEGACY_HEADER = ['classic', 'centered', 'floating'];
+  const LEGACY_FOOTER = ['classic', 'contact', 'minimal'];
+
+  test('aile varsayılanı: standart / Luxury / Architectural / Map First', () => {
+    for (const f of CATALOG.slice(0, 6)) {
+      const r = pick(f.id);
+      assert.ok(LEGACY_HEADER.includes(r.navigation.id) && r.navigation.legacy, `${f.id} header`);
+      assert.ok(LEGACY_FOOTER.includes(r.footer.id) && r.footer.legacy, `${f.id} footer`);
+    }
+    for (const [id, h, f] of [['luxury', 'transparent', 'editorial'], ['architectural', 'structured', 'structured'], ['map-first', 'search-bar', 'discovery']]) {
+      const r = pick(id);
+      assert.equal(r.navigation.id, h, id);
+      assert.equal(r.footer.id, f, id);
+      assert.equal(r.navigation.legacy, undefined);
+    }
+  });
+
+  test('manifest varyantı ailenin header/footer kararını ezer; gidiş-dönüş kararlı', () => {
+    const r = pick('luxury', { header: 'structured', footer: 'discovery' });
+    assert.equal(r.navigation.id, 'structured');
+    assert.equal(r.footer.id, 'discovery');
+    const back = manifestFromConfig(parseSiteConfig(compileManifest(manifest('luxury', { header: 'classic' }), base()).design));
+    assert.deepEqual(back.variants, { header: 'classic' });
+    // Eski aile + yeni header: yapılar bağımsız seçilebilir
+    assert.equal(pick('klasik-guven', { header: 'search-bar' }).navigation.id, 'search-bar');
+  });
+
+  test('bilinmeyen / null / ailesiz → mevcut standart header ve footer', () => {
+    for (const v of [null, undefined]) {
+      assert.ok(resolveSurfaces(v).navigation.legacy);
+      assert.ok(resolveSurfaces(v).footer.legacy);
+    }
+    const tampered = viewOf({ style: { headerLayout: 'yok', footerLayout: '<script>' } });
+    assert.ok(LEGACY_HEADER.includes(resolveSurfaces(tampered).navigation.id));
+    assert.ok(LEGACY_FOOTER.includes(resolveSurfaces(tampered).footer.id));
+    assert.throws(() => parseManifest(manifest('luxury', { header: 'yok' })));
+    // Görünüm elle bozulmuşsa (şemayı atlayan): yine kayıtlı bir standart desen
+    const raw = { config: parseSiteConfig({}), style: { ...resolveStyle(parseSiteConfig({})), headerLayout: 'yok', footerLayout: 'yok' } };
+    assert.ok(resolveSurfaces(raw).navigation.legacy);
+    assert.ok(resolveSurfaces(raw).footer.legacy);
+  });
+
+  test('önizleme = yayın: aynı manifestten header/footer aynı desen', () => {
+    for (const id of CATALOG.map((f) => f.id)) {
+      const s = manifestSurfaces(manifest(id));
+      const r = pick(id);
+      assert.equal(r.navigation.id, s.navigation, id);
+      assert.equal(r.footer.id, s.footer, id);
+    }
+  });
+
+  test('SiteFrame header/footer’ı YALNIZCA yüzey çizicilerinden çizer (paralel yol yok)', () => {
+    const frame = read('components/site/site-frame.tsx');
+    assert.match(frame, /<HeaderSurface /);
+    assert.match(frame, /<FooterSurface /);
+    assert.ok(!/<SiteHeader |<SiteFooter /.test(frame), 'SiteFrame eski bileşeni doğrudan çiziyor');
+    for (const f of ['components/patterns/header/surface.tsx', 'components/patterns/footer/surface.tsx']) {
+      const src = read(f);
+      assert.match(src, /resolvePattern\(props\.view, '(navigation|footer)'\)/, f);
+    }
+  });
+
+  test('katalog donmuş: aile nesneleri değiştirilemez (mutasyon koruması)', () => {
+    const lux = findDesignFamily('luxury');
+    assert.ok(Object.isFrozen(CATALOG) && Object.isFrozen(lux) && Object.isFrozen(lux.style) && Object.isFrozen(lux.style.slots));
+    assert.throws(() => {
+      lux.style.headerLayout = 'classic';
+    });
+    assert.throws(() => {
+      CATALOG[0].style = {};
+    });
+    assert.equal(findDesignFamily('luxury').style.headerLayout, 'transparent');
+  });
+
+  test('desen kodunda kiracı adı / slug / sabit kiracı dalı yok', () => {
+    for (const f of walk(path.join(SRC, 'components/patterns'))) {
+      const code = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, '');
+      assert.ok(!/elvankent/i.test(code), `${path.relative(SRC, f)}: kiracı adı`);
+      assert.ok(!/tenant\.(slug|key|id)\s*===|settings\.display_name\s*===|organizationId\s*===/.test(code), `${path.relative(SRC, f)}: kiracıya özel dal`);
     }
   });
 });

@@ -38,12 +38,22 @@ type Fam = (typeof FAMILIES)[number];
 const key = (f: Fam) => f ?? 'standart';
 const SITES = FAMILIES.map((f, i) => ({ family: f, host: `fam${i}-${RUN}.e2e.test`, orgId: '', slug: '' }));
 /** Ailenin beklenen yüzey desenleri (sayfa → işaretler) */
-const EXPECT: Record<string, Record<'home' | 'list' | 'detail', string[]>> = {
+const SHELL: Record<string, string[]> = {
+  luxury: ['header/transparent', 'footer/editorial'],
+  architectural: ['header/structured', 'footer/structured'],
+  'map-first': ['header/search-bar', 'footer/discovery'],
+  standart: [],
+};
+const BODY: Record<string, Record<'home' | 'list' | 'detail', string[]>> = {
   luxury: { home: ['hero/immersive'], list: ['listing/gallery-wide'], detail: ['property-detail/immersive', 'gallery/fullscreen'] },
   architectural: { home: ['hero/blueprint'], list: ['listing/ruled-index'], detail: ['property-detail/information-first', 'gallery/grid'] },
   'map-first': { home: ['hero/map-search'], list: ['search/map-first', 'listing/map-results'], detail: ['property-detail/map-first', 'gallery/carousel', 'map/map-first'] },
   standart: { home: [], list: [], detail: [] },
 };
+/** Ailenin beklenen desenleri (sayfa → işaretler): header/footer her sayfada (D7.4) */
+const EXPECT: Record<string, Record<'home' | 'list' | 'detail', string[]>> = Object.fromEntries(
+  Object.entries(BODY).map(([k, v]) => [k, { home: [...SHELL[k], ...v.home], list: [...SHELL[k], ...v.list], detail: [...SHELL[k], ...v.detail] }]),
+);
 const INTERACTIVE = PATTERN_REGISTRY.filter((p) => p.interactive && p.kind !== 'interaction');
 
 test.use({
@@ -68,8 +78,12 @@ const FOLDERS = ['villa', 'apartment-facade', 'living-room', 'house-garden', 'du
 
 test.beforeAll(async () => {
   const type = await service!.from('property_types').select('id').eq('slug', 'daire').single();
-  const district = await service!.from('districts').select('id, city_id').limit(1).single();
-  if (type.error || district.error) throw type.error ?? district.error;
+  const first = await service!.from('districts').select('id, city_id').limit(1).single();
+  if (type.error || first.error) throw type.error ?? first.error;
+  // Aynı ilden iki ilçe: Map First ilçe kısayolları (≥2 ilçe) gerçekten çizilsin
+  const pair = await service!.from('districts').select('id, city_id').eq('city_id', first.data.city_id).limit(2);
+  if (pair.error || (pair.data?.length ?? 0) < 2) throw pair.error ?? new Error('İkinci ilçe yok');
+  const districts = pair.data!;
   for (const [i, s] of SITES.entries()) {
     const org = await service!.from('organizations').insert({ slug: `fam${i}-${RUN}`, name: `E2E Aile ${key(s.family)} ${RUN}`, reference_prefix: `F${letters(2)}`, status: 'active' }).select('id').single();
     if (org.error) throw org.error;
@@ -91,8 +105,8 @@ test.beforeAll(async () => {
           listing_type: n % 3 === 2 ? 'rent' : 'sale',
           category: 'konut',
           property_type_id: type.data.id,
-          city_id: district.data.city_id,
-          district_id: district.data.id,
+          city_id: districts[n % 2].city_id,
+          district_id: districts[n % 2].id,
           price: n % 3 === 2 ? 30000 + n * 1000 : 4_500_000 + n * 1_250_000,
           currency: 'TRY',
           room_count: 2 + (n % 3),
@@ -180,7 +194,9 @@ test('FAM-02: Map First liste ↔ harita (masaüstü yan yana, vurgu; telefonda 
   await root.locator('article').first().hover();
   await expect(root.locator('.kp-pin-active')).toHaveCount(1);
   // İlçe kısayolları (gerçek sayılarla)
-  await expect(p.getByRole('navigation', { name: 'Bölgeler' })).toBeVisible();
+  const chips = p.locator('[data-pattern="karay-pattern:search/map-first"]').getByRole('navigation', { name: 'Bölgeler' });
+  await expect(chips).toBeVisible();
+  await expect(chips.getByRole('link')).toHaveCount(3); // Tüm bölgeler + 2 ilçe (gerçek sayılarla)
   await desk.close();
 
   const mob = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -196,6 +212,43 @@ test('FAM-02: Map First liste ↔ harita (masaüstü yan yana, vurgu; telefonda 
   await expect(mroot.locator('.kp-pin')).toHaveCount(SPOTS.length);
   await expect(mroot.getByRole('list', { name: 'Sonuçlar' })).toBeHidden();
   await mob.close();
+});
+
+test('FAM-06 (D7.4): header/footer davranışı — Luxury saydam→düz, Map First header araması, Architectural künye şeridi', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const p = await ctx.newPage();
+  const lux = SITES.find((x) => x.family === 'luxury')!;
+  await p.goto(`http://${lux.host}:${PORT}/`, { waitUntil: 'networkidle' });
+  const header = p.locator('[data-pattern="karay-pattern:header/transparent"]');
+  const bg = () => header.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(await bg(), 'hero üzerinde saydam').toBe('rgba(0, 0, 0, 0)');
+  await expect(header.getByRole('button', { name: 'Menüyü aç' })).toBeVisible(); // masaüstünde de menü düğmesi
+  await p.mouse.wheel(0, 900);
+  await expect(p.locator('html')).toHaveAttribute('data-site-scrolled', '');
+  await expect.poll(bg).not.toBe('rgba(0, 0, 0, 0)');
+  await p.goto(`http://${lux.host}:${PORT}/ilanlar`, { waitUntil: 'networkidle' });
+  expect(await bg(), 'görselsiz sayfada düz zemin').not.toBe('rgba(0, 0, 0, 0)');
+
+  const map = SITES.find((x) => x.family === 'map-first')!;
+  await p.goto(`http://${map.host}:${PORT}/ilan/${map.slug}`, { waitUntil: 'networkidle' });
+  const search = p.locator('[data-pattern="karay-pattern:header/search-bar"]').getByRole('search').first();
+  await search.getByLabel('İlan ara').fill('ilanı 3');
+  await search.getByRole('button', { name: 'Ara' }).click();
+  await expect(p).toHaveURL(/\/ilanlar\?q=/);
+  await expect(p.getByText('Aile testi ilanı 3').first()).toBeVisible();
+  await expect(p.locator('[data-pattern="karay-pattern:footer/discovery"]').getByRole('navigation', { name: 'İlanlar' })).toBeVisible();
+
+  const arch = SITES.find((x) => x.family === 'architectural')!;
+  await p.goto(`http://${arch.host}:${PORT}/`, { waitUntil: 'networkidle' });
+  await expect(p.locator('[data-pattern="karay-pattern:header/structured"]').getByText('Çankaya, Ankara')).toBeVisible();
+  await expect(p.locator('[data-pattern="karay-pattern:footer/structured"] h2').first()).toContainText('01');
+  // Yasal bağlantılar ve çerez tercihleri her footer deseninde
+  for (const s of SITES) {
+    await p.goto(`http://${s.host}:${PORT}/`, { waitUntil: 'networkidle' });
+    const footer = p.locator('footer.site-footer');
+    for (const name of ['KVKK', 'Gizlilik', 'Çerezler']) await expect(footer.getByRole('link', { name, exact: true }), `${key(s.family)} ${name}`).toBeVisible();
+  }
+  await ctx.close();
 });
 
 test('FAM-03: önizleme eşliği — KARAY önizlemesi aynı manifestle aynı desenleri çizer', async ({ page }) => {

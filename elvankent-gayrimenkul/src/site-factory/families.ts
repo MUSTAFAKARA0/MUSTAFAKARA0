@@ -28,9 +28,9 @@ export function findDesignFamily(id: string): DesignFamily | null {
 
 const PART_LABELS: Record<string, Record<string, string>> = {
   hero: { overlay: 'Fotoğraf üstü hero', centered: 'Ortalı hero', split: 'Bölünmüş hero', cinematic: 'Sinematik hero', editorial: 'Editoryal hero', showcase: 'Vitrin hero', immersive: 'Kenardan kenara hero', blueprint: 'Izgaralı dizin hero', 'map-search': 'Arama + bölge hero' },
-  headerLayout: { classic: 'Klasik header', centered: 'Ortalı logo', floating: 'Yüzen header' },
+  headerLayout: { classic: 'Klasik header', centered: 'Ortalı logo', floating: 'Yüzen header', transparent: 'Saydam header', structured: 'Izgaralı header', 'search-bar': 'Arama çubuklu header' },
   cardLayout: { standard: 'Standart kart', overlay: 'Görsel üstü kart', editorial: 'Editoryal kart', horizontal: 'Yatay kart' },
-  footerLayout: { classic: 'Sütunlu footer', contact: 'İletişim öncelikli footer', minimal: 'Minimal footer' },
+  footerLayout: { classic: 'Sütunlu footer', contact: 'İletişim öncelikli footer', minimal: 'Minimal footer', editorial: 'Editoryal footer', structured: 'Izgaralı footer', discovery: 'Keşif footer' },
   motion: { none: 'Hareketsiz', subtle: 'Ölçülü hareket', expressive: 'Belirgin hareket' },
 };
 

@@ -215,6 +215,8 @@ describe('Yüzey sözleşmeleri ve desen çözümleyici (D7.2)', () => {
   test('her yüzey çizicisi türünün uygulanmış bütün desenlerini karşılar; standart = mevcut bileşen', () => {
     const SURFACE_FILES = {
       hero: ['components/patterns/hero/surface.tsx', 'Hero'],
+      header: ['components/patterns/header/surface.tsx', 'SiteHeader'],
+      footer: ['components/patterns/footer/surface.tsx', 'SiteFooter'],
       gallery: ['components/patterns/gallery/surface.tsx', 'PropertyGallery'],
       search: ['components/patterns/search/surface.tsx', 'ListingToolbar'],
       listing: ['components/patterns/listing/surface.tsx', 'PropertyGrid'],
@@ -225,13 +227,18 @@ describe('Yüzey sözleşmeleri ve desen çözümleyici (D7.2)', () => {
       const src = read(file);
       assert.ok(new RegExp(`<${legacyName}[\\s/]`).test(src), `${file}: standart bileşen yok`);
       const surface = SURFACE_CONTRACTS.find((c) => c.kind === kind).surface;
-      assert.ok(src.includes(`resolvePattern(view, '${surface}')`), `${file}: çözümleyici kullanılmıyor`);
+      assert.ok(src.includes(`resolvePattern(view, '${surface}')`) || src.includes(`resolvePattern(props.view, '${surface}')`), `${file}: çözümleyici kullanılmıyor`);
       const extra = PATTERN_ENUMS[kind].filter((id) => !findPattern(kind, id).legacy);
       for (const id of extra) {
         const meta = findPattern(kind, id);
         // İnteraktif desen: türün yükleyicisi üzerinden; sunucu deseni: çizicide adıyla
         if (meta.interactive) assert.ok(src.includes(`'@/${LOADERS[kind].replace('.tsx', '')}'`), `${file}: ${id} yükleyicisi yok`);
-        else assert.ok(src.includes(`case '${id}':`), `${file}: ${id} çizilmiyor`);
+        else {
+          // Sunucu deseni: dal, desenin KENDİ dosyasındaki bileşeni döndürmeli (ör. standart'a düşürülmüş dal yakalanır)
+          const branch = src.match(new RegExp(`case '${id}':[\\s\\S]*?return <(\\w+)`));
+          assert.ok(branch, `${file}: ${id} çizilmiyor`);
+          assert.ok(src.includes(`import { ${branch[1]} } from '@/components/patterns/${kind}/${id}'`), `${file}: '${id}' dalı kendi deseni yerine <${branch[1]}> çiziyor`);
+        }
       }
     }
   });
@@ -310,21 +317,16 @@ describe('Manifest ve aile ↔ desen sözleşmesi', () => {
   });
 
   test('ailenin yüzey kararı derlenir, manifest varyantı ailenin kararını ezer, gidiş-dönüş yalnızca farkı taşır', () => {
-    // Ailenin kararı (D7.3 aileleri style.slots ile verir): geçici olarak bir katalog ailesinde
-    const fam = CATALOG[0];
-    const original = fam.style;
-    fam.style = { ...original, slots: { gallery: 'grid' } };
-    try {
-      assert.equal(compileDesign(fam, base()).style.slots.gallery, 'grid', 'ailenin kararı derlenmedi');
-      assert.equal(manifestSurfaces({ siteType: 'real-estate-office', designFamily: fam.id }).gallery, 'grid');
-      const withInteraction = compileManifest({ siteType: 'real-estate-office', designFamily: fam.id, variants: { interactions: ['image-reveal'] } }, base());
-      assert.deepEqual(withInteraction.design.style.slots, { gallery: 'grid', interactions: ['image-reveal'] }, 'manifest slotu ailenin kararını sildi');
-      assert.deepEqual(manifestFromConfig(parseSiteConfig(withInteraction.design)).variants, { interactions: ['image-reveal'] }, 'ailenin kararı varyant sanıldı');
-      const override = compileManifest({ siteType: 'real-estate-office', designFamily: fam.id, variants: { gallery: 'carousel' } }, base());
-      assert.equal(override.design.style.slots.gallery, 'carousel');
-    } finally {
-      fam.style = original;
-    }
+    // Ailenin kararı (D7.3 aileleri style.slots ile verir) — gerçek aile: Luxury (katalog donmuş, değiştirilmez)
+    const fam = CATALOG.find((f) => f.id === 'luxury');
+    assert.equal(compileDesign(fam, base()).style.slots.gallery, 'fullscreen', 'ailenin kararı derlenmedi');
+    assert.equal(manifestSurfaces({ siteType: 'real-estate-office', designFamily: fam.id }).gallery, 'fullscreen');
+    const withInteraction = compileManifest({ siteType: 'real-estate-office', designFamily: fam.id, variants: { interactions: ['image-reveal'] } }, base());
+    assert.equal(withInteraction.design.style.slots.grid, 'gallery-wide', 'manifest slotu ailenin kararını sildi');
+    assert.deepEqual(withInteraction.design.style.slots.interactions, ['image-reveal']);
+    assert.deepEqual(manifestFromConfig(parseSiteConfig(withInteraction.design)).variants, { interactions: ['image-reveal'] }, 'ailenin kararı varyant sanıldı');
+    const override = compileManifest({ siteType: 'real-estate-office', designFamily: fam.id, variants: { gallery: 'carousel' } }, base());
+    assert.equal(override.design.style.slots.gallery, 'carousel');
     // Manifest varyantı > aile; aile slotu manifestte etkileşim seçilince kaybolmaz
     const m = { siteType: 'real-estate-office', designFamily: 'sinematik-vitrin', variants: { gallery: 'carousel', interactions: ['scroll-header'] } };
     const c = compileManifest(m, base());

@@ -26,5 +26,14 @@ import mapFirst from '@/site-factory/catalog/map-first';
  * kiracının sayfasını, CSS'ini, JS'ini veya yazı tiplerini değiştirmez. Kiracı yalnızca kendi
  * manifestini (site_configs) okur.
  */
+/** Katalog salt okunurdur: bir kiracının derlemesi veya bir hata ortak aile nesnesini değiştiremez */
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const v of Object.values(value)) deepFreeze(v);
+  }
+  return value;
+}
+
 // İlk 6 aile kilitli (D7 öncesi); D7.3 aileleri yüzey desenleriyle (style.slots) gelir
-export const CATALOG: readonly DesignFamily[] = [klasikGuven, sinematikVitrin, editoryalLuks, kurumsalPortfoy, yalinGaleri, dogalYasam, luxury, architectural, mapFirst];
+export const CATALOG: readonly DesignFamily[] = deepFreeze([klasikGuven, sinematikVitrin, editoryalLuks, kurumsalPortfoy, yalinGaleri, dogalYasam, luxury, architectural, mapFirst]);

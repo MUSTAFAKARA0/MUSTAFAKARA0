@@ -42,7 +42,7 @@ export default function CarouselGallery({ images, title }: GalleryPatternProps) 
             const el = track.current;
             if (el?.clientWidth) setIndex(Math.round(el.scrollLeft / el.clientWidth));
           }}
-          className="scrollbar-none flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain sm:rounded-[1.5rem]"
+          className="scrollbar-none flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain kp-carousel-track"
           role="region"
           aria-roledescription="carousel"
           aria-label={`${title} fotoğrafları`}
@@ -55,7 +55,7 @@ export default function CarouselGallery({ images, title }: GalleryPatternProps) 
                 setOpened(true);
                 setOpen(true);
               }}
-              className="relative aspect-[4/3] w-full shrink-0 snap-center bg-surface-muted md:aspect-auto md:h-[min(36rem,62vh)]"
+              className="kp-carousel-slide relative w-full shrink-0 snap-center bg-surface-muted"
               aria-label={`Fotoğraf ${i + 1} / ${images.length} – tam ekran aç`}
             >
               {Math.abs(i - index) <= 1 && (

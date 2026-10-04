@@ -204,6 +204,8 @@ organization → site_configs (manifest: theme + style.hero/slots) → resolvePa
 
 | Yüzey | Luxury | Architectural | Map First |
 | --- | --- | --- | --- |
+| navigation (header) | `transparent` | `structured` | `search-bar` |
+| footer | `editorial` | `structured` | `discovery` |
 | home (hero) | `immersive` | `blueprint` | `map-search` |
 | search | standart | standart | `map-first` |
 | listing | `gallery-wide` | `ruled-index` | `map-results` (istemci adası) |
@@ -222,6 +224,19 @@ organization → site_configs (manifest: theme + style.hero/slots) → resolvePa
 - Testler: `tests/unit/families.test.mjs` (aile × yüzey matrisi, geri dönüş, tema ≠ aile, kiracı
   yalıtımı, CSS/veri yalnızca seçilende, aile importu yasağı); `tests/e2e/design-families.spec.ts`
   (FAM-01…05: desen işaretleri, paket yalıtımı, liste ↔ harita, önizleme eşliği, 360 px, ölçüm).
+
+### D7.4 — Header ve Footer yüzeyleri
+
+`SiteFrame` header ve footer'ı artık yalnızca yüzey çizicilerinden çizer
+(`patterns/header/surface.tsx`, `patterns/footer/surface.tsx`; çözümleyici: `navigation` →
+`style.headerLayout`, `footer` → `style.footerLayout`). Mevcut düzenler (classic · centered ·
+floating / classic · contact · minimal) mevcut `SiteHeader` / `SiteFooter`'a gider (0 px). Yeni
+desenler sunucu bileşenidir; ortak veri `header/parts.tsx` ve `footer/parts.tsx`'te (Web Sitesi
+Yönetimi'ndeki Header/Menü/Footer ayarlarıyla aynı kurallar; yasal bağlantılar ve çerez
+tercihleri her footer'da zorunlu). Luxury'nin saydam header'ı CSS ile (`:has()`) yalnızca sayfa
+kenardan kenara görselle açıldığında saydamdır; kaydırınca mevcut `scroll-header` adasıyla düz
+zemine geçer. Katalog (`site-factory/catalog`) derin dondurulmuştur: aile nesneleri çalışma
+zamanında değiştirilemez.
 
 ## Theme Engine (`src/theme-engine`)
 

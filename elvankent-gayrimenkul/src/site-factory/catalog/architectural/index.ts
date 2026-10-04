@@ -12,10 +12,10 @@ export default defineFamily({
   typography: { heading: 'space-grotesk', body: 'inter' },
   style: {
     hero: 'blueprint',
-    headerLayout: 'classic',
+    headerLayout: 'structured',
     card: 'outline',
     cardLayout: 'standard',
-    footerLayout: 'classic',
+    footerLayout: 'structured',
     motion: 'none',
     slots: { grid: 'ruled-index', listingDetail: 'information-first', gallery: 'grid' },
   },

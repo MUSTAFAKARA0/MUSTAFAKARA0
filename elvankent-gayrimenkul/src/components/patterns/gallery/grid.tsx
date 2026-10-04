@@ -31,7 +31,7 @@ export default function GridGallery({ images, title }: GalleryPatternProps) {
   const hidden = images.length - tiles.length;
 
   return (
-    <div data-pattern={MARKER} className="relative">
+    <div data-pattern={MARKER} className="kp-gallery-grid relative">
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label={`${title} fotoğrafları`}>
         {tiles.map((img, i) => {
           const last = i === tiles.length - 1 && hidden > 0;

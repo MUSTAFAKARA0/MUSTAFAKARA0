@@ -22,13 +22,15 @@ const pattern = (kind: PatternKind, id: string, label: string, opts: { interacti
 });
 
 const LEGACY_HERO = ['overlay', 'centered', 'split', 'cinematic', 'editorial', 'showcase'] as const;
+const LEGACY_HEADER = ['classic', 'centered', 'floating'] as const;
+const LEGACY_FOOTER = ['classic', 'contact', 'minimal'] as const;
 
 export const PATTERN_REGISTRY: readonly PatternMeta[] = [
   // Mevcut (kilitli) uygulamalar
   ...legacy('hero', LEGACY_HERO, 'components/home/hero.tsx'),
-  ...legacy('header', HEADER_LAYOUTS, 'components/layout/site-header.tsx'),
+  ...legacy('header', LEGACY_HEADER, 'components/layout/site-header.tsx'),
   ...legacy('listing-card', CARD_LAYOUTS, 'components/property/property-card.tsx'),
-  ...legacy('footer', FOOTER_LAYOUTS, 'components/layout/site-footer.tsx'),
+  ...legacy('footer', LEGACY_FOOTER, 'components/layout/site-footer.tsx'),
   ...legacy('gallery', ['standard'], 'components/gallery/property-gallery.tsx'),
   ...legacy('search', ['standard'], 'components/search/listing-toolbar.tsx'),
   ...legacy('property-detail', ['standard'], 'components/property/property-detail-view.tsx'),
@@ -54,6 +56,13 @@ export const PATTERN_REGISTRY: readonly PatternMeta[] = [
   pattern('property-detail', 'map-first', 'Konum ve bölge bağlamı öncelikli'),
   pattern('gallery', 'fullscreen', 'Kenardan kenara sinematik galeri', { interactive: true }),
   pattern('map', 'map-first', 'Geniş harita + bölge bağlantıları'),
+  // D7.4: header ve footer desenleri (sunucu bileşeni; istemci parçaları mevcut header-client)
+  pattern('header', 'transparent', 'Hero üzerinde saydam, ortalı logo, düşük yoğunluk'),
+  pattern('header', 'structured', 'Çizgili ızgara hücreleri, üstte iletişim şeridi'),
+  pattern('header', 'search-bar', 'Header içinde ilan araması ve hızlı keşif bağlantıları'),
+  pattern('footer', 'editorial', 'Büyük marka cümlesi, tek çağrı, sade bağlantı satırı'),
+  pattern('footer', 'structured', 'Numaralı, çizgili sütunlar ve künye tipi iletişim'),
+  pattern('footer', 'discovery', 'Bölge ve ilan türü kısayollarıyla kompakt keşif'),
 ];
 
 /** Manifest kapalı listeleri (desen türü → izin verilen kimlikler) */

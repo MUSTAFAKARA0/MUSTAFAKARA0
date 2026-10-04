@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { SiteFooter } from '@/components/layout/site-footer';
-import { SiteHeader } from '@/components/layout/site-header';
 import { CompareBar, CookieConsent, FloatingWhatsApp } from '@/components/layout/site-extras';
 import { PreviewBar } from '@/components/layout/site-status';
+import { FooterSurface } from '@/components/patterns/footer/surface';
+import { HeaderSurface } from '@/components/patterns/header/surface';
 import { InteractionIslands } from '@/components/patterns/interaction/islands';
 import { resolveSurfaces } from '@/components/patterns/resolver';
 import { patternCss } from '@/components/patterns/styles';
@@ -77,11 +77,11 @@ export function SiteFrame({ tenant, view, hasBlog, regions, version, mode = 'liv
       >
         İçeriğe geç
       </a>
-      <SiteHeader tenant={tenant} hasBlog={hasBlog} view={view} />
+      <HeaderSurface tenant={tenant} hasBlog={hasBlog} view={view} />
       <main id="icerik" className="min-h-[60vh]">
         {children}
       </main>
-      <SiteFooter tenant={tenant} regions={regions} hasBlog={hasBlog} view={view} />
+      <FooterSurface tenant={tenant} regions={regions} hasBlog={hasBlog} view={view} />
       {surfaceCss && (
         <style href={`site-surfaces-${hashString(surfaceCss)}`} precedence="high">
           {surfaceCss}

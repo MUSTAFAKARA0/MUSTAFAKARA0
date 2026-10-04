@@ -12,10 +12,10 @@ export default defineFamily({
   typography: { heading: 'dm-sans', body: 'inter' },
   style: {
     hero: 'map-search',
-    headerLayout: 'classic',
+    headerLayout: 'search-bar',
     card: 'outline',
     cardLayout: 'standard',
-    footerLayout: 'contact',
+    footerLayout: 'discovery',
     motion: 'none',
     slots: { search: 'map-first', grid: 'map-results', listingDetail: 'map-first', gallery: 'carousel', mapList: 'map-first' },
   },
