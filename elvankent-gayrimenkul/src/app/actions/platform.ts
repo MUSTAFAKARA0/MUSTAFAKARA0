@@ -1,29 +1,20 @@
 'use server';
 
-import { randomInt } from 'node:crypto';
 import { revalidatePath, updateTag } from 'next/cache';
 import { z } from 'zod';
 import { getDomainProvider } from '@/modules/domains';
 import { cacheTags } from '@/lib/cache-tags';
-import { slugify } from '@/lib/slug';
 import { isUuid } from '@/lib/utils';
 import { createServiceClient } from '@/lib/supabase/server';
 import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/platform/actions';
-import { logSecurityEvent } from '@/platform/audit';
 import { requireSuperAdmin } from '@/platform/auth/session';
+import { hostnameSchema, type CreateOrgInput } from '@/modules/platform/org-schema';
+import { provisionOrganization } from '@/modules/platform/provisioning';
 
 /**
  * Süper admin işlemleri. Yetki hem burada (requireSuperAdmin) hem de her
  * veritabanı fonksiyonunun içinde (assert_super_admin) doğrulanır.
  */
-
-const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-function temporaryPassword(): string {
-  for (;;) {
-    const value = Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => ALPHABET[randomInt(ALPHABET.length)]).join('')).join('-');
-    if (/\d/.test(value) && /[a-z]/.test(value) && /[A-Z]/.test(value)) return value;
-  }
-}
 
 function refreshTenants(orgId?: string) {
   updateTag(cacheTags.tenants);
@@ -31,89 +22,13 @@ function refreshTenants(orgId?: string) {
   revalidatePath('/platform', 'layout');
 }
 
-const RESERVED_SLUGS = new Set(['admin', 'api', 'platform', 'www', 'app', 'mail', 'static', 'assets', 't', 'onizleme', 'koleksiyon']);
-
-const orgSchema = z.object({
-  name: z
-    .string()
-    .max(200)
-    .transform((v) => v.replace(/[<>]/g, '').replace(/\s+/g, ' ').trim())
-    .pipe(z.string().min(2, { error: 'Organizasyon adı en az 2 karakter olmalıdır.' }).max(80, { error: 'Organizasyon adı en fazla 80 karakter olabilir.' })),
-  slug: z
-    .string()
-    .max(60)
-    .transform((v) => slugify(v, 40))
-    .pipe(
-      z
-        .string()
-        .min(3, { error: 'Kısa ad en az 3 karakter olmalıdır (harf, rakam, tire).' })
-        .refine((v) => !RESERVED_SLUGS.has(v), { error: 'Bu kısa ad sistem tarafından kullanılıyor.' }),
-    ),
-  prefix: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .regex(/^[A-Z]{2,5}$/, { error: 'İlan no öneki 2–5 büyük harf olmalıdır (ör. ABC).' }),
-  plan: z.string().regex(/^[a-z][a-z0-9_]{1,30}$/, { error: 'Plan seçin.' }),
-  owner_email: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .max(160)
-    .pipe(z.email({ error: 'Sahip için geçerli bir e-posta girin.' })),
-  owner_name: z
-    .string()
-    .max(200)
-    .transform((v) => v.replace(/[<>]/g, '').replace(/\s+/g, ' ').trim())
-    .pipe(z.string().min(2, { error: 'Sahip adı en az 2 karakter olmalıdır.' }).max(100)),
-});
-
-export type CreateOrgInput = z.input<typeof orgSchema>;
-
 /** Yeni organizasyon + sahip hesabı (yoksa geçici şifreyle oluşturulur) */
 export async function createOrganization(raw: CreateOrgInput): Promise<ActionResult<{ id: string; temporaryPassword: string | null; ownerEmail: string }>> {
   return runAction(async () => {
     const session = await requireSuperAdmin();
-    const input = orgSchema.parse(raw);
-    const service = createServiceClient();
-    if (!service) throw new ActionError('Sunucu yapılandırması eksik: SUPABASE_SERVICE_ROLE_KEY tanımlı değil.', 'config');
-
-    // Sahip hesabı: varsa mevcut hesap, yoksa geçici şifreyle yeni hesap
-    const { data: found } = await session.supabase.rpc('platform_users', { p_search: input.owner_email, p_limit: 20 });
-    let ownerId = (found ?? []).find((u) => u.email?.toLowerCase() === input.owner_email)?.user_id ?? null;
-    let password: string | null = null;
-    let createdUser = false;
-    if (!ownerId) {
-      password = temporaryPassword();
-      const { data, error } = await service.auth.admin.createUser({
-        email: input.owner_email,
-        password,
-        email_confirm: true,
-        user_metadata: { full_name: input.owner_name },
-      });
-      if (error || !data.user) throw new ActionError('Sahip hesabı oluşturulamadı. Lütfen tekrar deneyin.');
-      ownerId = data.user.id;
-      createdUser = true;
-      await service.from('profiles').update({ full_name: input.owner_name, password_change_required: true }).eq('id', ownerId);
-    }
-
-    const { data: orgId, error } = await session.supabase.rpc('platform_create_organization', {
-      p_slug: input.slug,
-      p_name: input.name,
-      p_prefix: input.prefix,
-      p_plan: input.plan,
-      p_owner: ownerId,
-    });
-    if (error) {
-      if (createdUser) await service.auth.admin.deleteUser(ownerId);
-      if (error.code === '23505') throw new ActionError('Lütfen işaretli alanları kontrol edin.', 'validation', { slug: ['Bu kısa ad veya önek başka bir organizasyonda kullanılıyor.'] });
-      assertNoDbError(error);
-    }
-    if (createdUser) {
-      await logSecurityEvent({ orgId: orgId as string, action: 'user.created', actorId: session.user.id, targetType: 'user', targetId: ownerId, targetLabel: input.owner_name, metadata: { role: 'owner' } });
-    }
+    const created = await provisionOrganization(session, raw);
     refreshTenants();
-    return { id: orgId as string, temporaryPassword: password, ownerEmail: input.owner_email };
+    return created;
   });
 }
 
@@ -141,13 +56,6 @@ export async function setOrganizationPlan(orgId: string, plan: string, status: s
     return null;
   }, 'Plan güncellendi.');
 }
-
-const hostnameSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .transform((v) => v.replace(/^https?:\/\//, '').replace(/\/.*$/, ''))
-  .pipe(z.string().regex(/^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/, { error: 'Geçerli bir alan adı girin (ör. www.ornekemlak.com).' }));
 
 export async function addDomain(orgId: string, hostname: string, primary: boolean): Promise<ActionResult<null>> {
   return runAction(async () => {

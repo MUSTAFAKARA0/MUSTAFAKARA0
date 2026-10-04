@@ -29,8 +29,8 @@ const ZONES = {
   },
   // KARAY platform konsolu (süper admin, site oluşturucu)
   karayPlatform: {
-    files: ["src/app/platform/**", "src/components/platform/**", "src/app/api/platform/**", "src/app/actions/{platform,site-builder,karay-admin}.ts"],
-    regex: "^@/(components/platform|app/platform|app/api/platform)(/|$)|^@/app/actions/(platform|site-builder|karay-admin)$",
+    files: ["src/app/platform/**", "src/components/platform/**", "src/app/api/platform/**", "src/app/actions/{platform,site-builder,karay-admin,site-create}.ts"],
+    regex: "^@/(components/platform|app/platform|app/api/platform)(/|$)|^@/app/actions/(platform|site-builder|karay-admin|site-create)$",
     label: "KARAY platform konsolu (karay-platform)",
   },
   // KARAY'ın herkese açık şirket sayfası

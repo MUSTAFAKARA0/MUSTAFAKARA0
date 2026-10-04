@@ -57,8 +57,8 @@ export default async function SitesPage() {
         description="Müşteri ofislerinin web sitelerinin görünümünü, sayfalarını, SEO'sunu ve yayın durumunu buradan yönetin. İlanlar ve CRM ofisin kendi panelindedir."
         actions={
           <Button asChild>
-            <Link href="/platform/organizasyonlar/yeni">
-              <Plus /> Yeni site / müşteri
+            <Link href="/platform/siteler/yeni">
+              <Plus /> Yeni site oluştur
             </Link>
           </Button>
         }
