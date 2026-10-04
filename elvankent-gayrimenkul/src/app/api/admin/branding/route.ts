@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { revalidateTag } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { NextResponse } from 'next/server';
 import { cacheTags } from '@/lib/cache-tags';
 import { isSameOrigin } from '@/lib/same-origin';
@@ -16,7 +16,8 @@ import {
   type BrandingKind,
 } from '@/modules/media/branding';
 import { MEDIA_BUCKETS } from '@/modules/media/variants';
-import { mapDbError } from '@/platform/actions';
+import { mapDbError, toActionFailure } from '@/platform/actions';
+import { DRAFT_BRANDING_KINDS, uploadBrandingDraft } from '@/site-editor/branding';
 import { logSecurityEvent } from '@/platform/audit';
 import { getOrgContext } from '@/platform/auth/session';
 import type { TablesUpdate } from '@/types/supabase';
@@ -27,7 +28,8 @@ export const maxDuration = 30;
 const json = (body: Record<string, unknown>, status: number) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } });
 
 /**
- * Marka görseli yükleme (logo, site simgesi, ana sayfa ve paylaşım görseli).
+ * Marka görseli yükleme (logo, mobil logo, site simgesi, ana sayfa görseli → TASLAK;
+ * paylaşım görseli → SEO modülü, anında).
  * Yetki sunucuda doğrulanır; organizasyon istemciden alınmaz. Dosya yolu
  * kullanıcı girdisi içermez. Ayar satırı oturum istemcisiyle güncellenir
  * (RLS + organization_settings_guard ikinci kez doğrular).
@@ -53,6 +55,28 @@ export async function POST(request: Request) {
   const file = form.get('file');
   if (!(file instanceof File) || file.size === 0) return json({ error: 'Dosya seçilmedi.' }, 400);
   if (file.size > BRANDING_MAX_INPUT_BYTES) return json({ error: 'Dosya çok büyük (en fazla 15 MB).' }, 413);
+
+  // P0.2: logo, mobil logo, site simgesi ve ana sayfa görseli TASLAĞA yazılır (ortak çekirdek;
+  // canlı site yayına kadar eskisini gösterir, eski dosya silinmez). Paylaşım görseli (seo.manage)
+  // SEO modülünün parçasıdır ve aşağıdaki mevcut yoldan kaydedilir.
+  if (DRAFT_BRANDING_KINDS.includes(kind)) {
+    try {
+      const expected = form.get('expected');
+      const res = await uploadBrandingDraft({
+        db: ctx.supabase,
+        storage: ctx.supabase,
+        orgId: ctx.org.id,
+        kind,
+        input: Buffer.from(await file.arrayBuffer()),
+        expected: typeof expected === 'string' ? expected : null,
+      });
+      revalidatePath('/admin', 'layout');
+      return json({ path: res.path, message: res.message }, 201);
+    } catch (error) {
+      if (error instanceof BrandingError) return json({ error: error.message }, 400);
+      return json({ error: toActionFailure(error).error }, 400);
+    }
+  }
 
   let output;
   try {

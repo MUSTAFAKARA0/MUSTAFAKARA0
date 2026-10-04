@@ -2726,11 +2726,12 @@ export type Database = {
       }
       site_save_draft: {
         Args: {
+          p_expected_updated_at?: string
           p_org: string
           p_section: string
           p_value: Json
         }
-        Returns: undefined
+        Returns: string
       }
       site_set_features: {
         Args: {

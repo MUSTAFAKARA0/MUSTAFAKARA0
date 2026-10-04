@@ -55,7 +55,7 @@ export function BrandingImageField({
    * Ofis paneli: görseli kaldıran sunucu işlemi (sayfadan verilir). Ortak panel bileşeni
    * ofis veya KARAY işlemlerini kendisi içe aktarmaz (katman sınırı).
    */
-  removeAction?: (kind: 'logo' | 'favicon' | 'hero' | 'og') => Promise<RemoveResult>;
+  removeAction?: (kind: Kind) => Promise<RemoveResult>;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -143,7 +143,7 @@ export function BrandingImageField({
         onConfirm={async () => {
           const res: RemoveResult = orgId
             ? await removePlatformImage(orgId, kind)
-            : kind === 'logo_mobile' || !removeAction
+            : !removeAction
               ? { ok: false, error: 'Geçersiz görsel türü.' }
               : await removeAction(kind);
           if (!res.ok) {

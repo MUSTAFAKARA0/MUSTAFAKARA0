@@ -123,6 +123,7 @@ export default async function SiteControlLayout({ children, params }: LayoutProp
       <SiteTabs base={`/platform/siteler/${site.org.id}`} tabs={PLATFORM_SITE_TABS} pending={pending} />
       {/* Formlar KARAY işlemlerini çağırır; site kimliği sunucuda bağlanır (istemci değiştiremez) */}
       <SiteEditorProvider
+        draftToken={site.draftUpdatedAt}
         actions={{
           saveSection: saveSiteSection.bind(null, site.org.id),
           saveBrand: updateSiteBrand.bind(null, site.org.id),

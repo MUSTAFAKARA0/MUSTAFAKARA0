@@ -254,7 +254,12 @@ test("TEST-OWNER-08: Elvankent kendi markasını değiştirir; tema yalnızca o 
   await loginOffice(page, S.e!.email, PASSWORD);
   await page.goto('/admin/sirket');
   await page.getByLabel('Ana renk', { exact: true }).fill(E_NEW_PRIMARY);
-  await page.getByRole('button', { name: 'Kaydet' }).click();
+  // P0.2: marka taslağa kaydedilir, "Yayınla" ile canlıya çıkar
+  await page.getByRole('button', { name: 'Taslağa kaydet' }).click();
+  await expect(page.getByText('Taslak değişiklikler var')).toBeVisible();
+  await page.getByRole('button', { name: 'Değişiklikleri yayınla' }).click();
+  await page.getByRole('button', { name: 'Yayınla', exact: true }).click();
+  await expect(page.getByText(/Yayınlandı \(sürüm \d+\)/)).toBeVisible();
   await expect
     .poll(async () => (await service!.from('organization_settings').select('primary_color').eq('organization_id', S.elvankentId!).single()).data?.primary_color)
     .toBe(E_NEW_PRIMARY);

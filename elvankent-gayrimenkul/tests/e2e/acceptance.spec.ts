@@ -315,7 +315,11 @@ test.describe('Yönetim paneli (telefon)', () => {
     await login(page);
     await page.goto('/admin/sirket');
     await page.locator('#branding-logo').setInputFiles(logoFile);
-    await expect(page.getByText('Logo güncellendi.')).toBeVisible({ timeout: 30_000 });
+    // P0.2: logo taslağa yüklenir; canlı site "Yayınla" ile değişir
+    await expect(page.getByText('Logo taslağa kaydedildi', { exact: false })).toBeVisible({ timeout: 30_000 });
+    await page.getByRole('button', { name: 'Değişiklikleri yayınla' }).click();
+    await page.getByRole('button', { name: 'Yayınla', exact: true }).click();
+    await expect(page.getByText(/Yayınlandı \(sürüm \d+\)/)).toBeVisible();
     // Panel (menüde)
     await page.reload();
     await openMenu(page);

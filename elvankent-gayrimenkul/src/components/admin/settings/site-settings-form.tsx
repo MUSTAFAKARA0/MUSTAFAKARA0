@@ -17,7 +17,7 @@ const PRECISION_OPTIONS: { value: Precision; label: string; hint: string }[] = [
   { value: 'exact', label: 'Tam konum', hint: 'Yalnızca mülk sahibinin onayı varsa kullanın.' },
 ];
 
-export function SiteSettingsForm({ initial, defaults }: { initial: { hero_title: string; hero_subtitle: string; default_location_precision: Precision }; defaults: { title: string; subtitle: string } }) {
+export function SiteSettingsForm({ initial, defaults, draftToken = null }: { initial: { hero_title: string; hero_subtitle: string; default_location_precision: Precision }; defaults: { title: string; subtitle: string }; draftToken?: string | null }) {
   const router = useRouter();
   const [v, setV] = useState(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -31,7 +31,7 @@ export function SiteSettingsForm({ initial, defaults }: { initial: { hero_title:
         e.preventDefault();
         setPending(true);
         setErrors({});
-        const res = await saveSiteSettings(v);
+        const res = await saveSiteSettings(v, draftToken);
         setPending(false);
         if (!res.ok) {
           const next: Record<string, string> = {};

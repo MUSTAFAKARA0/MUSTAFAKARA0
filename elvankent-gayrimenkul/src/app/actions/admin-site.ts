@@ -6,6 +6,7 @@ import { requirePermission } from '@/platform/auth/session';
 import { selectableFamilies } from '@/modules/platform/design-access';
 import type { SiteSection } from '@/site-config/schema';
 import type { BrandInput } from '@/site-editor/brand-input';
+import type { SavedDraft } from '@/site-editor/types';
 import {
   applyFamilyToDraft,
   discardDraft,
@@ -37,31 +38,31 @@ async function editor() {
   return requirePermission('settings.manage');
 }
 
-export async function saveOfficeSiteSection(section: SiteSection, value: unknown): Promise<ActionResult<null>> {
+export async function saveOfficeSiteSection(section: SiteSection, value: unknown, expected?: string | null): Promise<ActionResult<SavedDraft>> {
   return runAction(async () => {
     const ctx = await editor();
-    await saveDraftSection(ctx.supabase, ctx.org.id, section, value);
+    const draftToken = await saveDraftSection(ctx.supabase, ctx.org.id, section, value, expected);
     revalidatePath(PANEL, 'layout');
-    return null;
+    return { draftToken };
   }, 'Taslağa kaydedildi. Sitede görünmesi için "Yayınla"ya basın.');
 }
 
-export async function updateOfficeSiteBrand(input: BrandInput): Promise<ActionResult<null>> {
+export async function updateOfficeSiteBrand(input: BrandInput, expected?: string | null): Promise<ActionResult<SavedDraft>> {
   return runAction(async () => {
     const ctx = await editor();
-    await saveBrandDraft(ctx.supabase, ctx.org.id, input);
+    const draftToken = await saveBrandDraft(ctx.supabase, ctx.org.id, input, expected);
     revalidatePath(PANEL, 'layout');
-    return null;
+    return { draftToken };
   }, 'Taslağa kaydedildi. Sitede görünmesi için "Yayınla"ya basın.');
 }
 
-export async function applyOfficeDesignFamily(familyId: string): Promise<ActionResult<null>> {
+export async function applyOfficeDesignFamily(familyId: string, expected?: string | null): Promise<ActionResult<SavedDraft>> {
   return runAction(async () => {
     const ctx = await editor();
     const access = await selectableFamilies(ctx.supabase, ctx.org.id);
-    await applyFamilyToDraft(ctx.supabase, ctx.org.id, familyId, access.families);
+    const draftToken = await applyFamilyToDraft(ctx.supabase, ctx.org.id, familyId, access.families, expected);
     revalidatePath(PANEL, 'layout');
-    return null;
+    return { draftToken };
   }, 'Tasarım taslağa uygulandı. Önizleyip "Yayınla"ya basın.');
 }
 

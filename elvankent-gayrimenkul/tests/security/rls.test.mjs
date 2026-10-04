@@ -331,7 +331,8 @@ describe('Rol yetkileri (Tenant A içinde)', { skip }, () => {
   });
   test('admin: ayarları ve kayıtları yönetir; sahip atayamaz, kendi rolünü değiştiremez', async () => {
     const ad = T.A.users.admin.client;
-    assert.ok(!denied(await ad.from('organization_settings').update({ tagline: 'RLS test' }).eq('organization_id', T.A.orgId).select('organization_id')));
+    // P0.2: marka/site içeriği doğrudan değil, taslak + yayınla değişir; ilan ayarı doğrudan yazılabilir
+    assert.ok(!denied(await ad.from('organization_settings').update({ default_location_precision: 'approximate' }).eq('organization_id', T.A.orgId).select('organization_id')));
     assert.ok(!denied(await ad.from('audit_logs').select('id').eq('organization_id', T.A.orgId)));
     const promote = await ad.from('organization_members').update({ role: 'owner' }).eq('organization_id', T.A.orgId).eq('user_id', T.A.users.viewer.id).select('user_id');
     assert.ok(promote.error, 'admin sahip atadı');
@@ -567,12 +568,17 @@ describe('Platform sahibi ↔ kiracı ayrımı', { skip }, () => {
       assert.ok(denied(await c.from('subscriptions').select('id').eq('organization_id', T.B.orgId)));
     }
   });
-  test("kiracı sahibi başka kiracının markasını değiştiremez; kendi markasını değiştirebilir", async () => {
+  test("kiracı sahibi başka kiracının markasını değiştiremez; kendi markasını yalnızca taslak + yayınla değiştirir", async () => {
     const ow = T.A.users.owner.client;
     assert.ok(denied(await ow.from('organization_settings').update({ primary_color: '#123456' }).eq('organization_id', T.B.orgId).select('organization_id')));
-    const own = await ow.from('organization_settings').update({ primary_color: '#654321' }).eq('organization_id', T.A.orgId).select('primary_color');
-    assert.ifError(own.error);
-    assert.equal(own.data[0].primary_color, '#654321');
+    // P0.2: doğrudan yazım reddedilir (tek yayın noktası)
+    const direct = await ow.from('organization_settings').update({ primary_color: '#654321' }).eq('organization_id', T.A.orgId).select('primary_color');
+    assert.ok(direct.error, 'marka doğrudan değişti');
+    assert.match(direct.error.message, /brand_requires_publish/);
+    assert.ifError((await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'brand', p_value: { primary_color: '#654321' } })).error);
+    assert.ifError((await ow.rpc('site_publish', { p_org: T.A.orgId, p_note: 'rls marka rengi' })).error);
+    const own = await service.from('organization_settings').select('primary_color').eq('organization_id', T.A.orgId).single();
+    assert.equal(own.data.primary_color, '#654321');
     const b = await service.from('organization_settings').select('primary_color').eq('organization_id', T.B.orgId).single();
     assert.notEqual(b.data.primary_color, '#123456');
   });
@@ -1036,5 +1042,106 @@ describe('P0.1: ofis site yönetimi (taslak → yayın → geri alma, kendi site
     }
     const row = await service.from('site_configs').select('site_status, feature_overrides').eq('organization_id', T.A.orgId).single();
     assert.equal(row.data.site_status, 'active');
+  });
+});
+
+describe('P0.2: marka ve site içeriği taslağı (tek yayın noktası, görsel, saatler, eşzamanlılık)', { skip }, () => {
+  const site = async (org) => (await service.from('site_configs').select('draft, published, published_version, draft_updated_at').eq('organization_id', org).single()).data;
+  const settings = async (org) => (await service.from('organization_settings').select('*').eq('organization_id', org).single()).data;
+  const HOURS = [{ days: ['mon', 'tue'], opens: '09:00', closes: '18:00' }];
+
+  test('marka + iletişim + saatler + konum + ana sayfa metni taslağa yazılır; canlı ayar ve yayın değişmez', async () => {
+    const ow = T.A.users.owner.client;
+    assert.ifError((await ow.rpc('site_discard_draft', { p_org: T.A.orgId })).error);
+    const before = await settings(T.A.orgId);
+    const sBefore = await site(T.A.orgId);
+    const draft = {
+      display_name: 'P02 Taslak Ofis',
+      phone: '+90 312 000 00 02',
+      logo_url: `organizations/${T.A.orgId}/branding/logo-p02-taslak-200x80.png`,
+      opening_hours: HOURS,
+      office_latitude: 39.92,
+      office_longitude: 32.85,
+      postal_code: '06100',
+      hero_title: 'P02 başlık',
+    };
+    const token = await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'brand', p_value: draft });
+    assert.ifError(token.error);
+    assert.ok(typeof token.data === 'string' && token.data.length > 10, 'yeni eşzamanlılık belirteci dönmedi');
+    const after = await settings(T.A.orgId);
+    for (const k of Object.keys(draft)) assert.deepEqual(after[k], before[k], `${k} canlıya yazıldı`);
+    const s1 = await site(T.A.orgId);
+    assert.deepEqual(s1.published, sBefore.published, 'yayın değişti');
+    assert.equal(s1.published_version, sBefore.published_version);
+    assert.equal(s1.draft.brand.display_name, 'P02 Taslak Ofis');
+  });
+
+  test('yayın tipli alanları (sayı, JSON, metin) canlıya uygular; geri alma eskisini getirir', async () => {
+    const ow = T.A.users.owner.client;
+    const before = (await site(T.A.orgId)).published_version;
+    const old = await settings(T.A.orgId);
+    const v = await ow.rpc('site_publish', { p_org: T.A.orgId, p_note: 'P0.2 marka' });
+    assert.ifError(v.error);
+    const live = await settings(T.A.orgId);
+    assert.equal(live.display_name, 'P02 Taslak Ofis');
+    assert.equal(live.phone, '+90 312 000 00 02');
+    assert.equal(live.logo_url, `organizations/${T.A.orgId}/branding/logo-p02-taslak-200x80.png`);
+    assert.deepEqual(live.opening_hours, HOURS);
+    assert.equal(Number(live.office_latitude), 39.92);
+    assert.equal(live.postal_code, '06100');
+    assert.equal(live.hero_title, 'P02 başlık');
+    if (before > 0) {
+      assert.ifError((await ow.rpc('site_rollback', { p_org: T.A.orgId, p_version: before })).error);
+      const back = await settings(T.A.orgId);
+      assert.equal(back.display_name, old.display_name);
+      assert.equal(back.logo_url, old.logo_url);
+      assert.deepEqual(back.opening_hours, old.opening_hours);
+      assert.equal(back.hero_title, old.hero_title);
+    }
+  });
+
+  test('tek yayın noktası: hiçbir ofis rolü marka/iletişim/saat/görsel sütununu doğrudan değiştiremez; SEO ve ilan ayarı serbest', async () => {
+    for (const role of ROLES) {
+      const c = T.A.users[role].client;
+      for (const patch of [{ display_name: 'Doğrudan' }, { phone: '000' }, { logo_url: 'x.png' }, { opening_hours: [{ days: ['sun'], opens: '07:00', closes: '08:00' }] }, { hero_title: 'x' }, { office_latitude: 1 }]) {
+        const r = await c.from('organization_settings').update(patch).eq('organization_id', T.A.orgId).select('organization_id');
+        assert.ok(r.error || denied(r), `${role}: ${Object.keys(patch)[0]} doğrudan yazıldı`);
+      }
+    }
+    const seo = await T.A.users.owner.client.from('organization_settings').update({ seo_title: 'P02 SEO' }).eq('organization_id', T.A.orgId).select('organization_id');
+    assert.ifError(seo.error);
+    assert.equal(seo.data.length, 1);
+    // Yardımcı (bayraklı) uygulama fonksiyonu doğrudan çağrılamaz
+    assert.ok((await T.A.users.owner.client.rpc('site_apply_brand', { p_org: T.A.orgId, p_brand: { display_name: 'Hack' } })).error);
+  });
+
+  test('başka kiracı: A, B\'nin markasını/iletişimini/logosunu ne taslakta ne canlıda değiştiremez', async () => {
+    const before = await settings(T.B.orgId);
+    const sBefore = await site(T.B.orgId);
+    for (const role of ['owner', 'admin']) {
+      const c = T.A.users[role].client;
+      assert.ok((await c.rpc('site_save_draft', { p_org: T.B.orgId, p_section: 'brand', p_value: { display_name: 'Ele geçirildi', logo_url: 'x.png' } })).error);
+      assert.ok(denied(await c.from('organization_settings').update({ phone: '1' }).eq('organization_id', T.B.orgId).select('organization_id')));
+      assert.ok((await c.rpc('site_publish', { p_org: T.B.orgId })).error);
+    }
+    assert.deepEqual(await settings(T.B.orgId), before);
+    assert.deepEqual((await site(T.B.orgId)).draft, sBefore.draft);
+  });
+
+  test('eşzamanlılık: eski belirteçle kayıt reddedilir (stale_draft); güncel belirteçle kabul edilir', async () => {
+    const ow = T.A.users.owner.client;
+    const t0 = (await site(T.A.orgId)).draft_updated_at;
+    // Başka kullanıcı (yönetici) bu arada taslağı değiştirir
+    const t1 = await T.A.users.admin.client.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'brand', p_value: { tagline: 'Yönetici değişikliği' } });
+    assert.ifError(t1.error);
+    const stale = await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'brand', p_value: { tagline: 'Sahibin eski formu' }, p_expected_updated_at: t0 });
+    assert.ok(stale.error, 'eski taslak üzerine yazıldı');
+    assert.match(stale.error.message, /stale_draft/);
+    assert.equal((await site(T.A.orgId)).draft.brand.tagline, 'Yönetici değişikliği');
+    const fresh = await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'brand', p_value: { tagline: 'Güncel' }, p_expected_updated_at: t1.data });
+    assert.ifError(fresh.error);
+    // Art arda kayıt: dönen belirteç bir sonrakinde geçerlidir
+    assert.ifError((await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'theme', p_value: 'atlas', p_expected_updated_at: fresh.data })).error);
+    assert.ifError((await ow.rpc('site_discard_draft', { p_org: T.A.orgId })).error);
   });
 });

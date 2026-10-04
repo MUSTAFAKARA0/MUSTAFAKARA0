@@ -215,11 +215,20 @@ test("TEST-KARAY-04: Elvankent başka kiracının site kaydını, taslağını, 
   expect(list.data ?? []).toEqual([]);
 });
 
+/** P0.2: ofisin marka değişikliği taslaktan "Yayınla" ile canlıya çıkar */
+async function publishOffice(page: Page) {
+  await expect(page.getByText('Taslak değişiklikler var')).toBeVisible();
+  await page.getByRole('button', { name: 'Değişiklikleri yayınla' }).click();
+  await page.getByRole('button', { name: 'Yayınla', exact: true }).click();
+  await expect(page.getByText(/Yayınlandı \(sürüm \d+\)/)).toBeVisible();
+}
+
 test('TEST-KARAY-05: Elvankent tema/renk değişikliği KARAY platformunu etkilemez', async ({ page, browser }) => {
   await loginOffice(page);
   await page.goto('/admin/sirket');
   await page.getByLabel('Ana renk', { exact: true }).fill(E_NEW_PRIMARY);
-  await page.getByRole('button', { name: 'Kaydet' }).click();
+  await page.getByRole('button', { name: 'Taslağa kaydet' }).click();
+  await publishOffice(page);
   await expect
     .poll(async () => (await service!.from('organization_settings').select('primary_color').eq('organization_id', S.elvId!).single()).data?.primary_color)
     .toBe(E_NEW_PRIMARY);
@@ -234,7 +243,8 @@ test('TEST-KARAY-05: Elvankent tema/renk değişikliği KARAY platformunu etkile
   // Geri al (ofis kendi ekranından)
   await page.goto('/admin/sirket');
   await page.getByLabel('Ana renk', { exact: true }).fill(S.elvPrimary!);
-  await page.getByRole('button', { name: 'Kaydet' }).click();
+  await page.getByRole('button', { name: 'Taslağa kaydet' }).click();
+  await publishOffice(page);
   await expect
     .poll(async () => (await service!.from('organization_settings').select('primary_color').eq('organization_id', S.elvId!).single()).data?.primary_color)
     .toBe(S.elvPrimary);

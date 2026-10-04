@@ -1,25 +1,19 @@
-import { randomBytes } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
 import { isSameOrigin } from '@/lib/same-origin';
 import { createServiceClient } from '@/lib/supabase/server';
 import { isUuid } from '@/lib/utils';
 import {
-  BRANDING_COLUMN,
   BRANDING_KINDS,
   BRANDING_LABEL,
   BRANDING_MAX_INPUT_BYTES,
   BrandingError,
-  processBranding,
   type BrandingKind,
 } from '@/modules/media/branding';
-import { MEDIA_BUCKETS } from '@/modules/media/variants';
 import { logSecurityEvent } from '@/platform/audit';
 import { requireSuperAdmin } from '@/platform/auth/session';
-import { parseSiteConfig } from '@/site-config/schema';
-import type { Json } from '@/types/supabase';
-
-type SessionDb = Awaited<ReturnType<typeof requireSuperAdmin>>['supabase'];
+import { toActionFailure } from '@/platform/actions';
+import { removeBrandingDraft, uploadBrandingDraft } from '@/site-editor/branding';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -34,12 +28,6 @@ const json = (body: Record<string, unknown>, status: number) => NextResponse.jso
  * değişir, önizlemede hemen görünür. Eski dosya silinmez (sürüm geçmişi ona başvurabilir).
  */
 
-/** Taslaktaki marka alanını günceller (süper admin oturumuyla; site_save_draft yetkiyi tekrar doğrular) */
-async function setDraftBrandField(db: SessionDb, orgId: string, column: string, value: string | null) {
-  const { data } = await db.from('site_configs').select('draft').eq('organization_id', orgId).maybeSingle();
-  const brand = { ...parseSiteConfig(data?.draft).brand, [column]: value };
-  return db.rpc('site_save_draft', { p_org: orgId, p_section: 'brand', p_value: brand as Json });
-}
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return json({ error: 'Geçersiz istek kaynağı.' }, 403);
   let session;
@@ -64,33 +52,19 @@ export async function POST(request: Request) {
 
   const service = createServiceClient();
   if (!service) return json({ error: 'Depolama yapılandırılmamış.' }, 503);
-  const column = BRANDING_COLUMN[kind];
-  const { data: before } = await service.from('organization_settings').select(column).eq('organization_id', orgId).maybeSingle();
+  const { data: before } = await service.from('organization_settings').select('organization_id').eq('organization_id', orgId).maybeSingle();
   if (!before) return json({ error: 'Site bulunamadı.' }, 404);
-
-  let output;
+  // Ortak çekirdek (ofisle aynı): doğrula → yeni yola yükle → taslağa bağla; eski dosya silinmez
+  let res;
   try {
-    output = await processBranding(kind, Buffer.from(await file.arrayBuffer()));
+    res = await uploadBrandingDraft({ db: session.supabase, storage: service, orgId, kind, input: Buffer.from(await file.arrayBuffer()), allowOg: true });
   } catch (error) {
     if (error instanceof BrandingError) return json({ error: error.message }, 400);
-    return json({ error: 'Görsel işlenemedi. Lütfen farklı bir dosya deneyin.' }, 400);
-  }
-
-  // Boyut dosya adında: logo sayfada doğru en-boy oranıyla, kayma (CLS) olmadan yer ayırır
-  const path = `organizations/${orgId}/branding/${kind}-${randomBytes(8).toString('hex')}-${output.width}x${output.height}.${output.ext}`;
-  const { error: uploadError } = await service.storage
-    .from(MEDIA_BUCKETS.branding)
-    .upload(path, output.buffer, { contentType: output.contentType, cacheControl: '31536000', upsert: false });
-  if (uploadError) return json({ error: 'Görsel kaydedilemedi. Lütfen tekrar deneyin.' }, 502);
-
-  const { error } = await setDraftBrandField(session.supabase, orgId, column, path);
-  if (error) {
-    await service.storage.from(MEDIA_BUCKETS.branding).remove([path]);
-    return json({ error: 'Taslak güncellenemedi.' }, 500);
+    return json({ error: toActionFailure(error).error }, 400);
   }
   await logSecurityEvent({ orgId, action: 'site.branding_uploaded', actorId: session.user.id, targetType: 'branding', targetLabel: `${BRANDING_LABEL[kind]} (taslak)` });
   revalidatePath(`/platform/siteler/${orgId}`, 'layout');
-  return json({ path, message: `${BRANDING_LABEL[kind]} taslağa kaydedildi. Canlı sitede görünmesi için yayınlayın.` }, 201);
+  return json({ path: res.path, message: res.message }, 201);
 }
 
 /** Görseli kaldırır (ör. mobil logo) */
@@ -106,14 +80,13 @@ export async function DELETE(request: Request) {
   const orgId = url.searchParams.get('orgId') ?? '';
   const kind = (url.searchParams.get('kind') ?? '') as BrandingKind;
   if (!isUuid(orgId) || !BRANDING_KINDS.includes(kind)) return json({ error: 'Geçersiz istek.' }, 400);
-  const service = createServiceClient();
-  if (!service) return json({ error: 'Depolama yapılandırılmamış.' }, 503);
-  const column = BRANDING_COLUMN[kind];
-  const { data: before } = await service.from('organization_settings').select(column).eq('organization_id', orgId).maybeSingle();
-  if (!before) return json({ error: 'Site bulunamadı.' }, 404);
-  const { error } = await setDraftBrandField(session.supabase, orgId, column, null);
-  if (error) return json({ error: 'Taslak güncellenemedi.' }, 500);
+  let message: string;
+  try {
+    message = await removeBrandingDraft(session.supabase, orgId, kind, { allowOg: true });
+  } catch (error) {
+    return json({ error: toActionFailure(error).error }, 400);
+  }
   await logSecurityEvent({ orgId, action: 'site.branding_uploaded', actorId: session.user.id, targetType: 'branding', targetLabel: `${BRANDING_LABEL[kind]} kaldırıldı (taslak)` });
   revalidatePath(`/platform/siteler/${orgId}`, 'layout');
-  return json({ message: `${BRANDING_LABEL[kind]} taslakta kaldırıldı. Canlı sitede yayınlayınca kalkar.` }, 200);
+  return json({ message }, 200);
 }

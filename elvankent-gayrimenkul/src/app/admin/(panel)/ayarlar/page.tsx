@@ -13,7 +13,9 @@ import { trashDemoListings, removeBrandingImage } from '@/app/actions/admin-sett
 import { formatBytes, formatDate, formatDateTime, formatNumber } from '@/lib/format';
 import { brandingUrl } from '@/modules/media/variants';
 import { isEmailConfigured } from '@/modules/notifications/email';
+import { getSiteAdmin } from '@/modules/platform/sites';
 import { requirePagePermission } from '@/platform/auth/session';
+import { pendingSectionLabels, SiteDraftStatus } from '@/components/admin/site-draft-status';
 
 export const metadata: Metadata = { title: 'Ayarlar' };
 
@@ -63,8 +65,9 @@ function UsageRow({ label, used, limit, format = formatNumber }: { label: string
 
 export default async function SettingsPage() {
   const ctx = await requirePagePermission('settings.manage');
-  const [{ data: s }, { data: usageRaw }, { data: sub }, { data: plan }, { count: demoCount }] = await Promise.all([
-    ctx.supabase.from('organization_settings').select('hero_title, hero_subtitle, hero_image_url, default_location_precision, service_area').eq('organization_id', ctx.org.id).maybeSingle(),
+  const [site, { data: usageRaw }, { data: sub }, { data: plan }, { count: demoCount }] = await Promise.all([
+    // P0.2: ana sayfa metinleri ve görseli taslaktan okunur (canlı + bekleyen değişiklikler)
+    getSiteAdmin(ctx, ctx.org.id),
     ctx.supabase.rpc('org_usage', { p_org: ctx.org.id }),
     ctx.supabase.from('subscriptions').select('status, trial_ends_at, renewal_at, started_at').eq('organization_id', ctx.org.id).in('status', ['trialing', 'active', 'past_due']).maybeSingle(),
     ctx.plan.id ? ctx.supabase.from('plans').select('name').eq('id', ctx.plan.id).maybeSingle() : Promise.resolve({ data: null }),
@@ -80,6 +83,8 @@ export default async function SettingsPage() {
       .order('created_at', { ascending: false })
       .limit(8),
   ]);
+  const s = site?.brand ?? null;
+  const pendingHero = site ? ['hero_title', 'hero_subtitle', 'hero_image_url'].some((k) => k in site.draft.brand) : false;
   const usage = usageRaw as unknown as Usage | null;
   const subStatus = SUBSCRIPTION_LABELS[sub?.status ?? usage?.subscription_status ?? ''];
   const canExport = ctx.can('data.export');
@@ -89,13 +94,16 @@ export default async function SettingsPage() {
       <AdminPageHeader title="Ayarlar" description="Ana sayfa, ilan varsayılanları, plan kullanımı ve veri dışa aktarma. Marka ve iletişim bilgileri Şirket Ayarları'ndadır." />
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="min-w-0 space-y-6">
-          <Panel title="Ana sayfa" description="Ziyaretçinin ilk gördüğü bölüm.">
+          <Panel title="Ana sayfa" description="Ziyaretçinin ilk gördüğü bölüm. Metinler ve görsel taslağa kaydedilir; yayınladığınızda sitede görünür.">
             <div className="space-y-6">
+              {site && <SiteDraftStatus site={site} labels={pendingSectionLabels(site)} />}
+              {pendingHero && <p className="text-[13px] font-semibold text-amber-900">Ana sayfa metni veya görseli taslakta: yayınlanınca sitede görünür.</p>}
               <SiteSettingsForm
+                draftToken={site?.draftUpdatedAt ?? null}
                 initial={{
                   hero_title: s?.hero_title ?? '',
                   hero_subtitle: s?.hero_subtitle ?? '',
-                  default_location_precision: s?.default_location_precision ?? 'approximate',
+                  default_location_precision: site?.settings.default_location_precision ?? 'approximate',
                 }}
                 defaults={{
                   title: 'Size uygun gayrimenkulü, güvenle bulun.',

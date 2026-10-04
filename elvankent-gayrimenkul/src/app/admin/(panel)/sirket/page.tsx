@@ -8,17 +8,23 @@ import { parseOpeningHours } from '@/modules/content/hours';
 import { publicMapConfig } from '@/modules/maps/providers';
 import { brandingUrl } from '@/modules/media/variants';
 import { getTaxonomy } from '@/modules/properties/taxonomy';
+import { getSiteAdmin } from '@/modules/platform/sites';
 import { requirePagePermission } from '@/platform/auth/session';
+import { pendingSectionLabels, SiteDraftStatus } from '@/components/admin/site-draft-status';
 
 export const metadata: Metadata = { title: 'Marka ve görünüm' };
 
+/**
+ * Ofis › Marka ve görünüm. P0.2: değerler TASLAKTAN okunur (canlı + bekleyen değişiklikler) ve
+ * taslağa kaydedilir; canlı site yalnızca "Yayınla" ile değişir (KARAY ve /admin/site ile aynı
+ * taslak, aynı yayın, aynı sürüm geçmişi).
+ */
 export default async function CompanySettingsPage() {
   const ctx = await requirePagePermission('settings.manage');
-  const [{ data: s }, taxonomy] = await Promise.all([
-    ctx.supabase.from('organization_settings').select('*').eq('organization_id', ctx.org.id).maybeSingle(),
-    getTaxonomy(),
-  ]);
-  if (!s) notFound();
+  const [site, taxonomy] = await Promise.all([getSiteAdmin(ctx, ctx.org.id), getTaxonomy()]);
+  if (!site) notFound();
+  const s = site.brand;
+  const pending = new Set(Object.keys(site.draft.brand));
   const city = taxonomy.cities.find((c) => c.latitude !== null && c.longitude !== null);
   const str = (value: string | number | null | undefined) => (value === null || value === undefined ? '' : String(value));
 
@@ -26,9 +32,11 @@ export default async function CompanySettingsPage() {
     <>
       <AdminPageHeader
         title="Marka ve görünüm"
-        description="Sitenizin kimliği: marka, renkler, iletişim ve adres bilgileri. Değişiklikler kaydedildiği anda sitede görünür."
+        description="Sitenizin kimliği: marka, renkler, iletişim ve adres bilgileri. Değişiklikler önce taslağa kaydedilir; önizleyip yayınladığınızda sitede görünür."
       />
+      <SiteDraftStatus site={site} labels={pendingSectionLabels(site)} />
       <CompanyForm
+        draftToken={site.draftUpdatedAt}
         initial={{
           display_name: s.display_name,
           legal_name: str(s.legal_name),
@@ -63,14 +71,14 @@ export default async function CompanySettingsPage() {
               kind="logo"
               label="Logo"
               url={brandingUrl(s.logo_url)}
-              hint="PNG (şeffaf zemin önerilir), JPG, WEBP veya AVIF. En fazla 1200×480 px'e küçültülür. Yüklenmezse şirket adı yazı olarak gösterilir."
+              hint={`PNG (şeffaf zemin önerilir), JPG, WEBP veya AVIF. En fazla 1200×480 px'e küçültülür. Yüklenmezse şirket adı yazı olarak gösterilir.${pending.has('logo_url') ? ' · Taslakta: yayınlanınca sitede görünür.' : ''}`}
             />
             <BrandingImageField removeAction={removeBrandingImage}
               kind="favicon"
               label="Site simgesi (favicon)"
               url={brandingUrl(s.favicon_url)}
               previewClassName="size-24"
-              hint="Kare görsel önerilir; 512×512 px PNG'ye dönüştürülür. Tarayıcı sekmesinde ve ana ekrana eklemede görünür."
+              hint={`Kare görsel önerilir; 512×512 px PNG'ye dönüştürülür. Tarayıcı sekmesinde ve ana ekrana eklemede görünür.${pending.has('favicon_url') ? ' · Taslakta: yayınlanınca sitede görünür.' : ''}`}
             />
           </div>
         }

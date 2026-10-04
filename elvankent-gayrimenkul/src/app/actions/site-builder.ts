@@ -8,6 +8,7 @@ import { requireSuperAdmin } from '@/platform/auth/session';
 import { FEATURE_KEYS, type SiteSection } from '@/site-config/schema';
 import { findDesignFamily } from '@/site-factory/families';
 import { firstIssue, type BrandInput } from '@/site-editor/brand-input';
+import type { SavedDraft } from '@/site-editor/types';
 import {
   applyFamilyToDraft,
   discardDraft,
@@ -40,13 +41,13 @@ function refreshSite(orgId: string) {
 }
 
 /** Taslağın bir bölümünü kaydeder (canlı site değişmez; yayınlanınca değişir) */
-export async function saveSiteSection(orgId: string, section: SiteSection, value: unknown): Promise<ActionResult<null>> {
+export async function saveSiteSection(orgId: string, section: SiteSection, value: unknown, expected?: string | null): Promise<ActionResult<SavedDraft>> {
   return runAction(async () => {
     assertOrg(orgId);
     const session = await requireSuperAdmin();
-    await saveDraftSection(session.supabase, orgId, section, value);
+    const draftToken = await saveDraftSection(session.supabase, orgId, section, value, expected);
     revalidatePath(`/platform/siteler/${orgId}`, 'layout');
-    return null;
+    return { draftToken };
   }, 'Taslağa kaydedildi. Canlı sitede görünmesi için "Değişiklikleri yayınla"ya basın.');
 }
 
@@ -54,13 +55,13 @@ export async function saveSiteSection(orgId: string, section: SiteSection, value
  * Site Factory: seçilen tasarım ailesini taslağa derler (ortak servis: applyFamilyToDraft).
  * KARAY katalogdaki her aileyi uygulayabilir. Canlı site değişmez.
  */
-export async function applyDesignFamily(orgId: string, familyId: string): Promise<ActionResult<null>> {
+export async function applyDesignFamily(orgId: string, familyId: string, expected?: string | null): Promise<ActionResult<SavedDraft>> {
   return runAction(async () => {
     assertOrg(orgId);
     const session = await requireSuperAdmin();
-    await applyFamilyToDraft(session.supabase, orgId, familyId);
+    const draftToken = await applyFamilyToDraft(session.supabase, orgId, familyId, undefined, expected);
     revalidatePath(`/platform/siteler/${orgId}`, 'layout');
-    return null;
+    return { draftToken };
   }, 'Tasarım ailesi taslağa uygulandı. Önizleyip "Değişiklikleri yayınla"ya basın.');
 }
 
@@ -132,13 +133,13 @@ export async function setSiteFeatures(orgId: string, overrides: Record<string, b
 export type { BrandInput };
 
 /** Marka ve iletişim TASLAĞA yazılır (ortak servis: saveBrandDraft) */
-export async function updateSiteBrand(orgId: string, input: BrandInput): Promise<ActionResult<null>> {
+export async function updateSiteBrand(orgId: string, input: BrandInput, expected?: string | null): Promise<ActionResult<SavedDraft>> {
   return runAction(async () => {
     assertOrg(orgId);
     const session = await requireSuperAdmin();
-    await saveBrandDraft(session.supabase, orgId, input);
+    const draftToken = await saveBrandDraft(session.supabase, orgId, input, expected);
     revalidatePath(`/platform/siteler/${orgId}`, 'layout');
-    return null;
+    return { draftToken };
   }, 'Marka taslağa kaydedildi. Canlı sitede görünmesi için "Değişiklikleri yayınla"ya basın.');
 }
 

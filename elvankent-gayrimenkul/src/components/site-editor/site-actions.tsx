@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { createContext, useContext, useState, useTransition, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useTransition, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { Eye, Rocket, Save, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { hasUnsavedChanges, useDirtyGuard } from '@/components/site-editor/dirty-guard';
 import type { ActionResult } from '@/platform/actions';
 import type { BrandInput } from '@/site-editor/brand-input';
+import type { SavedDraft } from '@/site-editor/types';
 import type { SiteSection } from '@/site-config/schema';
 
 type Size = 'xs' | 'sm' | 'md';
@@ -23,19 +24,53 @@ type Size = 'xs' | 'sm' | 'md';
  *   ofis   → app/actions/admin-site   (settings.manage; organizasyon OTURUMDAN, istemciden alınmaz)
  * Her iki yol da aynı servise (@/site-editor/service) ve aynı veritabanı fonksiyonlarına gider.
  */
+type Saved = ActionResult<SavedDraft>;
+
 export interface SiteEditorActions {
-  saveSection: (section: SiteSection, value: unknown) => Promise<ActionResult<null>>;
-  saveBrand: (input: BrandInput) => Promise<ActionResult<null>>;
-  applyFamily: (familyId: string) => Promise<ActionResult<null>>;
+  saveSection: (section: SiteSection, value: unknown, expected?: string | null) => Promise<Saved>;
+  saveBrand: (input: BrandInput, expected?: string | null) => Promise<Saved>;
+  applyFamily: (familyId: string, expected?: string | null) => Promise<Saved>;
 }
 
-const SiteEditorContext = createContext<SiteEditorActions | null>(null);
-
-export function SiteEditorProvider({ actions, children }: { actions: SiteEditorActions; children: ReactNode }) {
-  return <SiteEditorContext.Provider value={actions}>{children}</SiteEditorContext.Provider>;
+/**
+ * Taslak eşzamanlılık belirteci (P0.2): sayfanın yüklendiği andaki taslak zamanı. Her kayıtta
+ * gönderilir; taslak bu arada başka biri (ör. KARAY ↔ ofis) tarafından değiştirildiyse sunucu
+ * kaydı reddeder ve kullanıcıdan güncel taslağı incelemesini ister. Kayıt sonrası sayfa tazelenince
+ * belirteç de yenilenir.
+ */
+interface SiteEditorContextValue extends SiteEditorActions {
+  draftToken: string | null;
 }
 
-export function useSiteEditor(): SiteEditorActions {
+const SiteEditorContext = createContext<SiteEditorContextValue | null>(null);
+
+export function SiteEditorProvider({ actions, draftToken = null, children }: { actions: SiteEditorActions; draftToken?: string | null; children: ReactNode }) {
+  // Sunucudan gelen belirteç (sayfa tazelenince) ile bu sekmenin son kaydının belirteci: hangisi
+  // daha yeniyse o kullanılır. Art arda kayıtlar (ör. tema + stil + renk) kendi yazımına takılmaz.
+  const latest = useRef(draftToken);
+  useEffect(() => {
+    latest.current = draftToken;
+  }, [draftToken]);
+  const run = async (call: (token: string | null) => Promise<Saved>): Promise<Saved> => {
+    const res = await call(latest.current);
+    if (res.ok && res.data?.draftToken) latest.current = res.data.draftToken;
+    return res;
+  };
+  return (
+    <SiteEditorContext.Provider
+      value={{
+        draftToken,
+        saveSection: (section, value) => run((t) => actions.saveSection(section, value, t)),
+        saveBrand: (input) => run((t) => actions.saveBrand(input, t)),
+        applyFamily: (familyId) => run((t) => actions.applyFamily(familyId, t)),
+      }}
+    >
+      {children}
+    </SiteEditorContext.Provider>
+  );
+}
+
+export function useSiteEditor(): SiteEditorContextValue {
   const ctx = useContext(SiteEditorContext);
   if (!ctx) throw new Error('SiteEditorProvider eksik');
   return ctx;

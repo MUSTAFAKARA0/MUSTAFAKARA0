@@ -92,7 +92,7 @@ export default async function OfficeSiteLayout({ children }: LayoutProps<'/admin
         pendingLabels={pendingLabels}
       />
       <SiteTabs base="/admin/site" tabs={TABS} pending={pending} />
-      <SiteEditorProvider actions={{ saveSection: saveOfficeSiteSection, saveBrand: updateOfficeSiteBrand, applyFamily: applyOfficeDesignFamily }}>
+      <SiteEditorProvider draftToken={site.draftUpdatedAt} actions={{ saveSection: saveOfficeSiteSection, saveBrand: updateOfficeSiteBrand, applyFamily: applyOfficeDesignFamily }}>
         <div className="pt-6">{children}</div>
       </SiteEditorProvider>
     </>

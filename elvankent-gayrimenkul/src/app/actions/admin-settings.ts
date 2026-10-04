@@ -1,6 +1,6 @@
 'use server';
 
-import { updateTag } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { z } from 'zod';
 import { bulkPropertyAction } from '@/app/actions/admin-properties';
 import { cacheTags } from '@/lib/cache-tags';
@@ -13,13 +13,25 @@ import { isEmailConfigured, sendEmail } from '@/modules/notifications/email';
 import { leadNotificationRecipients } from '@/modules/notifications/lead';
 import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/platform/actions';
 import { requirePermission } from '@/platform/auth/session';
+import type { BrandDraft } from '@/site-config/schema';
+import { DRAFT_BRANDING_KINDS, removeBrandingDraft } from '@/site-editor/branding';
+import { saveBrandFields } from '@/site-editor/service';
 import type { TablesUpdate } from '@/types/supabase';
 
-/** Marka görselini kaldırır (sitede varsayılan görünüm kullanılır) ve dosyayı siler */
+/**
+ * Marka görselini kaldırır. Logo, mobil logo, site simgesi ve ana sayfa görseli TASLAKTA kaldırılır
+ * (P0.2: canlı site yayına kadar görseli göstermeye devam eder; dosya silinmez). Paylaşım görseli
+ * SEO modülüne aittir (seo.manage) ve anında kaldırılır.
+ */
 export async function removeBrandingImage(kind: BrandingKind): Promise<ActionResult<null>> {
   return runAction(async () => {
     if (!BRANDING_KINDS.includes(kind)) throw new ActionError('Geçersiz görsel türü.');
     const ctx = await requirePermission(BRANDING_PERMISSION[kind]);
+    if (DRAFT_BRANDING_KINDS.includes(kind)) {
+      await removeBrandingDraft(ctx.supabase, ctx.org.id, kind);
+      revalidatePath('/admin', 'layout');
+      return null;
+    }
     const column = BRANDING_COLUMN[kind];
     const { data: before } = await ctx.supabase.from('organization_settings').select(column).eq('organization_id', ctx.org.id).maybeSingle();
     const { error } = await ctx.supabase
@@ -34,7 +46,7 @@ export async function removeBrandingImage(kind: BrandingKind): Promise<ActionRes
     }
     updateTag(cacheTags.org(ctx.org.id));
     return null;
-  }, `${BRANDING_LABEL[kind] ?? 'Görsel'} kaldırıldı.`);
+  }, DRAFT_BRANDING_KINDS.includes(kind) ? `${BRANDING_LABEL[kind] ?? 'Görsel'} taslakta kaldırıldı. Sitede yayınlayınca kalkar.` : `${BRANDING_LABEL[kind] ?? 'Görsel'} kaldırıldı.`);
 }
 
 // -----------------------------------------------------------------------------
@@ -139,40 +151,45 @@ const companySchema = z
 
 export type CompanySettingsInput = z.input<typeof companySchema>;
 
-export async function saveCompanySettings(raw: CompanySettingsInput): Promise<ActionResult<null>> {
+/**
+ * Şirket ayarları (marka, iletişim, adres, konum, saatler, sosyal medya) — P0.2: TASLAĞA yazılır.
+ * Ortak çekirdek saveBrandFields (KARAY ve /admin/site ile aynı); canlı site "Yayınla" ile değişir,
+ * önizlemede hemen görünür, sürüm geçmişinden geri alınabilir. Organizasyon oturumdan gelir.
+ */
+export async function saveCompanySettings(raw: CompanySettingsInput, expected?: string | null): Promise<ActionResult<null>> {
   return runAction(async () => {
     const ctx = await requirePermission('settings.manage');
     const input = companySchema.parse(raw);
-    const { data, error } = await ctx.supabase
-      .from('organization_settings')
-      .update({
-        ...input,
-        legal_name: input.legal_name ?? null,
-        tagline: input.tagline ?? null,
-        description: input.description ?? null,
-        service_area: input.service_area ?? null,
-        phone: input.phone ?? null,
-        whatsapp: input.whatsapp ?? null,
-        email: input.email ?? null,
-        address_line: input.address_line ?? null,
-        address_district: input.address_district ?? null,
-        address_city: input.address_city ?? null,
-        postal_code: input.postal_code ?? null,
-        working_hours_note: input.working_hours_note ?? null,
-        instagram_url: input.instagram_url ?? null,
-        facebook_url: input.facebook_url ?? null,
-        x_url: input.x_url ?? null,
-        youtube_url: input.youtube_url ?? null,
-        linkedin_url: input.linkedin_url ?? null,
-        tiktok_url: input.tiktok_url ?? null,
-      })
-      .eq('organization_id', ctx.org.id)
-      .select('organization_id');
-    assertNoDbError(error);
-    if (!data?.length) throw new ActionError('Ayarlar bulunamadı.');
-    updateTag(cacheTags.org(ctx.org.id));
+    const values: BrandDraft = {
+      display_name: input.display_name,
+      legal_name: input.legal_name ?? null,
+      tagline: input.tagline ?? null,
+      description: input.description ?? null,
+      service_area: input.service_area ?? null,
+      primary_color: input.primary_color,
+      accent_color: input.accent_color,
+      phone: input.phone ?? null,
+      whatsapp: input.whatsapp ?? null,
+      email: input.email ?? null,
+      address_line: input.address_line ?? null,
+      address_district: input.address_district ?? null,
+      address_city: input.address_city ?? null,
+      postal_code: input.postal_code ?? null,
+      office_latitude: input.office_latitude,
+      office_longitude: input.office_longitude,
+      opening_hours: input.opening_hours,
+      working_hours_note: input.working_hours_note ?? null,
+      instagram_url: input.instagram_url ?? null,
+      facebook_url: input.facebook_url ?? null,
+      x_url: input.x_url ?? null,
+      youtube_url: input.youtube_url ?? null,
+      linkedin_url: input.linkedin_url ?? null,
+      tiktok_url: input.tiktok_url ?? null,
+    };
+    await saveBrandFields(ctx.supabase, ctx.org.id, values, expected);
+    revalidatePath('/admin', 'layout');
     return null;
-  }, 'Şirket ayarları kaydedildi.');
+  }, 'Taslağa kaydedildi. Sitede görünmesi için "Yayınla"ya basın.');
 }
 
 // -----------------------------------------------------------------------------
@@ -186,20 +203,26 @@ const siteSchema = z.object({
 
 export type SiteSettingsInput = z.input<typeof siteSchema>;
 
-export async function saveSiteSettings(raw: SiteSettingsInput): Promise<ActionResult<null>> {
+/**
+ * Ana sayfa metinleri TASLAĞA (P0.2; ziyaretçinin gördüğü içerik), ilan konum gösterimi varsayılanı
+ * ise ilan davranışı ayarıdır ve anında kaydedilir (site içeriği değil, ilan verisi politikası).
+ */
+export async function saveSiteSettings(raw: SiteSettingsInput, expected?: string | null): Promise<ActionResult<null>> {
   return runAction(async () => {
     const ctx = await requirePermission('settings.manage');
     const input = siteSchema.parse(raw);
+    await saveBrandFields(ctx.supabase, ctx.org.id, { hero_title: input.hero_title ?? null, hero_subtitle: input.hero_subtitle ?? null }, expected);
     const { data, error } = await ctx.supabase
       .from('organization_settings')
-      .update({ hero_title: input.hero_title ?? null, hero_subtitle: input.hero_subtitle ?? null, default_location_precision: input.default_location_precision })
+      .update({ default_location_precision: input.default_location_precision })
       .eq('organization_id', ctx.org.id)
       .select('organization_id');
     assertNoDbError(error);
     if (!data?.length) throw new ActionError('Ayarlar bulunamadı.');
     updateTag(cacheTags.org(ctx.org.id));
+    revalidatePath('/admin', 'layout');
     return null;
-  }, 'Site ayarları kaydedildi.');
+  }, 'Ana sayfa metinleri taslağa kaydedildi; yayınlayınca sitede görünür. İlan ayarı kaydedildi.');
 }
 
 /**

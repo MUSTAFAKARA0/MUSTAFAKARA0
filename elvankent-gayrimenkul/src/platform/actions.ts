@@ -73,6 +73,8 @@ const DB_MESSAGES: Record<string, string> = {
   not_found: 'Kayıt bulunamadı.',
   forbidden: 'Bu işlem için yetkiniz yok.',
   family_not_allowed: 'Bu tasarım ailesi siteniz için açık değil.',
+  stale_draft: 'Bu taslak siz açtıktan sonra değiştirildi. Önce sayfayı yenileyip güncel taslağı inceleyin.',
+  brand_requires_publish: 'Marka ve site bilgileri doğrudan değiştirilemez; taslağa kaydedip yayınlayın.',
 };
 
 export function mapDbError(error: DbErrorLike): string {

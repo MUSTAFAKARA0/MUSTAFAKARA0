@@ -265,7 +265,36 @@ Alan Adı (yalnızca görüntüleme) ve Geçmiş (sürümler, geri yükleme). Ü
 - **Tek taslak:** KARAY ve ofis aynı taslağı düzenler; ofisin yayını KARAY'ın bekleyen taslak
   değişikliklerini de yayınlar (sürüm geçmişinden geri alınabilir).
 - Eski `/admin/tasarim` (anında yayın) `/admin/site/tasarim`'e yönlenir; `site_apply_design` veritabanında
-  durur ama arayüz kullanmaz. Logo/görseller ve çalışma saatleri `/admin/sirket`'te kalır (anında yayın).
+  durur ama arayüz kullanmaz.
+
+## P0.2 — Marka ve site içeriği taslağı (tek yayın noktası)
+
+Ziyaretçinin gördüğü marka/site içeriği (ad, kısa ad, unvan, slogan, açıklama, hizmet bölgesi, renkler,
+telefon, WhatsApp, e-posta, adres, posta kodu, ofis konumu, çalışma saatleri ve notu, sosyal medya,
+harita bağlantısı, logo, mobil logo, site simgesi, ana sayfa görseli ve metinleri) yalnızca
+taslak → önizleme → yayın akışıyla değişir. Kaynak: `organization_settings` (yeni tablo yok); bekleyen
+değerler `site_configs.draft.brand`'de durur (beyaz liste: `BRAND_FIELDS` = `site_brand_columns()`).
+
+- **Tek çekirdek:** `site-editor/service.ts › saveBrandFields` (canlıyla aynı alanı taslaktan çıkarır,
+  sayı/JSON değerleri anahtar sırasından bağımsız karşılaştırır). KARAY marka formu, `/admin/site`,
+  `/admin/sirket` ve `/admin/ayarlar` (ana sayfa metinleri) bunu kullanır.
+- **Görseller:** `site-editor/branding.ts › uploadBrandingDraft` (KARAY ve ofis uç noktaları ortak):
+  doğrula → yeni rastgele yola yükle → yolu taslağa bağla. Eski dosya SİLİNMEZ (canlı site ve sürüm
+  geçmişi ona başvurabilir); taslağa bağlanamazsa yalnızca yeni dosya silinir. Kova herkese açıktır;
+  taslak dosyanın adresi tahmin edilemez (16 hex).
+- **Tek yayın noktası (veritabanı):** `organization_settings_guard` süper admin olmayan kullanıcının
+  marka/site içeriği sütunlarını doğrudan değiştirmesini reddeder (`brand_requires_publish`); yalnızca
+  `site_apply_brand` (yayın / geri alma, işlem içi bayrak) yazar.
+- **Eşzamanlılık:** `site_save_draft(..., p_expected_updated_at)` belirteç verilirse eski taslağı reddeder
+  (`stale_draft`, HTTP 409) ve yeni belirteci döner. Formlar `SiteEditorProvider` üzerinden sayfa
+  yüklendiğindeki taslak zamanını gönderir; art arda kayıtlarda dönen belirteç kullanılır. Görsel
+  yüklemede belirteç gönderilmez (tek alan; son yazan kazanır).
+- **Taslak dışında kalanlar:** SEO modülü (`/admin/seo`: SEO başlığı/açıklaması, paylaşım görseli,
+  doğrulama kodu; `seo.manage` yetkisi editöre de açıktır ve editör yayın yapamaz) ve ilan konum
+  gösterimi varsayılanı (ilan verisi politikası).
+- **Önbellek:** yayın / geri alma `refreshPublicSite` ile `tenants` ve `org` etiketlerini geçersiz kılar
+  (başlık, alt bilgi, iletişim, ilan, meta verisi aynı önbellekli kiracı kaydını okur). Otomatik site
+  simgesi (`/site-icon`, logo yokken baş harflerden üretilir) 1 saat public önbellekte kalabilir.
 
 ## Theme Engine (`src/theme-engine`)
 

@@ -121,10 +121,31 @@ export const BRAND_FIELDS = [
   'instagram_url', 'facebook_url', 'x_url', 'youtube_url', 'linkedin_url', 'tiktok_url',
   'logo_url', 'logo_mobile_url', 'favicon_url', 'og_image_url', 'hero_image_url',
   'primary_color', 'accent_color',
+  // P0.2: ziyaretçinin gördüğü diğer site içeriği (veritabanı: site_brand_columns ile aynı liste)
+  'service_area', 'postal_code', 'office_latitude', 'office_longitude',
+  'opening_hours', 'working_hours_note', 'hero_title', 'hero_subtitle',
 ] as const;
 export type BrandField = (typeof BRAND_FIELDS)[number];
-export type BrandDraft = Partial<Record<BrandField, string | null>>;
-export const brandDraftSchema = z.partialRecord(z.enum(BRAND_FIELDS), z.string().max(2000).nullable());
+/** Çalışma saatleri satırı (organization_settings.opening_hours ile aynı biçim) */
+export interface OpeningHoursRow {
+  days: string[];
+  opens: string;
+  closes: string;
+}
+export type BrandValue = string | number | null | OpeningHoursRow[];
+export type BrandDraft = Partial<Record<BrandField, BrandValue>>;
+const openingHoursRow = z.object({ days: z.array(z.string().max(12)).max(7), opens: z.string().max(5), closes: z.string().max(5) });
+const NUMERIC_BRAND_FIELDS: readonly string[] = ['office_latitude', 'office_longitude'];
+export const brandDraftSchema = z
+  .partialRecord(z.enum(BRAND_FIELDS), z.union([z.string().max(2000), z.number().finite(), z.null(), z.array(openingHoursRow).max(7)]))
+  .superRefine((brand, ctx) => {
+    // Alan tipi sütun tipine uymalı: saatler liste, konum sayı, diğerleri metin (veya boş)
+    for (const [k, v] of Object.entries(brand)) {
+      if (v === null || v === undefined) continue;
+      const ok = k === 'opening_hours' ? Array.isArray(v) : NUMERIC_BRAND_FIELDS.includes(k) ? typeof v === 'number' : typeof v === 'string';
+      if (!ok) ctx.addIssue({ code: 'custom', message: 'Geçersiz değer.', path: [k] });
+    }
+  });
 
 // --------------------------------------------------------------------------- Sayfalar
 export const PAGE_KEYS = ['hakkimizda', 'hizmetlerimiz', 'iletisim', 'degerleme', 'blog', 'bolgeler'] as const;

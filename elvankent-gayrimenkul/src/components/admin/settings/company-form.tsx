@@ -62,8 +62,11 @@ export function CompanyForm({
   map,
   defaultCenter,
   branding,
+  draftToken = null,
 }: {
   initial: CompanyValues;
+  /** Taslak eşzamanlılık belirteci (sayfa yüklendiğindeki taslak zamanı) */
+  draftToken?: string | null;
   map: { attribution: string; maxZoom: number };
   defaultCenter: { lat: number; lng: number };
   branding: React.ReactNode;
@@ -97,7 +100,7 @@ export function CompanyForm({
       ...v,
       office_latitude: v.office_latitude === '' ? null : v.office_latitude,
       office_longitude: v.office_longitude === '' ? null : v.office_longitude,
-    });
+    }, draftToken);
     setPending(false);
     if (!res.ok) {
       const next: Record<string, string> = {};
@@ -294,15 +297,15 @@ export function CompanyForm({
       <div className="sticky bottom-0 z-10 -mx-4 flex items-center justify-end gap-3 border-t border-border bg-[#f5f4f1]/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:px-5">
         {dirty ? (
           <p className="mr-auto text-[13px] font-medium text-warning" role="status">
-            Kaydedilmemiş değişiklikler var.
+            Kaydedilmemiş değişiklikler var — taslağa kaydedin.
           </p>
         ) : (
           <p className="mr-auto flex items-center gap-1.5 text-[13px] text-muted-foreground" role="status">
-            <Check className="size-4" aria-hidden /> Tüm değişiklikler kaydedildi.
+            <Check className="size-4" aria-hidden /> Değişiklikler taslağa kaydedilir; sitede görünmesi için yayınlayın.
           </p>
         )}
         <Button type="submit" loading={pending} disabled={!dirty && !pending}>
-          {!pending && <Save />} Kaydet
+          {!pending && <Save />} Taslağa kaydet
         </Button>
       </div>
     </form>
