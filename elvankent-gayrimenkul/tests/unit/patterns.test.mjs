@@ -35,6 +35,7 @@ const SRC = fileURLToPath(new URL('../../src/', import.meta.url));
 const LOADERS = {
   interaction: 'components/patterns/interaction/islands.tsx',
   gallery: 'components/patterns/gallery/islands.tsx',
+  listing: 'components/patterns/listing/islands.tsx',
 };
 const PATTERNS = path.join(SRC, 'components/patterns');
 const read = (rel) => readFileSync(path.join(SRC, rel), 'utf8');
@@ -166,7 +167,7 @@ describe('Yüzey sözleşmeleri ve desen çözümleyici (D7.2)', () => {
     }
     // Planlanmış bir kimlik manifestte seçilemez
     assert.throws(() => parseManifest({ siteType: 'real-estate-office', designFamily: 'klasik-guven', variants: { gallery: 'masonry' } }));
-    assert.throws(() => parseManifest({ siteType: 'real-estate-office', designFamily: 'klasik-guven', variants: { search: 'map-first' } }));
+    assert.throws(() => parseManifest({ siteType: 'real-estate-office', designFamily: 'klasik-guven', variants: { search: 'premium' } }));
   });
 
   test('çözümleyici: seçim yoksa/bilinmiyorsa mevcut standart bileşen (eski kiracı → eski görünüm)', () => {
@@ -213,6 +214,7 @@ describe('Yüzey sözleşmeleri ve desen çözümleyici (D7.2)', () => {
 
   test('her yüzey çizicisi türünün uygulanmış bütün desenlerini karşılar; standart = mevcut bileşen', () => {
     const SURFACE_FILES = {
+      hero: ['components/patterns/hero/surface.tsx', 'Hero'],
       gallery: ['components/patterns/gallery/surface.tsx', 'PropertyGallery'],
       search: ['components/patterns/search/surface.tsx', 'ListingToolbar'],
       listing: ['components/patterns/listing/surface.tsx', 'PropertyGrid'],
@@ -221,13 +223,15 @@ describe('Yüzey sözleşmeleri ve desen çözümleyici (D7.2)', () => {
     };
     for (const [kind, [file, legacyName]] of Object.entries(SURFACE_FILES)) {
       const src = read(file);
-      assert.ok(src.includes(`<${legacyName} `), `${file}: standart bileşen yok`);
-      assert.ok(src.includes(`resolvePattern(view, '${kind}')`), `${file}: çözümleyici kullanılmıyor`);
-      const extra = PATTERN_ENUMS[kind].filter((id) => id !== 'standard');
+      assert.ok(new RegExp(`<${legacyName}[\\s/]`).test(src), `${file}: standart bileşen yok`);
+      const surface = SURFACE_CONTRACTS.find((c) => c.kind === kind).surface;
+      assert.ok(src.includes(`resolvePattern(view, '${surface}')`), `${file}: çözümleyici kullanılmıyor`);
+      const extra = PATTERN_ENUMS[kind].filter((id) => !findPattern(kind, id).legacy);
       for (const id of extra) {
         const meta = findPattern(kind, id);
         // İnteraktif desen: türün yükleyicisi üzerinden; sunucu deseni: çizicide adıyla
-        assert.ok(meta.interactive ? src.includes(LOADERS[kind].split('/').pop().replace('.tsx', '')) : src.includes(`'${id}'`), `${file}: ${id} çizilmiyor`);
+        if (meta.interactive) assert.ok(src.includes(`'@/${LOADERS[kind].replace('.tsx', '')}'`), `${file}: ${id} yükleyicisi yok`);
+        else assert.ok(src.includes(`case '${id}':`), `${file}: ${id} çizilmiyor`);
       }
     }
   });

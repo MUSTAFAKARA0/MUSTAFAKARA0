@@ -1,3 +1,4 @@
+import type { HeroLayout } from '@/theme-engine/ids';
 import type { HomepageComposition } from '@/site-factory/types';
 
 /**
@@ -5,7 +6,7 @@ import type { HomepageComposition } from '@/site-factory/types';
  * kullanır; kiracı sitesine girmez. Değer listeleri Theme Engine kimlikleridir (ids.ts).
  */
 export const VARIANT_LABELS = {
-  hero: { overlay: 'Fotoğraf üstü', centered: 'Ortalı', split: 'Bölünmüş', cinematic: 'Sinematik', editorial: 'Editoryal (çerçeveli)', showcase: 'İlan vitrini' },
+  hero: { overlay: 'Fotoğraf üstü', centered: 'Ortalı', split: 'Bölünmüş', cinematic: 'Sinematik', editorial: 'Editoryal (çerçeveli)', showcase: 'İlan vitrini', immersive: 'Kenardan kenara (az metin)', blueprint: 'Izgaralı dizin', 'map-search': 'Arama + bölge dizini' } satisfies Record<HeroLayout, string>,
   header: { classic: 'Klasik', centered: 'Ortalı logo, ayrı menü', floating: 'Yüzen (ayrık)' },
   card: { elevated: 'Gölgeli', outline: 'Çizgili', flat: 'Düz zemin', bezel: 'Çift çerçeve' },
   cardLayout: { standard: 'Standart', overlay: 'Görsel üstü', editorial: 'Editoryal (kutusuz)', horizontal: 'Yatay' },

@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { Hero } from '@/components/home/hero';
+import { HeroSurface } from '@/components/patterns/hero/surface';
 import { SpotlightSection, StatsSection } from '@/components/home/design-sections';
 import {
   BlogSection,
@@ -78,7 +78,7 @@ export function SiteHome({ tenant, view, data }: { tenant: Tenant; view: SiteVie
     const o: SectionOverride = { eyebrow: sec.eyebrow, title: sec.title, description: sec.description, ctaLabel: sec.ctaLabel, ctaHref: sec.ctaHref };
     switch (sec.type) {
       case 'hero':
-        return <Hero tenant={tenant} options={options} spotlight={heroSpot} publishedCount={inventory.total} variant={view.style.hero} o={o} />;
+        return <HeroSurface view={view} tenant={tenant} options={options} spotlight={heroSpot} publishedCount={inventory.total} inventory={inventory} content={o} />;
       case 'showcase':
         return <ShowcaseSection items={showcase} o={o} />;
       case 'categories':

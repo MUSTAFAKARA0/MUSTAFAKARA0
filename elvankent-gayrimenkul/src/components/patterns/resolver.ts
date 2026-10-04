@@ -1,6 +1,6 @@
 import 'server-only';
-import type { PatternMeta } from '@/components/patterns/contracts';
-import { findPattern } from '@/components/patterns/registry';
+import type { PatternDataNeed, PatternMeta } from '@/components/patterns/contracts';
+import { findPattern, PATTERN_REGISTRY } from '@/components/patterns/registry';
 import { SITE_SURFACES, surfaceContract, type SiteSurface } from '@/components/patterns/surfaces';
 import type { SiteView } from '@/site-config/load';
 
@@ -34,10 +34,19 @@ export function resolvePattern(view: PatternView | null | undefined, surface: Si
   if (hit) return hit;
   // Tema kaynaklı yüzeylerde ResolvedStyle her zaman geçerli bir değer taşır; slotlarda standart
   const fallback = setting.in === 'style' && view ? view.style[setting.key] : 'standard';
-  return findPattern(kind, fallback) ?? findPattern(kind, 'standard')!;
+  // Görünüm hiç yoksa (ör. yönetim önizlemesi) türün ilk mevcut (kilitli) uygulaması
+  return findPattern(kind, fallback) ?? PATTERN_REGISTRY.find((p) => p.kind === kind && p.legacy)!;
 }
 
 /** Bütün yüzeylerin çözümü (önizleme etiketleri ve testler) */
 export function resolveSurfaces(view: PatternView | null | undefined): Record<SiteSurface, PatternMeta> {
   return Object.fromEntries(SITE_SURFACES.map((s) => [s, resolvePattern(view, s)])) as Record<SiteSurface, PatternMeta>;
+}
+
+/**
+ * Seçili desenlerden biri veri katmanından EK veri istiyor mu (ör. Map First → 'map-points')?
+ * Sayfa yalnızca bu durumda veri katmanını çağırır; desen veriyi kendisi çekmez.
+ */
+export function patternNeeds(view: PatternView | null | undefined, need: PatternDataNeed): boolean {
+  return Object.values(resolveSurfaces(view)).some((p) => p.needs?.includes(need));
 }

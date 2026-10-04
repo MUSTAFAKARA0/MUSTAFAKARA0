@@ -4,6 +4,7 @@ import { SiteHeader } from '@/components/layout/site-header';
 import { CompareBar, CookieConsent, FloatingWhatsApp } from '@/components/layout/site-extras';
 import { PreviewBar } from '@/components/layout/site-status';
 import { InteractionIslands } from '@/components/patterns/interaction/islands';
+import { resolveSurfaces } from '@/components/patterns/resolver';
 import { patternCss } from '@/components/patterns/styles';
 import { whatsappHref } from '@/lib/contact-links';
 import { hashString } from '@/lib/utils';
@@ -63,6 +64,9 @@ export function SiteFrame({ tenant, view, hasBlog, regions, version, mode = 'liv
   const { attributes, head } = siteRuntime(tenant, view, version);
   // D7 desenleri: yalnızca manifestte seçilen etkileşim adaları ve CSS'leri (seçim yoksa hiçbir şey)
   const interactions = view.config.style.slots?.interactions ?? [];
+  // D7.3 yüzey desenleri: yalnızca seçilenlerin (standart olmayanların) CSS'i; standart → hiçbir şey
+  const surfaces = [...new Set(Object.values(resolveSurfaces(view)).filter((p) => !p.legacy).map((p) => `${p.kind}/${p.id}`))].sort();
+  const surfaceCss = patternCss({ surfaces });
   return (
     <div {...attributes} className="contents">
       {head}
@@ -78,6 +82,11 @@ export function SiteFrame({ tenant, view, hasBlog, regions, version, mode = 'liv
         {children}
       </main>
       <SiteFooter tenant={tenant} regions={regions} hasBlog={hasBlog} view={view} />
+      {surfaceCss && (
+        <style href={`site-surfaces-${hashString(surfaceCss)}`} precedence="high">
+          {surfaceCss}
+        </style>
+      )}
       {interactions.length > 0 && (
         <>
           <style href={`site-patterns-${interactions.join('-')}`} precedence="high">

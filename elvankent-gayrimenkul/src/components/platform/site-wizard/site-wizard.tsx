@@ -23,20 +23,22 @@ export interface WizardCatalog {
     palette: string;
     swatch: string[];
     fonts: { heading: string; body: string; headingName: string; bodyName: string };
-    defaults: Record<'hero' | 'header' | 'card' | 'cardLayout' | 'footer' | 'motion', string>;
+    defaults: Record<'theme' | 'hero' | 'header' | 'card' | 'cardLayout' | 'footer' | 'motion', string>;
+    /** Ailenin yüzey kararları (style.slots → okunur ad); yoksa paketin standart parçası */
+    surfaces: Record<string, string>;
     parts: string[];
     /** KARAY global olarak kapattı: listede görünür, seçilemez */
     disabled: boolean;
   }[];
   palettes: { id: string; name: string; swatch: string[] }[];
   fonts: { id: string; name: string; kind: 'serif' | 'sans' }[];
-  variantLabels: Record<'hero' | 'header' | 'card' | 'cardLayout' | 'footer' | 'motion' | 'homepage', Record<string, string>>;
+  variantLabels: Record<'theme' | 'hero' | 'header' | 'card' | 'cardLayout' | 'footer' | 'motion' | 'homepage', Record<string, string>>;
   fixedSlots: [string, string, string][];
   plans: { id: string; name: string }[];
   rootDomain: string | null;
 }
 
-type VariantKey = 'hero' | 'header' | 'card' | 'cardLayout' | 'footer' | 'motion' | 'homepage' | 'headingFont' | 'bodyFont';
+type VariantKey = 'theme' | 'hero' | 'header' | 'card' | 'cardLayout' | 'footer' | 'motion' | 'homepage' | 'headingFont' | 'bodyFont';
 type Variants = Partial<Record<VariantKey, string>>;
 
 const STEPS = [
@@ -50,6 +52,7 @@ const STEPS = [
 
 const SOCIAL_LABELS: Record<(typeof SOCIAL_KEYS)[number], string> = { instagram: 'Instagram', facebook: 'Facebook', x: 'X (Twitter)', youtube: 'YouTube', linkedin: 'LinkedIn', tiktok: 'TikTok' };
 const VARIANT_GROUPS: [Exclude<VariantKey, 'headingFont' | 'bodyFont'>, string][] = [
+  ['theme', 'Tema (yazı tipi, köşe, yoğunluk)'],
   ['hero', 'Hero (üst bölüm)'],
   ['header', 'Header'],
   ['cardLayout', 'İlan kartı düzeni'],
@@ -659,7 +662,7 @@ function VariantStep({ catalog, family, variants, setVariants, palette, setPalet
           {catalog.fixedSlots.map(([k, label, value]) => (
             <div key={k} className="flex justify-between gap-3">
               <dt className="text-muted-foreground">{label}</dt>
-              <dd className="text-right font-medium text-foreground">{value}</dd>
+              <dd className="text-right font-medium text-foreground">{family.surfaces[k] ?? value}</dd>
             </div>
           ))}
         </dl>

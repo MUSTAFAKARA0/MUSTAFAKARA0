@@ -5,6 +5,9 @@ import klasikGuven from '@/site-factory/catalog/klasik-guven';
 import kurumsalPortfoy from '@/site-factory/catalog/kurumsal-portfoy';
 import sinematikVitrin from '@/site-factory/catalog/sinematik-vitrin';
 import yalinGaleri from '@/site-factory/catalog/yalin-galeri';
+import luxury from '@/site-factory/catalog/luxury';
+import architectural from '@/site-factory/catalog/architectural';
+import mapFirst from '@/site-factory/catalog/map-first';
 
 /**
  * TASARIM KATALOĞU — klasör sözleşmesi.
@@ -23,4 +26,5 @@ import yalinGaleri from '@/site-factory/catalog/yalin-galeri';
  * kiracının sayfasını, CSS'ini, JS'ini veya yazı tiplerini değiştirmez. Kiracı yalnızca kendi
  * manifestini (site_configs) okur.
  */
-export const CATALOG: readonly DesignFamily[] = [klasikGuven, sinematikVitrin, editoryalLuks, kurumsalPortfoy, yalinGaleri, dogalYasam];
+// İlk 6 aile kilitli (D7 öncesi); D7.3 aileleri yüzey desenleriyle (style.slots) gelir
+export const CATALOG: readonly DesignFamily[] = [klasikGuven, sinematikVitrin, editoryalLuks, kurumsalPortfoy, yalinGaleri, dogalYasam, luxury, architectural, mapFirst];

@@ -14,7 +14,7 @@ const MARKER = 'karay-pattern:gallery/grid';
 const VISIBLE = 6;
 
 /**
- * Galeri deseni · grid: eşit karolu ızgara (mobilde 2, geniş ekranda 3 sütun). İlk altı fotoğraf
+ * Galeri deseni · grid: eşit karolu, numaralı (01, 02…) düzenli ızgara (mobilde 2, geniş ekranda 3 sütun). İlk altı fotoğraf
  * gösterilir; fazlası son karoda "+N" olarak tam ekran galeriye açılır. Yalnızca bu deseni seçen
  * sitenin tarayıcısına iner (patterns/gallery/islands.tsx).
  */
@@ -52,6 +52,9 @@ export default function GridGallery({ images, title }: GalleryPatternProps) {
                   fetchPriority={i === 0 ? 'high' : undefined}
                   className="object-cover transition duration-700 ease-premium group-hover:scale-[1.03]"
                 />
+                <span className="numeric pointer-events-none absolute top-2 left-2 rounded-md bg-black/55 px-1.5 py-0.5 text-[11.5px] font-semibold text-white" aria-hidden>
+                  {String(i + 1).padStart(2, '0')}
+                </span>
                 {last && (
                   <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-white">
                     <span className="numeric font-display text-[2rem] leading-none">+{hidden}</span>

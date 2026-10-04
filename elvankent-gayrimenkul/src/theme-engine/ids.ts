@@ -11,7 +11,7 @@ export const FONT_IDS = ['manrope', 'fraunces', 'inter', 'playfair', 'dm-sans', 
 export type FontId = (typeof FONT_IDS)[number];
 
 /** Yapısal tasarım seçenekleri (kapalı listeler; bkz. settings.ts › styleSchema) */
-export const HERO_LAYOUTS = ['overlay', 'centered', 'split', 'cinematic', 'editorial', 'showcase'] as const;
+export const HERO_LAYOUTS = ['overlay', 'centered', 'split', 'cinematic', 'editorial', 'showcase', 'immersive', 'blueprint', 'map-search'] as const;
 export const CARD_SURFACES = ['elevated', 'outline', 'flat', 'bezel'] as const;
 export const CARD_LAYOUTS = ['standard', 'overlay', 'editorial', 'horizontal'] as const;
 export const HEADER_LAYOUTS = ['classic', 'centered', 'floating'] as const;
@@ -25,17 +25,18 @@ export type FooterLayout = (typeof FOOTER_LAYOUTS)[number];
 export type MotionLevel = (typeof MOTION_LEVELS)[number];
 
 /**
- * Tasarım paketi slotları (design package). Her slot sitenin manifestinde kapalı bir listeden
+ * Tasarım paketi slotları (design package). D7.3: yüzey desenleri yalnızca EKLEME ile genişler
+ * (mevcut değerler silinmez/yeniden adlandırılmaz). Her slot sitenin manifestinde kapalı bir listeden
  * seçilir. Bugün tek uygulaması olan slotlar 'standard' ile başlar; yeni bir varyant = buraya
  * kimlik + Site Engine'de bileşen/CSS parçası (yalnızca seçen siteye gider). 'none' = bu sürümde
  * bileşen yok (ör. müşteri yorumları gerçek veri gerektirir; uydurma içerik gösterilmez).
  */
 export const NAVIGATION_STYLES = ['standard'] as const;
-export const GRID_LAYOUTS = ['standard'] as const;
-export const SEARCH_STYLES = ['standard'] as const;
-export const LISTING_DETAIL_LAYOUTS = ['standard'] as const;
-export const GALLERY_LAYOUTS = ['standard', 'grid', 'carousel'] as const;
-export const MAP_LIST_LAYOUTS = ['standard'] as const;
+export const GRID_LAYOUTS = ['standard', 'gallery-wide', 'ruled-index', 'map-results'] as const;
+export const SEARCH_STYLES = ['standard', 'map-first'] as const;
+export const LISTING_DETAIL_LAYOUTS = ['standard', 'immersive', 'information-first', 'map-first'] as const;
+export const GALLERY_LAYOUTS = ['standard', 'grid', 'carousel', 'fullscreen'] as const;
+export const MAP_LIST_LAYOUTS = ['standard', 'map-first'] as const;
 export type SearchStyle = (typeof SEARCH_STYLES)[number];
 export type GridLayout = (typeof GRID_LAYOUTS)[number];
 export type ListingDetailLayout = (typeof LISTING_DETAIL_LAYOUTS)[number];

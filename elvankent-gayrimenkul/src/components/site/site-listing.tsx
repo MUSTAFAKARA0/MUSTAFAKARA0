@@ -3,6 +3,7 @@ import { SearchX } from 'lucide-react';
 import { Breadcrumbs } from '@/components/common/breadcrumbs';
 import { EmptyState } from '@/components/common/empty-state';
 import { ListingResultsSurface } from '@/components/patterns/listing/surface';
+import type { MapPoint } from '@/components/patterns/contracts';
 import type { PatternView } from '@/components/patterns/resolver';
 import { ListingSearchSurface } from '@/components/patterns/search/surface';
 import { ListingResults, ListingSearchProvider } from '@/components/search/search-context';
@@ -27,10 +28,12 @@ export interface ListingPageData {
   result: SearchResult;
   regionPage: { slug: string; name: string } | null;
   hrefFor: (page: number) => string;
+  /** Yalnızca seçili desen istediğinde (patternNeeds 'map-points') veri katmanından */
+  mapPoints?: MapPoint[];
 }
 
 export function SiteListing({ tenant, view, data }: { tenant: Tenant; view: PatternView | null; data: ListingPageData }) {
-  const { route, query, options, result, regionPage, hrefFor } = data;
+  const { route, query, options, result, regionPage, hrefFor, mapPoints } = data;
   return (
     <ListingSearchProvider>
       <div className="border-b border-border bg-surface">
@@ -66,7 +69,7 @@ export function SiteListing({ tenant, view, data }: { tenant: Tenant; view: Patt
       <section id="sonuclar" aria-label="Arama sonuçları" className="container-page scroll-mt-24 py-10 sm:py-14">
         <ListingResults>
           {result.items.length > 0 ? (
-            <ListingResultsSurface view={view} items={result.items} page={result.page} pageCount={result.pageCount} hrefFor={hrefFor} priorityCount={2} />
+            <ListingResultsSurface view={view} items={result.items} mapPoints={mapPoints} page={result.page} pageCount={result.pageCount} hrefFor={hrefFor} priorityCount={2} />
           ) : (
             <EmptyState
               icon={SearchX}

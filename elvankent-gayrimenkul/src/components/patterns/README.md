@@ -12,7 +12,9 @@ patterns/
 ├── styles.ts           seçili desenlerin CSS'i (yalnızca seçen siteye yazılır)
 ├── hero/  header/  listing-card/  footer/  section/  navigation/
 ├── gallery/  search/  listing/  property-detail/  map/   (her biri surface.tsx: yüzey çizicisi)
+├── surface-css.ts      D7.3 desen CSS'i (yalnızca seçilenler sayfaya yazılır; Tailwind'e yeni sınıf eklemeyin)
 ├── gallery/islands.tsx galeri varyantlarının istemci yükleyicisi
+├── listing/islands.tsx ilan listesi adalarının (Map First) istemci yükleyicisi
 └── interaction/        tarayıcı adaları + istemci yükleyicisi (islands.tsx)
 ```
 

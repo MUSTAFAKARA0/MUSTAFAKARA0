@@ -33,6 +33,7 @@ type Pattern = (typeof INTERACTIVE)[number];
 const SELECT: Record<string, (id: string) => Record<string, unknown>> = {
   interaction: (id) => ({ interactions: [id] }),
   gallery: (id) => ({ gallery: id }),
+  listing: (id) => ({ grid: id }),
 };
 /** Her interaktif desen için onu tek başına seçen bir kiracı + hiç seçmeyen bir kiracı */
 const SITES = [
@@ -141,7 +142,7 @@ for (const s of SITES) {
   const label = s.selected.map((p) => `${p.kind}/${p.id}`).join(', ') || 'desen yok';
   test(`PB-01/02 (${s.key}: ${label}): yalnızca seçilen interaktif kod indirilir`, async ({ page }) => {
     const base = `http://${s.host}:${PORT}`;
-    const { js, html, marks, chunks } = await load(page, [`${base}/`, `${base}/ilan/${LISTING_SLUG}`]);
+    const { js, html, marks, chunks } = await load(page, [`${base}/`, `${base}/ilanlar`, `${base}/ilan/${LISTING_SLUG}`]);
     expect(chunks).toBeGreaterThan(0);
     for (const p of INTERACTIVE) {
       const selected = s.selected.includes(p);

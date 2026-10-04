@@ -45,7 +45,7 @@ export const SURFACE_CONTRACTS: readonly SurfaceContract[] = [
     setting: SURFACE_SETTINGS.search,
     routes: ['/ilanlar', '/[ilan-listesi]'],
     // standard = klasik filtre çubuğu
-    planned: ['premium', 'sidebar', 'map-first', 'filter-sheet', 'compact'],
+    planned: ['premium', 'sidebar', 'filter-sheet', 'compact'],
   },
   {
     surface: 'listing',
@@ -53,7 +53,7 @@ export const SURFACE_CONTRACTS: readonly SurfaceContract[] = [
     setting: SURFACE_SETTINGS.listing,
     routes: ['/ilanlar', '/[ilan-listesi]'],
     // standard = ızgara
-    planned: ['compact', 'horizontal', 'featured', 'map-results'],
+    planned: ['compact', 'horizontal', 'featured'],
   },
   {
     surface: 'property-detail',
@@ -61,15 +61,15 @@ export const SURFACE_CONTRACTS: readonly SurfaceContract[] = [
     setting: SURFACE_SETTINGS['property-detail'],
     routes: ['/ilan/[slug]'],
     // standard = galeri öncelikli
-    planned: ['information-first', 'editorial', 'map-first', 'immersive'],
+    planned: ['editorial'],
   },
   {
     surface: 'gallery',
     kind: 'gallery',
     setting: SURFACE_SETTINGS.gallery,
     routes: ['/ilan/[slug]'],
-    // standard = mozaik (büyük kapak + karolar); uygulanmış: grid, carousel
-    planned: ['masonry', 'fullscreen', 'hero-thumbnails'],
+    // standard = mozaik (büyük kapak + karolar); uygulanmış: grid, carousel, fullscreen
+    planned: ['masonry', 'hero-thumbnails'],
   },
   {
     surface: 'map',
@@ -77,7 +77,7 @@ export const SURFACE_CONTRACTS: readonly SurfaceContract[] = [
     setting: SURFACE_SETTINGS.map,
     routes: ['/ilan/[slug]'],
     // standard = ilan konumu haritası (tembel yüklenen Leaflet)
-    planned: ['map-first'],
+    planned: [],
   },
 ];
 

@@ -42,7 +42,15 @@ export interface PatternMeta {
   source: string;
   /** Mevcut (D7 öncesi) bileşen: dosyası kilitli, değiştirilmez */
   legacy?: boolean;
+  /**
+   * Desenin veri katmanından istediği EK veri (D7.3). Desen veriyi kendisi çekmez: sayfa
+   * çözümleyiciye sorar (patternNeeds) ve yalnızca seçili desen istiyorsa veri katmanını çağırır.
+   */
+  needs?: readonly PatternDataNeed[];
 }
+
+/** 'map-points': ilan sonuçlarının herkese açık konumları (modules/properties › getMapPoints) */
+export type PatternDataNeed = 'map-points';
 
 /** Kiracıya bağlı desenlerin ortak bağlamı (kiracı yalnızca prop olarak gelir) */
 export interface PatternContext {
@@ -50,11 +58,14 @@ export interface PatternContext {
   view: SiteView;
 }
 
-export interface HeroPatternProps extends PatternContext {
+export interface HeroPatternProps {
+  tenant: Tenant;
   spotlight: PropertyCard | null;
   options: SearchOptions;
   publishedCount: number;
   content: SectionOverride;
+  /** Kategori sayıları (gerçek envanter) */
+  inventory: { total: number; byListingType: { sale: number; rent: number }; byCategory: Record<string, number> };
 }
 export interface HeaderPatternProps extends PatternContext {
   hasBlog: boolean;
@@ -96,6 +107,9 @@ export interface ListingSearchPatternProps {
  */
 export interface ListingResultsPatternProps {
   items: PropertyCard[];
+  /** Yalnızca desen 'map-points' istiyorsa doldurulur (veri katmanı) */
+  mapPoints?: MapPoint[];
+  total?: number;
   page: number;
   pageCount: number;
   hrefFor: (page: number) => string;
@@ -105,6 +119,15 @@ export interface ListingResultsPatternProps {
  * Harita yüzeyi (Map First altyapısı). Harita sağlayıcısı, karo sunucusu ve koordinatlar mevcut
  * sistemden gelir (modules/maps); desen yalnızca sunumu seçer, harita arka ucunu değiştirmez.
  */
+/** Bir ilanın herkese açık konumu (ilan detayındaki haritayla aynı veri ve aynı hassasiyet kuralı) */
+export interface MapPoint {
+  id: string;
+  lat: number;
+  lng: number;
+  /** 'exact' → işaret; diğerleri → yaklaşık bölge dairesi */
+  precision: 'exact' | 'approximate' | 'neighborhood';
+}
+
 export interface MapPatternProps {
   center: { lat: number; lng: number };
   mode: 'pin' | 'area';
@@ -114,6 +137,8 @@ export interface MapPatternProps {
   maxZoom?: number;
   ariaLabel: string;
   className?: string;
+  /** Konumun bölge bağlantısı (map-first deseni; yoksa gösterilmez) */
+  area?: { label: string; href: string | null } | null;
 }
 export interface PropertyDetailPatternProps extends PatternContext {
   property: PropertyDetail;

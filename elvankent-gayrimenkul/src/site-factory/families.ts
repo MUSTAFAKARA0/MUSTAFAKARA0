@@ -27,14 +27,24 @@ export function findDesignFamily(id: string): DesignFamily | null {
 }
 
 const PART_LABELS: Record<string, Record<string, string>> = {
-  hero: { overlay: 'Fotoğraf üstü hero', centered: 'Ortalı hero', split: 'Bölünmüş hero', cinematic: 'Sinematik hero', editorial: 'Editoryal hero', showcase: 'Vitrin hero' },
+  hero: { overlay: 'Fotoğraf üstü hero', centered: 'Ortalı hero', split: 'Bölünmüş hero', cinematic: 'Sinematik hero', editorial: 'Editoryal hero', showcase: 'Vitrin hero', immersive: 'Kenardan kenara hero', blueprint: 'Izgaralı dizin hero', 'map-search': 'Arama + bölge hero' },
   headerLayout: { classic: 'Klasik header', centered: 'Ortalı logo', floating: 'Yüzen header' },
   cardLayout: { standard: 'Standart kart', overlay: 'Görsel üstü kart', editorial: 'Editoryal kart', horizontal: 'Yatay kart' },
   footerLayout: { classic: 'Sütunlu footer', contact: 'İletişim öncelikli footer', minimal: 'Minimal footer' },
   motion: { none: 'Hareketsiz', subtle: 'Ölçülü hareket', expressive: 'Belirgin hareket' },
 };
 
+/** D7.3 yüzey desenlerinin kısa adları (style.slots; standart → listelenmez) */
+export const SURFACE_PART_LABELS: Record<string, Record<string, string>> = {
+  search: { 'map-first': 'Bölge kısayollu arama' },
+  grid: { 'gallery-wide': 'Geniş görselli seçki', 'ruled-index': 'Numaralı ilan dizini', 'map-results': 'Liste ↔ harita' },
+  listingDetail: { immersive: 'Editoryal ilan detayı', 'information-first': 'Künye öncelikli detay', 'map-first': 'Konum öncelikli detay' },
+  gallery: { grid: 'Numaralı galeri', carousel: 'Kaydırmalı galeri', fullscreen: 'Tam genişlik galeri' },
+  mapList: { 'map-first': 'Bölge bağlamlı harita' },
+};
+
 /** Ailenin parçalarının kısa adları (Site Builder kartlarında) */
 export function familyParts(f: DesignFamily, resolved: Record<'hero' | 'headerLayout' | 'cardLayout' | 'footerLayout' | 'motion', string>): string[] {
-  return (['hero', 'headerLayout', 'cardLayout', 'footerLayout', 'motion'] as const).map((k) => PART_LABELS[k][resolved[k]] ?? resolved[k]).concat(`${f.home.length} bölüm`);
+  const surfaces = Object.entries(f.style.slots ?? {}).flatMap(([k, v]) => (typeof v === 'string' && SURFACE_PART_LABELS[k]?.[v] ? [SURFACE_PART_LABELS[k][v]] : []));
+  return (['hero', 'headerLayout', 'cardLayout', 'footerLayout', 'motion'] as const).map((k) => PART_LABELS[k][resolved[k]] ?? resolved[k]).concat(surfaces, `${f.home.length} bölüm`);
 }

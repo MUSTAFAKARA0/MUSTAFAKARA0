@@ -16,6 +16,7 @@ import {
   NAVIGATION_STYLES,
   SEARCH_STYLES,
   TESTIMONIAL_SECTIONS,
+  THEME_IDS,
 } from '@/theme-engine/ids';
 import { findPalette } from '@/theme-engine/palettes';
 import type { SiteSurface } from '@/theme-engine/surfaces';
@@ -40,6 +41,8 @@ const slug = z.string().regex(/^[a-z0-9-]{1,40}$/);
 
 export const manifestVariantsSchema = z
   .object({
+    /** Tema (görünüm: yazı tipi, köşe, yoğunluk, belirteçler). Boş = ailenin teması. Aile = yapı (yüzey desenleri). */
+    theme: z.enum(THEME_IDS).optional(),
     hero: z.enum(HERO_LAYOUTS).optional(),
     header: z.enum(HEADER_LAYOUTS).optional(),
     card: z.enum(CARD_SURFACES).optional(),
@@ -161,8 +164,9 @@ export function compileManifest(raw: unknown, current: SiteConfig): CompiledMani
     ...(Object.keys(slots).length ? { slots } : {}),
     origin: { siteType: siteType.id, family: family.id, homepage },
   };
+  // Tema ayrıca seçildiyse yazı tipleri temanındır (ailenin tipografisi yalnızca kendi temasıyla gelir)
   const typography = {
-    ...(family.typography ?? {}),
+    ...(v.theme ? {} : (family.typography ?? {})),
     ...(v.headingFont ? { heading: v.headingFont } : {}),
     ...(v.bodyFont ? { body: v.bodyFont } : {}),
   };
@@ -173,7 +177,7 @@ export function compileManifest(raw: unknown, current: SiteConfig): CompiledMani
   // Her bölüm taslağa yazılmadan önce sitenin şemasıyla doğrulanır (hatalı tanım yayına çıkamaz)
   return {
     design: {
-      theme: SECTION_SCHEMAS.theme.parse(family.theme),
+      theme: SECTION_SCHEMAS.theme.parse(v.theme ?? family.theme),
       colors: SECTION_SCHEMAS.colors.parse({ mode: 'preset', preset: manifest.palette ?? family.palette, scheme: current.colors.scheme }),
       typography: SECTION_SCHEMAS.typography.parse(typography),
       style: SECTION_SCHEMAS.style.parse(style),
@@ -192,15 +196,18 @@ export function manifestFromConfig(config: SiteConfig): SiteManifest | null {
   const family = origin ? findDesignFamily(origin.family) : null;
   if (!family) return null;
   const s = config.style;
+  const themeOverride = config.theme !== family.theme;
+  const familyFonts = themeOverride ? undefined : family.typography;
   const variants: ManifestVariants = {
+    ...(themeOverride ? { theme: config.theme } : {}),
     ...(s.hero && s.hero !== family.style.hero ? { hero: s.hero } : {}),
     ...(s.headerLayout && s.headerLayout !== family.style.headerLayout ? { header: s.headerLayout } : {}),
     ...(s.card && s.card !== family.style.card ? { card: s.card } : {}),
     ...(s.cardLayout && s.cardLayout !== family.style.cardLayout ? { cardLayout: s.cardLayout } : {}),
     ...(s.footerLayout && s.footerLayout !== family.style.footerLayout ? { footer: s.footerLayout } : {}),
     ...(s.motion && s.motion !== family.style.motion ? { motion: s.motion } : {}),
-    ...(config.typography.heading && config.typography.heading !== family.typography?.heading ? { headingFont: config.typography.heading } : {}),
-    ...(config.typography.body && config.typography.body !== family.typography?.body ? { bodyFont: config.typography.body } : {}),
+    ...(config.typography.heading && config.typography.heading !== familyFonts?.heading ? { headingFont: config.typography.heading } : {}),
+    ...(config.typography.body && config.typography.body !== familyFonts?.body ? { bodyFont: config.typography.body } : {}),
     ...(origin?.homepage && origin.homepage !== 'family' ? { homepage: origin.homepage as HomepageComposition } : {}),
     // Yalnızca ailenin kararından farklı yüzey seçimleri manifest varyantıdır
     ...Object.fromEntries(
@@ -216,9 +223,11 @@ export function resolvedVariants(raw: unknown) {
   const { manifest, family } = parseManifest(raw);
   const v = manifest.variants;
   const slots = family.style.slots ?? {};
-  const theme = THEMES[family.theme];
+  const themeId = v.theme ?? family.theme;
+  const theme = THEMES[themeId];
+  const familyFonts = v.theme ? undefined : family.typography;
   const style = resolveStyle({
-    theme: family.theme,
+    theme: themeId,
     style: {
       ...family.style,
       hero: v.hero ?? family.style.hero,
@@ -236,8 +245,9 @@ export function resolvedVariants(raw: unknown) {
     cardLayout: style.cardLayout,
     footer: style.footerLayout,
     motion: style.motion,
-    headingFont: v.headingFont ?? family.typography?.heading ?? theme.fonts.heading,
-    bodyFont: v.bodyFont ?? family.typography?.body ?? theme.fonts.body,
+    theme: themeId,
+    headingFont: v.headingFont ?? familyFonts?.heading ?? theme.fonts.heading,
+    bodyFont: v.bodyFont ?? familyFonts?.body ?? theme.fonts.body,
     homepage: v.homepage ?? 'family',
     palette: manifest.palette ?? family.palette,
     navigation: v.navigation ?? slots.navigation ?? 'standard',

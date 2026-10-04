@@ -14,6 +14,7 @@ export type GalleryIslandId = Exclude<GalleryLayout, 'standard'>;
 const GALLERIES: Record<GalleryIslandId, LazyExoticComponent<ComponentType<GalleryPatternProps>>> = {
   'grid': lazy(() => import('@/components/patterns/gallery/grid')),
   'carousel': lazy(() => import('@/components/patterns/gallery/carousel')),
+  'fullscreen': lazy(() => import('@/components/patterns/gallery/fullscreen')),
 };
 
 export function GalleryIsland({ id, images, title }: GalleryPatternProps & { id: GalleryIslandId }) {

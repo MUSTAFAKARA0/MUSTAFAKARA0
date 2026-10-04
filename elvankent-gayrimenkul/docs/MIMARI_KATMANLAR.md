@@ -192,6 +192,37 @@ aile sözleşmesi: önizleme (manifest) = kiracı (çözümleyici)); `tests/e2e/
 (desen kaydından üretilen kiracılarla her interaktif desen çifti için "seçmeyene inmez"; galeri
 varyantları ilan detayında); `tests/e2e/design-preview.spec.ts` (PV-01…05).
 
+### D7.3 — Luxury · Architectural · Map First (çalışan aileler)
+
+Aile = **bilgi mimarisi** (yüzey desenleri: hero, arama, ilan listesi, ilan detayı, galeri,
+harita); tema = **görünüm** (yazı tipi, renk, köşe, yoğunluk). Manifest ikisini ayrı taşır
+(`variants.theme` isteğe bağlı; seçilmezse ailenin teması). Akış:
+
+```
+organization → site_configs (manifest: theme + style.hero/slots) → resolvePattern(view, yüzey) → desen
+```
+
+| Yüzey | Luxury | Architectural | Map First |
+| --- | --- | --- | --- |
+| home (hero) | `immersive` | `blueprint` | `map-search` |
+| search | standart | standart | `map-first` |
+| listing | `gallery-wide` | `ruled-index` | `map-results` (istemci adası) |
+| property-detail | `immersive` | `information-first` | `map-first` |
+| gallery | `fullscreen` (ada) | `grid` (ada) | `carousel` (ada) |
+| map | standart | standart | `map-first` |
+
+- Aile kararı olmayan yüzey → tema varsayılanı / standart. Ailesiz (eski) site → bütün yüzeyler standart.
+- **Kod bölme:** sunucu desenleri tarayıcıya kod göndermez; interaktif desenler yalnızca türünün
+  istemci yükleyicisinden (`gallery/islands.tsx`, `listing/islands.tsx`). Map First'ün Leaflet
+  haritası `listing/map-results.tsx` içinden ayrıca tembel yüklenir (telefonda yalnızca "Harita" seçilince).
+- **Desen CSS'i** `patterns/surface-css.ts`: yalnızca seçilen desenlerinki SiteFrame'de satır içi
+  yazılır; desenler paylaşılan Tailwind CSS'ine yeni yardımcı sınıf eklemez (kiracı CSS'i 20,2 KB'ta kaldı).
+- **Veri:** desen veri çekmez. Desen `needs: ['map-points']` bildirir; sayfa `patternNeeds()` ile
+  sorar ve yalnızca gerekirse `getMapPoints()` (herkese açık `public_latitude/longitude`) çağırır.
+- Testler: `tests/unit/families.test.mjs` (aile × yüzey matrisi, geri dönüş, tema ≠ aile, kiracı
+  yalıtımı, CSS/veri yalnızca seçilende, aile importu yasağı); `tests/e2e/design-families.spec.ts`
+  (FAM-01…05: desen işaretleri, paket yalıtımı, liste ↔ harita, önizleme eşliği, 360 px, ölçüm).
+
 ## Theme Engine (`src/theme-engine`)
 
 | Dosya | İçerik |

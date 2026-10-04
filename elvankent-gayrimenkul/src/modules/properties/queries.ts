@@ -426,6 +426,31 @@ export async function getPropertyDetailsByIds(orgId: string, ids: string[]): Pro
   return valid.map((id) => details.find((d) => d.id === id)).filter((d): d is PropertyDetail => Boolean(d));
 }
 
+/**
+ * Harita konumları (Map First ilan listesi): verilen ilanların HERKESE AÇIK konumu. Yalnızca
+ * veritabanının yayın için ürettiği public_latitude/public_longitude okunur (ilan detayındaki
+ * haritayla aynı veri ve aynı hassasiyet kuralı: kesin değilse yaklaşık nokta + bölge dairesi).
+ */
+export async function getMapPoints(orgId: string, ids: string[]): Promise<{ id: string; lat: number; lng: number; precision: LocationPrecision }[]> {
+  const valid = ids.filter(isUuid).slice(0, 60);
+  if (!valid.length || !isSupabaseConfigured()) return [];
+  const { data, error } = await client(orgId)
+    .from('properties')
+    .select('id, public_latitude, public_longitude, location_precision')
+    .eq('organization_id', orgId)
+    .in('id', valid)
+    .in('status', ['published', 'sold', 'rented'])
+    .is('deleted_at', null)
+    .not('public_latitude', 'is', null)
+    .not('public_longitude', 'is', null);
+  if (error) return [];
+  return (data ?? []).flatMap((r) => {
+    const lat = toNumber(r.public_latitude);
+    const lng = toNumber(r.public_longitude);
+    return lat === null || lng === null ? [] : [{ id: r.id, lat, lng, precision: r.location_precision }];
+  });
+}
+
 /** Deterministik benzerlik puanına göre benzer ilanlar (similar_properties RPC) */
 export async function getSimilarProperties(orgId: string, propertyId: string, limit = 4): Promise<PropertyCard[]> {
   if (!isSupabaseConfigured()) return [];

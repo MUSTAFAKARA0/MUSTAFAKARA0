@@ -2,9 +2,10 @@ import 'server-only';
 import { notFound } from 'next/navigation';
 import { getPublishedPosts, getRegionPages } from '@/modules/content/queries';
 import { parseListingQuery } from '@/modules/properties/filters';
-import { getInventoryCounts, getLatestProperties, getPublicPropertyBySlug, getRegionCounts, getShowcaseProperties, getSimilarProperties, searchProperties } from '@/modules/properties/queries';
+import { getInventoryCounts, getLatestProperties, getMapPoints, getPublicPropertyBySlug, getRegionCounts, getShowcaseProperties, getSimilarProperties, searchProperties } from '@/modules/properties/queries';
 import { resolveListingRoute } from '@/modules/properties/routes';
 import { getSearchOptions } from '@/modules/properties/search-options';
+import { patternNeeds } from '@/components/patterns/resolver';
 import { selectableFamilies } from '@/modules/platform/design-access';
 import { requirePagePermission } from '@/platform/auth/session';
 import { getTenant, type Tenant } from '@/platform/tenant/tenant';
@@ -69,7 +70,8 @@ export async function loadOfficePreview(familyId: unknown, surface: PreviewSurfa
     const route = (await resolveListingRoute('ilanlar', tenant.settings.service_area))!;
     const query = parseListingQuery({}, route.preset);
     const [result, options] = await Promise.all([searchProperties(tenant.id, query), getSearchOptions(tenant.id)]);
-    content.listing = { route, query, options, result, regionPage: null, hrefFor: () => route.path };
+    const mapPoints = patternNeeds(view, 'map-points') ? await getMapPoints(tenant.id, result.items.map((i) => i.id)) : undefined;
+    content.listing = { route, query, options, result, regionPage: null, hrefFor: () => route.path, mapPoints };
   } else {
     // Ofisin en son yayınlanan ilanı (gerçek veri); yoksa boş durum
     const [latest] = await getLatestProperties(tenant.id, 1);

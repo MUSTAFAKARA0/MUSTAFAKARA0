@@ -5,7 +5,7 @@ import { serverEnv } from '@/lib/server-env';
 import { disabledFamilies } from '@/modules/platform/design-access';
 import { listPlans } from '@/modules/platform/queries';
 import { requireSuperAdminPage } from '@/platform/auth/session';
-import { DESIGN_FAMILIES, familyParts } from '@/site-factory/families';
+import { DESIGN_FAMILIES, familyParts, SURFACE_PART_LABELS } from '@/site-factory/families';
 import { FIXED_SLOT_LABELS, VARIANT_LABELS } from '@/site-factory/labels';
 import { SITE_TYPES } from '@/site-factory/site-types';
 import { FONT_IDS } from '@/theme-engine/ids';
@@ -39,14 +39,15 @@ export default async function NewSitePage() {
         palette: f.palette,
         swatch: [palette.tokens.primary, palette.tokens.accent, palette.tokens.background, palette.tokens.text],
         fonts: { heading, body, headingName: FONT_CATALOG[heading].name, bodyName: FONT_CATALOG[body].name },
-        defaults: { hero: style.hero, header: style.headerLayout, card: style.card, cardLayout: style.cardLayout, footer: style.footerLayout, motion: style.motion },
+        defaults: { theme: f.theme, hero: style.hero, header: style.headerLayout, card: style.card, cardLayout: style.cardLayout, footer: style.footerLayout, motion: style.motion },
         parts: familyParts(f, style),
+        surfaces: Object.fromEntries(Object.entries(f.style.slots ?? {}).flatMap(([k, v]) => (typeof v === 'string' && SURFACE_PART_LABELS[k]?.[v] ? [[k, SURFACE_PART_LABELS[k][v]]] : []))),
         disabled: global.disabled.has(f.id),
       };
     }),
     palettes: PALETTES.filter((p) => p.scheme === 'light').map((p) => ({ id: p.id, name: p.name, swatch: [p.tokens.primary, p.tokens.accent, p.tokens.background] })),
     fonts: FONT_IDS.map((id) => ({ id, name: FONT_CATALOG[id].name, kind: FONT_CATALOG[id].kind })),
-    variantLabels: VARIANT_LABELS,
+    variantLabels: { ...VARIANT_LABELS, theme: Object.fromEntries(Object.values(THEMES).map((t) => [t.id, t.name])) },
     fixedSlots: FIXED_SLOT_LABELS,
     plans: plans.map((p) => ({ id: p.id, name: p.name })),
     rootDomain: serverEnv.platformRootDomain || null,

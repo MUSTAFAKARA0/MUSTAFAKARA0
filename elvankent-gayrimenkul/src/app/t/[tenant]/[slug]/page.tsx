@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
+import { patternNeeds } from '@/components/patterns/resolver';
 import { SiteListing } from '@/components/site/site-listing';
 import { getRegionPages } from '@/modules/content/queries';
 import { countActiveFilters, listingHref, listingQueryToParams, parseListingQuery } from '@/modules/properties/filters';
-import { findRedirect, searchProperties } from '@/modules/properties/queries';
+import { findRedirect, getMapPoints, searchProperties } from '@/modules/properties/queries';
 import { followRedirect } from '@/modules/seo/redirects';
 import { resolveListingRoute } from '@/modules/properties/routes';
 import { getSearchOptions } from '@/modules/properties/search-options';
@@ -79,11 +80,13 @@ export default async function ListingPage({ params, searchParams }: PageProps<'/
   };
 
   const view = await getSiteView(tenant);
+  // Yalnızca seçili desen (ör. Map First) harita konumu istiyorsa veri katmanından okunur
+  const mapPoints = patternNeeds(view, 'map-points') ? await getMapPoints(tenant.id, result.items.map((i) => i.id)) : undefined;
   return (
     <SiteListing
       tenant={tenant}
       view={view}
-      data={{ route, query, options, result, regionPage: regionPage ? { slug: regionPage.slug, name: regionPage.name } : null, hrefFor }}
+      data={{ route, query, options, result, regionPage: regionPage ? { slug: regionPage.slug, name: regionPage.name } : null, hrefFor, mapPoints }}
     />
   );
 }
