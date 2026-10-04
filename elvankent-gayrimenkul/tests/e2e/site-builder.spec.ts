@@ -53,7 +53,7 @@ test.beforeAll(async () => {
   S.orgId = org.data.id;
   await service.from('organization_settings').insert({ organization_id: S.orgId, display_name: S.name, primary_color: '#7a1f5c', accent_color: '#1f7a5c', phone: '+905550000000', whatsapp: '+905550000000' });
   await service.from('subscriptions').insert({ organization_id: S.orgId, plan_id: 'baslangic', status: 'active' });
-  const dom = await service.from('organization_domains').insert({ organization_id: S.orgId, hostname: HOST, is_primary: true, verified_at: new Date().toISOString() });
+  const dom = await service.from('organization_domains').insert({ organization_id: S.orgId, hostname: HOST, is_primary: true, verified_at: new Date().toISOString(), status: 'active', activated_at: new Date().toISOString() });
   if (dom.error) throw dom.error;
   // S kiracısının sahibi (süper admin değil): platform ekranlarına ve site_* işlemlerine erişememeli
   const email = `site-${RUN}@example.test`;
@@ -310,11 +310,13 @@ test('TEST-SITE-07: alan adı eklenir ve kaldırılır', async ({ page }) => {
   await loginPlatform(page);
   await page.goto(tab('alan-adi'));
   const host = `www.e2e-${RUN}.example.com`;
-  await page.getByRole('textbox', { name: 'Alan adı' }).fill(host);
-  await page.getByRole('button', { name: 'Alan adı ekle' }).click();
-  await expect(page.getByText(host).first()).toBeVisible();
-  await page.locator('li', { hasText: host }).getByRole('button', { name: 'Kaldır' }).click();
-  await page.getByRole('button', { name: 'Kaldır', exact: true }).last().click();
+  await page.getByRole('textbox', { name: 'Alan adı ekle' }).fill(host);
+  await page.getByRole('button', { name: 'Ekle', exact: true }).click();
+  // P0.5: eklenen alan adı doğrulanana kadar bekler (site bu adreste açılmaz)
+  const row = page.locator(`[data-testid="domain-row"][data-hostname="${host}"]`);
+  await expect(row).toHaveAttribute('data-status', 'pending');
+  await row.getByRole('button', { name: 'İptal et' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'İptal et' }).click();
   await expect(page.getByText(host)).toHaveCount(0);
 });
 

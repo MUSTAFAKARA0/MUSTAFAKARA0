@@ -54,7 +54,7 @@ test.beforeAll(async () => {
   S.orgId = org.data.id;
   await service.from('organization_settings').insert({ organization_id: S.orgId, display_name: NAME, primary_color: '#2c5f2d', accent_color: '#97bc62' });
   await service.from('subscriptions').insert({ organization_id: S.orgId, plan_id: 'baslangic', status: 'active' });
-  const dom = await service.from('organization_domains').insert({ organization_id: S.orgId, hostname: HOST, is_primary: true, verified_at: new Date().toISOString() });
+  const dom = await service.from('organization_domains').insert({ organization_id: S.orgId, hostname: HOST, is_primary: true, verified_at: new Date().toISOString(), status: 'active', activated_at: new Date().toISOString() });
   if (dom.error) throw dom.error;
   const email = `surf-${RUN}@example.test`;
   const created = await service.auth.admin.createUser({ email, password: PASSWORD, email_confirm: true, user_metadata: { full_name: 'Test Ofis Sahibi' } });

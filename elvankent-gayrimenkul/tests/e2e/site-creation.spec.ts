@@ -157,6 +157,14 @@ test('SC-01/02: sihirbaz → önizleme → oluştur; manifest kaydedilir, önizl
   const { data: settings } = await service!.from('organization_settings').select('display_name, legal_name, phone, address_city').eq('organization_id', org!.id).single();
   expect(settings).toMatchObject({ display_name: NAME, legal_name: `${NAME} İnşaat Ltd. Şti.`, phone: '+90 555 000 00 00', address_city: 'Ankara' });
 
+  // P0.5: özel alan adı doğrulanmadan bağlanmaz — sihirbaz BEKLEYEN kayıt açar
+  await expect(page.getByTestId('custom-domain-pending')).toContainText(HOST);
+  const { data: dom } = await service!.from('organization_domains').select('id, status, is_primary').eq('organization_id', org!.id).single();
+  expect(dom).toMatchObject({ status: 'pending', is_primary: false });
+  // Bu test sitenin kendisini sınar: alan adı bağlantısı (TXT + yönlendirme, P0.5 testleri) tamamlanmış sayılır
+  const now = new Date().toISOString();
+  await service!.from('organization_domains').update({ status: 'active', verified_at: now, activated_at: now, is_primary: true }).eq('id', dom!.id);
+
   // Önizleme = kiracı: oluşturulan sitenin görsel çalışma zamanı önizlemeyle aynı
   const t = await page.context().newPage();
   const res = await t.goto(`${SITE}/`, { waitUntil: 'networkidle' });

@@ -1532,3 +1532,213 @@ describe('P0.4: sahip daveti ve hesap aktivasyonu', { skip }, () => {
     }
   });
 });
+
+// -----------------------------------------------------------------------------
+// P0.5: Özel alan adı — doğrulama, bağlantı, çözümleme, tekillik, yetki, izolasyon
+// -----------------------------------------------------------------------------
+describe('P0.5: özel alan adı yaşam döngüsü ve kiracı çözümlemesi', { skip }, () => {
+  let platformAdmin;
+  const sha = (t) => createHash('sha256').update(t).digest('hex');
+  const hex = (n) => randomBytes(n).toString('hex');
+  const host = (label) => `${label}-${RUN}.rlsdomain.example.com`;
+  const actor = (key, role = 'owner') => ({ p_actor: T[key].users[role].id, p_org: T[key].orgId, p_platform: false });
+  async function add(a, hostname) {
+    const code = `karay-site-verification=${hex(16)}`;
+    const id = randomUUID();
+    const res = await service.rpc('domain_add', { ...a, p_id: id, p_hostname: hostname, p_nonce: hex(16), p_token_hash: sha(code) });
+    return { res, id, code };
+  }
+  const verify = (a, id, values) => service.rpc('domain_mark_verified', { ...a, p_id: id, p_found_hashes: values.map(sha) });
+  const activate = (a, id, manual = false) => service.rpc('domain_mark_active', { ...a, p_id: id, p_manual: manual });
+  const resolve = async (hostname) => (await anon.rpc('public_tenant', { p_hostname: hostname })).data?.[0]?.id ?? null;
+  const row = async (id) => (await service.from('organization_domains').select('*').eq('id', id).maybeSingle()).data;
+
+  before(async () => {
+    if (missing) return;
+    platformAdmin = await makeUser('dom-platform');
+    assert.ifError((await service.from('profiles').update({ is_super_admin: true }).eq('id', platformAdmin.id)).error);
+    // Önceki testler B'nin planını değiştirir; bu blok özel alan adı içeren planla başlar
+    for (const key of ['A', 'B']) assert.ifError((await service.from('subscriptions').update({ plan_id: 'kurumsal' }).eq('organization_id', T[key].orgId).eq('status', 'active')).error);
+  });
+  after(async () => {
+    if (missing) return;
+    await service.from('organization_domains').delete().like('hostname', `%-${RUN}.rlsdomain.example.com`);
+  });
+
+  test('ekle → bekliyor (çözülmez) → TXT doğrulandı (çözülmez) → aktif (yalnızca bu kiracıya çözülür)', async () => {
+    const h = host('life');
+    const { res, id, code } = await add(actor('A'), h);
+    assert.ifError(res.error);
+    const pending = await row(id);
+    assert.equal(pending.status, 'pending');
+    assert.equal(pending.verification_token_hash, sha(code));
+    assert.ok(!JSON.stringify(pending).includes(code), 'ham doğrulama kodu veritabanında');
+    assert.equal(await resolve(h), null, 'bekleyen alan adı kiracıya çözüldü');
+    // Doğrulama olmadan aktif olamaz
+    assert.match((await activate(actor('A'), id)).error?.message ?? '', /not_verified/);
+    // Yanlış kod
+    assert.match((await verify(actor('A'), id, ['karay-site-verification=yanlis'])).error?.message ?? '', /verification_failed/);
+    assert.ifError((await verify(actor('A'), id, ['baska-kayit', code])).error);
+    const verified = await row(id);
+    assert.equal(verified.status, 'verified');
+    assert.equal(verified.verification_token_hash, null, 'doğrulandıktan sonra özet silinmedi');
+    assert.equal(await resolve(h), null, 'doğrulanmış ama bağlanmamış alan adı çözüldü');
+    assert.ifError((await activate(actor('A'), id)).error);
+    const active = await row(id);
+    assert.equal(active.status, 'active');
+    assert.equal(active.is_primary, true, 'ilk aktif alan adı birincil olmalı');
+    assert.equal(await resolve(h), T.A.orgId);
+    assert.equal(await resolve(h.toUpperCase()), T.A.orgId);
+    const canon = await anon.rpc('public_tenant_domains', { p_org: T.A.orgId });
+    assert.deepEqual(canon.data, [{ hostname: h, is_primary: true }]);
+    // Kaldırınca çözümlemeden düşer
+    assert.ifError((await service.rpc('domain_remove', { ...actor('A'), p_id: id })).error);
+    assert.equal(await resolve(h), null);
+  });
+
+  test('doğrulama kodu bağlı: A alan adının kodu B alan adını / B kiracısını doğrulamaz; süresi geçen kod geçersiz', async () => {
+    const a = await add(actor('A'), host('bind-a'));
+    const b = await add(actor('B'), host('bind-b'));
+    assert.ifError(a.res.error);
+    assert.ifError(b.res.error);
+    assert.match((await verify(actor('B'), b.id, [a.code])).error?.message ?? '', /verification_failed/);
+    // B oturumu A'nın alan adını (A'nın koduyla bile) doğrulayamaz
+    assert.ok((await verify(actor('B'), a.id, [a.code])).error);
+    assert.equal((await row(a.id)).status, 'pending');
+    await service.from('organization_domains').update({ verification_expires_at: new Date(Date.now() - 1000).toISOString() }).eq('id', b.id);
+    assert.match((await verify(actor('B'), b.id, [b.code])).error?.message ?? '', /verification_failed/);
+    // Yeni kod: eski kod geçersiz, yeni kod çalışır
+    const fresh = `karay-site-verification=${hex(16)}`;
+    assert.ifError((await service.rpc('domain_rotate_verification', { ...actor('B'), p_id: b.id, p_nonce: hex(16), p_token_hash: sha(fresh) })).error);
+    assert.match((await verify(actor('B'), b.id, [b.code])).error?.message ?? '', /verification_failed/);
+    assert.ifError((await verify(actor('B'), b.id, [fresh])).error);
+  });
+
+  test('tekillik: bağlı alan adı tek kiracıda; bekleyen kayıt alan adını kilitlemez; eşzamanlı doğrulamada yalnızca biri kazanır', async () => {
+    const h = host('race');
+    const a = await add(actor('A'), h);
+    const b = await add(actor('B'), h);
+    assert.ifError(a.res.error, 'A bekleyen');
+    assert.ifError(b.res.error, 'B de bekleyen ekleyebilir (işgal yok)');
+    const dup = await add(actor('A'), h);
+    assert.match(dup.res.error?.message ?? '', /domain_exists/);
+    const results = await Promise.all([verify(actor('A'), a.id, [a.code]), verify(actor('B'), b.id, [b.code])]);
+    assert.equal(results.filter((r) => !r.error).length, 1, 'iki kiracı aynı alan adını doğruladı');
+    const loser = results.findIndex((r) => r.error);
+    assert.match(results[loser].error.message, /domain_taken/);
+    // Doğrulanmış alan adı başka kiracıya eklenemez
+    const third = await add({ p_actor: platformAdmin.id, p_org: T.B.orgId, p_platform: true }, h);
+    assert.ok(third.res.error, 'bağlı alan adı tekrar eklendi');
+    // Veritabanı indeksi: doğrudan ikinci bağlı kayıt da açılamaz
+    const winnerOrg = loser === 0 ? T.B.orgId : T.A.orgId;
+    const otherOrg = winnerOrg === T.A.orgId ? T.B.orgId : T.A.orgId;
+    const direct = await service.from('organization_domains').update({ status: 'verified', verified_at: new Date().toISOString() }).eq('organization_id', otherOrg).eq('hostname', h);
+    assert.ok(direct.error, 'tekil indeks yok');
+  });
+
+  test('yetki: başka kiracı, yetkisiz rol, istemci oturumu; elle bağlantı onayı yalnızca süper admin', async () => {
+    const h = host('auth');
+    // A sahibi B'nin organizasyonuna alan adı ekleyemez
+    const cross = await add({ p_actor: T.A.users.owner.id, p_org: T.B.orgId, p_platform: false }, h);
+    assert.match(cross.res.error?.message ?? '', /forbidden/);
+    // settings.manage olmayan roller (agent, editor, viewer) ekleyemez
+    for (const role of ['agent', 'editor', 'viewer']) {
+      const r = await add(actor('A', role), host(`auth-${role}`));
+      assert.match(r.res.error?.message ?? '', /forbidden/, role);
+    }
+    // Ofis kullanıcısı süper admin bayrağı göndererek yükselemez
+    const fake = await add({ p_actor: T.A.users.owner.id, p_org: T.A.orgId, p_platform: true }, host('auth-fake'));
+    assert.match(fake.res.error?.message ?? '', /forbidden/);
+    const ok = await add(actor('A', 'admin'), h);
+    assert.ifError(ok.res.error);
+    assert.ifError((await verify(actor('A'), ok.id, [ok.code])).error);
+    assert.match((await activate(actor('A'), ok.id, true)).error?.message ?? '', /forbidden/);
+    assert.ifError((await activate({ p_actor: platformAdmin.id, p_org: T.A.orgId, p_platform: true }, ok.id, true)).error);
+    // B, A'nın alan adını birincil yapamaz / kaldıramaz
+    assert.ok((await service.rpc('domain_set_primary', { ...actor('B'), p_id: ok.id })).error);
+    assert.ok((await service.rpc('domain_remove', { ...actor('B'), p_id: ok.id })).error);
+    assert.equal((await row(ok.id)).status, 'active');
+    // İstemci (oturum / anonim) alan adı fonksiyonlarını çağıramaz
+    for (const client of [anon, T.A.users.owner.client, platformAdmin.client]) {
+      for (const [fn, args] of [
+        ['domain_add', { ...actor('A'), p_id: randomUUID(), p_hostname: host('client'), p_nonce: hex(16), p_token_hash: sha('x') }],
+        ['domain_mark_verified', { ...actor('A'), p_id: ok.id, p_found_hashes: [] }],
+        ['domain_mark_active', { ...actor('A'), p_id: ok.id, p_manual: true }],
+        ['domain_list', actor('A')],
+      ]) {
+        assert.ok((await client.rpc(fn, args)).error, `${fn}: istemci çağırabildi`);
+      }
+    }
+    await service.rpc('domain_remove', { ...actor('A'), p_id: ok.id });
+  });
+
+  test('plan: özel alan adı plan özelliği yoksa ofis ekleyemez (KARAY ekleyebilir)', async () => {
+    assert.ifError((await service.from('subscriptions').update({ plan_id: 'baslangic' }).eq('organization_id', T.B.orgId).eq('status', 'active')).error);
+    try {
+      const r = await add(actor('B'), host('plan'));
+      assert.match(r.res.error?.message ?? '', /plan_feature_disabled/);
+      const p = await add({ p_actor: platformAdmin.id, p_org: T.B.orgId, p_platform: true }, host('plan'));
+      assert.ifError(p.res.error);
+    } finally {
+      await service.from('subscriptions').update({ plan_id: 'kurumsal' }).eq('organization_id', T.B.orgId).eq('status', 'active');
+    }
+  });
+
+  test('birincil: yalnızca aktif; kiracı başına tek; başka kiracının alan adı birincil yapılamaz', async () => {
+    const one = await add(actor('A'), host('p1'));
+    const two = await add(actor('A'), host('p2'));
+    for (const d of [one, two]) {
+      assert.ifError((await verify(actor('A'), d.id, [d.code])).error);
+      assert.ifError((await activate(actor('A'), d.id)).error);
+    }
+    assert.equal((await row(one.id)).is_primary, true);
+    assert.equal((await row(two.id)).is_primary, false);
+    assert.ifError((await service.rpc('domain_set_primary', { ...actor('A'), p_id: two.id })).error);
+    assert.equal((await row(one.id)).is_primary, false);
+    assert.equal((await row(two.id)).is_primary, true);
+    const pend = await add(actor('A'), host('p3'));
+    assert.match((await service.rpc('domain_set_primary', { ...actor('A'), p_id: pend.id })).error?.message ?? '', /not_active/);
+    // Kısıt: bekleyen kayıt birincil olamaz
+    assert.ok((await service.from('organization_domains').update({ is_primary: true }).eq('id', pend.id)).error);
+    // Birincil kaldırılınca diğer aktif alan adı kendiliğinden birincil olmaz; kiracı varsayılan adrese döner
+    await service.rpc('domain_remove', { ...actor('A'), p_id: two.id });
+    const canon = (await anon.rpc('public_tenant_domains', { p_org: T.A.orgId })).data;
+    assert.deepEqual(canon, [{ hostname: host('p1'), is_primary: false }]);
+    for (const d of [one, pend]) await service.rpc('domain_remove', { ...actor('A'), p_id: d.id });
+  });
+
+  test('tablo: istemci yalnızca kendi ofisini okur (settings.manage), doğrulama özeti / nonce okunmaz, doğrudan yazamaz', async () => {
+    const d = await add(actor('A'), host('tbl'));
+    assert.ifError(d.res.error);
+    const own = await T.A.users.owner.client.from('organization_domains').select('id, status').eq('id', d.id);
+    assert.equal(own.data?.length, 1);
+    for (const role of ['agent', 'viewer']) assert.ok(denied(await T.A.users[role].client.from('organization_domains').select('id').eq('id', d.id)), role);
+    assert.ok(denied(await T.B.users.owner.client.from('organization_domains').select('id').eq('id', d.id)));
+    assert.ok(denied(await anon.from('organization_domains').select('id')));
+    for (const client of [T.A.users.owner.client, platformAdmin.client]) {
+      assert.ok((await client.from('organization_domains').select('verification_token_hash')).error, 'özet okunabildi');
+      assert.ok((await client.from('organization_domains').select('verification_nonce')).error, 'nonce okunabildi');
+      assert.ok(denied(await client.from('organization_domains').insert({ organization_id: T.A.orgId, hostname: host('ins'), status: 'active', verified_at: new Date().toISOString(), activated_at: new Date().toISOString() }).select('id')));
+      assert.ok(denied(await client.from('organization_domains').update({ status: 'active', verified_at: new Date().toISOString(), activated_at: new Date().toISOString() }).eq('id', d.id).select('id')));
+      assert.ok(denied(await client.from('organization_domains').delete().eq('id', d.id).select('id')));
+    }
+    assert.equal((await row(d.id)).status, 'pending');
+    // Süper admin tüm ofisleri okuyabilir (özet hariç)
+    assert.equal((await platformAdmin.client.from('organization_domains').select('id').eq('id', d.id)).data?.length, 1);
+    await service.rpc('domain_remove', { ...actor('A'), p_id: d.id });
+  });
+
+  test('deneme sınırı: alan adı başına 10 dakikada 10 denetim', async () => {
+    const d = await add(actor('A'), host('rate'));
+    for (let i = 0; i < 10; i++) assert.ifError((await service.rpc('domain_check_begin', { ...actor('A'), p_id: d.id })).error);
+    assert.match((await service.rpc('domain_check_begin', { ...actor('A'), p_id: d.id })).error?.message ?? '', /rate_limited/);
+    await service.rpc('domain_remove', { ...actor('A'), p_id: d.id });
+  });
+
+  test('kısıt: doğrulanmadan aktif kayıt açılamaz (veritabanı)', async () => {
+    const bad = await service.from('organization_domains').insert({ organization_id: T.A.orgId, hostname: host('cons'), status: 'active', activated_at: new Date().toISOString() });
+    assert.ok(bad.error, 'verified_at olmadan aktif kayıt');
+    const bad2 = await service.from('organization_domains').insert({ organization_id: T.A.orgId, hostname: host('cons2'), status: 'active', verified_at: new Date().toISOString() });
+    assert.ok(bad2.error, 'activated_at olmadan aktif kayıt');
+  });
+});

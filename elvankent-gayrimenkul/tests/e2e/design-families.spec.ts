@@ -90,7 +90,7 @@ test.beforeAll(async () => {
     s.orgId = org.data.id;
     await service!.from('organization_settings').insert({ organization_id: s.orgId, display_name: `Aile Testi ${key(s.family)}`, address_city: 'Ankara', address_district: 'Çankaya', service_area: 'Ankara' });
     await service!.from('subscriptions').insert({ organization_id: s.orgId, plan_id: 'kurumsal', status: 'active' });
-    const dom = await service!.from('organization_domains').insert({ organization_id: s.orgId, hostname: s.host, is_primary: true, verified_at: new Date().toISOString() });
+    const dom = await service!.from('organization_domains').insert({ organization_id: s.orgId, hostname: s.host, is_primary: true, verified_at: new Date().toISOString(), status: 'active', activated_at: new Date().toISOString() });
     if (dom.error) throw dom.error;
     const published = s.family ? compileManifest({ siteType: 'real-estate-office', designFamily: s.family, variants: {} }, parseSiteConfig({})).design : { theme: 'klasik' };
     const sc = await service!.from('site_configs').upsert({ organization_id: s.orgId, published, draft: published, published_version: 1 });

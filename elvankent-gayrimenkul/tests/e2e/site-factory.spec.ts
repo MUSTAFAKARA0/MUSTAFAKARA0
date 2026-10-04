@@ -52,7 +52,7 @@ async function makeOrg(key: 'a' | 'b', host: string, withListings: boolean) {
   const id = org.data.id;
   await service!.from('organization_settings').insert({ organization_id: id, display_name: `Örnek Ofis ${key.toUpperCase()}`, primary_color: '#2c4a3e', accent_color: '#b98a3e', phone: '+905550000000', whatsapp: '+905550000000', email: `ofis-${key}@example.test`, address_city: 'Ankara', address_district: 'Çankaya', service_area: 'Ankara' });
   await service!.from('subscriptions').insert({ organization_id: id, plan_id: 'kurumsal', status: 'active' });
-  const dom = await service!.from('organization_domains').insert({ organization_id: id, hostname: host, is_primary: true, verified_at: new Date().toISOString() });
+  const dom = await service!.from('organization_domains').insert({ organization_id: id, hostname: host, is_primary: true, verified_at: new Date().toISOString(), status: 'active', activated_at: new Date().toISOString() });
   if (dom.error) throw dom.error;
   if (withListings) {
     const anon = createClient(url!, anonKey!, { auth: { persistSession: false } });

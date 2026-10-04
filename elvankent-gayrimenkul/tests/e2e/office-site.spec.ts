@@ -46,7 +46,7 @@ async function makeOrg(key: 'a' | 'b', host: string) {
   const id = org.data.id;
   await service!.from('organization_settings').insert({ organization_id: id, display_name: `Ofis Site ${key.toUpperCase()} ${RUN}`, address_city: 'Ankara', service_area: 'Ankara' });
   await service!.from('subscriptions').insert({ organization_id: id, plan_id: 'kurumsal', status: 'active' });
-  await service!.from('organization_domains').insert({ organization_id: id, hostname: host, is_primary: true, verified_at: new Date().toISOString() });
+  await service!.from('organization_domains').insert({ organization_id: id, hostname: host, is_primary: true, verified_at: new Date().toISOString(), status: 'active', activated_at: new Date().toISOString() });
   return id;
 }
 

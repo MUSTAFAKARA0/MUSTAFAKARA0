@@ -104,7 +104,7 @@ let AGENT = '';
 test.beforeAll(async () => {
   const own = await makeOrg('a', OWN_TITLE, ['sinematik-vitrin', 'klasik-guven']);
   await makeOrg('b', OTHER_TITLE, []);
-  const dom = await service!.from('organization_domains').insert({ organization_id: own, hostname: HOST, is_primary: true, verified_at: new Date().toISOString() });
+  const dom = await service!.from('organization_domains').insert({ organization_id: own, hostname: HOST, is_primary: true, verified_at: new Date().toISOString(), status: 'active', activated_at: new Date().toISOString() });
   if (dom.error) throw dom.error;
   OWNER = await makeMember(own, 'owner');
   AGENT = await makeMember(own, 'agent');

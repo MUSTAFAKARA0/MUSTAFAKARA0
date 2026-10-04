@@ -54,7 +54,7 @@ async function makeOrg(key: 'a' | 'b', host: string) {
   const id = org.data.id;
   await service!.from('organization_settings').insert({ organization_id: id, display_name: `SEO Ofis ${key.toUpperCase()} ${RUN}`, address_city: 'Ankara', service_area: 'Ankara' });
   await service!.from('subscriptions').insert({ organization_id: id, plan_id: 'kurumsal', status: 'active' });
-  await service!.from('organization_domains').insert({ organization_id: id, hostname: host, is_primary: true, verified_at: new Date().toISOString() });
+  await service!.from('organization_domains').insert({ organization_id: id, hostname: host, is_primary: true, verified_at: new Date().toISOString(), status: 'active', activated_at: new Date().toISOString() });
   // Başlangıç yayını: canlı SEO başlığı (geriye uyum: seo bölümü)
   await service!.from('site_configs').update({ published: { seo: { title: OLD_TITLE } }, draft: { seo: { title: OLD_TITLE } } }).eq('organization_id', id);
   return id;

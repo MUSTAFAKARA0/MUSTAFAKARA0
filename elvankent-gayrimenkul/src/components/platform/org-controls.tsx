@@ -3,10 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox, Field, Input, Select } from '@/components/ui/form-controls';
-import { addDomain, createOrganization, setOrganizationPlan } from '@/app/actions/platform';
+import { Field, Input, Select } from '@/components/ui/form-controls';
+import { createOrganization, setOrganizationPlan } from '@/app/actions/platform';
 import { OwnerInvitationCard } from '@/components/platform/owner-invitation';
 
 export function PlanForm({ orgId, plans, current, status }: { orgId: string; plans: { id: string; name: string }[]; current: string | null; status: string | null }) {
@@ -46,43 +45,6 @@ export function PlanForm({ orgId, plans, current, status }: { orgId: string; pla
       </Field>
       <Button type="submit" loading={pending}>
         Uygula
-      </Button>
-    </form>
-  );
-}
-
-export function DomainForm({ orgId }: { orgId: string }) {
-  const router = useRouter();
-  const [host, setHost] = useState('');
-  const [primary, setPrimary] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-  const [, startTransition] = useTransition();
-  return (
-    <form
-      className="space-y-3"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        setPending(true);
-        setError(null);
-        const res = await addDomain(orgId, host, primary);
-        setPending(false);
-        if (!res.ok) {
-          setError(res.fieldErrors?.hostname?.[0] ?? res.error);
-          return;
-        }
-        toast.success(res.message ?? 'Alan adı eklendi.');
-        setHost('');
-        setPrimary(false);
-        startTransition(() => router.refresh());
-      }}
-    >
-      <Field label="Alan adı" htmlFor="org-domain" error={error}>
-        <Input id="org-domain" value={host} onChange={(e) => setHost(e.target.value)} placeholder="www.ornekemlak.com" autoComplete="off" spellCheck={false} maxLength={253} />
-      </Field>
-      <Checkbox checked={primary} onChange={(e) => setPrimary(e.target.checked)} label="Birincil alan adı yap" description="Sitenin kanonik adresi (site haritası, paylaşım bağlantıları) bu alan adı olur." />
-      <Button type="submit" size="sm" loading={pending} disabled={!host.trim()}>
-        {!pending && <Plus />} Alan adı ekle
       </Button>
     </form>
   );

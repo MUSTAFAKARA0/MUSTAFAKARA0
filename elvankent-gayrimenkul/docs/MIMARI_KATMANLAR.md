@@ -353,6 +353,39 @@ KARAY → Yeni organizasyon / Yeni site → organizasyon + sahip üyeliği + BEK
 - **Kapsam dışı (bilinçli):** ofis panelindeki ekip üyesi ekleme (`/admin/kullanicilar`) hâlâ geçici
   şifre kullanır; müşteri onboarding'i değildir.
 
+## P0.5 — Özel alan adı ve kiracı host çözümlemesi
+
+**Host → kiracı (öncelik sırası; proxy yalnızca `Host` başlığını okur, `X-Forwarded-Host` kullanılmaz):**
+
+1. KARAY alan adı (`KARAY_HOSTS`) → KARAY sayfası; `/platform` yalnızca KARAY/paylaşılan yüzeyde
+2. Geliştirme / önizleme / `NEXT_PUBLIC_SITE_URL` adresleri → varsayılan kiracı (`DEFAULT_TENANT_SLUG` / `is_default`)
+3. `{slug}.{PLATFORM_ROOT_DOMAIN}` → slug
+4. Diğer alan adları → `public_tenant(p_hostname)`: **yalnızca `status = 'active'`** alan adı (yoksa 404)
+
+Özel alan adında `/platform`, `/api/platform`, `/karay`, `/site-onizleme` 404; `/admin` ofis paneli
+(oturum + üyelik sunucuda). `x-tenant-key` her istekte sunucuda yeniden yazılır; `/t/*` doğrudan 404.
+
+**Yaşam döngüsü** (`organization_domains` genişletildi; `20261009000001_custom_domains.sql`):
+`pending` (TXT kodu bekleniyor, 7 gün) → `verified` (sahiplik) → `active` (DNS KARAY'a yönleniyor).
+DNS sahipliği ≠ trafik bağlantısı. Doğrulama kodu sunucu anahtarıyla HMAC (alan adı kimliği + kiracı
++ hostname + nonce); veritabanında yalnızca SHA-256 özeti. Bağlı (verified/active) hostname tek
+kiracıda (kısmi tekil indeks); bekleyen kayıt alan adını kilitlemez. Birincil yalnızca aktif; ilk aktif
+alan adı birincil olur; birincil kaldırılırsa kiracı varsayılan adresine döner.
+
+**Yazma:** `modules/domains/service.ts` (ofis: `settings.manage` + plan özel alan adı, organizasyon
+`ctx.org.id`; KARAY: süper admin, ek olarak bağlantıyı elle onaylama). DB fonksiyonları yalnızca
+`service_role`; işlemi yapanın yetkisini ayrıca doğrular. İstemci tabloyu yalnızca okur (özet / nonce yok).
+
+**DNS:** `modules/domains/dns.ts` (sistem DNS'i veya DoH; testlerde sahte DoH). Hedef kayıtlar
+ortamdan (`DOMAIN_TARGET_CNAME`, `DOMAIN_TARGET_A`); kodda Vercel değeri yok.
+
+**Kanonik / www:** birincil aktif alan adı kanoniktir (metadata, sitemap, OG, davet bağlantısı).
+Diğer aktif alan adları aynı siteyi `canonical` = birincil ile sunar; 301 (www ↔ kök) barındırma
+katmanında yapılır → uygulamada yönlendirme döngüsü yok.
+
+**Önbellek:** her durum değişikliğinde `tenants` + `org:{id}` etiketleri yenilenir (bekleyen
+alan adının 404'ü aktif olunca önbellekte kalmaz).
+
 ## Theme Engine (`src/theme-engine`)
 
 | Dosya | İçerik |

@@ -141,8 +141,8 @@ export function SiteWizard({ catalog }: { catalog: WizardCatalog }) {
     if (!/^[A-Z]{2,5}$/.test(account.prefix)) next.prefix = 'İlan no öneki 2–5 büyük harf olmalıdır (ör. ABC).';
     if (account.owner_name.trim().length < 2) next.owner_name = 'Sahip adı en az 2 karakter olmalıdır.';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account.owner_email.trim())) next.owner_email = 'Sahip için geçerli bir e-posta girin.';
-    if (domainMode === 'custom' && !/^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(customDomain.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '')))
-      next.customDomain = 'Geçerli bir alan adı girin (ör. www.ornekemlak.com).';
+    if (domainMode === 'custom' && !/^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\.?$/i.test(customDomain.trim()))
+      next.customDomain = 'Yalnızca alan adını yazın (ör. www.ornekemlak.com) — https:// veya yol olmadan.';
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -417,7 +417,7 @@ function InfoStep(props: {
           <Input id="w-slug" value={account.slug} onChange={(e) => setAccount('slug', e.target.value.toLowerCase())} maxLength={40} autoComplete="off" spellCheck={false} />
         </Field>
         {props.domainMode === 'custom' ? (
-          <Field label="Özel alan adı" htmlFor="w-domain" required error={errors.customDomain} hint="Birincil alan adı olarak eklenir.">
+          <Field label="Özel alan adı" htmlFor="w-domain" required error={errors.customDomain} hint="Doğrulama bekleyen alan adı olarak eklenir; TXT doğrulaması ve yönlendirmeden sonra birincil adres olur.">
             <Input id="w-domain" value={props.customDomain} onChange={(e) => props.setCustomDomain(e.target.value)} placeholder="www.ornekemlak.com" autoComplete="off" spellCheck={false} maxLength={253} />
           </Field>
         ) : (
@@ -865,7 +865,8 @@ function ConfirmStep(props: {
 }
 
 function Result({ done, activate, rootDomain, customDomain }: { done: { id: string; slug: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account'; warnings: string[]; published: boolean }; activate: boolean; rootDomain: string | null; customDomain: string | null }) {
-  const url = customDomain ? `https://${customDomain.replace(/^https?:\/\//, '').replace(/\/.*$/, '')}` : rootDomain ? `https://${done.slug}.${rootDomain}` : null;
+  // Özel alan adı doğrulanana kadar site varsayılan (alt alan adı) adresinde açılır
+  const url = rootDomain ? `https://${done.slug}.${rootDomain}` : null;
   return (
     <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-surface p-6 shadow-[0_12px_32px_-20px_rgb(0_0_0/0.18)] sm:p-8" role="status">
       <span className="grid size-11 place-items-center rounded-full bg-success-soft text-success">
@@ -875,6 +876,11 @@ function Result({ done, activate, rootDomain, customDomain }: { done: { id: stri
       <p className="mt-1 text-[14px] text-muted-foreground">
         {done.published ? (activate ? 'İlk sürüm yayınlandı ve site ziyaretçiye açık.' : 'İlk sürüm yayınlandı; site taslak durumunda (ziyaretçiye kapalı).') : 'Site kaydedildi; yayın tamamlanamadı.'}
       </p>
+      {customDomain && (
+        <p className="mt-3 text-[13.5px] text-muted-foreground" data-testid="custom-domain-pending">
+          {customDomain} doğrulama bekliyor: Site Kontrol Merkezi › Alan adı sekmesindeki TXT kaydıyla doğrulayıp bağlayın. O zamana kadar site varsayılan adresinde açılır.
+        </p>
+      )}
       {done.warnings.length > 0 && (
         <ul className="mt-4 space-y-1.5 rounded-xl bg-warning-soft p-4 text-[13.5px] text-warning">
           {done.warnings.map((w) => (

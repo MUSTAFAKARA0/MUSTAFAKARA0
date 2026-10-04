@@ -2,13 +2,12 @@
 
 import { revalidatePath, updateTag } from 'next/cache';
 import { z } from 'zod';
-import { getDomainProvider } from '@/modules/domains';
+import * as domains from '@/modules/domains/service';
 import { cacheTags } from '@/lib/cache-tags';
 import { isUuid } from '@/lib/utils';
-import { createServiceClient } from '@/lib/supabase/server';
 import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/platform/actions';
 import { requireSuperAdmin } from '@/platform/auth/session';
-import { hostnameSchema, type CreateOrgInput } from '@/modules/platform/org-schema';
+import type { CreateOrgInput } from '@/modules/platform/org-schema';
 import { provisionOrganization, type OwnerAccountState } from '@/modules/platform/provisioning';
 import { revokeOwnerInvitation, sendOwnerInvitation } from '@/modules/platform/invitations/service';
 
@@ -83,33 +82,78 @@ export async function setOrganizationPlan(orgId: string, plan: string, status: s
   }, 'Plan güncellendi.');
 }
 
-export async function addDomain(orgId: string, hostname: string, primary: boolean): Promise<ActionResult<null>> {
-  return runAction(async () => {
-    const session = await requireSuperAdmin();
-    if (!isUuid(orgId)) throw new ActionError('Organizasyon bulunamadı.');
-    const host = hostnameSchema.parse(hostname);
-    const { error } = await session.supabase.rpc('platform_add_domain', { p_org: orgId, p_hostname: host, p_primary: primary });
-    if (error?.code === '23505') throw new ActionError('Bu alan adı başka bir organizasyona bağlı.', 'validation', { hostname: ['Bu alan adı zaten kullanılıyor.'] });
-    assertNoDbError(error);
-    refreshTenants(orgId);
-    // Barındırma tarafı: manual → DNS talimatı sayfada gösterilir; vercel → projeye otomatik eklenir
-    const provider = getDomainProvider();
-    const hosted = await provider.add(host);
-    if (!hosted.ok) throw new ActionError(`Alan adı kaydedildi ancak barındırmaya eklenemedi: ${hosted.error} Vercel panelinden elle ekleyebilirsiniz.`);
-    return null;
-  }, 'Alan adı eklendi. Sayfadaki DNS kaydını alan adı sağlayıcınızda tanımlayın.');
+/**
+ * Özel alan adı (P0.5) — KARAY tarafı. Aynı yaşam döngüsü ofis paneliyle ortaktır
+ * (modules/domains/service): ekle (bekliyor) → TXT doğrulama → bağlantı → birincil / kaldır.
+ * Süper admin ek olarak bağlantıyı (barındırmada kontrol ettikten sonra) elle onaylayabilir.
+ * Organizasyon kimliği yalnızca hangi ofis için işlem yapıldığını seçer; yetki sunucuda ve
+ * veritabanında doğrulanır.
+ */
+async function platformDomainActor(orgId: string) {
+  const session = await requireSuperAdmin();
+  if (!isUuid(orgId)) throw new ActionError('Organizasyon bulunamadı.');
+  return { userId: session.user.id, platform: true };
 }
 
-export async function removeDomain(domainId: string, orgId: string): Promise<ActionResult<null>> {
+export async function addDomain(orgId: string, hostname: string): Promise<ActionResult<{ id: string; hostname: string }>> {
   return runAction(async () => {
-    const session = await requireSuperAdmin();
+    const actor = await platformDomainActor(orgId);
+    const added = await domains.addDomain(actor, orgId, hostname);
+    revalidatePath('/platform', 'layout');
+    return added;
+  }, 'Alan adı eklendi. Doğrulama için gösterilen TXT kaydını alan adı sağlayıcısında tanımlayın.');
+}
+
+export async function verifyDomainAction(orgId: string, domainId: string): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const actor = await platformDomainActor(orgId);
     if (!isUuid(domainId)) throw new ActionError('Alan adı bulunamadı.');
-    // Süper admin doğrulandıktan sonra alan adı adı hizmet istemcisiyle okunur (barındırmadan kaldırmak için)
-    const { data: domain } = (await createServiceClient()?.from('organization_domains').select('hostname').eq('id', domainId).maybeSingle()) ?? { data: null };
-    const { error } = await session.supabase.rpc('platform_remove_domain', { p_id: domainId });
-    assertNoDbError(error);
-    if (domain?.hostname) await getDomainProvider().remove(domain.hostname);
-    refreshTenants(isUuid(orgId) ? orgId : undefined);
+    await domains.verifyDomain(actor, orgId, domainId);
+    revalidatePath('/platform', 'layout');
+    return null;
+  }, 'Alan adının sahipliği doğrulandı.');
+}
+
+export async function connectDomainAction(orgId: string, domainId: string, manual?: boolean): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const actor = await platformDomainActor(orgId);
+    if (!isUuid(domainId)) throw new ActionError('Alan adı bulunamadı.');
+    await domains.connectDomain(actor, orgId, domainId, { manual: manual === true });
+    revalidatePath('/platform', 'layout');
+    return null;
+  }, 'Alan adı aktif; site bu adreste açılır.');
+}
+
+export async function rotateDomainVerificationAction(orgId: string, domainId: string): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const actor = await platformDomainActor(orgId);
+    if (!isUuid(domainId)) throw new ActionError('Alan adı bulunamadı.');
+    await domains.rotateVerification(actor, orgId, domainId);
+    revalidatePath('/platform', 'layout');
+    return null;
+  }, 'Yeni doğrulama kodu oluşturuldu; önceki kod artık geçersiz.');
+}
+
+export async function setPrimaryDomainAction(orgId: string, domainId: string): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const actor = await platformDomainActor(orgId);
+    if (!isUuid(domainId)) throw new ActionError('Alan adı bulunamadı.');
+    await domains.setPrimaryDomain(actor, orgId, domainId);
+    revalidatePath('/platform', 'layout');
+    return null;
+  }, 'Birincil alan adı güncellendi.');
+}
+
+export async function connectDomainManualAction(orgId: string, domainId: string): Promise<ActionResult<null>> {
+  return connectDomainAction(orgId, domainId, true);
+}
+
+export async function removeDomainAction(orgId: string, domainId: string): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const actor = await platformDomainActor(orgId);
+    if (!isUuid(domainId)) throw new ActionError('Alan adı bulunamadı.');
+    await domains.removeDomain(actor, orgId, domainId);
+    revalidatePath('/platform', 'layout');
     return null;
   }, 'Alan adı kaldırıldı.');
 }

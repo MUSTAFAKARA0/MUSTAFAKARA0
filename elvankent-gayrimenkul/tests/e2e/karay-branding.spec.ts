@@ -64,7 +64,7 @@ test.beforeAll(async () => {
   S.bId = org.data.id;
   await service.from('organization_settings').insert({ organization_id: S.bId, display_name: B_NAME, primary_color: B_PRIMARY, accent_color: '#1f7a5c' });
   await service.from('subscriptions').insert({ organization_id: S.bId, plan_id: 'baslangic', status: 'active' });
-  const dom = await service.from('organization_domains').insert({ organization_id: S.bId, hostname: HOST, is_primary: true, verified_at: new Date().toISOString() });
+  const dom = await service.from('organization_domains').insert({ organization_id: S.bId, hostname: HOST, is_primary: true, verified_at: new Date().toISOString(), status: 'active', activated_at: new Date().toISOString() });
   if (dom.error) throw dom.error;
 
   const email = `karay-${RUN}@example.test`;

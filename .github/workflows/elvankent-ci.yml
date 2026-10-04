@@ -112,6 +112,10 @@ jobs:
             echo "RESEND_API_KEY=ci-test-key"
             echo "RESEND_API_BASE=http://127.0.0.1:4010"
             echo "EMAIL_FROM=KARAY CI <davet@example.test>"
+            # P0.5 özel alan adı: gerçek DNS yok; E2E sahte DoH sunucusunu (127.0.0.1:4011) kendisi açar
+            echo "DOMAIN_DNS_RESOLVER_URL=http://127.0.0.1:4011/dns-query"
+            echo "DOMAIN_TARGET_CNAME=sites.karay.test"
+            echo "DOMAIN_TARGET_A=203.0.113.10"
           } > .env.local
       - name: Birim + güvenlik testleri (RLS, MFA, kiracı izolasyonu)
         run: npm test

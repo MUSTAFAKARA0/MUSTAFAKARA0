@@ -52,7 +52,7 @@ test.beforeAll(async () => {
   S.orgId = org.data.id;
   await service!.from('organization_settings').insert({ organization_id: S.orgId, display_name: `Tasarım İzin Ofisi ${RUN}`, address_city: 'Ankara', service_area: 'Ankara' });
   await service!.from('subscriptions').insert({ organization_id: S.orgId, plan_id: 'kurumsal', status: 'active' });
-  await service!.from('organization_domains').insert({ organization_id: S.orgId, hostname: HOST, is_primary: true, verified_at: new Date().toISOString() });
+  await service!.from('organization_domains').insert({ organization_id: S.orgId, hostname: HOST, is_primary: true, verified_at: new Date().toISOString(), status: 'active', activated_at: new Date().toISOString() });
   await makeMember('owner');
   await makeMember('agent');
   S.yalinBefore = (await service!.from('design_family_settings').select('enabled').eq('family_id', 'yalin-galeri').maybeSingle()).data?.enabled ?? null;

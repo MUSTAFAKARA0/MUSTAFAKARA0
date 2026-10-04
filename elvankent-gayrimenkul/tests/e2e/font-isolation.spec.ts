@@ -64,7 +64,7 @@ test.beforeAll(async () => {
     orgs.push(org.data.id);
     await service!.from('organization_settings').insert({ organization_id: org.data.id, display_name: `Örnek Ofis ${key.toUpperCase()}`, address_city: 'Ankara', service_area: 'Ankara' });
     await service!.from('subscriptions').insert({ organization_id: org.data.id, plan_id: 'baslangic', status: 'active' });
-    const dom = await service!.from('organization_domains').insert({ organization_id: org.data.id, hostname: s.host, is_primary: true, verified_at: new Date().toISOString() });
+    const dom = await service!.from('organization_domains').insert({ organization_id: org.data.id, hostname: s.host, is_primary: true, verified_at: new Date().toISOString(), status: 'active', activated_at: new Date().toISOString() });
     if (dom.error) throw dom.error;
     const published = { theme: s.theme, colors: { mode: 'preset', preset: s.palette, scheme: 'light' } };
     const sc = await service!.from('site_configs').upsert({ organization_id: org.data.id, published, draft: published, published_version: 1 });

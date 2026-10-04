@@ -871,7 +871,11 @@ export type Database = {
           hostname: string
           is_primary: boolean
           verified_at: string | null
+          status: string
+          activated_at: string | null
+          verification_expires_at: string | null
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
@@ -879,6 +883,8 @@ export type Database = {
           hostname: string
           is_primary?: boolean
           verified_at?: string | null
+          status?: string
+          activated_at?: string | null
           created_at?: string
         }
         Update: {
@@ -887,6 +893,8 @@ export type Database = {
           hostname?: string
           is_primary?: boolean
           verified_at?: string | null
+          status?: string
+          activated_at?: string | null
           created_at?: string
         }
         Relationships: [
@@ -2453,6 +2461,48 @@ export type Database = {
           p_owner: string
           p_invite_token_hash?: string
         }
+        Returns: string
+      }
+      domain_list: {
+        Args: { p_actor: string; p_org: string; p_platform: boolean }
+        Returns: {
+          id: string
+          hostname: string
+          status: string
+          is_primary: boolean
+          verified_at: string | null
+          activated_at: string | null
+          verification_expires_at: string | null
+          verification_nonce: string | null
+          created_at: string
+        }[]
+      }
+      domain_add: {
+        Args: { p_actor: string; p_org: string; p_platform: boolean; p_id: string; p_hostname: string; p_nonce: string; p_token_hash: string }
+        Returns: { id: string; hostname: string; status: string; verification_expires_at: string }[]
+      }
+      domain_rotate_verification: {
+        Args: { p_actor: string; p_org: string; p_platform: boolean; p_id: string; p_nonce: string; p_token_hash: string }
+        Returns: string
+      }
+      domain_check_begin: {
+        Args: { p_actor: string; p_org: string; p_platform: boolean; p_id: string }
+        Returns: { hostname: string; status: string; verification_nonce: string | null; verification_expires_at: string | null }[]
+      }
+      domain_mark_verified: {
+        Args: { p_actor: string; p_org: string; p_platform: boolean; p_id: string; p_found_hashes: string[] }
+        Returns: string
+      }
+      domain_mark_active: {
+        Args: { p_actor: string; p_org: string; p_platform: boolean; p_id: string; p_manual: boolean }
+        Returns: string
+      }
+      domain_set_primary: {
+        Args: { p_actor: string; p_org: string; p_platform: boolean; p_id: string }
+        Returns: undefined
+      }
+      domain_remove: {
+        Args: { p_actor: string; p_org: string; p_platform: boolean; p_id: string }
         Returns: string
       }
       platform_send_owner_invitation: {

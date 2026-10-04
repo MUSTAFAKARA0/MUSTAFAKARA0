@@ -1,19 +1,18 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ExternalLink, Globe, Trash2 } from 'lucide-react';
-import { ActionButton, AutoSaveSelect } from '@/components/panel/action-controls';
+import { ExternalLink, Globe } from 'lucide-react';
+import { AutoSaveSelect } from '@/components/panel/action-controls';
 import { AuditList } from '@/components/panel/audit-list';
 import { AdminPageHeader, EmptyPanel, Panel } from '@/components/panel/ui';
-import { DomainForm, PlanForm } from '@/components/platform/org-controls';
+import { PlanForm } from '@/components/platform/org-controls';
+import { PlatformDomainsPanel } from '@/components/platform/domains-panel';
 import { OwnerInvitationCard } from '@/components/platform/owner-invitation';
 import { getOwnerInvitation } from '@/modules/platform/invitations/service';
 import { Badge } from '@/components/ui/badge';
-import { vercelDnsRecords } from '@/modules/domains/provider';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { removeDomain, setOrganizationStatus } from '@/app/actions/platform';
+import { setOrganizationStatus } from '@/app/actions/platform';
 import { formatBytes, formatDate, formatNumber, formatRelativeDate } from '@/lib/format';
-import { createServiceClient } from '@/lib/supabase/server';
 import { isUuid } from '@/lib/utils';
 import { listAuditLogs } from '@/modules/audit/queries';
 import { listPlans, listPlatformOrgs, ORG_STATUS_LABELS, SUBSCRIPTION_LABELS } from '@/modules/platform/queries';
@@ -33,16 +32,12 @@ export default async function PlatformOrgPage({ params }: PageProps<'/platform/o
   const org = orgs.find((o) => o.id === id);
   if (!org) notFound();
 
-  // Alan adları: süper admin doğrulandıktan sonra (askıdaki organizasyonlar dâhil) sunucu istemcisiyle okunur
-  const service = createServiceClient();
-  const [domainsRes, usersRes, logs, tenant, invitation] = await Promise.all([
-    service ? service.from('organization_domains').select('id, hostname, is_primary, created_at').eq('organization_id', id).order('created_at') : Promise.resolve({ data: [] }),
+  const [usersRes, logs, tenant, invitation] = await Promise.all([
     session.supabase.rpc('platform_users', { p_limit: 500 }),
     listAuditLogs(session.supabase, { orgId: id, page: 1 }),
     org.status === 'active' ? getTenant(org.slug) : Promise.resolve(null),
     getOwnerInvitation(session, id),
   ]);
-  const domains = domainsRes.data ?? [];
   const members = (usersRes.data ?? [])
     .map((u) => ({ ...u, membership: (u.memberships as Membership[]).find((m) => m.slug === org.slug) }))
     .filter((u) => u.membership);
@@ -89,41 +84,8 @@ export default async function PlatformOrgPage({ params }: PageProps<'/platform/o
             <PlanForm orgId={org.id} plans={plans.map((p) => ({ id: p.id, name: p.name }))} current={org.plan_id} status={org.subscription_status} />
           </Panel>
 
-          <Panel title="Alan adları" description="Alan adının DNS kaydı ve barındırma (Vercel) projesine eklenmesi ayrıca yapılmalıdır.">
-            {domains.length === 0 ? (
-              <p className="mb-4 text-sm text-muted-foreground">Özel alan adı yok; site {org.is_default ? 'ana adreste' : `${org.slug} alt alan adında`} yayınlanır.</p>
-            ) : (
-              <ul className="mb-5 divide-y divide-border rounded-xl border border-border">
-                {domains.map((d) => (
-                  <li key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                    <Globe className="size-4 text-muted-foreground" aria-hidden />
-                    <span className="min-w-0 flex-1 truncate font-medium">{d.hostname}</span>
-                    {d.is_primary && <Badge variant="primary-soft">Birincil</Badge>}
-                    <ActionButton
-                      size="xs"
-                      variant="danger-ghost"
-                      confirm={{ title: `${d.hostname} kaldırılsın mı?`, description: 'Bu alan adından gelen ziyaretçiler siteye ulaşamaz.', confirmLabel: 'Kaldır', destructive: true }}
-                      action={async () => {
-                        'use server';
-                        return removeDomain(d.id, org.id);
-                      }}
-                    >
-                      <Trash2 /> Kaldır
-                    </ActionButton>
-                    <p className="w-full text-[12.5px] text-muted-foreground">
-                      DNS:{' '}
-                      {vercelDnsRecords(d.hostname).map((r) => (
-                        <code key={r.type} className="numeric rounded bg-surface-muted px-1.5 py-0.5">
-                          {r.type} {r.name} → {r.value}
-                        </code>
-                      ))}{' '}
-                      (Vercel panelinde projeye özel değer gösterilirse o kullanılır.)
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <DomainForm orgId={org.id} />
+          <Panel title="Alan adları" description="TXT ile doğrulanan ve KARAY'a yönlendirilen (aktif) alan adında site açılır.">
+            <PlatformDomainsPanel session={session} orgId={org.id} fallbackUrl={tenant?.baseUrl ?? null} />
           </Panel>
 
           <Panel title="Son işlemler" bodyClassName="p-0 sm:p-0">

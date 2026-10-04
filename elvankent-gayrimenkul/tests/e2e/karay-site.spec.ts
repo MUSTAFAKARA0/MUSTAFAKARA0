@@ -78,7 +78,7 @@ test.beforeAll(async () => {
   S.bId = org.data.id;
   await service.from('organization_settings').insert({ organization_id: S.bId, display_name: B_NAME, primary_color: '#7a1f5c', accent_color: '#1f7a5c' });
   await service.from('subscriptions').insert({ organization_id: S.bId, plan_id: 'baslangic', status: 'active' });
-  const dom = await service.from('organization_domains').insert({ organization_id: S.bId, hostname: HOST, is_primary: true, verified_at: new Date().toISOString() });
+  const dom = await service.from('organization_domains').insert({ organization_id: S.bId, hostname: HOST, is_primary: true, verified_at: new Date().toISOString(), status: 'active', activated_at: new Date().toISOString() });
   if (dom.error) throw dom.error;
   // B'nin kendi (kiracı) müşteri talebi: KARAY tarafında görünmemeli
   const customer = await service.from('customers').insert({ organization_id: S.bId, full_name: TENANT_LEAD_NAME, phone: '05320000000' }).select('id').single();

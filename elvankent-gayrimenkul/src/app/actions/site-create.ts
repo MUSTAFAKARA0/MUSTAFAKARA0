@@ -3,8 +3,10 @@
 import { revalidatePath, updateTag } from 'next/cache';
 import { cacheTags } from '@/lib/cache-tags';
 import { isUuid } from '@/lib/utils';
-import { getDomainProvider } from '@/modules/domains';
-import { hostnameSchema, orgSchema, type CreateOrgInput } from '@/modules/platform/org-schema';
+import { domainConfig } from '@/modules/domains/config';
+import { parseDomainInput } from '@/modules/domains/hostname';
+import { addDomain } from '@/modules/domains/service';
+import { orgSchema, type CreateOrgInput } from '@/modules/platform/org-schema';
 import { disabledFamilies, isMissingDesignAccessSchema } from '@/modules/platform/design-access';
 import { provisionOrganization, type OwnerAccountState } from '@/modules/platform/provisioning';
 import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/platform/actions';
@@ -25,7 +27,7 @@ import type { Json } from '@/types/supabase';
  *
  * Migration gerektirmez: yalnızca mevcut, yetki denetimli veritabanı fonksiyonları kullanılır
  * (platform_create_organization, site_save_draft, site_set_features, site_publish, site_set_status,
- * platform_add_domain — hepsi assert_super_admin). Organizasyon kimliği istemciden alınmaz.
+ * domain_add (bekleyen özel alan adı) — hepsi yetki denetimli). Organizasyon kimliği istemciden alınmaz.
  */
 const DESIGN_SECTIONS = ['theme', 'colors', 'typography', 'style', 'home', 'pages', 'seo'] as const;
 
@@ -72,7 +74,12 @@ export async function createSite(raw: CreateSiteInput): Promise<ActionResult<{ i
     // KARAY'ın global olarak kapattığı aileyle yeni site açılamaz
     if ((await disabledFamilies(session.supabase)).disabled.has((raw.manifest as { designFamily: string }).designFamily)) throw new ActionError('Bu tasarım ailesi katalogda kapalı.');
     const account = orgSchema.parse(raw?.account);
-    const host = raw?.customDomain?.trim() ? hostnameSchema.parse(raw.customDomain) : null;
+    let host: string | null = null;
+    if (raw?.customDomain?.trim()) {
+      const parsed = parseDomainInput(raw.customDomain, domainConfig().policy);
+      if (!parsed.ok) throw new ActionError(parsed.message, 'validation', { customDomain: [parsed.message] });
+      host = parsed.hostname;
+    }
     const { sections, features } = initialSiteSections(raw.manifest, info.data);
 
     const created = await provisionOrganization(session, account);
@@ -96,13 +103,14 @@ export async function createSite(raw: CreateSiteInput): Promise<ActionResult<{ i
     const family = (raw.manifest as { designFamily: string }).designFamily;
     const grant = await db.rpc('platform_set_org_design_families', { p_org: orgId, p_families: [family] });
     if (grant.error && !isMissingDesignAccessSchema(grant.error)) warnings.push('Tasarım ailesi izni kaydedilemedi; Tema sekmesinden ekleyebilirsiniz.');
+    // Özel alan adı DOĞRULANMADAN bağlanmaz (P0.5): bekleyen kayıt açılır; TXT doğrulaması ve
+    // yönlendirme sitenin Alan adı sekmesinden yapılır. Site o zamana kadar varsayılan adreste açılır.
     if (host) {
-      const { error } = await db.rpc('platform_add_domain', { p_org: orgId, p_hostname: host, p_primary: true });
-      if (error?.code === '23505') warnings.push(`${host} başka bir organizasyona bağlı; alan adı eklenmedi.`);
-      else if (error) warnings.push('Özel alan adı eklenemedi; Alan adı sekmesinden tekrar deneyin.');
-      else {
-        const hosted = await getDomainProvider().add(host);
-        if (!hosted.ok) warnings.push(`Alan adı kaydedildi ancak barındırmaya eklenemedi: ${hosted.error}`);
+      try {
+        await addDomain({ userId: session.user.id, platform: true }, orgId, host);
+        warnings.push(`${host} eklendi; doğrulama bekliyor. Alan adı sekmesindeki TXT kaydıyla doğrulayıp bağlayın.`);
+      } catch (e) {
+        warnings.push(e instanceof ActionError ? `${host}: ${e.message}` : 'Özel alan adı eklenemedi; Alan adı sekmesinden tekrar deneyin.');
       }
     }
     updateTag(cacheTags.tenants);
