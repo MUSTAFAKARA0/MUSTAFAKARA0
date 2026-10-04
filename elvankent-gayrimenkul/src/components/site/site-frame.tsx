@@ -3,6 +3,8 @@ import { SiteFooter } from '@/components/layout/site-footer';
 import { SiteHeader } from '@/components/layout/site-header';
 import { CompareBar, CookieConsent, FloatingWhatsApp } from '@/components/layout/site-extras';
 import { PreviewBar } from '@/components/layout/site-status';
+import { InteractionIslands } from '@/components/patterns/interaction/islands';
+import { patternCss } from '@/components/patterns/styles';
 import { whatsappHref } from '@/lib/contact-links';
 import { hashString } from '@/lib/utils';
 import type { Tenant } from '@/platform/tenant/tenant';
@@ -59,6 +61,8 @@ export interface SiteFrameProps {
 export function SiteFrame({ tenant, view, hasBlog, regions, version, mode = 'live', children }: SiteFrameProps) {
   const s = tenant.settings;
   const { attributes, head } = siteRuntime(tenant, view, version);
+  // D7 desenleri: yalnızca manifestte seçilen etkileşim adaları ve CSS'leri (seçim yoksa hiçbir şey)
+  const interactions = view.config.style.slots?.interactions ?? [];
   return (
     <div {...attributes} className="contents">
       {head}
@@ -74,6 +78,14 @@ export function SiteFrame({ tenant, view, hasBlog, regions, version, mode = 'liv
         {children}
       </main>
       <SiteFooter tenant={tenant} regions={regions} hasBlog={hasBlog} view={view} />
+      {interactions.length > 0 && (
+        <>
+          <style href={`site-patterns-${interactions.join('-')}`} precedence="high">
+            {patternCss({ interactions })}
+          </style>
+          <InteractionIslands ids={interactions} />
+        </>
+      )}
       {view.features.whatsapp && <FloatingWhatsApp href={whatsappHref(s.whatsapp ?? s.phone, 'Merhaba, bilgi almak istiyorum.')} />}
       {mode === 'live' && view.features.favorites && <CompareBar />}
       {mode === 'live' && <CookieConsent />}

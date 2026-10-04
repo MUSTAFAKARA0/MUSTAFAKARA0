@@ -123,6 +123,35 @@ KARAY › Web Siteleri › Yeni site oluştur (/platform/siteler/yeni)
 | Ofis yöneticisi (`settings.manage`) | yalnızca izinli ve açık aileleri görür, kendi sitesine uygular (yayınlanır) | `/admin/tasarim` (`site_apply_design`; yetki veritabanında) |
 | Kiracı sitesi | yalnızca kendi manifestini okur; izin tablolarını ve katalogu bilmez | — |
 
+## D7 — Design Pattern Library (`src/components/patterns`)
+
+Yeni (D7) tasarım aileleri mevcut 6 ailenin üzerine yama yapılarak değil, **desen** (pattern)
+eklenerek kurulur. Mevcut bileşenler kilitlidir ("standart"/eski varyantlar).
+
+```
+Site Factory catalog/<aile>   ─ manifest seçimi (kapalı liste: theme-engine/ids.ts) ─┐
+                                                                                     ▼
+site_configs (style.slots.*) ─▶ Site Renderer (SiteFrame / SiteHome / sayfalar)
+                                   ├─ görsel desen  → SUNUCU bileşeni (seçilmeyenin kodu tarayıcıya gitmez)
+                                   ├─ interaktif desen → İSTEMCİ yükleyicisi içinden next/dynamic
+                                   │                    (yalnızca seçilen adanın parçası indirilir)
+                                   └─ desen CSS'i  → yalnızca seçilen desenler (patterns/styles.ts)
+```
+
+**Kesin teknik kural (D7.0 ölçümü, yalıtılmış production build):** bir istemci bileşeni sunucu
+bileşenine statik olarak içe aktarılırsa veya sunucu bileşeninde `next/dynamic` ile yüklenirse,
+HİÇ çizilmese bile kodu sayfanın tarayıcı parçasına girer. Yalnızca **istemci bileşeninin
+içinden** `next/dynamic` ile tembel yüklenen kod ayrı parçadır ve yalnızca çizildiğinde indirilir.
+Bu yüzden interaktif desenler yalnızca bir istemci yükleyicisinden (`interaction/islands.tsx`
+örneği) yüklenir.
+
+**Testler:** `tests/unit/patterns.test.mjs` (kayıt ↔ manifest ↔ dosya; yükleyici dışında statik
+içe aktarma yasağı; CSS yalnızca seçilen); `tests/e2e/pattern-bundle.spec.ts` (BUILD → SERVE →
+gerçek sayfa isteği → indirilen JS parçaları → seçili/seçilmeyen işaretleri). Yükleyici kasıtlı
+olarak statik içe aktarmaya çevrildiğinde bu E2E testi başarısız olur (doğrulandı).
+
+Adlandırma ve yeni desen ekleme adımları: `src/components/patterns/README.md`.
+
 ## Theme Engine (`src/theme-engine`)
 
 | Dosya | İçerik |
@@ -167,7 +196,8 @@ Her kökün kendi `not-found.tsx`'i vardır. `tests/e2e/surface-isolation.spec.t
 | Yeni tasarım ailesi (tema + parçalar + kompozisyon) | Site Factory (`catalog/<aile>/index.ts` + `catalog/index.ts`) — veri |
 | Yeni site tipi (içerik/özellik mimarisi) | Site Factory (`site-types.ts`) — veri |
 | Yeni müşteri sitesi | KARAY › Yeni site oluştur (veri; kod veya müşteri klasörü yok) |
-| Yeni yapısal parça (hero, header, kart, footer, bölüm) | Site Engine bileşeni + Theme Engine kimliği/CSS parçası; yalnızca seçen siteye gider |
+| Yeni yapısal parça (hero, header, kart, footer, bölüm) | D7: `components/patterns/<tür>/<kimlik>.tsx` + `theme-engine/ids.ts` kimliği + `patterns/registry.ts`; yalnızca seçen siteye gider |
+| Yeni interaktif davranış (harita, galeri, filtre paneli) | D7: desen klasöründe ada + yalnızca istemci yükleyicisinden tembel yükleme |
 | Public ilan sayfası, arama, menü, footer | Site Engine |
 | Public site SEO çıktısı | Site Engine + Site Config (`seo` bölümü) + `modules/seo` |
 | Kullanıcı yetkisi, oturum | Core (`platform/auth`) |

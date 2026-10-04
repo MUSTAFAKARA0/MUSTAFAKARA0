@@ -69,8 +69,8 @@ const ZONES = {
   },
   // Kiracıların herkese açık siteleri
   siteEngine: {
-    files: ["src/app/t/**", "src/components/{layout,home,property,search,content,gallery,forms,site}/**"],
-    regex: "^@/(components/(layout|home|property|search|content|gallery|forms|site)|app/t)(/|$)",
+    files: ["src/app/t/**", "src/components/{layout,home,property,search,content,gallery,forms,site,patterns}/**"],
+    regex: "^@/(components/(layout|home|property|search|content|gallery|forms|site|patterns)|app/t)(/|$)",
     label: "kiracı sitesi (site-engine)",
   },
 };

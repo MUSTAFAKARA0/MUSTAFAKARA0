@@ -38,3 +38,11 @@ export const GALLERY_LAYOUTS = ['standard'] as const;
 export const MAP_LIST_LAYOUTS = ['standard'] as const;
 export const AGENT_SECTIONS = ['none'] as const;
 export const TESTIMONIAL_SECTIONS = ['none'] as const;
+
+/**
+ * Etkileşim desenleri (D7 Pattern Library › interaction). Tarayıcıda çalışan küçük adalar; her
+ * biri YALNIZCA onu seçen sitenin tarayıcısına iner (istemci tarafı tembel yükleme — D7.0 ölçümü).
+ * Seçilmezse sayfaya ne kod ne CSS yazılır. Kimlikler kapalı listedir (manifest: slots.interactions).
+ */
+export const INTERACTION_PATTERNS = ['scroll-header', 'image-reveal'] as const;
+export type InteractionPattern = (typeof INTERACTION_PATTERNS)[number];

@@ -9,6 +9,7 @@ import {
   GRID_LAYOUTS,
   HEADER_LAYOUTS,
   HERO_LAYOUTS,
+  INTERACTION_PATTERNS,
   LISTING_DETAIL_LAYOUTS,
   MAP_LIST_LAYOUTS,
   MOTION_LEVELS,
@@ -104,6 +105,12 @@ export const styleSchema = z.object({
       mapList: z.enum(MAP_LIST_LAYOUTS).optional(),
       agents: z.enum(AGENT_SECTIONS).optional(),
       testimonials: z.enum(TESTIMONIAL_SECTIONS).optional(),
+      /** Etkileşim adaları (D7): yalnızca seçilenlerin kodu ve CSS'i siteye iner */
+      interactions: z
+        .array(z.enum(INTERACTION_PATTERNS))
+        .max(INTERACTION_PATTERNS.length)
+        .transform((list) => [...new Set(list)])
+        .optional(),
     })
     .optional(),
   /**

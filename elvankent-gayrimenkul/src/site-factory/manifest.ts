@@ -9,6 +9,7 @@ import {
   GRID_LAYOUTS,
   HEADER_LAYOUTS,
   HERO_LAYOUTS,
+  INTERACTION_PATTERNS,
   LISTING_DETAIL_LAYOUTS,
   MAP_LIST_LAYOUTS,
   MOTION_LEVELS,
@@ -55,6 +56,7 @@ export const manifestVariantsSchema = z
     mapList: z.enum(MAP_LIST_LAYOUTS).optional(),
     agents: z.enum(AGENT_SECTIONS).optional(),
     testimonials: z.enum(TESTIMONIAL_SECTIONS).optional(),
+    interactions: z.array(z.enum(INTERACTION_PATTERNS)).max(INTERACTION_PATTERNS.length).optional(),
   })
   .strict();
 export type ManifestVariants = z.infer<typeof manifestVariantsSchema>;
@@ -141,7 +143,9 @@ export function compileManifest(raw: unknown, current: SiteConfig): CompiledMani
   for (const s of existing) if (s.type !== 'text' && !placed.has(s.type)) sections.push({ ...s, enabled: false });
 
   const slots = Object.fromEntries(
-    (['navigation', 'grid', 'search', 'listingDetail', 'gallery', 'mapList', 'agents', 'testimonials'] as const).filter((k) => v[k]).map((k) => [k, v[k]]),
+    (['navigation', 'grid', 'search', 'listingDetail', 'gallery', 'mapList', 'agents', 'testimonials', 'interactions'] as const)
+      .filter((k) => (Array.isArray(v[k]) ? (v[k] as unknown[]).length > 0 : v[k]))
+      .map((k) => [k, v[k]]),
   );
   const style = {
     ...family.style,
@@ -237,5 +241,6 @@ export function resolvedVariants(raw: unknown) {
     mapList: v.mapList ?? 'standard',
     agents: v.agents ?? 'none',
     testimonials: v.testimonials ?? 'none',
+    interactions: v.interactions ?? [],
   };
 }
