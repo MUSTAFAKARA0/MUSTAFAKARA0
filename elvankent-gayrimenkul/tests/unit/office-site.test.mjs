@@ -217,11 +217,16 @@ function lastDefinition(fn) {
 
 describe('OS-07: veritabanı yetkileri (son migration tanımları)', () => {
   test('taslak/yayın/geri alma/taslağı geri alma: assert_site_editor (süper admin veya kendi ofisinde settings.manage)', () => {
-    for (const fn of ['site_save_draft', 'site_publish', 'site_rollback', 'site_discard_draft']) {
+    for (const fn of ['site_publish', 'site_rollback', 'site_discard_draft']) {
       const def = lastDefinition(fn);
       assert.ok(def, fn);
       assert.match(def, /perform public\.assert_site_editor\(p_org\);/, `${fn}: yetki kontrolü`);
     }
+    // P0.3: taslak kaydı iki kademeli — settings.manage tüm bölümler; seo.manage yalnızca SEO taslağı
+    const save = lastDefinition('site_save_draft');
+    assert.match(save, /public\.has_org_permission\(p_org, 'settings\.manage'\)/);
+    assert.match(save, /public\.has_org_permission\(p_org, 'seo\.manage'\)\s+and p_section in \('seo', 'brand'\)/);
+    assert.match(save, /raise exception 'forbidden' using errcode = '42501'/);
     const guard = lastDefinition('assert_site_editor');
     assert.match(guard, /has_org_permission\(p_org, 'settings\.manage'\)/);
     assert.match(guard, /auth\.uid\(\)\) is null/);

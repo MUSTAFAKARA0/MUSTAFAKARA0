@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   // Ortak çekirdek (ofisle aynı): doğrula → yeni yola yükle → taslağa bağla; eski dosya silinmez
   let res;
   try {
-    res = await uploadBrandingDraft({ db: session.supabase, storage: service, orgId, kind, input: Buffer.from(await file.arrayBuffer()), allowOg: true });
+    res = await uploadBrandingDraft({ db: session.supabase, storage: service, orgId, kind, input: Buffer.from(await file.arrayBuffer()) });
   } catch (error) {
     if (error instanceof BrandingError) return json({ error: error.message }, 400);
     return json({ error: toActionFailure(error).error }, 400);
@@ -82,7 +82,7 @@ export async function DELETE(request: Request) {
   if (!isUuid(orgId) || !BRANDING_KINDS.includes(kind)) return json({ error: 'Geçersiz istek.' }, 400);
   let message: string;
   try {
-    message = await removeBrandingDraft(session.supabase, orgId, kind, { allowOg: true });
+    message = await removeBrandingDraft(session.supabase, orgId, kind);
   } catch (error) {
     return json({ error: toActionFailure(error).error }, 400);
   }

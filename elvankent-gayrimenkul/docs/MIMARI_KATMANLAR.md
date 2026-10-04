@@ -289,12 +289,35 @@ değerler `site_configs.draft.brand`'de durur (beyaz liste: `BRAND_FIELDS` = `si
   (`stale_draft`, HTTP 409) ve yeni belirteci döner. Formlar `SiteEditorProvider` üzerinden sayfa
   yüklendiğindeki taslak zamanını gönderir; art arda kayıtlarda dönen belirteç kullanılır. Görsel
   yüklemede belirteç gönderilmez (tek alan; son yazan kazanır).
-- **Taslak dışında kalanlar:** SEO modülü (`/admin/seo`: SEO başlığı/açıklaması, paylaşım görseli,
-  doğrulama kodu; `seo.manage` yetkisi editöre de açıktır ve editör yayın yapamaz) ve ilan konum
-  gösterimi varsayılanı (ilan verisi politikası).
+- **Taslak dışında kalan:** ilan konum gösterimi varsayılanı (ilan verisi politikası). Site SEO'su
+  P0.3 ile taslağa alındı (aşağıda).
 - **Önbellek:** yayın / geri alma `refreshPublicSite` ile `tenants` ve `org` etiketlerini geçersiz kılar
   (başlık, alt bilgi, iletişim, ilan, meta verisi aynı önbellekli kiracı kaydını okur). Otomatik site
   simgesi (`/site-icon`, logo yokken baş harflerden üretilir) 1 saat public önbellekte kalabilir.
+
+## P0.3 — Site geneli SEO ve metadata taslağı
+
+Site SEO'su ayrı bir anlık yayın yolu değildir; taslak → önizleme → yayın → geri alma akışının parçasıdır.
+
+- **Tek kaynak:** başlık / açıklama / indeksleme / şema türü → `site_configs.seo` bölümü (taslaklı).
+  Doğrulama kodu ve paylaşım görseli → marka taslağı (`organization_settings`'e yalnızca yayında).
+  Eski `organization_settings.seo_title / seo_description` migration `20261007000001_seo_draft.sql`
+  ile (yalnızca boşsa) yayın, taslak ve sürüm kayıtlarındaki seo bölümüne kopyalandı; artık okunmaz ve
+  doğrudan değiştirilemez (donduruldu; silinmedi).
+- **Servis:** `site-editor/service.ts › saveSeoDraft` (iki taslak yazımı, ikincisi ilkinin belirteciyle;
+  değişmeyen kısım yazılmaz). `/admin/seo` bunu çağırır (`seo.manage`); ayrı yayın düğmesi yoktur.
+- **Yetki:** `site_save_draft` iki kademeli — `settings.manage` tüm bölümler; `seo.manage` (editör)
+  yalnızca `seo` bölümü ve marka taslağında yalnızca paylaşım görseli / doğrulama (diğer bekleyen
+  alanlara dokunamaz). Yayın / geri alma `settings.manage` ister.
+- **Metadata:** `modules/seo/site-metadata.ts › buildSiteMetadata` tek, saf üretici. Yayında canlı
+  ayarlar + `published.seo`, önizlemede taslak marka (`withPreviewBrand`) + `draft.seo`; aynı fonksiyon.
+  Önizleme her zaman `noindex` ve doğrulama etiketi yaymaz. Kanonik adres sayfa düzeyinde göreli,
+  `metadataBase` kiracının çözümlenmiş adresi (sabit alan adı yok).
+- **Rotalar:** `/og`, `/site-icon`, `/site-icon/apple`, `/manifest.webmanifest` → `siteTenantForRoute`:
+  taslak yalnızca bu kiracıya ait imzalı önizleme çereziyle; önizleme yanıtı `private, no-store`.
+  Sorgu parametresiyle taslak açılamaz. `sitemap.xml` ve `robots.txt` yalnızca yayındaki kiracıyı okur.
+- **JSON-LD:** ana sayfa önizleme destekli kiracıyı ve `view.config.seo`'yu kullanır (taslak/yayın
+  ayrımı sayfalarla aynı).
 
 ## Theme Engine (`src/theme-engine`)
 

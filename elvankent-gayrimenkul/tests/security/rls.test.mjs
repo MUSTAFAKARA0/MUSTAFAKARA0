@@ -1100,7 +1100,7 @@ describe('P0.2: marka ve site içeriği taslağı (tek yayın noktası, görsel,
     }
   });
 
-  test('tek yayın noktası: hiçbir ofis rolü marka/iletişim/saat/görsel sütununu doğrudan değiştiremez; SEO ve ilan ayarı serbest', async () => {
+  test('tek yayın noktası: hiçbir ofis rolü marka/iletişim/saat/görsel/SEO sütununu doğrudan değiştiremez; ilan ayarı serbest', async () => {
     for (const role of ROLES) {
       const c = T.A.users[role].client;
       for (const patch of [{ display_name: 'Doğrudan' }, { phone: '000' }, { logo_url: 'x.png' }, { opening_hours: [{ days: ['sun'], opens: '07:00', closes: '08:00' }] }, { hero_title: 'x' }, { office_latitude: 1 }]) {
@@ -1108,9 +1108,12 @@ describe('P0.2: marka ve site içeriği taslağı (tek yayın noktası, görsel,
         assert.ok(r.error || denied(r), `${role}: ${Object.keys(patch)[0]} doğrudan yazıldı`);
       }
     }
+    // P0.3: site SEO'su da yalnızca taslak + yayınla değişir; ilan ayarı (konum gösterimi) doğrudan yazılır
     const seo = await T.A.users.owner.client.from('organization_settings').update({ seo_title: 'P02 SEO' }).eq('organization_id', T.A.orgId).select('organization_id');
-    assert.ifError(seo.error);
-    assert.equal(seo.data.length, 1);
+    assert.ok(seo.error, 'SEO başlığı doğrudan yazıldı');
+    const listing = await T.A.users.owner.client.from('organization_settings').update({ default_location_precision: 'approximate' }).eq('organization_id', T.A.orgId).select('organization_id');
+    assert.ifError(listing.error);
+    assert.equal(listing.data.length, 1);
     // Yardımcı (bayraklı) uygulama fonksiyonu doğrudan çağrılamaz
     assert.ok((await T.A.users.owner.client.rpc('site_apply_brand', { p_org: T.A.orgId, p_brand: { display_name: 'Hack' } })).error);
   });
@@ -1142,6 +1145,103 @@ describe('P0.2: marka ve site içeriği taslağı (tek yayın noktası, görsel,
     assert.ifError(fresh.error);
     // Art arda kayıt: dönen belirteç bir sonrakinde geçerlidir
     assert.ifError((await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'theme', p_value: 'atlas', p_expected_updated_at: fresh.data })).error);
+    assert.ifError((await ow.rpc('site_discard_draft', { p_org: T.A.orgId })).error);
+  });
+});
+
+describe('P0.3: site SEO taslağı (tek kaynak, yayın/geri alma, SEO yetkisi, doğrudan yazım koruması)', { skip }, () => {
+  const site = async (org) => (await service.from('site_configs').select('draft, published, published_version, draft_updated_at').eq('organization_id', org).single()).data;
+  const settings = async (org) => (await service.from('organization_settings').select('seo_title, seo_description, og_image_url, google_site_verification').eq('organization_id', org).single()).data;
+  const seo = (title) => ({ title, description: `${title} açıklaması`, robots: 'index', schemaType: 'RealEstateAgent' });
+
+  test('SEO taslağı canlıyı değiştirmez; yayın başlık/açıklama + doğrulama + paylaşım görselini birlikte canlıya alır; geri alma birlikte getirir', async () => {
+    const ow = T.A.users.owner.client;
+    assert.ifError((await ow.rpc('site_discard_draft', { p_org: T.A.orgId })).error);
+    // Sürüm A
+    assert.ifError((await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'seo', p_value: seo('SEO-A') })).error);
+    assert.ifError((await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'brand', p_value: { google_site_verification: 'dogrulamaA_123456', og_image_url: `organizations/${T.A.orgId}/branding/og-a.jpg` } })).error);
+    const before = await settings(T.A.orgId);
+    assert.notEqual(before.google_site_verification, 'dogrulamaA_123456', 'taslak canlıya yazıldı');
+    assert.notEqual((await site(T.A.orgId)).published.seo?.title, 'SEO-A', 'taslak yayına yazıldı');
+    const va = await ow.rpc('site_publish', { p_org: T.A.orgId, p_note: 'SEO A' });
+    assert.ifError(va.error);
+    let row = await site(T.A.orgId);
+    assert.equal(row.published.seo.title, 'SEO-A');
+    assert.equal((await settings(T.A.orgId)).google_site_verification, 'dogrulamaA_123456');
+    // Sürüm B
+    assert.ifError((await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'seo', p_value: seo('SEO-B') })).error);
+    assert.ifError((await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'brand', p_value: { google_site_verification: 'dogrulamaB_123456', og_image_url: `organizations/${T.A.orgId}/branding/og-b.jpg` } })).error);
+    assert.ifError((await ow.rpc('site_publish', { p_org: T.A.orgId, p_note: 'SEO B' })).error);
+    assert.equal((await site(T.A.orgId)).published.seo.title, 'SEO-B');
+    assert.equal((await settings(T.A.orgId)).og_image_url, `organizations/${T.A.orgId}/branding/og-b.jpg`);
+    // Geri alma A: başlık, açıklama, doğrulama, paylaşım görseli birlikte döner
+    assert.ifError((await ow.rpc('site_rollback', { p_org: T.A.orgId, p_version: va.data })).error);
+    row = await site(T.A.orgId);
+    assert.equal(row.published.seo.title, 'SEO-A');
+    assert.equal(row.published.seo.description, 'SEO-A açıklaması');
+    const back = await settings(T.A.orgId);
+    assert.equal(back.google_site_verification, 'dogrulamaA_123456');
+    assert.equal(back.og_image_url, `organizations/${T.A.orgId}/branding/og-a.jpg`);
+  });
+
+  test('SEO yetkisi (editör): yalnızca SEO taslağı — seo bölümü ve marka taslağında yalnızca paylaşım görseli / doğrulama', async () => {
+    const ed = T.A.users.editor.client;
+    assert.ifError((await T.A.users.owner.client.rpc('site_discard_draft', { p_org: T.A.orgId })).error);
+    assert.ifError((await ed.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'seo', p_value: seo('Editör SEO') })).error);
+    assert.ifError((await ed.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'brand', p_value: { google_site_verification: 'editorKodu_123456' } })).error);
+    // Marka / tasarım / menü yazamaz
+    for (const [section, value] of [['brand', { google_site_verification: 'editorKodu_123456', display_name: 'Editör ele geçirdi' }], ['theme', 'atlas'], ['navigation', []], ['header', {}]]) {
+      const r = await ed.rpc('site_save_draft', { p_org: T.A.orgId, p_section: section, p_value: value });
+      assert.ok(r.error, `editör ${section} yazdı`);
+    }
+    // Başkasının bekleyen marka değişikliğini silemez / değiştiremez
+    assert.ifError((await T.A.users.owner.client.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'brand', p_value: { google_site_verification: 'editorKodu_123456', tagline: 'Sahibin taslağı' } })).error);
+    assert.ok((await ed.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'brand', p_value: { google_site_verification: 'baska_kod_123456' } })).error, 'editör bekleyen slogan taslağını sildi');
+    assert.ifError((await ed.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'brand', p_value: { google_site_verification: 'baska_kod_123456', tagline: 'Sahibin taslağı' } })).error);
+    // Yayınlayamaz, geri alamaz
+    assert.ok((await ed.rpc('site_publish', { p_org: T.A.orgId })).error, 'editör yayınladı');
+    assert.ok((await ed.rpc('site_rollback', { p_org: T.A.orgId, p_version: 1 })).error, 'editör geri aldı');
+    // SEO yetkisi olmayan roller SEO taslağı da yazamaz
+    for (const role of ['agent', 'viewer']) {
+      assert.ok((await T.A.users[role].client.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'seo', p_value: seo('x') })).error, `${role} SEO yazdı`);
+    }
+    assert.ifError((await T.A.users.owner.client.rpc('site_discard_draft', { p_org: T.A.orgId })).error);
+  });
+
+  test('doğrudan canlı SEO yazımı reddedilir (paylaşım görseli, doğrulama, eski başlık/açıklama), tüm roller', async () => {
+    const before = await settings(T.A.orgId);
+    for (const role of ROLES) {
+      const c = T.A.users[role].client;
+      for (const patch of [{ og_image_url: 'x.png' }, { google_site_verification: 'dogrudan_123456' }, { seo_title: 'Doğrudan' }, { seo_description: 'Doğrudan' }]) {
+        const r = await c.from('organization_settings').update(patch).eq('organization_id', T.A.orgId).select('organization_id');
+        assert.ok(r.error || denied(r), `${role}: ${Object.keys(patch)[0]} doğrudan yazıldı`);
+      }
+    }
+    assert.deepEqual(await settings(T.A.orgId), before);
+  });
+
+  test('kiracı izolasyonu: A (sahip/editör) B\'nin SEO taslağını yazamaz/okuyamaz; B\'nin canlı SEO\'su değişmez', async () => {
+    const before = await site(T.B.orgId);
+    for (const role of ['owner', 'admin', 'editor']) {
+      const c = T.A.users[role].client;
+      assert.ok((await c.rpc('site_save_draft', { p_org: T.B.orgId, p_section: 'seo', p_value: seo('Ele geçirildi') })).error, `${role}: B'ye SEO yazdı`);
+      assert.ok((await c.rpc('site_save_draft', { p_org: T.B.orgId, p_section: 'brand', p_value: { google_site_verification: 'hack_1234567' } })).error);
+      assert.ok(denied(await c.from('site_configs').select('draft').eq('organization_id', T.B.orgId)));
+    }
+    assert.deepEqual((await site(T.B.orgId)).draft, before.draft);
+  });
+
+  test('eşzamanlılık: SEO kaydı eski belirteçle 409 (PT409); dönen belirteçle art arda kayıt kabul', async () => {
+    const ow = T.A.users.owner.client;
+    const t0 = (await site(T.A.orgId)).draft_updated_at;
+    const t1 = await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'seo', p_value: seo('Sıra 1'), p_expected_updated_at: t0 });
+    assert.ifError(t1.error);
+    const t2 = await ow.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'brand', p_value: { google_site_verification: 'sira_iki_123456' }, p_expected_updated_at: t1.data });
+    assert.ifError(t2.error);
+    const stale = await T.A.users.editor.client.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'seo', p_value: seo('Eski form'), p_expected_updated_at: t0 });
+    assert.ok(stale.error);
+    assert.match(stale.error.message, /stale_draft/);
+    assert.equal((await site(T.A.orgId)).draft.seo.title, 'Sıra 1');
     assert.ifError((await ow.rpc('site_discard_draft', { p_org: T.A.orgId })).error);
   });
 });

@@ -5,7 +5,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { parseSiteConfig, type FeatureOverrides, type SiteConfig, type SiteStatus } from '@/site-config/schema';
 import { PREVIEW_COOKIE, verifyPreviewToken } from '@/site-config/preview';
 import { applyBrandDraft, hasBrandDraft } from '@/site-config/brand';
-import { requireTenant, type Tenant } from '@/platform/tenant/tenant';
+import { getTenant, requireTenant, type Tenant } from '@/platform/tenant/tenant';
 import { resolveStyle, type ResolvedStyle } from '@/theme-engine/themes';
 
 /** Kiracı sitesinin o istekteki görünümü */
@@ -84,6 +84,25 @@ export async function withPreviewBrand(tenant: Tenant): Promise<Tenant> {
   const brand = parseSiteConfig(draft).brand;
   if (!hasBrandDraft(brand)) return tenant;
   return { ...tenant, settings: applyBrandDraft(tenant.settings, brand) };
+}
+
+/**
+ * Kiracı sitesi ROTALARI (paylaşım görseli /og, site simgesi, manifest) için kiracı: sayfalarla
+ * aynı kural — taslak marka YALNIZCA imzalı önizleme çerezi bu kiracıya aitse bindirilir
+ * (adres/sorgu parametresiyle taslak açılamaz). `preview` doğruysa yanıt önbelleğe alınmamalıdır.
+ */
+export async function siteTenantForRoute(rawKey: string): Promise<{ tenant: Tenant; preview: boolean } | null> {
+  const base = await getTenant(rawKey);
+  if (!base) return null;
+  const draft = await loadPreviewDraft(base.id);
+  if (!draft) return { tenant: base, preview: false };
+  const brand = parseSiteConfig(draft).brand;
+  return { tenant: hasBrandDraft(brand) ? { ...base, settings: applyBrandDraft(base.settings, brand) } : base, preview: true };
+}
+
+/** Önizleme yanıtları paylaşılan önbelleğe girmez; yayın yanıtının başlığı aynen kalır */
+export function routeCacheControl(preview: boolean, published: string): string {
+  return preview ? 'private, no-store' : published;
 }
 
 /**

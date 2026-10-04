@@ -138,12 +138,14 @@ function BrandChip({ brand }: { brand: OgBrand }) {
   );
 }
 
-function headers(): Record<string, string> {
-  // URL'de sürüm parametresi (?v=) bulunduğu için CDN'de uzun süre saklanabilir
-  return { 'Cache-Control': 'public, max-age=3600, s-maxage=604800, stale-while-revalidate=604800' };
+/** URL'de sürüm parametresi (?v=) bulunduğu için CDN'de uzun süre saklanabilir */
+export const OG_CACHE_PUBLIC = 'public, max-age=3600, s-maxage=604800, stale-while-revalidate=604800';
+
+function headers(cacheControl = OG_CACHE_PUBLIC): Record<string, string> {
+  return { 'Cache-Control': cacheControl };
 }
 
-export async function renderSiteOgImage(opts: { brand: OgBrand; headline: string; subline: string | null; photo: string | null }) {
+export async function renderSiteOgImage(opts: { brand: OgBrand; headline: string; subline: string | null; photo: string | null; cacheControl?: string }) {
   const { brand, headline, subline, photo } = opts;
   return new ImageResponse(
     (
@@ -184,7 +186,7 @@ export async function renderSiteOgImage(opts: { brand: OgBrand; headline: string
         </div>
       </div>
     ),
-    { ...OG_SIZE, fonts: await ogFonts(), headers: headers() },
+    { ...OG_SIZE, fonts: await ogFonts(), headers: headers(opts.cacheControl) },
   );
 }
 

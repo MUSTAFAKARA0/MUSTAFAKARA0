@@ -3,7 +3,7 @@ import type { z } from 'zod';
 import { isUuid } from '@/lib/utils';
 import { ActionError, assertNoDbError } from '@/platform/actions';
 import type { SessionUser } from '@/platform/auth/session';
-import { BRAND_FIELDS, SECTION_SCHEMAS, brandDraftSchema, parseSiteConfig, type BrandDraft, type BrandField, type BrandValue, type SiteSection } from '@/site-config/schema';
+import { BRAND_FIELDS, SECTION_SCHEMAS, brandDraftSchema, seoSchema, parseSiteConfig, type BrandDraft, type BrandField, type BrandValue, type SiteSection } from '@/site-config/schema';
 import { compileDesign } from '@/site-factory/compile';
 import { findDesignFamily } from '@/site-factory/families';
 import { brandSchema, firstIssue, type BrandInput } from '@/site-editor/brand-input';
@@ -95,6 +95,53 @@ export async function saveBrandDraft(db: Db, orgId: string, input: BrandInput, e
   const parsed = brandSchema.safeParse(input);
   if (!parsed.success) throw new ActionError(firstIssue(parsed.error));
   return saveBrandFields(db, orgId, parsed.data, expected);
+}
+
+/** Site geneli SEO taslağı girdisi (/admin/seo; boş metin = varsayılana dön) */
+export interface SeoDraftInput {
+  title?: string | null;
+  description?: string | null;
+  /** Google Search Console doğrulama kodu */
+  googleSiteVerification?: string | null;
+  /** Dış paylaşım görseli adresi (https). Yüklenen görsel uploadBrandingDraft ile gelir. */
+  ogImageUrl?: string | null;
+}
+
+/**
+ * SİTE GENELİ SEO TASLAĞI (P0.3) — ayrı bir SEO kayıt/yayın sistemi YOKTUR:
+ *   • başlık / açıklama → site_configs.draft.seo (indeksleme ve şema türü korunur)
+ *   • doğrulama kodu / paylaşım görseli → marka taslağı (saveBrandFields; yayında ayar kaydına)
+ * İki yazım art arda yapılır; ikincisi ilkinin döndürdüğü belirteçle (aynı oturumun kendi yazımına
+ * takılmaz, araya başkası girdiyse 'stale_draft'). Yalnızca değişen kısım yazılır. Yayın ve geri
+ * alma site_publish / site_rollback ile hepsini tek işlemde canlıya alır / geri getirir.
+ * seo.manage yetkili rol (editör) bunu çağırabilir; veritabanı bu rolün yalnızca SEO alanlarını
+ * değiştirdiğini ayrıca doğrular.
+ */
+export async function saveSeoDraft(db: Db, orgId: string, input: SeoDraftInput, expected?: DraftToken): Promise<string | null> {
+  assertOrg(orgId);
+  const { data: row, error: readError } = await db.from('site_configs').select('draft').eq('organization_id', orgId).maybeSingle();
+  assertNoDbError(readError);
+  if (!row) throw new ActionError('Site bulunamadı.');
+  const current = parseSiteConfig(row.draft).seo;
+  let token: DraftToken = expected;
+  if (input.title !== undefined || input.description !== undefined) {
+    const parsed = seoSchema.safeParse({
+      ...current,
+      ...(input.title !== undefined ? { title: input.title ?? '' } : {}),
+      ...(input.description !== undefined ? { description: input.description ?? '' } : {}),
+    });
+    if (!parsed.success) throw new ActionError(firstIssue(parsed.error));
+    if (canonical(parsed.data) !== canonical(current)) {
+      const { data, error } = await db.rpc('site_save_draft', draftArgs(orgId, 'seo', parsed.data, token));
+      assertNoDbError(error);
+      token = data ?? token;
+    }
+  }
+  const brand: BrandDraft = {};
+  if (input.googleSiteVerification !== undefined) brand.google_site_verification = input.googleSiteVerification || null;
+  if (input.ogImageUrl !== undefined) brand.og_image_url = input.ogImageUrl || null;
+  if (Object.keys(brand).length > 0) token = (await saveBrandFields(db, orgId, brand, token)) ?? token;
+  return typeof token === 'string' ? token : null;
 }
 
 /**

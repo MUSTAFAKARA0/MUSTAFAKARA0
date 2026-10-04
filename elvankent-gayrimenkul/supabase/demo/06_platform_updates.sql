@@ -1303,6 +1303,615 @@ grant execute on function public.site_apply_design(uuid, text, jsonb) to authent
 
 notify pgrst, 'reload schema';
 
+-- ---------------------------------------------------------------------------
+-- 20261005000001_office_site_management.sql
+-- ---------------------------------------------------------------------------
+-- =============================================================================
+-- P0.1 — Ofis site yönetimi (/admin/site): mevcut taslak/yayın akışını ofise açar
+--
+-- NEDEN: site_save_draft, site_publish, site_rollback ve site_discard_draft yalnızca süper
+-- admine (assert_super_admin) açıktı; ofis yöneticisi kendi sitesini taslak → önizleme → yayın
+-- akışıyla yönetemiyordu. YENİ bir taslak/yayın sistemi yazılmaz: aynı fonksiyonların yetki
+-- kontrolü genişletilir, gövdeleri AYNEN korunur (20261001000001 ve 20260930000002 ile aynı).
+--
+--   1) assert_site_editor(p_org) : süper admin VEYA (oturum + o organizasyonda settings.manage)
+--   2) site_save_draft / site_publish / site_rollback / site_discard_draft : assert_site_editor
+--   3) site_save_draft : süper admin olmayan çağıran 'style' bölümünde tasarım ailesini yalnızca
+--      KARAY'ın izin verdiği (org_design_family_access) bir aileye değiştirebilir
+--   4) site_config_revisions : ofiste settings.manage yetkisi olan kendi sürümlerini okuyabilir
+--
+-- DEĞİŞMEYENLER (yalnızca KARAY / süper admin): site_set_status, site_set_features, platform_*
+-- fonksiyonları, aile izin tabloları, planlar. site_apply_design olduğu gibi kalır (silinmez).
+-- Yeni tablo yok, veri değişmez/silinmez. organization_id her fonksiyonda parametre olarak gelir
+-- ve has_org_permission ile OTURUMUN üyeliğine karşı doğrulanır (istemciye güvenilmez).
+--
+-- Geri alma (veri kaybı yoktur):
+--   1) 20261001000001_site_brand_publish.sql içindeki site_save_draft, site_publish, site_rollback
+--      tanımlarını ve 20260930000002_site_builder.sql içindeki site_discard_draft tanımını yeniden
+--      çalıştırın (perform public.assert_super_admin()).
+--   2) drop policy if exists "site_config_revisions_read" on public.site_config_revisions;
+--      create policy "site_config_revisions_read" on public.site_config_revisions for select
+--        to authenticated using ((select public.is_super_admin()));
+--   3) drop function if exists public.assert_site_editor(uuid);
+-- =============================================================================
+
+-- Site düzenleme yetkisi: KARAY süper admini veya o ofiste "Şirket ve site ayarları" yetkisi
+create or replace function public.assert_site_editor(p_org uuid)
+returns void
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if public.is_super_admin() then
+    return;
+  end if;
+  if (select auth.uid()) is null or p_org is null or not public.has_org_permission(p_org, 'settings.manage') then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+end;
+$$;
+
+-- Taslak bölümü kaydeder (gövde 20261001000001 ile aynı; yetki + ofis için aile izni)
+create or replace function public.site_save_draft(p_org uuid, p_section text, p_value jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_old jsonb;
+  v_family text;
+begin
+  perform public.assert_site_editor(p_org);
+  if p_section is null or p_section not in ('theme', 'colors', 'typography', 'header', 'navigation', 'home', 'footer', 'pages', 'seo', 'brand', 'style') then
+    raise exception 'invalid_section' using errcode = '22023';
+  end if;
+  if p_section = 'brand' and (jsonb_typeof(p_value) <> 'object'
+      or exists (select 1 from jsonb_object_keys(p_value) k where k <> all (public.site_brand_columns()))) then
+    raise exception 'invalid_brand' using errcode = '22023';
+  end if;
+  -- Ofis: tasarım ailesi yalnızca izinli (ve global açık) bir aileye değiştirilebilir. Sitenin
+  -- mevcut ailesi (KARAY'ın atadığı) korunarak diğer görünüm ayarları kaydedilebilir.
+  if p_section = 'style' and not public.is_super_admin() then
+    v_family := p_value -> 'origin' ->> 'family';
+    if v_family is not null
+       and v_family is distinct from (select c.draft -> 'style' -> 'origin' ->> 'family' from public.site_configs c where c.organization_id = p_org)
+       and v_family is distinct from (select c.published -> 'style' -> 'origin' ->> 'family' from public.site_configs c where c.organization_id = p_org)
+       and not exists (select 1 from public.org_design_family_access(p_org) a where a.family_id = v_family) then
+      raise exception 'family_not_allowed' using errcode = '42501';
+    end if;
+  end if;
+  insert into public.site_configs (organization_id) values (p_org) on conflict (organization_id) do nothing;
+  select c.draft -> p_section into v_old from public.site_configs c where c.organization_id = p_org for update;
+  update public.site_configs
+     set draft = case when p_section = 'brand' and p_value = '{}'::jsonb then draft - 'brand'
+                      else jsonb_set(draft, array[p_section], coalesce(p_value, 'null'::jsonb), true) end,
+         has_unpublished_changes = true,
+         draft_updated_at = now(),
+         draft_updated_by = (select auth.uid())
+   where organization_id = p_org;
+  perform public.write_audit(p_org, 'site.draft_saved', 'site', p_org::text, p_section,
+    jsonb_build_object('section', p_section,
+                       'old', case when p_section in ('theme') then v_old else null end,
+                       'new', case when p_section in ('theme') then p_value else null end,
+                       'fields', case when p_section = 'brand' then (select jsonb_agg(k) from jsonb_object_keys(p_value) k) else null end));
+end;
+$$;
+
+-- Taslağı yayınlar (gövde 20261001000001 ile aynı)
+create or replace function public.site_publish(p_org uuid, p_note text default null)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_row public.site_configs;
+  v_version integer;
+  v_config jsonb;
+begin
+  perform public.assert_site_editor(p_org);
+  select * into v_row from public.site_configs c where c.organization_id = p_org for update;
+  if not found then
+    raise exception 'not_found' using errcode = 'P0002';
+  end if;
+  perform public.site_apply_brand(p_org, v_row.draft -> 'brand');
+  v_config := v_row.draft - 'brand';
+  v_version := v_row.published_version + 1;
+  insert into public.site_config_revisions (organization_id, version, config, note, created_by)
+  values (p_org, v_version, v_config || jsonb_build_object('brand', public.site_brand_snapshot(p_org)),
+          left(nullif(trim(p_note), ''), 200), (select auth.uid()));
+  update public.site_configs
+     set published = v_config, draft = v_config, published_version = v_version, has_unpublished_changes = false,
+         published_at = now(), published_by = (select auth.uid())
+   where organization_id = p_org;
+  perform public.write_audit(p_org, 'site.published', 'site', p_org::text, 'Sürüm ' || v_version,
+    jsonb_build_object('version', v_version, 'note', left(p_note, 200),
+                       'old_theme', v_row.published->>'theme', 'new_theme', v_row.draft->>'theme',
+                       'brand_fields', (select jsonb_agg(k) from jsonb_object_keys(coalesce(v_row.draft -> 'brand', '{}'::jsonb)) k)));
+  return v_version;
+end;
+$$;
+
+-- Önceki sürüme döner (gövde 20261001000001 ile aynı)
+create or replace function public.site_rollback(p_org uuid, p_version integer)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_config jsonb;
+  v_row public.site_configs;
+  v_version integer;
+begin
+  perform public.assert_site_editor(p_org);
+  select r.config into v_config from public.site_config_revisions r where r.organization_id = p_org and r.version = p_version;
+  if v_config is null then
+    raise exception 'not_found' using errcode = 'P0002';
+  end if;
+  select * into v_row from public.site_configs c where c.organization_id = p_org for update;
+  perform public.site_apply_brand(p_org, v_config -> 'brand');
+  v_config := v_config - 'brand';
+  v_version := v_row.published_version + 1;
+  insert into public.site_config_revisions (organization_id, version, config, note, created_by)
+  values (p_org, v_version, v_config || jsonb_build_object('brand', public.site_brand_snapshot(p_org)),
+          'Sürüm ' || p_version || ' geri yüklendi', (select auth.uid()));
+  update public.site_configs
+     set published = v_config, draft = v_config, published_version = v_version, has_unpublished_changes = false,
+         published_at = now(), published_by = (select auth.uid()), draft_updated_at = now(), draft_updated_by = (select auth.uid())
+   where organization_id = p_org;
+  perform public.write_audit(p_org, 'site.rolled_back', 'site', p_org::text, 'Sürüm ' || p_version,
+    jsonb_build_object('restored_version', p_version, 'new_version', v_version));
+  return v_version;
+end;
+$$;
+
+-- Taslağı canlı sürüme döndürür (gövde 20260930000002 ile aynı)
+create or replace function public.site_discard_draft(p_org uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform public.assert_site_editor(p_org);
+  update public.site_configs
+     set draft = published, has_unpublished_changes = false, draft_updated_at = now(), draft_updated_by = (select auth.uid())
+   where organization_id = p_org;
+  perform public.write_audit(p_org, 'site.draft_discarded', 'site', p_org::text, null, '{}'::jsonb);
+end;
+$$;
+
+-- Sürüm geçmişi: süper admin veya o ofiste settings.manage (başka kiracının sürümleri görünmez)
+drop policy if exists "site_config_revisions_read" on public.site_config_revisions;
+create policy "site_config_revisions_read" on public.site_config_revisions for select to authenticated
+  using ((select public.is_super_admin()) or public.has_org_permission(organization_id, 'settings.manage'));
+
+revoke all on function public.assert_site_editor(uuid) from public, anon;
+grant execute on function public.assert_site_editor(uuid) to authenticated;
+revoke all on function public.site_save_draft(uuid, text, jsonb) from public, anon;
+revoke all on function public.site_publish(uuid, text) from public, anon;
+revoke all on function public.site_rollback(uuid, integer) from public, anon;
+revoke all on function public.site_discard_draft(uuid) from public, anon;
+grant execute on function public.site_save_draft(uuid, text, jsonb) to authenticated;
+grant execute on function public.site_publish(uuid, text) to authenticated;
+grant execute on function public.site_rollback(uuid, integer) to authenticated;
+grant execute on function public.site_discard_draft(uuid) to authenticated;
+
+notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------------
+-- 20261006000001_brand_content_draft.sql
+-- ---------------------------------------------------------------------------
+-- =============================================================================
+-- P0.2 — Marka ve site içeriği de taslak → önizleme → yayın → geri alma akışında
+--
+-- NEDEN: Ofis panelindeki "Şirket ayarları" (/admin/sirket), ana sayfa metinleri ve marka
+-- görselleri organization_settings'e ANINDA yazılıyordu; P0.1'in taslak/yayın modeliyle
+-- tutarsızdı ve canlı siteyi değiştiren ikinci bir yayın yolu bırakıyordu. Yeni taslak/sürüm
+-- sistemi YAZILMAZ: mevcut site_configs.draft.brand + site_publish + site_rollback kullanılır.
+--
+--   1) site_brand_columns() : ziyaretçinin gördüğü diğer içerik alanları beyaz listeye eklenir
+--      (hizmet bölgesi, posta kodu, ofis konumu, çalışma saatleri, saat notu, ana sayfa metinleri)
+--   2) site_apply_brand()   : sütun tipine duyarlı (numeric / jsonb); yalnızca yayın/geri alma
+--      sırasında işlem içi bayrak (app.site_brand_apply) açılır
+--   3) organization_settings_guard : süper admin olmayan kullanıcı marka/site içeriği sütunlarını
+--      DOĞRUDAN değiştiremez (tek yayın noktası); yalnızca site_publish / site_rollback yazar.
+--      Paylaşım görseli ve SEO alanları SEO modülünde kalır (seo.manage; ayrı yetki modeli).
+--   4) site_save_draft : isteğe bağlı eşzamanlılık belirteci (p_expected_updated_at). Verilirse ve
+--      taslak o andan sonra değişmişse kayıt reddedilir ('stale_draft'). Verilmezse eskisi gibi.
+--      Dönüş: yeni taslak zamanı (bir sonraki kaydın belirteci; art arda kayıtlar için).
+--
+-- Yeni tablo yok; veri değişmez/silinmez. Gövdelerin geri kalanı 20261005000001 ile aynıdır.
+--
+-- Geri alma (veri kaybı yoktur; bekleyen taslak alanları kalır ama yeni alanlar uygulanmaz):
+--   1) 20261001000001_site_brand_publish.sql › site_brand_columns, site_apply_brand ve
+--      20260930000002_site_builder.sql › organization_settings_guard tanımlarını yeniden çalıştırın.
+--   2) drop function if exists public.site_save_draft(uuid, text, jsonb, timestamptz);
+--      ardından 20261005000001_office_site_management.sql › site_save_draft tanımını ve izinlerini
+--      yeniden çalıştırın.
+--   3) notify pgrst, 'reload schema';
+-- =============================================================================
+
+-- 1) Taslakta tutulabilen marka / site içeriği alanları (organization_settings sütunları)
+create or replace function public.site_brand_columns()
+returns text[]
+language sql
+immutable
+set search_path = ''
+as $$
+  select array[
+    'display_name', 'short_name', 'legal_name', 'tagline', 'description',
+    'phone', 'whatsapp', 'email', 'address_line', 'address_district', 'address_city', 'maps_url',
+    'instagram_url', 'facebook_url', 'x_url', 'youtube_url', 'linkedin_url', 'tiktok_url',
+    'logo_url', 'logo_mobile_url', 'favicon_url', 'og_image_url', 'hero_image_url',
+    'primary_color', 'accent_color',
+    'service_area', 'postal_code', 'office_latitude', 'office_longitude',
+    'opening_hours', 'working_hours_note', 'hero_title', 'hero_subtitle'
+  ]::text[];
+$$;
+
+-- 2) Marka alanlarını organization_settings'e uygular (yalnızca beyaz liste; tip dönüşümü sütuna göre)
+create or replace function public.site_apply_brand(p_org uuid, p_brand jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  k text;
+  v jsonb;
+begin
+  if p_brand is null or jsonb_typeof(p_brand) <> 'object' then
+    return;
+  end if;
+  -- Doğrudan yazım koruması (organization_settings_guard) yalnızca bu işlem boyunca açılır
+  perform set_config('app.site_brand_apply', 'on', true);
+  foreach k in array public.site_brand_columns() loop
+    if p_brand ? k then
+      v := p_brand -> k;
+      -- Boş metin = boş değer
+      if jsonb_typeof(v) = 'string' and v #>> '{}' = '' then
+        v := 'null'::jsonb;
+      end if;
+      -- Firma adı ve renkler boşaltılamaz (NOT NULL); boş gelirse mevcut değer korunur
+      if k in ('display_name', 'primary_color', 'accent_color') and jsonb_typeof(v) = 'null' then
+        continue;
+      end if;
+      -- Çalışma saatleri boşaltılırsa boş liste (sütun NOT NULL varsayılanı)
+      if k = 'opening_hours' and jsonb_typeof(v) = 'null' then
+        v := '[]'::jsonb;
+      end if;
+      execute format('update public.organization_settings set %1$I = (jsonb_populate_record(null::public.organization_settings, jsonb_build_object(%2$L, $1))).%1$I where organization_id = $2', k, k)
+        using v, p_org;
+    end if;
+  end loop;
+  perform set_config('app.site_brand_apply', 'off', true);
+end;
+$$;
+
+-- 3) Ayar kaydı koruması (20260930000002 tanımı + marka/site içeriği için tek yayın noktası)
+create or replace function public.organization_settings_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_fields text[];
+begin
+  if (select auth.uid()) is null then
+    return new;
+  end if;
+  new.organization_id := old.organization_id;
+  new.updated_by := (select auth.uid());
+  v_fields := public.audit_changed_fields(to_jsonb(old), to_jsonb(new));
+  if exists (
+    select 1 from unnest(v_fields) f
+     where f not in ('seo_title', 'seo_description', 'og_image_url', 'google_site_verification', 'updated_by')
+  ) and not public.has_org_permission(new.organization_id, 'settings.manage')
+    and not public.is_super_admin() then
+    raise exception 'settings_forbidden' using errcode = '42501';
+  end if;
+  -- Ziyaretçinin gördüğü marka/site içeriği yalnızca yayınla (site_publish / site_rollback) değişir
+  if exists (
+    select 1 from unnest(v_fields) f
+     where f = any (public.site_brand_columns()) and f <> 'og_image_url'
+  ) and coalesce(current_setting('app.site_brand_apply', true), '') <> 'on'
+    and not public.is_super_admin() then
+    raise exception 'brand_requires_publish' using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+-- 4) Taslak bölümü kaydeder (20261005000001 gövdesi + isteğe bağlı eşzamanlılık belirteci)
+drop function if exists public.site_save_draft(uuid, text, jsonb);
+drop function if exists public.site_save_draft(uuid, text, jsonb, timestamptz);
+create or replace function public.site_save_draft(p_org uuid, p_section text, p_value jsonb, p_expected_updated_at timestamptz default null)
+returns timestamptz
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_old jsonb;
+  v_family text;
+  v_updated_at timestamptz;
+  v_now timestamptz := now();
+begin
+  perform public.assert_site_editor(p_org);
+  if p_section is null or p_section not in ('theme', 'colors', 'typography', 'header', 'navigation', 'home', 'footer', 'pages', 'seo', 'brand', 'style') then
+    raise exception 'invalid_section' using errcode = '22023';
+  end if;
+  if p_section = 'brand' and (jsonb_typeof(p_value) <> 'object'
+      or exists (select 1 from jsonb_object_keys(p_value) k where k <> all (public.site_brand_columns()))) then
+    raise exception 'invalid_brand' using errcode = '22023';
+  end if;
+  if p_section = 'style' and not public.is_super_admin() then
+    v_family := p_value -> 'origin' ->> 'family';
+    if v_family is not null
+       and v_family is distinct from (select c.draft -> 'style' -> 'origin' ->> 'family' from public.site_configs c where c.organization_id = p_org)
+       and v_family is distinct from (select c.published -> 'style' -> 'origin' ->> 'family' from public.site_configs c where c.organization_id = p_org)
+       and not exists (select 1 from public.org_design_family_access(p_org) a where a.family_id = v_family) then
+      raise exception 'family_not_allowed' using errcode = '42501';
+    end if;
+  end if;
+  insert into public.site_configs (organization_id) values (p_org) on conflict (organization_id) do nothing;
+  select c.draft -> p_section, c.draft_updated_at into v_old, v_updated_at from public.site_configs c where c.organization_id = p_org for update;
+  -- Eski taslak: kullanıcı formu açtıktan sonra taslak başka biri tarafından değiştirildi
+  if p_expected_updated_at is not null and v_updated_at is distinct from p_expected_updated_at then
+    raise exception 'stale_draft' using errcode = 'PT409';
+  end if;
+  update public.site_configs
+     set draft = case when p_section = 'brand' and p_value = '{}'::jsonb then draft - 'brand'
+                      else jsonb_set(draft, array[p_section], coalesce(p_value, 'null'::jsonb), true) end,
+         has_unpublished_changes = true,
+         draft_updated_at = v_now,
+         draft_updated_by = (select auth.uid())
+   where organization_id = p_org;
+  perform public.write_audit(p_org, 'site.draft_saved', 'site', p_org::text, p_section,
+    jsonb_build_object('section', p_section,
+                       'old', case when p_section in ('theme') then v_old else null end,
+                       'new', case when p_section in ('theme') then p_value else null end,
+                       'fields', case when p_section = 'brand' then (select jsonb_agg(k) from jsonb_object_keys(p_value) k) else null end));
+  -- Yeni eşzamanlılık belirteci (istemci bir sonraki kayıtta gönderir)
+  return v_now;
+end;
+$$;
+
+revoke all on function public.site_brand_columns() from public, anon;
+grant execute on function public.site_brand_columns() to authenticated;
+revoke all on function public.site_apply_brand(uuid, jsonb) from public, anon, authenticated;
+revoke all on function public.site_save_draft(uuid, text, jsonb, timestamptz) from public, anon;
+grant execute on function public.site_save_draft(uuid, text, jsonb, timestamptz) to authenticated;
+
+notify pgrst, 'reload schema';
+
+-- ---------------------------------------------------------------------------
+-- 20261007000001_seo_draft.sql
+-- ---------------------------------------------------------------------------
+-- =============================================================================
+-- P0.3 — Site geneli SEO ve meta verisi de taslak → önizleme → yayın → geri alma akışında
+--
+-- NEDEN: /admin/seo (seo.manage) SEO başlığını, açıklamasını, paylaşım görselini ve Search
+-- Console doğrulama kodunu organization_settings'e ANINDA yazıyordu; ayrıca site_configs.seo
+-- (taslaklı) ile organization_settings.seo_* (anlık) iki ayrı başlık/açıklama kaynağıydı.
+-- Yeni tablo veya ikinci bir taslak/sürüm sistemi YAZILMAZ:
+--
+--   * Başlık / açıklama / indeksleme / şema türü : TEK kaynak site_configs.seo bölümü (taslaklı)
+--   * Paylaşım görseli / doğrulama kodu          : marka taslağı (site_configs.draft.brand →
+--                                                  yayında organization_settings; P0.2 ile aynı yol)
+--
+--   1) Geriye uyum (veri kaybı yok): organization_settings.seo_title / seo_description değerleri,
+--      site_configs.published / draft ve sürüm kayıtlarındaki seo bölümüne — orada değer YOKSA —
+--      kopyalanır (görünen sonuç değişmez; eski metadata "seo.title ?? seo_title" ile aynıydı).
+--      Eski sütunlar silinmez; artık yalnızca okunmaz ve doğrudan değiştirilemez (donduruldu).
+--   2) site_brand_columns : google_site_verification eklenir (og_image_url zaten listede)
+--   3) organization_settings_guard : paylaşım görseli dahil marka sütunları ve eski SEO sütunları
+--      süper admin dışında doğrudan değiştirilemez (yalnızca site_publish / site_rollback yazar)
+--   4) site_save_draft : SEO yetkisi (seo.manage) olan rol (ör. editör) yalnızca SEO taslağını
+--      yazabilir: 'seo' bölümü ve marka taslağında YALNIZCA paylaşım görseli / doğrulama kodu.
+--      Yayın ve geri alma eskisi gibi settings.manage ister (assert_site_editor).
+--
+-- Gövdelerin geri kalanı 20261006000001 ile aynıdır. Veri silinmez.
+--
+-- Geri alma:
+--   1) 20261006000001_brand_content_draft.sql › site_brand_columns, organization_settings_guard ve
+--      site_save_draft tanımlarını yeniden çalıştırın (site_save_draft'tan önce:
+--      drop function if exists public.site_save_draft(uuid, text, jsonb, timestamptz);).
+--   2) Kopyalanan seo.title / seo.description değerleri zararsızdır (eski sütunlarla aynı değer);
+--      geri almada bırakılabilir. Eski sütunlar hiç değişmediği için uygulama eski sürüme dönerse
+--      onları okumaya devam eder.
+--   3) notify pgrst, 'reload schema';
+-- =============================================================================
+
+-- 1) Geriye uyum: eski SEO alanları seo bölümüne (yalnızca boşsa)
+create or replace function public._p03_merge_seo(p_config jsonb, p_title text, p_description text)
+returns jsonb
+language sql
+immutable
+set search_path = ''
+as $$
+  select case
+    when p_config is null or jsonb_typeof(p_config) <> 'object' then p_config
+    when p_title is null and p_description is null then p_config
+    else jsonb_set(
+      p_config, '{seo}',
+      (case when jsonb_typeof(p_config -> 'seo') = 'object' then p_config -> 'seo' else '{}'::jsonb end)
+        || jsonb_strip_nulls(jsonb_build_object(
+             'title', coalesce(nullif(p_config -> 'seo' ->> 'title', ''), p_title),
+             'description', coalesce(nullif(p_config -> 'seo' ->> 'description', ''), p_description))),
+      true)
+  end;
+$$;
+
+update public.site_configs c
+   set published = public._p03_merge_seo(c.published, s.seo_title, s.seo_description),
+       draft = public._p03_merge_seo(c.draft, s.seo_title, s.seo_description)
+  from public.organization_settings s
+ where s.organization_id = c.organization_id
+   and (s.seo_title is not null or s.seo_description is not null);
+
+update public.site_config_revisions r
+   set config = public._p03_merge_seo(r.config, s.seo_title, s.seo_description)
+  from public.organization_settings s
+ where s.organization_id = r.organization_id
+   and (s.seo_title is not null or s.seo_description is not null);
+
+drop function public._p03_merge_seo(jsonb, text, text);
+
+-- 2) Taslakta tutulabilen marka / site içeriği alanları (+ doğrulama kodu)
+create or replace function public.site_brand_columns()
+returns text[]
+language sql
+immutable
+set search_path = ''
+as $$
+  select array[
+    'display_name', 'short_name', 'legal_name', 'tagline', 'description',
+    'phone', 'whatsapp', 'email', 'address_line', 'address_district', 'address_city', 'maps_url',
+    'instagram_url', 'facebook_url', 'x_url', 'youtube_url', 'linkedin_url', 'tiktok_url',
+    'logo_url', 'logo_mobile_url', 'favicon_url', 'og_image_url', 'hero_image_url',
+    'primary_color', 'accent_color',
+    'service_area', 'postal_code', 'office_latitude', 'office_longitude',
+    'opening_hours', 'working_hours_note', 'hero_title', 'hero_subtitle',
+    'google_site_verification'
+  ]::text[];
+$$;
+
+-- SEO yetkisinin (seo.manage) taslakta değiştirebildiği marka alanları
+create or replace function public.site_seo_brand_columns()
+returns text[]
+language sql
+immutable
+set search_path = ''
+as $$
+  select array['og_image_url', 'google_site_verification']::text[];
+$$;
+
+-- 3) Ayar kaydı koruması: marka/site içeriği + SEO yalnızca yayınla değişir
+create or replace function public.organization_settings_guard()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_fields text[];
+begin
+  if (select auth.uid()) is null then
+    return new;
+  end if;
+  new.organization_id := old.organization_id;
+  new.updated_by := (select auth.uid());
+  v_fields := public.audit_changed_fields(to_jsonb(old), to_jsonb(new));
+  if exists (
+    select 1 from unnest(v_fields) f
+     where f not in ('seo_title', 'seo_description', 'og_image_url', 'google_site_verification', 'updated_by')
+  ) and not public.has_org_permission(new.organization_id, 'settings.manage')
+    and not public.is_super_admin() then
+    raise exception 'settings_forbidden' using errcode = '42501';
+  end if;
+  -- Ziyaretçinin gördüğü marka/site içeriği ve site SEO'su yalnızca yayınla (site_publish /
+  -- site_rollback) değişir. Eski seo_title / seo_description artık okunmaz ve değiştirilemez.
+  if exists (
+    select 1 from unnest(v_fields) f
+     where f = any (public.site_brand_columns()) or f in ('seo_title', 'seo_description')
+  ) and coalesce(current_setting('app.site_brand_apply', true), '') <> 'on'
+    and not public.is_super_admin() then
+    raise exception 'brand_requires_publish' using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+-- 4) Taslak bölümü kaydeder (20261006000001 gövdesi + SEO yetkisinin sınırlı taslak hakkı)
+drop function if exists public.site_save_draft(uuid, text, jsonb, timestamptz);
+create or replace function public.site_save_draft(p_org uuid, p_section text, p_value jsonb, p_expected_updated_at timestamptz default null)
+returns timestamptz
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_old jsonb;
+  v_family text;
+  v_updated_at timestamptz;
+  v_now timestamptz := now();
+  v_full boolean;
+begin
+  -- Yetki: süper admin veya settings.manage → tüm bölümler; seo.manage → yalnızca SEO taslağı
+  if public.is_super_admin()
+     or ((select auth.uid()) is not null and p_org is not null and public.has_org_permission(p_org, 'settings.manage')) then
+    v_full := true;
+  elsif (select auth.uid()) is not null and p_org is not null and public.has_org_permission(p_org, 'seo.manage')
+        and p_section in ('seo', 'brand') then
+    v_full := false;
+  else
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+  if p_section is null or p_section not in ('theme', 'colors', 'typography', 'header', 'navigation', 'home', 'footer', 'pages', 'seo', 'brand', 'style') then
+    raise exception 'invalid_section' using errcode = '22023';
+  end if;
+  if p_section = 'brand' and (jsonb_typeof(p_value) <> 'object'
+      or exists (select 1 from jsonb_object_keys(p_value) k where k <> all (public.site_brand_columns()))) then
+    raise exception 'invalid_brand' using errcode = '22023';
+  end if;
+  if p_section = 'style' and not public.is_super_admin() then
+    v_family := p_value -> 'origin' ->> 'family';
+    if v_family is not null
+       and v_family is distinct from (select c.draft -> 'style' -> 'origin' ->> 'family' from public.site_configs c where c.organization_id = p_org)
+       and v_family is distinct from (select c.published -> 'style' -> 'origin' ->> 'family' from public.site_configs c where c.organization_id = p_org)
+       and not exists (select 1 from public.org_design_family_access(p_org) a where a.family_id = v_family) then
+      raise exception 'family_not_allowed' using errcode = '42501';
+    end if;
+  end if;
+  insert into public.site_configs (organization_id) values (p_org) on conflict (organization_id) do nothing;
+  select c.draft -> p_section, c.draft_updated_at into v_old, v_updated_at from public.site_configs c where c.organization_id = p_org for update;
+  -- SEO yetkisi: marka taslağında yalnızca SEO alanları değişebilir (diğer bekleyen alanlar aynen kalmalı)
+  if not v_full and p_section = 'brand' and exists (
+    select 1
+      from (select jsonb_object_keys(coalesce(v_old, '{}'::jsonb)) as k
+            union select jsonb_object_keys(p_value)) keys
+     where keys.k <> all (public.site_seo_brand_columns())
+       and (coalesce(v_old, '{}'::jsonb) -> keys.k) is distinct from (p_value -> keys.k)
+  ) then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+  -- Eski taslak: kullanıcı formu açtıktan sonra taslak başka biri tarafından değiştirildi
+  if p_expected_updated_at is not null and v_updated_at is distinct from p_expected_updated_at then
+    raise exception 'stale_draft' using errcode = 'PT409';
+  end if;
+  update public.site_configs
+     set draft = case when p_section = 'brand' and p_value = '{}'::jsonb then draft - 'brand'
+                      else jsonb_set(draft, array[p_section], coalesce(p_value, 'null'::jsonb), true) end,
+         has_unpublished_changes = true,
+         draft_updated_at = v_now,
+         draft_updated_by = (select auth.uid())
+   where organization_id = p_org;
+  perform public.write_audit(p_org, 'site.draft_saved', 'site', p_org::text, p_section,
+    jsonb_build_object('section', p_section,
+                       'old', case when p_section in ('theme') then v_old else null end,
+                       'new', case when p_section in ('theme') then p_value else null end,
+                       'fields', case when p_section = 'brand' then (select jsonb_agg(k) from jsonb_object_keys(p_value) k) else null end));
+  -- Yeni eşzamanlılık belirteci (istemci bir sonraki kayıtta gönderir)
+  return v_now;
+end;
+$$;
+
+revoke all on function public.site_brand_columns() from public, anon;
+grant execute on function public.site_brand_columns() to authenticated;
+revoke all on function public.site_seo_brand_columns() from public, anon;
+grant execute on function public.site_seo_brand_columns() to authenticated;
+revoke all on function public.site_save_draft(uuid, text, jsonb, timestamptz) from public, anon;
+grant execute on function public.site_save_draft(uuid, text, jsonb, timestamptz) to authenticated;
+
+notify pgrst, 'reload schema';
+
 -- Supabase CLI migration geçmişi (ileride "supabase db push" yalnızca yeni dosyaları uygular)
 create schema if not exists supabase_migrations;
 create table if not exists supabase_migrations.schema_migrations (version text primary key, statements text[], name text);
@@ -1312,7 +1921,10 @@ insert into supabase_migrations.schema_migrations (version, name) values
   ('20260930000002', 'site_builder'),
   ('20261001000001', 'site_brand_publish'),
   ('20261002000001', 'karay_platform'),
-  ('20261004000001', 'design_family_access')
+  ('20261004000001', 'design_family_access'),
+  ('20261005000001', 'office_site_management'),
+  ('20261006000001', 'brand_content_draft'),
+  ('20261007000001', 'seo_draft')
 on conflict (version) do nothing;
 
 -- API şema önbelleğini yenile

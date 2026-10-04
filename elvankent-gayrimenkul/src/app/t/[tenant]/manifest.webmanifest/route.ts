@@ -1,11 +1,13 @@
 import { brandingUrl } from '@/modules/media/variants';
 import { buildTheme } from '@/platform/branding/theme';
-import { getTenant } from '@/platform/tenant/tenant';
+import { routeCacheControl, siteTenantForRoute } from '@/site-config/load';
 
 /** Kiracıya özel web uygulaması bildirimi (ad, renkler, simgeler) */
 export async function GET(_request: Request, { params }: RouteContext<'/t/[tenant]/manifest.webmanifest'>) {
-  const tenant = await getTenant(decodeURIComponent((await params).tenant));
-  if (!tenant) return new Response('Not found', { status: 404 });
+  // Yayında canlı marka; imzalı önizlemede taslak marka (önbelleğe alınmaz)
+  const route = await siteTenantForRoute(decodeURIComponent((await params).tenant));
+  if (!route) return new Response('Not found', { status: 404 });
+  const { tenant, preview } = route;
   const s = tenant.settings;
   const theme = buildTheme(s.primary_color, s.accent_color);
   const favicon = brandingUrl(s.favicon_url);
@@ -29,7 +31,7 @@ export async function GET(_request: Request, { params }: RouteContext<'/t/[tenan
   return new Response(JSON.stringify(manifest), {
     headers: {
       'Content-Type': 'application/manifest+json; charset=utf-8',
-      'Cache-Control': 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400',
+      'Cache-Control': routeCacheControl(preview, 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400'),
     },
   });
 }

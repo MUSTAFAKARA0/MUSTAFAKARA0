@@ -18,10 +18,11 @@ function version(value: string | null | undefined): string {
  * yoksa dinamik üretilen marka görseli (/og). Sürüm parametresi ayarlar
  * değiştiğinde önbelleği boşaltır.
  */
-export function siteOgImage(tenant: Tenant): OgImageRef {
+export function siteOgImage(tenant: Pick<Tenant, 'settings'>, preview = false): OgImageRef {
   const custom = brandingUrl(tenant.settings.og_image_url);
   return {
-    url: custom ?? `/og?v=${version(tenant.settings.updated_at)}`,
+    // Önizlemede ayrı adres: CDN'deki yayın görseli önizlemeye, önizleme görseli yayına karışmaz
+    url: custom ?? `/og?v=${version(tenant.settings.updated_at)}${preview ? '&onizleme=1' : ''}`,
     width: 1200,
     height: 630,
     alt: tenant.settings.display_name,
@@ -34,6 +35,6 @@ export function listingOgImage(p: { slug: string; title: string; updatedAt: stri
 }
 
 /** Sayfa düzeyindeki openGraph nesnesi yerleşimdekini tamamen değiştirdiği için ortak alanlar */
-export function baseOpenGraph(tenant: Tenant) {
+export function baseOpenGraph(tenant: Pick<Tenant, 'settings'>) {
   return { locale: 'tr_TR', siteName: tenant.settings.display_name } as const;
 }

@@ -304,28 +304,3 @@ export async function listRedirects(ctx: OrgContext, q: string | undefined, page
   };
 }
 
-export interface SeoSettings {
-  displayName: string;
-  seoTitle: string | null;
-  seoDescription: string | null;
-  ogImageUrl: string | null;
-  googleSiteVerification: string | null;
-  updatedAt: string;
-}
-
-export async function getSeoSettings(ctx: OrgContext): Promise<SeoSettings | null> {
-  const { data } = await ctx.supabase
-    .from('organization_settings')
-    .select('display_name, seo_title, seo_description, og_image_url, google_site_verification, updated_at')
-    .eq('organization_id', ctx.org.id)
-    .maybeSingle();
-  if (!data) return null;
-  return {
-    displayName: data.display_name,
-    seoTitle: data.seo_title,
-    seoDescription: data.seo_description,
-    ogImageUrl: data.og_image_url,
-    googleSiteVerification: data.google_site_verification,
-    updatedAt: data.updated_at,
-  };
-}

@@ -30,6 +30,7 @@ const LIVE = {
   primary_color: '#112233',
   accent_color: '#445566',
   logo_url: `organizations/${ORG}/branding/logo-eski-200x80.png`,
+  og_image_url: `organizations/${ORG}/branding/og-eski-1200x630.jpg`,
   opening_hours: [{ opens: '09:00', days: ['mon'], closes: '18:00' }],
   office_latitude: 39.9,
   office_longitude: 32.8,
@@ -143,18 +144,23 @@ describe('BD-03: logo yaşam döngüsü', async () => {
     assert.ok(!rm.paths.includes(LIVE.logo_url));
   });
 
-  test('görsel kaldırma taslakta boş değer yazar, dosya silmez; paylaşım görseli ofiste taslak türü değildir', async () => {
+  test('görsel kaldırma taslakta boş değer yazar, dosya silmez; P0.3: paylaşım görseli de taslak türüdür', async () => {
     const db = fakeDb();
     await branding.removeBrandingDraft(db, ORG, 'logo');
     assert.deepEqual(brandCall(db).args.p_value, { logo_url: null });
-    await assert.rejects(() => branding.removeBrandingDraft(fakeDb(), ORG, 'og'), /Geçersiz görsel türü/);
-    assert.deepEqual([...branding.DRAFT_BRANDING_KINDS].sort(), ['favicon', 'hero', 'logo', 'logo_mobile']);
+    const og = fakeDb();
+    await branding.removeBrandingDraft(og, ORG, 'og');
+    assert.deepEqual(brandCall(og).args.p_value, { og_image_url: null });
+    await assert.rejects(() => branding.removeBrandingDraft(fakeDb(), ORG, 'kapak'), /Geçersiz görsel türü/);
+    assert.deepEqual([...branding.DRAFT_BRANDING_KINDS].sort(), ['favicon', 'hero', 'logo', 'logo_mobile', 'og']);
   });
 
   test('ofis görsel uç noktası taslak türlerini ortak çekirdeğe yollar; organizasyon oturumdan', () => {
     const route = read('src/app/api/admin/branding/route.ts');
-    assert.match(route, /if \(DRAFT_BRANDING_KINDS\.includes\(kind\)\)[\s\S]*?uploadBrandingDraft\(\{[\s\S]*?orgId: ctx\.org\.id/);
+    assert.match(route, /uploadBrandingDraft\(\{[\s\S]*?orgId: ctx\.org\.id/);
     assert.doesNotMatch(route, /form\.get\('orgId'\)/);
+    // P0.3: ayar kaydına doğrudan yazım yolu kalmadı (paylaşım görseli dahil)
+    assert.doesNotMatch(route, /from\('organization_settings'\)/);
     const platform = read('src/app/api/platform/branding/route.ts');
     assert.match(platform, /uploadBrandingDraft\(/);
     assert.doesNotMatch(platform, /\.from\('organization_settings'\)\.update/);
@@ -207,7 +213,9 @@ describe('BD-06/08: yayın, geri alma ve tek yayın noktası (veritabanı)', () 
 
   test('ayar kaydı koruması: marka/site içeriği yalnızca yayın bayrağıyla değişir (süper admin hariç); SEO serbest', () => {
     const guard = lastDefinition('organization_settings_guard');
-    assert.match(guard, /f = any \(public\.site_brand_columns\(\)\) and f <> 'og_image_url'/);
+    // P0.3: paylaşım görseli istisnası kalktı; eski seo_title / seo_description donduruldu
+    assert.match(guard, /f = any \(public\.site_brand_columns\(\)\) or f in \('seo_title', 'seo_description'\)/);
+    assert.doesNotMatch(guard, /f <> 'og_image_url'/);
     assert.match(guard, /current_setting\('app\.site_brand_apply', true\)/);
     assert.match(guard, /brand_requires_publish/);
     assert.match(guard, /not public\.has_org_permission\(new\.organization_id, 'settings\.manage'\)/);
@@ -234,9 +242,9 @@ describe('BD-07: yetki ve organizasyon kaynağı', () => {
     }
   });
 
-  test('görsel kaldırma tür yetkisine bağlı; taslak türleri settings.manage', async () => {
+  test('görsel kaldırma tür yetkisine bağlı: paylaşım görseli seo.manage, diğerleri settings.manage', async () => {
     const { BRANDING_PERMISSION } = await import('@/modules/media/branding');
-    for (const k of branding.DRAFT_BRANDING_KINDS) assert.equal(BRANDING_PERMISSION[k], 'settings.manage', k);
+    for (const k of branding.DRAFT_BRANDING_KINDS) assert.equal(BRANDING_PERMISSION[k], k === 'og' ? 'seo.manage' : 'settings.manage', k);
     assert.match(body('removeBrandingImage'), /requirePermission\(BRANDING_PERMISSION\[kind\]\)[\s\S]*removeBrandingDraft\(ctx\.supabase, ctx\.org\.id, kind\)/);
   });
 });

@@ -124,7 +124,11 @@ export const BRAND_FIELDS = [
   // P0.2: ziyaretçinin gördüğü diğer site içeriği (veritabanı: site_brand_columns ile aynı liste)
   'service_area', 'postal_code', 'office_latitude', 'office_longitude',
   'opening_hours', 'working_hours_note', 'hero_title', 'hero_subtitle',
+  // P0.3: site SEO'su (paylaşım görseli yukarıda; başlık/açıklama seo bölümündedir)
+  'google_site_verification',
 ] as const;
+/** SEO yetkisinin (seo.manage) marka taslağında değiştirebildiği alanlar (veritabanı: site_seo_brand_columns) */
+export const SEO_BRAND_FIELDS = ['og_image_url', 'google_site_verification'] as const;
 export type BrandField = (typeof BRAND_FIELDS)[number];
 /** Çalışma saatleri satırı (organization_settings.opening_hours ile aynı biçim) */
 export interface OpeningHoursRow {

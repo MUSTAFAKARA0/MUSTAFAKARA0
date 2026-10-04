@@ -13,7 +13,12 @@ import { Input } from '@/components/ui/form-controls';
 import { deleteRedirect } from '@/app/actions/admin-content';
 import { formatDate, formatNumber } from '@/lib/format';
 import { firstParam, parsePositiveInt } from '@/lib/utils';
-import { getSeoSettings, listRedirects } from '@/modules/content/admin-queries';
+import { listRedirects } from '@/modules/content/admin-queries';
+import { getSiteAdmin } from '@/modules/platform/sites';
+import { SiteStatusCards } from '@/components/site-editor/site-status';
+import { pendingSectionLabels } from '@/components/admin/site-draft-status';
+import Link from '@/components/common/intent-link';
+import { notFound } from 'next/navigation';
 import { brandingUrl } from '@/modules/media/variants';
 import { requirePagePermission } from '@/platform/auth/session';
 import { getTenant, tenantUrl } from '@/platform/tenant/tenant';
@@ -25,11 +30,15 @@ export default async function SeoPage({ searchParams }: PageProps<'/admin/seo'>)
   const sp = await searchParams;
   const q = firstParam(sp.q);
   const page = Math.max(1, parsePositiveInt(firstParam(sp.sayfa), 10_000) ?? 1);
-  const [settings, redirects, tenant] = await Promise.all([getSeoSettings(ctx), listRedirects(ctx, q, page), getTenant(ctx.org.slug)]);
+  // P0.3: değerler TASLAKTAN (canlı + bekleyen) okunur; yayındaki değer ayrıca gösterilir
+  const [site, redirects, tenant] = await Promise.all([getSiteAdmin(ctx, ctx.org.id), listRedirects(ctx, q, page), getTenant(ctx.org.slug)]);
+  if (!site) notFound();
   const siteLink = (path: string) => (tenant ? tenantUrl(tenant, path) : path);
   const siteHost = tenant ? new URL(tenant.baseUrl).host : 'site';
-  const name = settings?.displayName ?? ctx.org.name;
-  const ogUrl = brandingUrl(settings?.ogImageUrl);
+  const name = site.brand.display_name;
+  const ogUrl = brandingUrl(site.brand.og_image_url);
+  const ogPending = 'og_image_url' in site.draft.brand;
+  const canPublish = ctx.can('settings.manage');
   const hrefFor = (p: number) => {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
@@ -44,14 +53,38 @@ export default async function SeoPage({ searchParams }: PageProps<'/admin/seo'>)
         title="SEO"
         description="Arama motorlarında ve sosyal medyada sitenizin nasıl görüneceği. İlan, blog ve bölge sayfalarının SEO alanları kendi düzenleyicilerindedir."
       />
+      {/* SEO de site taslağının parçasıdır: ayrı yayın düğmesi yok; yayın Site yönetimindedir */}
+      <SiteStatusCards
+        live={site.status === 'active' && site.org.status === 'active'}
+        version={site.version}
+        publishedAt={site.publishedAt}
+        hasUnpublishedChanges={site.hasUnpublishedChanges}
+        pendingLabels={pendingSectionLabels(site)}
+      />
+      <p className="-mt-2 mb-5 text-[13px] text-muted-foreground">
+        SEO değişiklikleri taslağa kaydedilir.{' '}
+        {canPublish ? (
+          <>
+            Önizlemek, yayınlamak veya geri almak için{' '}
+            <Link href="/admin/site" className="font-semibold text-primary hover:underline">
+              Site yönetimi
+            </Link>
+            &apos;ni kullanın.
+          </>
+        ) : (
+          'Yayınlama yetkisi ofis yöneticisindedir.'
+        )}
+      </p>
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="min-w-0 space-y-6">
           <Panel title="Ana sayfa ve site geneli" description="Boş bırakılan alanlar şirket adından otomatik oluşturulur.">
             <SeoSettingsForm
-              initial={{ seoTitle: settings?.seoTitle ?? null, seoDescription: settings?.seoDescription ?? null, googleSiteVerification: settings?.googleSiteVerification ?? null }}
+              draftToken={site.draftUpdatedAt}
+              initial={{ seoTitle: site.draft.seo.title ?? null, seoDescription: site.draft.seo.description ?? null, googleSiteVerification: site.brand.google_site_verification ?? null }}
+              live={{ seoTitle: site.published.seo.title ?? null, seoDescription: site.published.seo.description ?? null, googleSiteVerification: site.settings.google_site_verification ?? null }}
               siteHost={siteHost}
               fallbackTitle={`${name} | Satılık ve kiralık gayrimenkuller`}
-              fallbackDescription={tenant?.settings.description ?? `${name}: satılık ve kiralık daire, villa, ticari gayrimenkul ve arsa ilanları.`}
+              fallbackDescription={site.brand.description ?? `${name}: satılık ve kiralık daire, villa, ticari gayrimenkul ve arsa ilanları.`}
             />
           </Panel>
 
@@ -130,7 +163,7 @@ export default async function SeoPage({ searchParams }: PageProps<'/admin/seo'>)
               url={ogUrl}
               stacked
               previewClassName="aspect-[1200/630] w-full"
-              hint="1200×630 px'e kırpılır. Yüklenmezse şirket adı ve renklerinizle otomatik bir görsel üretilir. İlan sayfaları kendi fotoğraflarını kullanır."
+              hint={`1200×630 px'e kırpılır. Yüklenmezse şirket adı ve renklerinizle otomatik bir görsel üretilir. İlan sayfaları kendi fotoğraflarını kullanır.${ogPending ? ' · Taslakta: yayınlanınca paylaşımlarda görünür.' : ''}`}
             />
           </Panel>
           <Panel title="Arama motoru dosyaları">

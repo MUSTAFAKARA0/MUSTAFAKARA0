@@ -1,13 +1,18 @@
 import { getShowcaseProperties } from '@/modules/properties/queries';
 import { brandingUrl, mediaUrl } from '@/modules/media/variants';
-import { imageAsJpegDataUrl, OG_SIZE, renderSiteOgImage } from '@/modules/seo/og-image';
+import { imageAsJpegDataUrl, OG_CACHE_PUBLIC, OG_SIZE, renderSiteOgImage } from '@/modules/seo/og-image';
 import { buildTheme } from '@/platform/branding/theme';
-import { getTenant } from '@/platform/tenant/tenant';
+import { routeCacheControl, siteTenantForRoute } from '@/site-config/load';
 
-/** Sitenin dinamik paylaşım görseli (/og → /t/{kiracı}/og) */
+/**
+ * Sitenin dinamik paylaşım görseli (/og → /t/{kiracı}/og). Herkese açık istek YALNIZCA yayındaki
+ * markayı çizer; taslak yalnızca bu kiracıya ait imzalı önizleme çerezi varsa (P0.3) ve yanıt
+ * paylaşılan önbelleğe alınmaz. Sorgu parametresiyle taslak açılamaz.
+ */
 export async function GET(request: Request, { params }: RouteContext<'/t/[tenant]/og'>) {
-  const tenant = await getTenant(decodeURIComponent((await params).tenant));
-  if (!tenant) return new Response('Not found', { status: 404 });
+  const route = await siteTenantForRoute(decodeURIComponent((await params).tenant));
+  if (!route) return new Response('Not found', { status: 404 });
+  const { tenant, preview } = route;
   const s = tenant.settings;
   const theme = buildTheme(s.primary_color, s.accent_color);
 
@@ -23,5 +28,6 @@ export async function GET(request: Request, { params }: RouteContext<'/t/[tenant
     headline: s.hero_title ?? s.tagline ?? 'Satılık ve kiralık gayrimenkuller',
     subline: s.service_area ? `${s.service_area} satılık ve kiralık daire, villa, ticari gayrimenkul ve arsa ilanları` : s.description,
     photo,
+    cacheControl: routeCacheControl(preview, OG_CACHE_PUBLIC),
   });
 }

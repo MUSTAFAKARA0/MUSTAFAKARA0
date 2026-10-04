@@ -7,7 +7,8 @@ import { MEDIA_BUCKETS } from '@/modules/media/variants';
 import { saveBrandFields, type DraftToken } from '@/site-editor/service';
 
 /**
- * MARKA GÖRSELİ TASLAĞI (logo, mobil logo, site simgesi, ana sayfa görseli) — KARAY ve ofis ortak.
+ * MARKA GÖRSELİ TASLAĞI (logo, mobil logo, site simgesi, ana sayfa ve paylaşım görseli) — KARAY ve
+ * ofis ortak.
  *
  * Yaşam döngüsü:
  *   1) dosya sunucuda doğrulanır ve yeniden kodlanır (processBranding; SVG güvenlik denetimi)
@@ -26,8 +27,8 @@ import { saveBrandFields, type DraftToken } from '@/site-editor/service';
 type Db = SessionUser['supabase'];
 type Storage = Pick<Db, 'storage'>;
 
-/** Taslakla yönetilen marka görselleri (paylaşım görseli SEO modülündedir) */
-export const DRAFT_BRANDING_KINDS: readonly BrandingKind[] = ['logo', 'logo_mobile', 'favicon', 'hero'];
+/** Taslakla yönetilen marka görselleri (P0.3: paylaşım görseli de taslakta; tüm türler) */
+export const DRAFT_BRANDING_KINDS: readonly BrandingKind[] = ['logo', 'logo_mobile', 'favicon', 'hero', 'og'];
 
 export async function uploadBrandingDraft(opts: {
   db: Db;
@@ -36,11 +37,9 @@ export async function uploadBrandingDraft(opts: {
   kind: BrandingKind;
   input: Buffer;
   expected?: DraftToken;
-  /** KARAY Site Builder paylaşım görselini de taslakla yönetir */
-  allowOg?: boolean;
 }): Promise<{ path: string; message: string }> {
   const { db, storage, orgId, kind, input } = opts;
-  if (!DRAFT_BRANDING_KINDS.includes(kind) && !(opts.allowOg && kind === 'og')) throw new ActionError('Geçersiz görsel türü.');
+  if (!DRAFT_BRANDING_KINDS.includes(kind)) throw new ActionError('Geçersiz görsel türü.');
   const output = await processBranding(kind, input);
   const path = `organizations/${orgId}/branding/${kind}-${randomBytes(8).toString('hex')}-${output.width}x${output.height}.${output.ext}`;
   const { error: uploadError } = await storage.storage
@@ -57,8 +56,8 @@ export async function uploadBrandingDraft(opts: {
 }
 
 /** Görseli taslakta kaldırır (dosya silinmez; canlı site yayına kadar eskisini gösterir) */
-export async function removeBrandingDraft(db: Db, orgId: string, kind: BrandingKind, opts: { allowOg?: boolean } = {}): Promise<string> {
-  if (!DRAFT_BRANDING_KINDS.includes(kind) && !(opts.allowOg && kind === 'og')) throw new ActionError('Geçersiz görsel türü.');
+export async function removeBrandingDraft(db: Db, orgId: string, kind: BrandingKind): Promise<string> {
+  if (!DRAFT_BRANDING_KINDS.includes(kind)) throw new ActionError('Geçersiz görsel türü.');
   await saveBrandFields(db, orgId, { [BRANDING_COLUMN[kind]]: null });
   return `${BRANDING_LABEL[kind]} taslakta kaldırıldı. Sitede yayınlayınca kalkar.`;
 }

@@ -1,6 +1,6 @@
 'use server';
 
-import { updateTag } from 'next/cache';
+import { revalidatePath, updateTag } from 'next/cache';
 import { z } from 'zod';
 import { cacheTags } from '@/lib/cache-tags';
 import { slugify } from '@/lib/slug';
@@ -8,6 +8,8 @@ import { isUuid } from '@/lib/utils';
 import { PAGE_DEFINITIONS, type PageKey } from '@/modules/content/default-pages';
 import { ActionError, assertNoDbError, NotFoundError, runAction, type ActionResult } from '@/platform/actions';
 import { requirePermission, type OrgContext } from '@/platform/auth/session';
+import { saveSeoDraft } from '@/site-editor/service';
+import type { SavedDraft } from '@/site-editor/types';
 
 /**
  * İçerik yönetimi: blog yazıları, düzenlenebilir sayfalar, bölge sayfaları,
@@ -498,21 +500,28 @@ const seoSchema = z.object({
 
 export type SeoSettingsInput = z.input<typeof seoSchema>;
 
-export async function saveSeoSettings(raw: SeoSettingsInput): Promise<ActionResult<null>> {
+/**
+ * Site geneli SEO ayarları — P0.3: TASLAĞA yazılır (ortak servis saveSeoDraft; ayrı bir SEO yayın
+ * sistemi yok). Canlı site, /admin/site'taki "Yayınla" ile (marka, ana sayfa ve SEO birlikte, tek
+ * işlemde) değişir; önizlemede hemen görünür; sürüm geçmişinden geri alınabilir. seo.manage yetkisi
+ * yeter (editör taslağı yazar; yayın settings.manage ister). Organizasyon oturumdan gelir.
+ */
+export async function saveSeoSettings(raw: SeoSettingsInput, expected?: string | null): Promise<ActionResult<SavedDraft>> {
   return runAction(async () => {
     const ctx = await requirePermission('seo.manage');
     const input = seoSchema.parse(raw);
-    const patch: { seo_title: string | null; seo_description: string | null; google_site_verification: string | null; og_image_url?: string | null } = {
-      seo_title: input.seo_title ?? null,
-      seo_description: input.seo_description ?? null,
-      google_site_verification: input.google_site_verification ?? null,
-    };
-    // Yüklenen paylaşım görseli (depolama yolu) formda gösterilmez; yalnızca açıkça değiştirildiyse yazılır
-    if (input.og_image_url !== undefined) patch.og_image_url = input.og_image_url;
-    const { data, error } = await ctx.supabase.from('organization_settings').update(patch).eq('organization_id', ctx.org.id).select('organization_id');
-    assertNoDbError(error);
-    if (!data?.length) throw new NotFoundError('Ayarlar bulunamadı.');
-    updateTag(cacheTags.org(ctx.org.id));
-    return null;
-  }, 'SEO ayarları kaydedildi.');
+    const draftToken = await saveSeoDraft(
+      ctx.supabase,
+      ctx.org.id,
+      {
+        title: input.seo_title ?? null,
+        description: input.seo_description ?? null,
+        googleSiteVerification: input.google_site_verification ?? null,
+        ...(input.og_image_url !== undefined ? { ogImageUrl: input.og_image_url } : {}),
+      },
+      expected,
+    );
+    revalidatePath('/admin', 'layout');
+    return { draftToken };
+  }, 'Kaydedildi — taslak. Sitede görünmesi için Site yönetimi › "Yayınla".');
 }

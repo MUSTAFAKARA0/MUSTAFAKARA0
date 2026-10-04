@@ -1,26 +1,12 @@
-import { randomBytes } from 'node:crypto';
-import { revalidatePath, revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { NextResponse } from 'next/server';
-import { cacheTags } from '@/lib/cache-tags';
 import { isSameOrigin } from '@/lib/same-origin';
 import { createServiceClient } from '@/lib/supabase/server';
-import {
-  BRANDING_COLUMN,
-  BRANDING_KINDS,
-  BRANDING_LABEL,
-  BRANDING_MAX_INPUT_BYTES,
-  BRANDING_PERMISSION,
-  BrandingError,
-  isOwnBrandingPath,
-  processBranding,
-  type BrandingKind,
-} from '@/modules/media/branding';
-import { MEDIA_BUCKETS } from '@/modules/media/variants';
-import { mapDbError, toActionFailure } from '@/platform/actions';
-import { DRAFT_BRANDING_KINDS, uploadBrandingDraft } from '@/site-editor/branding';
+import { BRANDING_KINDS, BRANDING_MAX_INPUT_BYTES, BRANDING_PERMISSION, BrandingError, type BrandingKind } from '@/modules/media/branding';
+import { toActionFailure } from '@/platform/actions';
 import { logSecurityEvent } from '@/platform/audit';
 import { getOrgContext } from '@/platform/auth/session';
-import type { TablesUpdate } from '@/types/supabase';
+import { uploadBrandingDraft } from '@/site-editor/branding';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -28,11 +14,10 @@ export const maxDuration = 30;
 const json = (body: Record<string, unknown>, status: number) => NextResponse.json(body, { status, headers: { 'Cache-Control': 'private, no-store' } });
 
 /**
- * Marka görseli yükleme (logo, mobil logo, site simgesi, ana sayfa görseli → TASLAK;
- * paylaşım görseli → SEO modülü, anında).
- * Yetki sunucuda doğrulanır; organizasyon istemciden alınmaz. Dosya yolu
- * kullanıcı girdisi içermez. Ayar satırı oturum istemcisiyle güncellenir
- * (RLS + organization_settings_guard ikinci kez doğrular).
+ * Marka görseli yükleme (logo, mobil logo, site simgesi, ana sayfa ve paylaşım görseli) → TASLAK.
+ * Yetki türe göre sunucuda doğrulanır (paylaşım görseli seo.manage, diğerleri settings.manage);
+ * organizasyon istemciden alınmaz; dosya yolu kullanıcı girdisi içermez. Taslak yazımını
+ * veritabanı (site_save_draft) ikinci kez doğrular: SEO yetkisi yalnızca SEO alanlarını yazabilir.
  */
 export async function POST(request: Request) {
   if (!isSameOrigin(request)) return json({ error: 'Geçersiz istek kaynağı.' }, 403);
@@ -56,68 +41,23 @@ export async function POST(request: Request) {
   if (!(file instanceof File) || file.size === 0) return json({ error: 'Dosya seçilmedi.' }, 400);
   if (file.size > BRANDING_MAX_INPUT_BYTES) return json({ error: 'Dosya çok büyük (en fazla 15 MB).' }, 413);
 
-  // P0.2: logo, mobil logo, site simgesi ve ana sayfa görseli TASLAĞA yazılır (ortak çekirdek;
-  // canlı site yayına kadar eskisini gösterir, eski dosya silinmez). Paylaşım görseli (seo.manage)
-  // SEO modülünün parçasıdır ve aşağıdaki mevcut yoldan kaydedilir.
-  if (DRAFT_BRANDING_KINDS.includes(kind)) {
-    try {
-      const expected = form.get('expected');
-      const res = await uploadBrandingDraft({
-        db: ctx.supabase,
-        storage: ctx.supabase,
-        orgId: ctx.org.id,
-        kind,
-        input: Buffer.from(await file.arrayBuffer()),
-        expected: typeof expected === 'string' ? expected : null,
-      });
-      revalidatePath('/admin', 'layout');
-      return json({ path: res.path, message: res.message }, 201);
-    } catch (error) {
-      if (error instanceof BrandingError) return json({ error: error.message }, 400);
-      return json({ error: toActionFailure(error).error }, 400);
-    }
-  }
-
-  let output;
+  // P0.2/P0.3: tüm marka görselleri (logo, mobil logo, site simgesi, ana sayfa ve paylaşım görseli)
+  // TASLAĞA yazılır (ortak çekirdek; canlı site yayına kadar eskisini gösterir, eski dosya silinmez).
+  // Ayar kaydına doğrudan yazılmaz; organizasyon oturumdan gelir.
   try {
-    output = await processBranding(kind, Buffer.from(await file.arrayBuffer()));
+    const expected = form.get('expected');
+    const res = await uploadBrandingDraft({
+      db: ctx.supabase,
+      storage: ctx.can('settings.manage') ? ctx.supabase : createServiceClient() ?? ctx.supabase,
+      orgId: ctx.org.id,
+      kind,
+      input: Buffer.from(await file.arrayBuffer()),
+      expected: typeof expected === 'string' ? expected : null,
+    });
+    revalidatePath('/admin', 'layout');
+    return json({ path: res.path, message: res.message }, 201);
   } catch (error) {
     if (error instanceof BrandingError) return json({ error: error.message }, 400);
-    console.error('[branding] processing failed', { kind });
-    return json({ error: 'Görsel işlenemedi. Lütfen farklı bir dosya deneyin.' }, 400);
+    return json({ error: toActionFailure(error).error }, 400);
   }
-
-  // Depolama: ayar yetkisi varsa oturum istemcisi (Storage RLS), yalnızca SEO
-  // yetkisiyle paylaşım görseli yükleniyorsa sunucu istemcisi (yetki yukarıda doğrulandı)
-  const storageClient = ctx.can('settings.manage') ? ctx.supabase : createServiceClient();
-  if (!storageClient) return json({ error: 'Depolama yapılandırılmamış.' }, 503);
-  // Boyut dosya adında: logo sayfada doğru en-boy oranıyla, kayma (CLS) olmadan yer ayırır
-  const path = `organizations/${ctx.org.id}/branding/${kind}-${randomBytes(8).toString('hex')}-${output.width}x${output.height}.${output.ext}`;
-  const { error: uploadError } = await storageClient.storage
-    .from(MEDIA_BUCKETS.branding)
-    .upload(path, output.buffer, { contentType: output.contentType, cacheControl: '31536000', upsert: false });
-  if (uploadError) {
-    console.warn('[branding] upload failed', { kind });
-    return json({ error: 'Görsel kaydedilemedi. Lütfen tekrar deneyin.' }, 502);
-  }
-
-  const column = BRANDING_COLUMN[kind];
-  const { data: before } = await ctx.supabase.from('organization_settings').select(column).eq('organization_id', ctx.org.id).maybeSingle();
-  const { data: updated, error } = await ctx.supabase
-    .from('organization_settings')
-    .update({ [column]: path } as TablesUpdate<'organization_settings'>)
-    .eq('organization_id', ctx.org.id)
-    .select('organization_id');
-  if (error || !updated?.length) {
-    await storageClient.storage.from(MEDIA_BUCKETS.branding).remove([path]);
-    return json({ error: error ? mapDbError(error) : 'Ayarlar bulunamadı.' }, error?.code === '42501' ? 403 : 500);
-  }
-
-  // Önceki dosya (yalnızca bu organizasyonun marka klasöründeyse) silinir
-  const previous = (before as Record<string, string | null> | null)?.[column];
-  if (isOwnBrandingPath(ctx.org.id, previous) && previous !== path) {
-    await storageClient.storage.from(MEDIA_BUCKETS.branding).remove([previous]);
-  }
-  revalidateTag(cacheTags.org(ctx.org.id), { expire: 0 });
-  return json({ path, width: output.width, height: output.height, message: `${BRANDING_LABEL[kind]} güncellendi.` }, 201);
 }

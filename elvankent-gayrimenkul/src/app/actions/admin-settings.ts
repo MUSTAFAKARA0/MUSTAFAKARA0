@@ -7,46 +7,27 @@ import { cacheTags } from '@/lib/cache-tags';
 import { createServiceClient } from '@/lib/supabase/server';
 import { WEEKDAYS } from '@/modules/content/hours';
 import { emailField, phoneField } from '@/modules/crm/validation';
-import { BRANDING_COLUMN, BRANDING_KINDS, BRANDING_LABEL, BRANDING_PERMISSION, isOwnBrandingPath, type BrandingKind } from '@/modules/media/branding';
-import { MEDIA_BUCKETS } from '@/modules/media/variants';
+import { BRANDING_KINDS, BRANDING_LABEL, BRANDING_PERMISSION, type BrandingKind } from '@/modules/media/branding';
 import { isEmailConfigured, sendEmail } from '@/modules/notifications/email';
 import { leadNotificationRecipients } from '@/modules/notifications/lead';
 import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/platform/actions';
 import { requirePermission } from '@/platform/auth/session';
 import type { BrandDraft } from '@/site-config/schema';
-import { DRAFT_BRANDING_KINDS, removeBrandingDraft } from '@/site-editor/branding';
+import { removeBrandingDraft } from '@/site-editor/branding';
 import { saveBrandFields } from '@/site-editor/service';
-import type { TablesUpdate } from '@/types/supabase';
 
 /**
- * Marka görselini kaldırır. Logo, mobil logo, site simgesi ve ana sayfa görseli TASLAKTA kaldırılır
- * (P0.2: canlı site yayına kadar görseli göstermeye devam eder; dosya silinmez). Paylaşım görseli
- * SEO modülüne aittir (seo.manage) ve anında kaldırılır.
+ * Marka görselini TASLAKTA kaldırır (P0.2/P0.3: tüm türler; canlı site yayına kadar görseli
+ * göstermeye devam eder; dosya silinmez çünkü sürüm geçmişi ona başvurabilir). Yetki türe göre.
  */
 export async function removeBrandingImage(kind: BrandingKind): Promise<ActionResult<null>> {
   return runAction(async () => {
     if (!BRANDING_KINDS.includes(kind)) throw new ActionError('Geçersiz görsel türü.');
     const ctx = await requirePermission(BRANDING_PERMISSION[kind]);
-    if (DRAFT_BRANDING_KINDS.includes(kind)) {
-      await removeBrandingDraft(ctx.supabase, ctx.org.id, kind);
-      revalidatePath('/admin', 'layout');
-      return null;
-    }
-    const column = BRANDING_COLUMN[kind];
-    const { data: before } = await ctx.supabase.from('organization_settings').select(column).eq('organization_id', ctx.org.id).maybeSingle();
-    const { error } = await ctx.supabase
-      .from('organization_settings')
-      .update({ [column]: null } as TablesUpdate<'organization_settings'>)
-      .eq('organization_id', ctx.org.id);
-    assertNoDbError(error);
-    const previous = (before as Record<string, string | null> | null)?.[column];
-    if (isOwnBrandingPath(ctx.org.id, previous)) {
-      const storage = ctx.can('settings.manage') ? ctx.supabase : createServiceClient();
-      await storage?.storage.from(MEDIA_BUCKETS.branding).remove([previous]);
-    }
-    updateTag(cacheTags.org(ctx.org.id));
+    await removeBrandingDraft(ctx.supabase, ctx.org.id, kind);
+    revalidatePath('/admin', 'layout');
     return null;
-  }, DRAFT_BRANDING_KINDS.includes(kind) ? `${BRANDING_LABEL[kind] ?? 'Görsel'} taslakta kaldırıldı. Sitede yayınlayınca kalkar.` : `${BRANDING_LABEL[kind] ?? 'Görsel'} kaldırıldı.`);
+  }, `${BRANDING_LABEL[kind] ?? 'Görsel'} taslakta kaldırıldı. Sitede yayınlayınca kalkar.`);
 }
 
 // -----------------------------------------------------------------------------

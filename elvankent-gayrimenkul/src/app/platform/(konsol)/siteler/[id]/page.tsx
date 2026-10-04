@@ -32,7 +32,7 @@ export default async function SiteGeneralPage({ params }: PageProps<'/platform/s
     { label: 'İletişim bilgisi (telefon veya e-posta)', done: Boolean(b.phone || b.email), tab: 'marka' },
     { label: 'Adres girildi', done: Boolean(b.address_line || b.address_city), tab: 'marka' },
     { label: 'Tema seçildi', done: 'theme' in site.draftRaw, tab: 'tema' },
-    { label: 'SEO başlığı ve açıklaması', done: Boolean((d.seo.title || site.settings.seo_title) && (d.seo.description || site.settings.seo_description)), tab: 'seo' },
+    { label: 'SEO başlığı ve açıklaması', done: Boolean(d.seo.title && d.seo.description), tab: 'seo' },
     { label: 'Paylaşım görseli', done: Boolean(b.og_image_url), tab: 'marka' },
     { label: 'Özel alan adı bağlandı', done: Boolean(site.primaryDomain), tab: 'alan-adi' },
     { label: 'Site yayınlandı', done: site.version > 0 && site.status === 'active', tab: '' },
