@@ -107,6 +107,11 @@ jobs:
             echo "CRON_SECRET=ci-$(openssl rand -hex 32)"
             echo "NEXT_IMAGE_ALLOW_LOCAL_IP=1"
             echo "SITE_ENV=development"
+            # P0.4 davet e-postası: gerçek gönderim yok; E2E sahte Resend sunucusunu (127.0.0.1:4010) kendisi açar
+            echo "EMAIL_PROVIDER=resend"
+            echo "RESEND_API_KEY=ci-test-key"
+            echo "RESEND_API_BASE=http://127.0.0.1:4010"
+            echo "EMAIL_FROM=KARAY CI <davet@example.test>"
           } > .env.local
       - name: Birim + güvenlik testleri (RLS, MFA, kiracı izolasyonu)
         run: npm test

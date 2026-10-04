@@ -19,7 +19,7 @@ import { DEFAULT_TENANT_KEY, defaultHostsFromSiteUrl, isUnderPath, karayHostConf
  */
 
 const TENANT_HEADER = 'x-tenant-key';
-const PUBLIC_AUTH_PATHS = new Set(['/admin/giris', '/admin/sifremi-unuttum', '/admin/sifre-yenile', '/admin/auth/callback', '/platform/giris', '/platform/sifremi-unuttum', '/platform/sifre-yenile']);
+const PUBLIC_AUTH_PATHS = new Set(['/admin/giris', '/admin/davet', '/admin/sifremi-unuttum', '/admin/sifre-yenile', '/admin/auth/callback', '/platform/giris', '/platform/sifremi-unuttum', '/platform/sifre-yenile']);
 
 // Yapılandırma bir kez okunur; yüzey ve kiracı çözümlemesi aynı (küçük harfli) kök alan adını kullanır
 const SURFACE_CONFIG = karayHostConfigFromEnv(process.env);

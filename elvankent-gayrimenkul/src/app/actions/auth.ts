@@ -8,13 +8,13 @@ import { maskEmail } from '@/lib/format';
 import { getRequestFingerprint } from '@/lib/request';
 import { createSessionClient } from '@/lib/supabase/server';
 import { logSecurityEvent } from '@/platform/audit';
+import { authPasswordErrorMessage, passwordSchema } from '@/platform/auth/password-policy';
+import { writeSessionScopeCookie } from '@/platform/auth/scope-cookie';
 import {
   ACTIVE_ORG_COOKIE,
   getMemberships,
   getSessionUser,
   SESSION_SCOPE_COOKIE,
-  sessionIdFromAccessToken,
-  sessionScopeValue,
   type SessionScope,
 } from '@/platform/auth/session';
 import { requestHostSurface } from '@/platform/tenant/config';
@@ -34,14 +34,6 @@ const loginSchema = z.object({
   password: z.string().min(6, { error: 'Şifre en az 6 karakter olmalıdır.' }).max(200),
 });
 
-/** Güçlü şifre kuralı: en az 10 karakter, harf ve rakam içermeli */
-const passwordSchema = z
-  .string()
-  .min(10, { error: 'Şifre en az 10 karakter olmalıdır.' })
-  .max(200, { error: 'Şifre çok uzun.' })
-  .refine((v) => /[A-Za-zÇĞİÖŞÜçğıöşü]/.test(v) && /\d/.test(v), { error: 'Şifre en az bir harf ve bir rakam içermelidir.' })
-  .refine((v) => !/^(.)\1+$/.test(v), { error: 'Şifre tek bir karakterin tekrarı olamaz.' });
-
 /** Ofis girişi yalnızca ofis paneli içine döner (platform adresine asla; açık yönlendirme de yok) */
 function safeNext(next: FormDataEntryValue | null): string {
   const value = typeof next === 'string' ? next : '';
@@ -51,13 +43,7 @@ function safeNext(next: FormDataEntryValue | null): string {
 
 /** Oturumun alanını (platform / ofis) işaretler — bkz. SESSION_SCOPE_COOKIE */
 async function setSessionScope(scope: SessionScope, userId: string, accessToken: string | undefined) {
-  const value = sessionScopeValue(scope, userId, sessionIdFromAccessToken(accessToken)) ?? 'office';
-  (await cookies()).set(SESSION_SCOPE_COOKIE, value, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-  });
+  await writeSessionScopeCookie(scope, userId, accessToken);
 }
 
 export async function signIn(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
@@ -230,13 +216,7 @@ export async function updatePassword(_prev: AuthFormState, formData: FormData): 
 
   const { error } = await session.supabase.auth.updateUser({ password: parsed.data });
   if (error) {
-    return {
-      error: /same|different/i.test(error.message)
-        ? 'Yeni şifre eskisinden farklı olmalıdır.'
-        : /weak|pwned|leaked/i.test(error.message)
-          ? 'Bu şifre çok zayıf veya sızdırılmış şifreler listesinde. Lütfen başka bir şifre seçin.'
-          : 'Şifre güncellenemedi. Lütfen tekrar deneyin.',
-    };
+    return { error: authPasswordErrorMessage(error.message) };
   }
   await session.supabase.rpc('clear_password_change_required');
   await logSecurityEvent({ orgId: null, action: 'auth.password_changed', actorId: session.user.id });

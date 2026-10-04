@@ -3,10 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Copy, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox, Field, Input, Select } from '@/components/ui/form-controls';
 import { addDomain, createOrganization, setOrganizationPlan } from '@/app/actions/platform';
+import { OwnerInvitationCard } from '@/components/platform/owner-invitation';
 
 export function PlanForm({ orgId, plans, current, status }: { orgId: string; plans: { id: string; name: string }[]; current: string | null; status: string | null }) {
   const router = useRouter();
@@ -92,25 +93,19 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [done, setDone] = useState<{ id: string; password: string | null; email: string } | null>(null);
+  const [done, setDone] = useState<{ id: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account' } | null>(null);
 
   if (done) {
     return (
       <div className="space-y-4">
         <p className="rounded-xl bg-success-soft p-4 text-[14px] text-success">Organizasyon oluşturuldu.</p>
-        {done.password ? (
+        {done.ownerAccount === 'invitation_pending' ? (
           <div className="rounded-xl border border-border p-4">
-            <p className="text-[13px] text-muted-foreground">Sahip hesabı oluşturuldu. Geçici şifre yalnızca şimdi gösterilir; güvenli bir kanaldan iletin. İlk girişte değiştirmesi istenir.</p>
-            <p className="mt-3 text-[13px] font-semibold">{done.email}</p>
-            <div className="mt-1 flex items-center gap-2">
-              <code className="numeric flex-1 rounded-lg bg-surface-muted px-3 py-2 font-mono text-[16px] select-all">{done.password}</code>
-              <Button size="sm" variant="outline" onClick={() => void navigator.clipboard.writeText(done.password!).then(() => toast.success('Kopyalandı.'))}>
-                <Copy /> Kopyala
-              </Button>
-            </div>
+            <OwnerInvitationCard orgId={done.id} email={done.email} invitation={{ status: 'pending', expiresAt: null, lastSentAt: null, acceptedAt: null, accountPending: true }} />
+            <p className="mt-3 text-[12.5px] text-muted-foreground">Sahip şifresini davet e-postasındaki tek kullanımlık bağlantıyla kendisi belirler; şifre kimseye gösterilmez.</p>
           </div>
         ) : (
-          <p className="text-[13.5px] text-muted-foreground">{done.email} adresli mevcut hesap sahip olarak eklendi.</p>
+          <p className="text-[13.5px] text-muted-foreground">{done.email} adresli mevcut hesap sahip olarak eklendi; mevcut şifresiyle giriş yapar.</p>
         )}
         <Button onClick={() => router.push(`/platform/organizasyonlar/${done.id}`)}>Organizasyona git</Button>
       </div>
@@ -143,7 +138,7 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
           if (!Object.keys(next).length) setFormError(res.error);
           return;
         }
-        setDone({ id: res.data.id, password: res.data.temporaryPassword, email: res.data.ownerEmail });
+        setDone({ id: res.data.id, email: res.data.ownerEmail, ownerAccount: res.data.ownerAccount });
         router.refresh();
       }}
     >
@@ -169,7 +164,7 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
       <Field label="Sahip adı soyadı" htmlFor="co-owner-name" required error={errors.owner_name}>
         <Input id="co-owner-name" name="owner_name" maxLength={100} required autoComplete="off" />
       </Field>
-      <Field label="Sahip e-postası" htmlFor="co-owner-email" required error={errors.owner_email} hint="Hesap yoksa geçici şifreyle oluşturulur.">
+      <Field label="Sahip e-postası" htmlFor="co-owner-email" required error={errors.owner_email} hint="Hesap yoksa oluşturulur; sahibe şifresini kendisinin belirleyeceği aktivasyon daveti gönderilir.">
         <Input id="co-owner-email" name="owner_email" type="email" maxLength={160} required autoComplete="off" />
       </Field>
       {formError && (

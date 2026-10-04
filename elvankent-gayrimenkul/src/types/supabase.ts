@@ -899,6 +899,34 @@ export type Database = {
           },
         ]
       }
+      organization_invitations: {
+        Row: {
+          id: string
+          organization_id: string
+          user_id: string
+          email: string
+          role: Database["public"]["Enums"]["org_role"]
+          status: string
+          expires_at: string
+          last_sent_at: string | null
+          accepted_at: string | null
+          revoked_at: string | null
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: never
+        Update: never
+        Relationships: [
+          {
+            foreignKeyName: "organization_invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           organization_id: string
@@ -2423,8 +2451,51 @@ export type Database = {
           p_prefix: string
           p_plan: string
           p_owner: string
+          p_invite_token_hash?: string
         }
         Returns: string
+      }
+      platform_send_owner_invitation: {
+        Args: { p_org: string; p_token_hash: string }
+        Returns: { invitation_id: string; email: string; expires_at: string; resent: boolean }[]
+      }
+      platform_mark_invitation_sent: {
+        Args: { p_invitation: string }
+        Returns: undefined
+      }
+      platform_revoke_owner_invitation: {
+        Args: { p_org: string }
+        Returns: undefined
+      }
+      platform_owner_invitation: {
+        Args: { p_org: string }
+        Returns: {
+          id: string
+          email: string
+          status: string
+          expires_at: string
+          last_sent_at: string | null
+          accepted_at: string | null
+          revoked_at: string | null
+          created_at: string
+          account_pending: boolean
+        }[]
+      }
+      invitation_ttl: {
+        Args: never
+        Returns: unknown
+      }
+      invitation_lookup: {
+        Args: { p_token_hash: string; p_ip_hash?: string }
+        Returns: { result: string; email: string | null; organization_name: string | null; expires_at: string | null }[]
+      }
+      invitation_accept: {
+        Args: { p_token_hash: string; p_ip_hash?: string }
+        Returns: { result: string; invitation_id: string | null; organization_id: string | null; user_id: string | null; email: string | null }[]
+      }
+      invitation_release: {
+        Args: { p_invitation: string }
+        Returns: undefined
       }
       platform_organizations: {
         Args: never

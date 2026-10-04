@@ -23,7 +23,7 @@
  */
 import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { PERMISSIONS, ROLE_PERMISSIONS } from '../../src/platform/auth/permissions.ts';
 import { freshTotp } from './totp.mjs';
@@ -1243,5 +1243,292 @@ describe('P0.3: site SEO taslağı (tek kaynak, yayın/geri alma, SEO yetkisi, d
     assert.match(stale.error.message, /stale_draft/);
     assert.equal((await site(T.A.orgId)).draft.seo.title, 'Sıra 1');
     assert.ifError((await ow.rpc('site_discard_draft', { p_org: T.A.orgId })).error);
+  });
+});
+
+// -----------------------------------------------------------------------------
+// P0.4: Müşteri (ofis sahibi) daveti — token özeti, süre, tek kullanım, bağlar, yetki, izolasyon
+// -----------------------------------------------------------------------------
+describe('P0.4: sahip daveti ve hesap aktivasyonu', { skip }, () => {
+  let platformAdmin;
+  const orgs = [];
+  const sha = (t) => createHash('sha256').update(t).digest('hex');
+  const newToken = () => randomBytes(32).toString('base64url');
+  const ip = (label) => `rls-${RUN}-${label}-${randomBytes(4).toString('hex')}`;
+
+  /** Etkinleştirilmemiş (e-postası doğrulanmamış) davetli hesap + bilinen tokenlı ofis */
+  async function invitedOrg(label) {
+    const email = `rls-${RUN}-inv-${label}@example.test`;
+    const { data, error } = await service.auth.admin.createUser({ email, email_confirm: false });
+    assert.ifError(error);
+    createdUsers.push(data.user.id);
+    const token = newToken();
+    const res = await platformAdmin.client.rpc('platform_create_organization', {
+      p_slug: `rlstest-${RUN}-inv-${label}`,
+      p_name: `RLS Davet ${label}`,
+      p_prefix: `I${letters(3)}`,
+      p_plan: 'baslangic',
+      p_owner: data.user.id,
+      p_invite_token_hash: sha(token),
+    });
+    assert.ifError(res.error);
+    orgs.push(res.data);
+    return { orgId: res.data, userId: data.user.id, email, token };
+  }
+  const accept = (token, ipHash = ip('acc')) => service.rpc('invitation_accept', { p_token_hash: sha(token), p_ip_hash: ipHash });
+  const lookup = (token, ipHash = ip('look')) => service.rpc('invitation_lookup', { p_token_hash: sha(token), p_ip_hash: ipHash });
+  const row = async (orgId) => (await service.from('organization_invitations').select('*').eq('organization_id', orgId).order('created_at', { ascending: false })).data;
+
+  before(async () => {
+    if (missing) return;
+    platformAdmin = await makeUser('inv-platform');
+    assert.ifError((await service.from('profiles').update({ is_super_admin: true }).eq('id', platformAdmin.id)).error);
+  });
+  after(async () => {
+    if (missing) return;
+    for (const id of orgs) await service.from('organizations').delete().eq('id', id);
+  });
+
+  test('oluşturma: organizasyon + sahip üyeliği + bekleyen davet tek işlemde; DB yalnızca SHA-256 özeti tutar; süre 72 saat', async () => {
+    const x = await invitedOrg('x');
+    const [inv] = await row(x.orgId);
+    assert.equal(inv.status, 'pending');
+    assert.equal(inv.email, x.email);
+    assert.equal(inv.role, 'owner');
+    assert.equal(inv.user_id, x.userId);
+    assert.equal(inv.token_hash, sha(x.token));
+    assert.ok(!JSON.stringify(inv).includes(x.token), 'ham token veritabanında');
+    const hours = (new Date(inv.expires_at).getTime() - Date.now()) / 3_600_000;
+    assert.ok(hours > 71.9 && hours <= 72, `süre ${hours} saat`);
+    const member = await service.from('organization_members').select('role, status').eq('organization_id', x.orgId).eq('user_id', x.userId).single();
+    assert.deepEqual(member.data, { role: 'owner', status: 'active' });
+    // Ham token (64 hex olmayan) özet olarak kabul edilmez
+    const raw = await platformAdmin.client.rpc('platform_create_organization', { p_slug: `rlstest-${RUN}-inv-raw`, p_name: 'Ham', p_prefix: `H${letters(3)}`, p_plan: 'baslangic', p_owner: x.userId, p_invite_token_hash: x.token });
+    if (raw.data) orgs.push(raw.data);
+    assert.ok(raw.error, 'ham token kabul edildi');
+  });
+
+  test('tek kullanım: geçerli token bir kez kabul edilir; ikinci kullanım ve geçersiz token AYNI "invalid" yanıtı alır', async () => {
+    const y = await invitedOrg('y');
+    const peek = await lookup(y.token);
+    assert.ifError(peek.error);
+    assert.equal(peek.data[0].result, 'ok');
+    assert.equal(peek.data[0].email, y.email);
+    const first = await accept(y.token);
+    assert.ifError(first.error);
+    assert.equal(first.data[0].result, 'ok');
+    // Kiracı ve kullanıcı token → kayıt zincirinden gelir
+    assert.equal(first.data[0].organization_id, y.orgId);
+    assert.equal(first.data[0].user_id, y.userId);
+    const second = await accept(y.token);
+    assert.equal(second.data[0].result, 'invalid');
+    assert.equal(second.data[0].organization_id, null);
+    const bogus = await accept(newToken());
+    assert.deepEqual(Object.values(bogus.data[0]), Object.values(second.data[0]), 'geçersiz ve kullanılmış token farklı yanıt verdi');
+    assert.equal((await row(y.orgId))[0].status, 'accepted');
+  });
+
+  test('yarış: aynı token iki eşzamanlı istekte yalnızca BİR kez kabul edilir', async () => {
+    const z = await invitedOrg('z');
+    const results = await Promise.all([accept(z.token), accept(z.token), accept(z.token)]);
+    const ok = results.filter((r) => r.data?.[0]?.result === 'ok');
+    assert.equal(ok.length, 1, `kabul sayısı ${ok.length}`);
+  });
+
+  test('süre: süresi geçmiş davet kabul edilmez (durum "expired" görünür); tekrar gönderim yeni süre başlatır', async () => {
+    const e = await invitedOrg('e');
+    assert.ifError((await service.from('organization_invitations').update({ expires_at: new Date(Date.now() - 1000).toISOString() }).eq('organization_id', e.orgId)).error);
+    assert.equal((await lookup(e.token)).data[0].result, 'invalid');
+    assert.equal((await accept(e.token)).data[0].result, 'invalid');
+    const view = await platformAdmin.client.rpc('platform_owner_invitation', { p_org: e.orgId });
+    assert.ifError(view.error);
+    assert.equal(view.data[0].status, 'expired');
+    assert.ok(!('token_hash' in view.data[0]), 'platform görünümünde token özeti');
+    const next = newToken();
+    assert.ifError((await platformAdmin.client.rpc('platform_send_owner_invitation', { p_org: e.orgId, p_token_hash: sha(next) })).error);
+    assert.equal((await accept(e.token)).data[0].result, 'invalid');
+    assert.equal((await accept(next)).data[0].result, 'ok');
+  });
+
+  test('tekrar gönder: eski token hemen geçersiz, yeni token çalışır; aynı ofiste tek bekleyen davet', async () => {
+    const r = await invitedOrg('r');
+    const t2 = newToken();
+    const sent = await platformAdmin.client.rpc('platform_send_owner_invitation', { p_org: r.orgId, p_token_hash: sha(t2) });
+    assert.ifError(sent.error);
+    assert.equal(sent.data[0].email, r.email);
+    assert.equal((await lookup(r.token)).data[0].result, 'invalid');
+    assert.equal((await lookup(t2)).data[0].result, 'ok');
+    const rows = await row(r.orgId);
+    assert.equal(rows.filter((i) => i.status === 'pending').length, 1);
+    // Aynı ofis + e-posta için ikinci bekleyen davet açılamaz (kısmi tekil indeks)
+    const dup = await service.from('organization_invitations').insert({ organization_id: r.orgId, user_id: r.userId, email: r.email, token_hash: sha(newToken()), expires_at: new Date(Date.now() + 3_600_000).toISOString() });
+    assert.ok(dup.error, 'ikinci bekleyen davet açıldı');
+  });
+
+  test('iptal: bekleyen davet iptal edilir, token çalışmaz; kabul edilmiş davet iptal edilemez; hesap/ofis silinmez', async () => {
+    const v = await invitedOrg('v');
+    assert.ifError((await platformAdmin.client.rpc('platform_revoke_owner_invitation', { p_org: v.orgId })).error);
+    assert.equal((await accept(v.token)).data[0].result, 'invalid');
+    assert.equal((await row(v.orgId))[0].status, 'revoked');
+    const again = await platformAdmin.client.rpc('platform_revoke_owner_invitation', { p_org: v.orgId });
+    assert.equal(again.error?.code, 'P0002');
+    assert.ok((await service.from('organizations').select('id').eq('id', v.orgId).single()).data);
+    assert.ok((await service.auth.admin.getUserById(v.userId)).data.user);
+    // Yeni davet (iptalden sonra) yeni satır açar; eski token yine çalışmaz
+    const fresh = newToken();
+    assert.ifError((await platformAdmin.client.rpc('platform_send_owner_invitation', { p_org: v.orgId, p_token_hash: sha(fresh) })).error);
+    assert.equal((await accept(v.token)).data[0].result, 'invalid');
+    assert.equal((await accept(fresh)).data[0].result, 'ok');
+    const accepted = await platformAdmin.client.rpc('platform_revoke_owner_invitation', { p_org: v.orgId });
+    assert.equal(accepted.error?.code, 'P0002', 'kabul edilmiş davet iptal edildi');
+    assert.equal((await row(v.orgId))[0].status, 'accepted');
+  });
+
+  test('e-posta bağı ve hesap durumu: e-postası değişmiş, zaten etkinleştirilmiş veya engellenmiş hesapta davet çalışmaz (şifre sıfırlama yerine kullanılamaz)', async () => {
+    const m = await invitedOrg('mail');
+    assert.ifError((await service.auth.admin.updateUserById(m.userId, { email: `rls-${RUN}-baska@example.test`, email_confirm: false })).error);
+    assert.equal((await accept(m.token)).data[0].result, 'invalid');
+    const c = await invitedOrg('conf');
+    assert.ifError((await service.auth.admin.updateUserById(c.userId, { email_confirm: true })).error);
+    assert.equal((await accept(c.token)).data[0].result, 'invalid');
+    const send = await platformAdmin.client.rpc('platform_send_owner_invitation', { p_org: c.orgId, p_token_hash: sha(newToken()) });
+    assert.match(send.error?.message ?? '', /account_active/);
+    const b = await invitedOrg('ban');
+    assert.ifError((await service.auth.admin.updateUserById(b.userId, { ban_duration: '24h' })).error);
+    assert.equal((await accept(b.token)).data[0].result, 'invalid');
+    // Mevcut (etkin) hesap için davet oluşturulamaz; davetsiz eski yol aynen çalışır
+    const existing = await platformAdmin.client.rpc('platform_create_organization', { p_slug: `rlstest-${RUN}-inv-ex`, p_name: 'Mevcut', p_prefix: `E${letters(3)}`, p_plan: 'baslangic', p_owner: outsider.id, p_invite_token_hash: sha(newToken()) });
+    assert.match(existing.error?.message ?? '', /account_active/);
+    const legacy = await platformAdmin.client.rpc('platform_create_organization', { p_slug: `rlstest-${RUN}-inv-legacy`, p_name: 'Eski yol', p_prefix: `L${letters(3)}`, p_plan: 'baslangic', p_owner: outsider.id });
+    assert.ifError(legacy.error);
+    orgs.push(legacy.data);
+    assert.equal((await row(legacy.data)).length, 0);
+  });
+
+  test('rol bağı: davet yalnızca "owner" olabilir (tablo kısıtı); rol istemciden gelmez', async () => {
+    const o = await invitedOrg('role');
+    const bad = await service.from('organization_invitations').update({ role: 'admin' }).eq('organization_id', o.orgId);
+    assert.ok(bad.error, 'davet rolü owner dışına çevrildi');
+    const res = await accept(o.token);
+    assert.equal(res.data[0].result, 'ok');
+    const profile = await service.from('profiles').select('is_super_admin').eq('id', o.userId).single();
+    assert.equal(profile.data.is_super_admin, false);
+  });
+
+  test('kiracı ve rol bağı (veritabanı): davetin kullanıcısı o ofisin aktif ÜYESİ ve üyelik rolü davetin rolü değilse kabul edilmez', async () => {
+    const x = await invitedOrg('bindx');
+    const y = await invitedOrg('bindy');
+    const extra = async (label) => {
+      const { data, error } = await service.auth.admin.createUser({ email: `rls-${RUN}-bind-${label}@example.test`, email_confirm: false });
+      assert.ifError(error);
+      createdUsers.push(data.user.id);
+      return data.user;
+    };
+    const insertInvite = async (orgId, user) => {
+      const token = newToken();
+      const res = await service.from('organization_invitations').insert({ organization_id: orgId, user_id: user.id, email: user.email, token_hash: sha(token), expires_at: new Date(Date.now() + 3_600_000).toISOString() });
+      assert.ifError(res.error);
+      return token;
+    };
+    // Kiracı bağı: X üyesi, Y'nin davetiyle Y'ye bağlanamaz
+    const memberOfX = await extra('x');
+    assert.ifError((await service.from('organization_members').insert({ organization_id: x.orgId, user_id: memberOfX.id, role: 'owner', status: 'active' })).error);
+    const crossToken = await insertInvite(y.orgId, memberOfX);
+    assert.equal((await accept(crossToken)).data[0].result, 'invalid', 'başka ofisin üyesi davetle bağlandı');
+    // Rol bağı: üyeliği "agent" olan kişi owner davetiyle etkinleşemez
+    const agent = await extra('agent');
+    assert.ifError((await service.from('organization_members').insert({ organization_id: x.orgId, user_id: agent.id, role: 'agent', status: 'active' })).error);
+    const roleToken = await insertInvite(x.orgId, agent);
+    assert.equal((await accept(roleToken)).data[0].result, 'invalid', 'rolü uyuşmayan üyelik kabul edildi');
+    // Devre dışı üyelik: davet hesabı yeniden etkinleştirmez
+    const disabled = await extra('disabled');
+    assert.ifError((await service.from('organization_members').insert({ organization_id: y.orgId, user_id: disabled.id, role: 'owner', status: 'disabled' })).error);
+    const disabledToken = await insertInvite(y.orgId, disabled);
+    assert.equal((await accept(disabledToken)).data[0].result, 'invalid', 'devre dışı üyelik davetle etkinleşti');
+    const m = await service.from('organization_members').select('status').eq('organization_id', y.orgId).eq('user_id', disabled.id).single();
+    assert.equal(m.data.status, 'disabled');
+  });
+
+  test('yetki: yalnızca süper admin davet açar / gönderir / iptal eder / görür; token fonksiyonları istemciye kapalı', async () => {
+    const k = await invitedOrg('auth');
+    const owner = T.A.users.owner.client;
+    for (const [fn, args] of [
+      ['platform_send_owner_invitation', { p_org: k.orgId, p_token_hash: sha(newToken()) }],
+      ['platform_revoke_owner_invitation', { p_org: k.orgId }],
+      ['platform_owner_invitation', { p_org: k.orgId }],
+      ['platform_mark_invitation_sent', { p_invitation: (await row(k.orgId))[0].id }],
+    ]) {
+      const res = await owner.rpc(fn, args);
+      assert.ok(res.error, `${fn}: ofis sahibi çağırabildi`);
+    }
+    const create = await owner.rpc('platform_create_organization', { p_slug: `rlstest-${RUN}-inv-no`, p_name: 'Yetkisiz', p_prefix: `N${letters(3)}`, p_plan: 'baslangic', p_owner: owner === null ? null : T.A.users.owner.id, p_invite_token_hash: sha(newToken()) });
+    assert.ok(create.error, 'ofis sahibi organizasyon + davet açtı');
+    for (const client of [anon, owner, platformAdmin.client]) {
+      for (const fn of ['invitation_lookup', 'invitation_accept']) {
+        const res = await client.rpc(fn, { p_token_hash: sha(k.token), p_ip_hash: 'x' });
+        assert.ok(res.error, `${fn}: istemci çağırabildi`);
+      }
+      assert.ok((await client.rpc('invitation_release', { p_invitation: (await row(k.orgId))[0].id })).error);
+    }
+    assert.equal((await row(k.orgId))[0].status, 'pending');
+  });
+
+  test('tablo: istemci doğrudan yazamaz; token özeti hiçbir istemciye okunmaz; kiracı yalnızca kendi davetini görür', async () => {
+    const t = await invitedOrg('tbl');
+    const [inv] = await row(t.orgId);
+    for (const client of [anon, T.A.users.owner.client, platformAdmin.client]) {
+      assert.ok(denied(await client.from('organization_invitations').insert({ organization_id: t.orgId, user_id: t.userId, email: t.email, token_hash: sha(newToken()), expires_at: new Date(Date.now() + 1e7).toISOString() }).select('id')));
+      assert.ok(denied(await client.from('organization_invitations').update({ status: 'accepted', accepted_at: new Date().toISOString() }).eq('id', inv.id).select('id')));
+      assert.ok(denied(await client.from('organization_invitations').update({ expires_at: new Date(Date.now() + 1e9).toISOString() }).eq('id', inv.id).select('id')));
+      assert.ok(denied(await client.from('organization_invitations').delete().eq('id', inv.id).select('id')));
+      assert.ok((await client.from('organization_invitations').select('token_hash')).error, 'token_hash okunabildi');
+    }
+    assert.equal((await row(t.orgId))[0].status, 'pending');
+    // Süper admin görür (özet hariç); A ve B sahipleri bu ofisin davetini göremez
+    const pa = await platformAdmin.client.from('organization_invitations').select('id, status').eq('id', inv.id);
+    assert.equal(pa.data?.length, 1);
+    for (const key of ['A', 'B']) assert.ok(denied(await T[key].users.owner.client.from('organization_invitations').select('id').eq('id', inv.id)));
+    assert.ok(denied(await anon.from('organization_invitations').select('id')));
+    // Kabulden sonra ofisin kendi sahibi (users.manage) kendi davetini görür, başkası görmez
+    assert.equal((await accept(t.token)).data[0].result, 'ok');
+    const self = createClient(url, anonKey, opts);
+    const pw = `Rls-${randomBytes(6).toString('hex')}-9a`;
+    assert.ifError((await service.auth.admin.updateUserById(t.userId, { password: pw, email_confirm: true })).error);
+    assert.ifError((await self.auth.signInWithPassword({ email: t.email, password: pw })).error);
+    const mine = await self.from('organization_invitations').select('organization_id');
+    assert.ifError(mine.error);
+    assert.ok(mine.data.length >= 1 && mine.data.every((r) => r.organization_id === t.orgId), 'başka ofisin daveti görüldü');
+  });
+
+  test('deneme sınırı: aynı IP özetiyle 10 başarısız denemeden sonra geçerli token da "rate_limited"; gönderim saatte 5', async () => {
+    const l = await invitedOrg('limit');
+    const ipHash = ip('brute');
+    for (let i = 0; i < 10; i++) assert.equal((await lookup(newToken(), ipHash)).data[0].result, 'invalid');
+    assert.equal((await lookup(l.token, ipHash)).data[0].result, 'rate_limited');
+    assert.equal((await accept(l.token, ipHash)).data[0].result, 'rate_limited');
+    assert.equal((await row(l.orgId))[0].status, 'pending');
+    // Başarısız denemeler denetim kaydında (ham token yok)
+    const logs = await service.from('audit_logs').select('metadata').eq('action', 'invitation.activation_failed').eq('ip_hash', ipHash);
+    assert.equal(logs.data.length, 10);
+    assert.ok(!JSON.stringify(logs.data).includes(l.token));
+    // Gönderim sınırı
+    let limited = null;
+    for (let i = 0; i < 6; i++) {
+      const res = await platformAdmin.client.rpc('platform_send_owner_invitation', { p_org: l.orgId, p_token_hash: sha(newToken()) });
+      if (res.error) {
+        limited = { i, message: res.error.message };
+        break;
+      }
+    }
+    assert.deepEqual(limited, { i: 5, message: 'rate_limited' });
+  });
+
+  test('mevcut kullanıcılar etkilenmez: mevcut hesaplar şifreleriyle girer, üyelikleri aynı', async () => {
+    for (const key of ['A', 'B']) {
+      const client = createClient(url, anonKey, opts);
+      assert.ifError((await client.auth.signInWithPassword({ email: T[key].users.owner.email, password: PASSWORD })).error);
+      const m = await service.from('organization_members').select('role, status').eq('organization_id', T[key].orgId).eq('user_id', T[key].users.owner.id).single();
+      assert.deepEqual(m.data, { role: 'owner', status: 'active' });
+    }
   });
 });

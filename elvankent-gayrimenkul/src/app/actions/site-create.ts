@@ -6,7 +6,7 @@ import { isUuid } from '@/lib/utils';
 import { getDomainProvider } from '@/modules/domains';
 import { hostnameSchema, orgSchema, type CreateOrgInput } from '@/modules/platform/org-schema';
 import { disabledFamilies, isMissingDesignAccessSchema } from '@/modules/platform/design-access';
-import { provisionOrganization } from '@/modules/platform/provisioning';
+import { provisionOrganization, type OwnerAccountState } from '@/modules/platform/provisioning';
 import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/platform/actions';
 import { requireSuperAdmin } from '@/platform/auth/session';
 import type { BrandDraft } from '@/site-config/schema';
@@ -17,7 +17,7 @@ import type { Json } from '@/types/supabase';
 /**
  * YENİ SİTE OLUŞTUR (KARAY süper admin). Yeni müşteri VERİYLE açılır, kodla değil:
  *
- *   1. createSite     → organizasyon + sahip hesabı (provisionOrganization) → site "taslak" durumuna
+ *   1. createSite     → organizasyon + sahip hesabı ve bekleyen davet (provisionOrganization) → site "taslak" durumuna
  *                       alınır (ziyaretçiye kapalı) → manifestin derlenmiş bölümleri (initialSiteSections:
  *                       önizlemeyle AYNI kaynak), marka/iletişim, site tipi özellikleri, özel alan adı
  *   2. (istemci)      → logo varsa mevcut marka yükleme API'siyle taslağa yüklenir
@@ -58,7 +58,7 @@ function brandDraft(info: SiteInfo): BrandDraft {
   return Object.fromEntries(Object.entries(draft).filter(([, v]) => typeof v === 'string' && v)) as BrandDraft;
 }
 
-export async function createSite(raw: CreateSiteInput): Promise<ActionResult<{ id: string; slug: string; temporaryPassword: string | null; ownerEmail: string; warnings: string[] }>> {
+export async function createSite(raw: CreateSiteInput): Promise<ActionResult<{ id: string; slug: string; ownerEmail: string; ownerAccount: OwnerAccountState; warnings: string[] }>> {
   return runAction(async () => {
     const session = await requireSuperAdmin();
     // Her şey organizasyon açılmadan ÖNCE doğrulanır (yarım kayıt bırakmamak için)
@@ -107,7 +107,7 @@ export async function createSite(raw: CreateSiteInput): Promise<ActionResult<{ i
     }
     updateTag(cacheTags.tenants);
     revalidatePath('/platform', 'layout');
-    return { id: orgId, slug: account.slug, temporaryPassword: created.temporaryPassword, ownerEmail: created.ownerEmail, warnings };
+    return { id: orgId, slug: account.slug, ownerEmail: created.ownerEmail, ownerAccount: created.ownerAccount, warnings };
   });
 }
 

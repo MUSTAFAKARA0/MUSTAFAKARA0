@@ -9,7 +9,8 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/platform/actions';
 import { requireSuperAdmin } from '@/platform/auth/session';
 import { hostnameSchema, type CreateOrgInput } from '@/modules/platform/org-schema';
-import { provisionOrganization } from '@/modules/platform/provisioning';
+import { provisionOrganization, type OwnerAccountState } from '@/modules/platform/provisioning';
+import { revokeOwnerInvitation, sendOwnerInvitation } from '@/modules/platform/invitations/service';
 
 /**
  * Süper admin işlemleri. Yetki hem burada (requireSuperAdmin) hem de her
@@ -22,14 +23,39 @@ function refreshTenants(orgId?: string) {
   revalidatePath('/platform', 'layout');
 }
 
-/** Yeni organizasyon + sahip hesabı (yoksa geçici şifreyle oluşturulur) */
-export async function createOrganization(raw: CreateOrgInput): Promise<ActionResult<{ id: string; temporaryPassword: string | null; ownerEmail: string }>> {
+/** Yeni organizasyon + sahip hesabı (yoksa etkinleştirilmemiş açılır ve bekleyen davet oluşturulur) */
+export async function createOrganization(raw: CreateOrgInput): Promise<ActionResult<{ id: string; ownerEmail: string; ownerAccount: OwnerAccountState }>> {
   return runAction(async () => {
     const session = await requireSuperAdmin();
     const created = await provisionOrganization(session, raw);
     refreshTenants();
     return created;
   });
+}
+
+/**
+ * Sahip davetini gönderir / tekrar gönderir / iptal edilmişse yeniden açar (P0.4). İstemciden
+ * yalnızca organizasyon kimliği gelir; e-posta, kullanıcı ve rol veritabanında belirlenir.
+ */
+export async function sendOwnerInvitationAction(orgId: string): Promise<ActionResult<{ email: string; expiresAt: string }>> {
+  return runAction(async () => {
+    const session = await requireSuperAdmin();
+    if (!isUuid(orgId)) throw new ActionError('Organizasyon bulunamadı.');
+    const sent = await sendOwnerInvitation(session, orgId);
+    revalidatePath(`/platform/organizasyonlar/${orgId}`);
+    return sent;
+  }, 'Davet e-postası gönderildi. Önceki davet bağlantıları artık geçersiz.');
+}
+
+/** Bekleyen sahip davetini iptal eder (bağlantı geçersiz olur; hesap ve organizasyon silinmez) */
+export async function revokeOwnerInvitationAction(orgId: string): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const session = await requireSuperAdmin();
+    if (!isUuid(orgId)) throw new ActionError('Organizasyon bulunamadı.');
+    await revokeOwnerInvitation(session, orgId);
+    revalidatePath(`/platform/organizasyonlar/${orgId}`);
+    return null;
+  }, 'Davet iptal edildi. Bağlantı artık çalışmaz.');
 }
 
 export async function setOrganizationStatus(orgId: string, status: 'active' | 'suspended' | 'cancelled'): Promise<ActionResult<null>> {

@@ -319,6 +319,40 @@ Site SEO'su ayrı bir anlık yayın yolu değildir; taslak → önizleme → yay
 - **JSON-LD:** ana sayfa önizleme destekli kiracıyı ve `view.config.seo`'yu kullanır (taslak/yayın
   ayrımı sayfalarla aynı).
 
+## P0.4 — Müşteri daveti ve güvenli hesap aktivasyonu
+
+Yeni müşteri (ofis sahibi) hesabı artık **geçici şifreyle teslim edilmez**:
+
+```
+KARAY → Yeni organizasyon / Yeni site → organizasyon + sahip üyeliği + BEKLEYEN davet (tek işlem)
+      → "Davet gönder" → e-posta (https://<kiracı>/admin/davet#t=<token>)
+      → sahip şifresini belirler → Supabase Auth oturumu → /admin (davetin ofisi, owner)
+```
+
+- **Hesap:** Supabase Auth'ta şifre verilmeden ve e-postası doğrulanmamış açılır (giriş yapılamaz).
+  Aktivasyon şifreyi `auth.admin.updateUserById` ile yazar ve e-postayı doğrular; oturum normal
+  `signInWithPassword` ile açılır. Kendi oturum / token sistemimiz yoktur.
+- **Token:** 32 bayt rastgele (base64url); veritabanında yalnızca SHA-256 özeti
+  (`organization_invitations.token_hash`). Bağlantıda URL parçasında (`#t=`) taşınır → sunucu /
+  Vercel istek loglarına ve Referer'a girmez; sayfa tokenı okuyup adres çubuğundan siler.
+- **Kurallar veritabanında** (`20261008000001_owner_invitations.sql`): süre tek merkez
+  `invitation_ttl()` (72 saat); tek kullanım = koşullu tek UPDATE (yarış güvenli); e-posta,
+  kiracı, rol (yalnızca owner) ve üyelik bağı; iptal; tekrar gönderimde özet ve süre yenilenir
+  (eski bağlantı geçersiz). Geçersiz / kullanılmış / iptal / eskimiş tokenların hepsi aynı yanıtı alır.
+- **Durumlar:** `pending → accepted | revoked`; süresi geçmiş `pending` = **expired** (görünüm).
+  Kabul edilmiş ve iptal edilmiş davet tekrar kullanılamaz.
+- **Yetki:** platform işlemleri `requireSuperAdmin` + `assert_super_admin`; token fonksiyonları
+  (`invitation_lookup/accept/release`) yalnızca `service_role`. Tablo: RLS, yalnızca SELECT
+  (süper admin / ofiste `users.manage`), `token_hash` sütunu hiçbir istemciye okunmaz.
+- **Kötüye kullanım:** başarısız aktivasyon IP özeti başına 10 dk'da 10; gönderim ofis başına saatte 5
+  (mevcut `audit_logs` üzerinden). Olaylar denetim kaydında: `invitation.created/sent/resent/revoked/accepted`.
+- **Şifre sıfırlamadan ayrı:** davet yalnızca hiç etkinleştirilmemiş hesapta çalışır; etkin hesabın
+  şifresini değiştirmek için kullanılamaz. Mevcut hesaplar, girişler ve şifre sıfırlama değişmedi.
+- **E-posta:** mevcut `sendEmail` soyutlaması. Gönderilemezse davet bekler, yönetici tekrar gönderir.
+  Testler `RESEND_API_BASE` ile sahte sunucuya gönderir (gerçek e-posta yok).
+- **Kapsam dışı (bilinçli):** ofis panelindeki ekip üyesi ekleme (`/admin/kullanicilar`) hâlâ geçici
+  şifre kullanır; müşteri onboarding'i değildir.
+
 ## Theme Engine (`src/theme-engine`)
 
 | Dosya | İçerik |

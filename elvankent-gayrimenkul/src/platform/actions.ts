@@ -74,6 +74,11 @@ const DB_MESSAGES: Record<string, string> = {
   forbidden: 'Bu işlem için yetkiniz yok.',
   family_not_allowed: 'Bu tasarım ailesi siteniz için açık değil.',
   stale_draft: 'Bu taslak siz açtıktan sonra değiştirildi. Önce sayfayı yenileyip güncel taslağı inceleyin.',
+  invalid_organization: 'Organizasyon bulunamadı veya aktif değil.',
+  account_active: 'Sahip hesabı zaten etkin (şifresi belirlenmiş); davete gerek yok. Sahip mevcut şifresiyle veya "Şifremi unuttum" ile giriş yapabilir.',
+  invitation_accepted: 'Davet zaten kabul edildi; sahip hesabı etkin.',
+  owner_not_found: 'Bu organizasyonun aktif bir sahibi yok.',
+  invalid_invitation: 'Davet bilgileri geçersiz.',
   brand_requires_publish: 'Marka ve site bilgileri doğrudan değiştirilemez; taslağa kaydedip yayınlayın.',
 };
 

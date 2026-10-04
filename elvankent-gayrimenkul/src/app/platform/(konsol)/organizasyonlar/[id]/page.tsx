@@ -5,6 +5,8 @@ import { ActionButton, AutoSaveSelect } from '@/components/panel/action-controls
 import { AuditList } from '@/components/panel/audit-list';
 import { AdminPageHeader, EmptyPanel, Panel } from '@/components/panel/ui';
 import { DomainForm, PlanForm } from '@/components/platform/org-controls';
+import { OwnerInvitationCard } from '@/components/platform/owner-invitation';
+import { getOwnerInvitation } from '@/modules/platform/invitations/service';
 import { Badge } from '@/components/ui/badge';
 import { vercelDnsRecords } from '@/modules/domains/provider';
 import { Button } from '@/components/ui/button';
@@ -33,16 +35,18 @@ export default async function PlatformOrgPage({ params }: PageProps<'/platform/o
 
   // Alan adları: süper admin doğrulandıktan sonra (askıdaki organizasyonlar dâhil) sunucu istemcisiyle okunur
   const service = createServiceClient();
-  const [domainsRes, usersRes, logs, tenant] = await Promise.all([
+  const [domainsRes, usersRes, logs, tenant, invitation] = await Promise.all([
     service ? service.from('organization_domains').select('id, hostname, is_primary, created_at').eq('organization_id', id).order('created_at') : Promise.resolve({ data: [] }),
     session.supabase.rpc('platform_users', { p_limit: 500 }),
     listAuditLogs(session.supabase, { orgId: id, page: 1 }),
     org.status === 'active' ? getTenant(org.slug) : Promise.resolve(null),
+    getOwnerInvitation(session, id),
   ]);
   const domains = domainsRes.data ?? [];
   const members = (usersRes.data ?? [])
     .map((u) => ({ ...u, membership: (u.memberships as Membership[]).find((m) => m.slug === org.slug) }))
     .filter((u) => u.membership);
+  const owner = members.find((u) => u.membership!.role === 'owner' && u.membership!.status === 'active');
   const plan = plans.find((p) => p.id === org.plan_id);
   const status = ORG_STATUS_LABELS[org.status];
   const sub = org.subscription_status ? SUBSCRIPTION_LABELS[org.subscription_status] : null;
@@ -146,6 +150,17 @@ export default async function PlatformOrgPage({ params }: PageProps<'/platform/o
             <p className="mt-2 text-[12.5px] text-muted-foreground">
               {org.is_default ? 'Varsayılan kiracı askıya alınamaz.' : 'Askıdaki organizasyonun sitesi yayından kalkar ve üyeleri panele giremez; veriler silinmez.'}
             </p>
+          </Panel>
+          <Panel title="Sahip hesabı" description="Şifre kimseye gösterilmez; sahip tek kullanımlık davet bağlantısıyla kendisi belirler.">
+            <OwnerInvitationCard
+              orgId={org.id}
+              email={invitation?.email ?? owner?.email ?? null}
+              invitation={
+                invitation
+                  ? { status: invitation.status, expiresAt: invitation.expiresAt, lastSentAt: invitation.lastSentAt, acceptedAt: invitation.acceptedAt, accountPending: invitation.accountPending }
+                  : null
+              }
+            />
           </Panel>
           <Panel title="Kullanım">
             <dl className="space-y-4 text-[13.5px]">

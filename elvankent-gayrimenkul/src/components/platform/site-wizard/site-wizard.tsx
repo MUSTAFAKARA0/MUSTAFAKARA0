@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from '@/components/common/intent-link';
 import { toast } from 'sonner';
-import { ArrowLeft, ArrowRight, Check, Copy, ExternalLink, ImagePlus, Laptop, LayoutTemplate, Loader2, Monitor, Smartphone, Sparkles, Tablet, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ExternalLink, ImagePlus, Laptop, LayoutTemplate, Loader2, Monitor, Smartphone, Sparkles, Tablet, X } from 'lucide-react';
 import { createSite, publishNewSite } from '@/app/actions/site-create';
+import { OwnerInvitationCard } from '@/components/platform/owner-invitation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox, Field, Input, Select, Textarea } from '@/components/ui/form-controls';
@@ -102,7 +103,7 @@ export function SiteWizard({ catalog }: { catalog: WizardCatalog }) {
   const [activate, setActivate] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [creating, setCreating] = useState<null | 'hesap' | 'logo' | 'yayin'>(null);
-  const [done, setDone] = useState<{ id: string; slug: string; password: string | null; email: string; warnings: string[]; published: boolean } | null>(null);
+  const [done, setDone] = useState<{ id: string; slug: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account'; warnings: string[]; published: boolean } | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
   const family = catalog.families.find((f) => f.id === familyId) ?? null;
@@ -203,7 +204,7 @@ export function SiteWizard({ catalog }: { catalog: WizardCatalog }) {
     const pub = await publishNewSite(res.data.id, activate);
     if (!pub.ok) warnings.push(`Site oluşturuldu ancak yayınlanamadı: ${pub.error}`);
     setCreating(null);
-    setDone({ id: res.data.id, slug: res.data.slug, password: res.data.temporaryPassword, email: res.data.ownerEmail, warnings, published: pub.ok });
+    setDone({ id: res.data.id, slug: res.data.slug, email: res.data.ownerEmail, ownerAccount: res.data.ownerAccount, warnings, published: pub.ok });
     topRef.current?.scrollIntoView({ block: 'start' });
   }
 
@@ -470,7 +471,7 @@ function InfoStep(props: {
         <Field label="Sahip adı soyadı" htmlFor="w-owner-name" required error={errors.owner_name}>
           <Input id="w-owner-name" value={account.owner_name} onChange={(e) => setAccount('owner_name', e.target.value)} maxLength={100} autoComplete="off" />
         </Field>
-        <Field label="Sahip e-postası" htmlFor="w-owner-email" required error={errors.owner_email} hint="Hesap yoksa geçici şifreyle oluşturulur.">
+        <Field label="Sahip e-postası" htmlFor="w-owner-email" required error={errors.owner_email} hint="Hesap yoksa oluşturulur; sahibe aktivasyon daveti gönderilir.">
           <Input id="w-owner-email" type="email" value={account.owner_email} onChange={(e) => setAccount('owner_email', e.target.value)} maxLength={160} autoComplete="off" />
         </Field>
         <Field label="Plan" htmlFor="w-plan" error={errors.plan} hint="14 günlük deneme süresiyle başlar.">
@@ -863,7 +864,7 @@ function ConfirmStep(props: {
   );
 }
 
-function Result({ done, activate, rootDomain, customDomain }: { done: { id: string; slug: string; password: string | null; email: string; warnings: string[]; published: boolean }; activate: boolean; rootDomain: string | null; customDomain: string | null }) {
+function Result({ done, activate, rootDomain, customDomain }: { done: { id: string; slug: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account'; warnings: string[]; published: boolean }; activate: boolean; rootDomain: string | null; customDomain: string | null }) {
   const url = customDomain ? `https://${customDomain.replace(/^https?:\/\//, '').replace(/\/.*$/, '')}` : rootDomain ? `https://${done.slug}.${rootDomain}` : null;
   return (
     <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-surface p-6 shadow-[0_12px_32px_-20px_rgb(0_0_0/0.18)] sm:p-8" role="status">
@@ -881,19 +882,13 @@ function Result({ done, activate, rootDomain, customDomain }: { done: { id: stri
           ))}
         </ul>
       )}
-      {done.password ? (
+      {done.ownerAccount === 'invitation_pending' ? (
         <div className="mt-5 rounded-xl border border-border p-4">
-          <p className="text-[13px] text-muted-foreground">Sahip hesabı oluşturuldu. Geçici şifre yalnızca şimdi gösterilir; güvenli bir kanaldan iletin. İlk girişte değiştirmesi istenir.</p>
-          <p className="mt-3 text-[13px] font-semibold">{done.email}</p>
-          <div className="mt-1 flex items-center gap-2">
-            <code className="numeric flex-1 rounded-lg bg-surface-muted px-3 py-2 font-mono text-[16px] select-all">{done.password}</code>
-            <Button size="sm" variant="outline" onClick={() => void navigator.clipboard.writeText(done.password!).then(() => toast.success('Kopyalandı.'))}>
-              <Copy /> Kopyala
-            </Button>
-          </div>
+          <OwnerInvitationCard orgId={done.id} email={done.email} invitation={{ status: 'pending', expiresAt: null, lastSentAt: null, acceptedAt: null, accountPending: true }} />
+          <p className="mt-3 text-[12.5px] text-muted-foreground">Sahip şifresini davet e-postasındaki tek kullanımlık bağlantıyla kendisi belirler; şifre kimseye gösterilmez.</p>
         </div>
       ) : (
-        <p className="mt-5 text-[13.5px] text-muted-foreground">{done.email} adresli mevcut hesap sahip olarak eklendi.</p>
+        <p className="mt-5 text-[13.5px] text-muted-foreground">{done.email} adresli mevcut hesap sahip olarak eklendi; mevcut şifresiyle giriş yapar.</p>
       )}
       <div className="mt-6 flex flex-wrap gap-2">
         <Button asChild>

@@ -139,6 +139,18 @@ export function describeAudit(row: AuditRow): { text: string; detail: string | n
       return { text: `${target} kullanıcısının durumunu değiştirdi`, detail: `${MEMBER_STATUS[String(m.from)] ?? m.from} → ${MEMBER_STATUS[String(m.to)] ?? m.to}`, tone: 'warning' };
     case 'user.created':
       return { text: `${target} için yeni kullanıcı hesabı oluşturdu`, detail: m.role ? `Rol: ${role(m.role)}` : null, tone: 'neutral' };
+    case 'invitation.created':
+      return { text: `${target} için sahip daveti oluşturdu`, detail: null, tone: 'neutral' };
+    case 'invitation.sent':
+      return { text: `${target} adresine hesap aktivasyon daveti gönderdi`, detail: null, tone: 'neutral' };
+    case 'invitation.resent':
+      return { text: `${target} adresine daveti tekrar gönderdi`, detail: 'Önceki davet bağlantısı geçersiz oldu', tone: 'neutral' };
+    case 'invitation.revoked':
+      return { text: `${target} için bekleyen daveti iptal etti`, detail: null, tone: 'warning' };
+    case 'invitation.accepted':
+      return { text: 'Daveti kabul edip hesabını etkinleştirdi', detail: null, tone: 'success' };
+    case 'invitation.activation_failed':
+      return { text: 'Geçersiz davet bağlantısı denemesi', detail: null, tone: 'danger' };
     case 'user.mfa_enabled':
       return { text: 'İki adımlı doğrulamayı açtı', detail: null, tone: 'success' };
     case 'user.mfa_disabled':
