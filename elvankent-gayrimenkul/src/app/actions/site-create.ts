@@ -5,6 +5,7 @@ import { cacheTags } from '@/lib/cache-tags';
 import { isUuid } from '@/lib/utils';
 import { getDomainProvider } from '@/modules/domains';
 import { hostnameSchema, orgSchema, type CreateOrgInput } from '@/modules/platform/org-schema';
+import { disabledFamilies, isMissingDesignAccessSchema } from '@/modules/platform/design-access';
 import { provisionOrganization } from '@/modules/platform/provisioning';
 import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/platform/actions';
 import { requireSuperAdmin } from '@/platform/auth/session';
@@ -68,6 +69,8 @@ export async function createSite(raw: CreateSiteInput): Promise<ActionResult<{ i
     } catch (e) {
       throw new ActionError(e instanceof ManifestError ? e.message : 'Geçersiz site manifesti.');
     }
+    // KARAY'ın global olarak kapattığı aileyle yeni site açılamaz
+    if ((await disabledFamilies(session.supabase)).disabled.has((raw.manifest as { designFamily: string }).designFamily)) throw new ActionError('Bu tasarım ailesi katalogda kapalı.');
     const account = orgSchema.parse(raw?.account);
     const host = raw?.customDomain?.trim() ? hostnameSchema.parse(raw.customDomain) : null;
     const { sections, features } = initialSiteSections(raw.manifest, info.data);
@@ -88,6 +91,11 @@ export async function createSite(raw: CreateSiteInput): Promise<ActionResult<{ i
     } catch {
       throw new ActionError(`Hesap oluşturuldu (${account.slug}) ancak site yapılandırması tamamlanamadı. Site taslak durumunda ve ziyaretçiye kapalı; Web Siteleri sayfasından devam edebilirsiniz.`);
     }
+    // Seçilen aile ofise izinli olarak kaydedilir (ofis panelinde tasarımını görebilsin);
+    // yetki tabloları yoksa (migration uygulanmamış) yalnızca uyarı
+    const family = (raw.manifest as { designFamily: string }).designFamily;
+    const grant = await db.rpc('platform_set_org_design_families', { p_org: orgId, p_families: [family] });
+    if (grant.error && !isMissingDesignAccessSchema(grant.error)) warnings.push('Tasarım ailesi izni kaydedilemedi; Tema sekmesinden ekleyebilirsiniz.');
     if (host) {
       const { error } = await db.rpc('platform_add_domain', { p_org: orgId, p_hostname: host, p_primary: true });
       if (error?.code === '23505') warnings.push(`${host} başka bir organizasyona bağlı; alan adı eklenmedi.`);

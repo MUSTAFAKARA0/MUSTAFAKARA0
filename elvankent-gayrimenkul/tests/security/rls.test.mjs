@@ -831,3 +831,91 @@ describe('KARAY şirket bilgileri ve KARAY talepleri (platform_settings, platfor
     assert.ok(audit.data.every((a) => a.organization_id === null), 'KARAY işlemi bir kiracıya yazıldı');
   });
 });
+
+describe('PERMISSION: tasarım ailesi yetkileri (design_family_settings, organization_design_families, site_apply_design)', { skip }, () => {
+  let platformAdmin;
+  const sections = (family, theme = 'rezidans') => ({
+    theme,
+    colors: { mode: 'preset', preset: 'premium-gold', scheme: 'light' },
+    typography: {},
+    style: { hero: 'cinematic', origin: { siteType: 'real-estate-office', family, homepage: 'family' } },
+    home: { sections: [{ id: 'hero', type: 'hero', enabled: true }, { id: 'contact', type: 'contact', enabled: true }] },
+  });
+  before(async () => {
+    if (missing) return;
+    platformAdmin = await makeUser('designadmin');
+    assert.ifError((await service.from('profiles').update({ is_super_admin: true }).eq('id', platformAdmin.id)).error);
+  });
+  after(async () => {
+    if (missing) return;
+    await service.from('design_family_settings').delete().in('family_id', ['sinematik-vitrin', 'editoryal-luks']);
+  });
+
+  test('anonim ziyaretçi ve kiracı kullanıcıları izin kayıtlarını yazamaz; platform işlemlerini çağıramaz', async () => {
+    assert.ok(denied(await anon.from('design_family_settings').select('family_id')));
+    assert.ok(denied(await anon.from('organization_design_families').select('family_id')));
+    assert.ok((await anon.rpc('org_design_family_access', { p_org: T.A.orgId })).error || denied(await anon.rpc('org_design_family_access', { p_org: T.A.orgId })));
+    for (const role of ROLES) {
+      const c = T.A.users[role].client;
+      assert.ok(denied(await c.from('organization_design_families').insert({ organization_id: T.A.orgId, family_id: 'sinematik-vitrin' }).select('family_id')), `${role}: doğrudan izin ekledi`);
+      assert.ok(denied(await c.from('design_family_settings').insert({ family_id: 'sinematik-vitrin', enabled: false }).select('family_id')), `${role}: global ayarı yazdı`);
+      assert.ok((await c.rpc('platform_set_org_design_families', { p_org: T.A.orgId, p_families: ['sinematik-vitrin'] })).error, `${role}: kendine aile izni verdi`);
+      assert.ok((await c.rpc('platform_set_design_family', { p_family: 'sinematik-vitrin', p_enabled: false })).error, `${role}: aileyi global kapattı`);
+    }
+  });
+
+  test('KARAY admini tüm aileleri yönetir: kiracıya izin verir, global kapatır; denetime yazılır', async () => {
+    const pa = platformAdmin.client;
+    assert.ifError((await pa.rpc('platform_set_org_design_families', { p_org: T.A.orgId, p_families: ['sinematik-vitrin', 'editoryal-luks'] })).error);
+    assert.ifError((await pa.rpc('platform_set_org_design_families', { p_org: T.B.orgId, p_families: ['kurumsal-portfoy'] })).error);
+    assert.ok((await pa.rpc('platform_set_org_design_families', { p_org: T.A.orgId, p_families: ['<script>'] })).error, 'geçersiz kimlik kabul edildi');
+    const a = await pa.rpc('org_design_family_access', { p_org: T.A.orgId });
+    assert.deepEqual(a.data.map((r) => r.family_id), ['editoryal-luks', 'sinematik-vitrin']);
+    const logs = await service.from('audit_logs').select('action').eq('organization_id', T.A.orgId).eq('action', 'site.design_families_changed');
+    assert.ok(logs.data.length >= 1);
+  });
+
+  test('kiracı yalnızca KENDİ izinli ailelerini görür; global kapatılan aile listeden düşer', async () => {
+    const ow = T.A.users.owner.client;
+    assert.deepEqual((await ow.rpc('org_design_family_access', { p_org: T.A.orgId })).data.map((r) => r.family_id), ['editoryal-luks', 'sinematik-vitrin']);
+    assert.deepEqual((await ow.rpc('org_design_family_access', { p_org: T.B.orgId })).data ?? [], [], 'başka kiracının izinleri göründü');
+    const rows = await ow.from('organization_design_families').select('organization_id');
+    assert.ok(rows.data.every((r) => r.organization_id === T.A.orgId), 'başka kiracının izin satırı göründü');
+    assert.ifError((await platformAdmin.client.rpc('platform_set_design_family', { p_family: 'editoryal-luks', p_enabled: false })).error);
+    assert.deepEqual((await ow.rpc('org_design_family_access', { p_org: T.A.orgId })).data.map((r) => r.family_id), ['sinematik-vitrin']);
+  });
+
+  test('ofis yöneticisi izinli aileyle kendi sitesini değiştirir; izinsiz/kapalı aile, yetkisiz rol, başka kiracı ve sahte içerik reddedilir', async () => {
+    // Bekleyen KARAY taslağı (SEO) ofis işlemiyle yayınlanmamalı
+    assert.ifError((await platformAdmin.client.rpc('site_save_draft', { p_org: T.A.orgId, p_section: 'seo', p_value: { title: 'Bekleyen KARAY taslağı', robots: 'index', schemaType: 'RealEstateAgent' } })).error);
+    const before = (await service.from('site_configs').select('published_version, published').eq('organization_id', T.A.orgId).single()).data;
+    for (const role of ['agent', 'editor', 'viewer']) {
+      assert.ok((await T.A.users[role].client.rpc('site_apply_design', { p_org: T.A.orgId, p_family: 'sinematik-vitrin', p_sections: sections('sinematik-vitrin') })).error, `${role}: tasarım değiştirdi`);
+    }
+    const ow = T.A.users.owner.client;
+    assert.ok((await ow.rpc('site_apply_design', { p_org: T.A.orgId, p_family: 'kurumsal-portfoy', p_sections: sections('kurumsal-portfoy') })).error, 'izinsiz aile');
+    assert.ok((await ow.rpc('site_apply_design', { p_org: T.A.orgId, p_family: 'editoryal-luks', p_sections: sections('editoryal-luks') })).error, 'global kapalı aile');
+    assert.ok((await ow.rpc('site_apply_design', { p_org: T.A.orgId, p_family: 'sinematik-vitrin', p_sections: sections('kurumsal-portfoy') })).error, 'kaynak ailesi uyuşmuyor');
+    assert.ok((await ow.rpc('site_apply_design', { p_org: T.A.orgId, p_family: 'sinematik-vitrin', p_sections: { ...sections('sinematik-vitrin'), brand: { display_name: 'Ele geçirildi' } } })).error, 'marka bölümü yazıldı');
+    assert.ok((await ow.rpc('site_apply_design', { p_org: T.A.orgId, p_family: 'sinematik-vitrin', p_sections: { theme: 'atlas' } })).error, 'eksik bölümler kabul edildi');
+    assert.ok((await ow.rpc('site_apply_design', { p_org: T.B.orgId, p_family: 'kurumsal-portfoy', p_sections: sections('kurumsal-portfoy') })).error, 'başka kiracının sitesi');
+    assert.equal((await service.from('site_configs').select('published_version').eq('organization_id', T.A.orgId).single()).data.published_version, before.published_version, 'reddedilen işlem sürüm üretti');
+
+    const ok = await T.A.users.admin.client.rpc('site_apply_design', { p_org: T.A.orgId, p_family: 'sinematik-vitrin', p_sections: sections('sinematik-vitrin') });
+    assert.ifError(ok.error);
+    const row = (await service.from('site_configs').select('published, draft, published_version, has_unpublished_changes').eq('organization_id', T.A.orgId).single()).data;
+    assert.equal(row.published_version, before.published_version + 1);
+    assert.equal(row.published.theme, 'rezidans');
+    assert.equal(row.published.style.origin.family, 'sinematik-vitrin');
+    assert.equal(row.published.seo?.title ?? null, before.published.seo?.title ?? null, 'bekleyen KARAY taslağı yayınlandı');
+    assert.equal(row.draft.seo.title, 'Bekleyen KARAY taslağı', 'taslağın diğer bölümleri kayboldu');
+    assert.equal(row.has_unpublished_changes, true);
+    const rev = await service.from('site_config_revisions').select('version, note').eq('organization_id', T.A.orgId).eq('version', row.published_version).single();
+    assert.match(rev.data.note, /sinematik-vitrin/);
+    const audit = await service.from('audit_logs').select('action, actor_id').eq('organization_id', T.A.orgId).eq('action', 'site.design_applied');
+    assert.ok(audit.data.some((a) => a.actor_id === T.A.users.admin.id));
+    // B kiracısının yayını etkilenmedi
+    const b = (await service.from('site_configs').select('published').eq('organization_id', T.B.orgId).single()).data;
+    assert.notEqual(b.published?.style?.origin?.family, 'sinematik-vitrin');
+  });
+});

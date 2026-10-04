@@ -7,6 +7,7 @@ import {
   BarChart3,
   Building,
   Building2,
+  Palette,
   CalendarDays,
   Check,
   ChevronsUpDown,
@@ -39,6 +40,7 @@ import type { AdminIconKey, AdminNavItem, AdminNavSection } from '@/components/a
 
 const ICONS: Record<AdminIconKey, LucideIcon> = {
   dashboard: LayoutDashboard,
+  design: Palette,
   listings: Building2,
   customers: Users,
   leads: Inbox,

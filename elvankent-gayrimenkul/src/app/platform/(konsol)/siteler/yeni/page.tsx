@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { AdminPageHeader } from '@/components/panel/ui';
 import { SiteWizard, type WizardCatalog } from '@/components/platform/site-wizard/site-wizard';
 import { serverEnv } from '@/lib/server-env';
+import { disabledFamilies } from '@/modules/platform/design-access';
 import { listPlans } from '@/modules/platform/queries';
 import { requireSuperAdminPage } from '@/platform/auth/session';
 import { DESIGN_FAMILIES, familyParts } from '@/site-factory/families';
@@ -21,7 +22,7 @@ export const metadata: Metadata = { title: 'Yeni site oluştur' };
  */
 export default async function NewSitePage() {
   const session = await requireSuperAdminPage();
-  const plans = await listPlans(session);
+  const [plans, global] = await Promise.all([listPlans(session), disabledFamilies(session.supabase)]);
   const catalog: WizardCatalog = {
     siteTypes: SITE_TYPES.map((t) => ({ id: t.id, name: t.name, description: t.description, recommended: t.recommendedFamilies, required: t.requiredSections, excluded: t.excludedSections })),
     families: DESIGN_FAMILIES.map((f) => {
@@ -40,6 +41,7 @@ export default async function NewSitePage() {
         fonts: { heading, body, headingName: FONT_CATALOG[heading].name, bodyName: FONT_CATALOG[body].name },
         defaults: { hero: style.hero, header: style.headerLayout, card: style.card, cardLayout: style.cardLayout, footer: style.footerLayout, motion: style.motion },
         parts: familyParts(f, style),
+        disabled: global.disabled.has(f.id),
       };
     }),
     palettes: PALETTES.filter((p) => p.scheme === 'light').map((p) => ({ id: p.id, name: p.name, swatch: [p.tokens.primary, p.tokens.accent, p.tokens.background] })),

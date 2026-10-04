@@ -249,3 +249,32 @@ export async function createSitePreviewLink(orgId: string, path = '/'): Promise<
     return { url: `${tenant.baseUrl}/api/site-preview?token=${encodeURIComponent(token)}&to=${encodeURIComponent(to)}` };
   });
 }
+
+// --------------------------------------------------------------------------- Tasarım ailesi yetkileri
+/**
+ * KARAY: kiracının (ofis yöneticisinin) seçebileceği tasarım aileleri. Kimlikler kapalı katalogdan
+ * doğrulanır; veritabanı (platform_set_org_design_families) ayrıca süper admin yetkisini doğrular.
+ */
+export async function setOrgDesignFamilies(orgId: string, families: string[]): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    assertOrg(orgId);
+    if (!Array.isArray(families) || families.some((f) => typeof f !== 'string' || !findDesignFamily(f))) throw new ActionError('Geçersiz tasarım ailesi.');
+    const session = await requireSuperAdmin();
+    const { error } = await session.supabase.rpc('platform_set_org_design_families', { p_org: orgId, p_families: [...new Set(families)] });
+    assertNoDbError(error);
+    revalidatePath(`/platform/siteler/${orgId}`, 'layout');
+    return null;
+  }, 'Ofisin seçebileceği aileler güncellendi.');
+}
+
+/** KARAY: aileyi tüm kiracılar için aç / kapat (kullanan sitelerin yayındaki görünümü değişmez) */
+export async function setDesignFamilyEnabled(familyId: string, enabled: boolean): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    if (typeof familyId !== 'string' || !findDesignFamily(familyId) || typeof enabled !== 'boolean') throw new ActionError('Geçersiz tasarım ailesi.');
+    const session = await requireSuperAdmin();
+    const { error } = await session.supabase.rpc('platform_set_design_family', { p_family: familyId, p_enabled: enabled });
+    assertNoDbError(error);
+    revalidatePath('/platform/siteler', 'layout');
+    return null;
+  }, enabled ? 'Aile açıldı.' : 'Aile kapatıldı; ofislere yeni seçenek olarak gösterilmez.');
+}

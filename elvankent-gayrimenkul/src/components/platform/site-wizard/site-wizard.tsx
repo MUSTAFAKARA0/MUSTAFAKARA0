@@ -25,6 +25,8 @@ export interface WizardCatalog {
     fonts: { heading: string; body: string; headingName: string; bodyName: string };
     defaults: Record<'hero' | 'header' | 'card' | 'cardLayout' | 'footer' | 'motion', string>;
     parts: string[];
+    /** KARAY global olarak kapattı: listede görünür, seçilemez */
+    disabled: boolean;
   }[];
   palettes: { id: string; name: string; swatch: string[] }[];
   fonts: { id: string; name: string; kind: 'serif' | 'sans' }[];
@@ -485,12 +487,13 @@ function InfoStep(props: {
   );
 }
 
-function ChoiceCard({ selected, onSelect, children, className, label }: { selected: boolean; onSelect: () => void; children: React.ReactNode; className?: string; label: string }) {
+function ChoiceCard({ selected, onSelect, children, className, label, disabled }: { selected: boolean; onSelect: () => void; children: React.ReactNode; className?: string; label: string; disabled?: boolean }) {
   return (
     <button
       type="button"
       role="radio"
       aria-checked={selected}
+      aria-disabled={disabled || undefined}
       aria-label={label}
       onClick={onSelect}
       className={cn(
@@ -540,7 +543,7 @@ function FamilyStep({ families, recommended, value, onChange }: { families: Wiza
       </p>
       <div role="radiogroup" aria-label="Tasarım ailesi" className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {families.map((f) => (
-          <ChoiceCard key={f.id} selected={value === f.id} onSelect={() => onChange(f.id)} label={f.name} className="p-0">
+          <ChoiceCard key={f.id} selected={value === f.id} onSelect={() => !f.disabled && onChange(f.id)} label={f.name} className={cn('p-0', f.disabled && 'cursor-not-allowed opacity-55')} disabled={f.disabled}>
             <span className="flex h-28 items-end justify-between overflow-hidden rounded-t-2xl px-5 pb-4" style={{ background: f.swatch[2], color: f.swatch[3] }}>
               <span className="text-[2.6rem] leading-none" style={{ fontFamily: `"${f.fonts.headingName}", serif` }} aria-hidden>
                 Aa
@@ -554,7 +557,7 @@ function FamilyStep({ families, recommended, value, onChange }: { families: Wiza
             <span className="flex flex-1 flex-col p-5">
               <span className="flex flex-wrap items-center gap-2 pr-8">
                 <span className="text-[15.5px] font-semibold text-foreground">{f.name}</span>
-                {recommended.includes(f.id) && <Badge variant="success">Önerilen</Badge>}
+                {f.disabled ? <Badge>Katalogda kapalı</Badge> : recommended.includes(f.id) && <Badge variant="success">Önerilen</Badge>}
               </span>
               <span className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{f.description}</span>
               <span className="mt-3 text-[12.5px] text-muted-foreground">

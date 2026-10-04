@@ -2,6 +2,7 @@ import type { Permission } from '@/platform/auth/permissions';
 
 export type AdminIconKey =
   | 'dashboard'
+  | 'design'
   | 'listings'
   | 'customers'
   | 'leads'
@@ -76,6 +77,7 @@ export const ADMIN_NAV: AdminNavSection[] = [
     title: 'Web sitesi',
     items: [
       { href: '/admin/sirket', label: 'Marka ve Görünüm', icon: 'company', permission: 'settings.manage' },
+      { href: '/admin/tasarim', label: 'Site tasarımı', icon: 'design', permission: 'settings.manage' },
       { href: '/admin/icerikler', label: 'Blog / İçerikler', icon: 'content', permission: 'content.manage' },
       { href: '/admin/bolgeler', label: 'Bölgeler', icon: 'regions', permission: 'content.manage' },
       { href: '/admin/medya', label: 'Medya', icon: 'media', permission: 'media.manage' },

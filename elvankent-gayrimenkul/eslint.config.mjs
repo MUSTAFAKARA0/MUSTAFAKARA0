@@ -139,8 +139,10 @@ const eslintConfig = defineConfig([
       ZONES.sitePreview,
     ),
   },
-  // Ofis paneli ↛ KARAY konsolu / KARAY sayfası / kiracı sitesi bileşenleri
-  { files: ZONES.tenantPanel.files, rules: forbid(ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteEngine, ZONES.siteFactory, ZONES.sitePreview) },
+  // Ofis paneli ↛ KARAY konsolu / KARAY sayfası / kiracı sitesi bileşenleri. Site Factory'yi YALNIZCA
+  // sunucuda kullanır (Tasarım sayfası: izinli ailelerin görünen bilgileri + derleyici); istemciye
+  // yalnızca izinli ailelerin verisi gider (PERMISSION testi). Kiracı SİTESİ katalogu hiç içe aktaramaz.
+  { files: ZONES.tenantPanel.files, rules: forbid(ZONES.karayPlatform, ZONES.karayPublic, ZONES.siteEngine, ZONES.sitePreview) },
   // KARAY konsolu ↛ ofis paneli / kiracı sitesi bileşenleri (site oluşturucu yapılandırma üretir,
   // siteyi Site Engine çizer; önizleme Theme Engine'in önizlemesiyle yapılır)
   { files: ZONES.karayPlatform.files, rules: forbid(ZONES.tenantPanel, ZONES.siteEngine, ZONES.sitePreview) },

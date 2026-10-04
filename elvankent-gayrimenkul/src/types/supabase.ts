@@ -345,6 +345,27 @@ export type Database = {
           },
         ]
       }
+      design_family_settings: {
+        Row: {
+          family_id: string
+          enabled: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          family_id: string
+          enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          family_id?: string
+          enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       districts: {
         Row: {
           id: number
@@ -807,6 +828,35 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "organization_counters_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_design_families: {
+        Row: {
+          organization_id: string
+          family_id: string
+          granted_by: string | null
+          granted_at: string
+        }
+        Insert: {
+          organization_id: string
+          family_id: string
+          granted_by?: string | null
+          granted_at?: string
+        }
+        Update: {
+          organization_id?: string
+          family_id?: string
+          granted_by?: string | null
+          granted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_design_families_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -2319,6 +2369,14 @@ export type Database = {
         }
         Returns: Json
       }
+      org_design_family_access: {
+        Args: {
+          p_org: string
+        }
+        Returns: {
+          family_id: string
+        }[]
+      }
       org_member_mfa_status: {
         Args: {
           p_org: string
@@ -2394,6 +2452,20 @@ export type Database = {
       platform_remove_domain: {
         Args: {
           p_id: string
+        }
+        Returns: undefined
+      }
+      platform_set_design_family: {
+        Args: {
+          p_family: string
+          p_enabled: boolean
+        }
+        Returns: undefined
+      }
+      platform_set_org_design_families: {
+        Args: {
+          p_org: string
+          p_families: string[]
         }
         Returns: undefined
       }
@@ -2613,6 +2685,14 @@ export type Database = {
           p_brand: Json
         }
         Returns: undefined
+      }
+      site_apply_design: {
+        Args: {
+          p_org: string
+          p_family: string
+          p_sections: Json
+        }
+        Returns: number
       }
       site_brand_columns: {
         Args: never
