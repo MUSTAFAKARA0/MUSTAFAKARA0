@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { JsonLd } from '@/components/common/json-ld';
 import { ViewTracker } from '@/components/property/contact-panel';
-import { PropertyDetailView } from '@/components/property/property-detail-view';
+import { PropertyDetailSurface } from '@/components/patterns/property-detail/surface';
 import { formatListingPrice } from '@/lib/format';
 import { markdownToPlainText } from '@/modules/content/markdown';
 import { LISTING_TYPE_LABELS } from '@/modules/properties/constants';
@@ -10,7 +10,7 @@ import { findRedirect, getPublicPropertyBySlug, getSimilarProperties } from '@/m
 import { followRedirect } from '@/modules/seo/redirects';
 import { listingJsonLd } from '@/modules/seo/jsonld';
 import { baseOpenGraph, listingOgImage } from '@/modules/seo/og';
-import { requireSiteTenant } from '@/site-config/load';
+import { getSiteView, requireSiteTenant } from '@/site-config/load';
 
 export const revalidate = 300;
 
@@ -49,13 +49,13 @@ export default async function PropertyPage({ params }: PageProps<'/t/[tenant]/il
     if (target) followRedirect(target);
     notFound();
   }
-  const similar = await getSimilarProperties(tenant.id, p.id, 4);
+  const [similar, view] = await Promise.all([getSimilarProperties(tenant.id, p.id, 4), getSiteView(tenant)]);
 
   return (
     <>
       <ViewTracker propertyId={p.id} />
       <JsonLd data={listingJsonLd(tenant, p)} />
-      <PropertyDetailView tenant={tenant} p={p} similar={similar} />
+      <PropertyDetailSurface view={view} tenant={tenant} p={p} similar={similar} />
     </>
   );
 }

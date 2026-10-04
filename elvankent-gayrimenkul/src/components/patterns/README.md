@@ -7,9 +7,12 @@ desenleri kullanacağını manifestte seçer; **Site Engine** yalnızca seçilen
 patterns/
 ├── contracts.ts        bileşen sözleşmeleri (yalnızca tipler) + PatternMeta
 ├── registry.ts         desen kaydı (yalnızca VERİ — bileşen içe aktarmaz)
+├── surfaces.ts         D7.2 aile sözleşmesi: yüzey → desen türü, manifest alanı, planlanmış desenler (VERİ)
+├── resolver.ts         D7.2 çözümleyici: manifest → yüzey → desen (yalnızca sunucu, veri sorgusu yok)
 ├── styles.ts           seçili desenlerin CSS'i (yalnızca seçen siteye yazılır)
-├── hero/  header/  listing-card/  gallery/  search/  property-detail/
-├── footer/  section/  navigation/
+├── hero/  header/  listing-card/  footer/  section/  navigation/
+├── gallery/  search/  listing/  property-detail/  map/   (her biri surface.tsx: yüzey çizicisi)
+├── gallery/islands.tsx galeri varyantlarının istemci yükleyicisi
 └── interaction/        tarayıcı adaları + istemci yükleyicisi (islands.tsx)
 ```
 
@@ -21,7 +24,7 @@ patterns/
 3. **Görsel desen = sunucu bileşeni.** Seçilmeyen sunucu deseninin kodu tarayıcıya gitmez.
 4. **İnteraktif desen = istemci yükleyicisinden tembel yükleme.** Harita, tam ekran galeri,
    filtre alt paneli gibi tarayıcı kodu taşıyan desenler yalnızca bir istemci yükleyicisinin
-   (`interaction/islands.tsx` örneği) içinden `next/dynamic` ile yüklenir. D7.0 ölçümü: sunucu
+   (`interaction/islands.tsx` örneği) içinden `React.lazy` (veya `next/dynamic`) ile yüklenir. D7.0 ölçümü: sunucu
    bileşeninde statik import da, `next/dynamic` da seçilmeyen kodu tarayıcıya taşıyordu.
 5. **Desen CSS'i desene aittir** ve yalnızca deseni seçen sitenin sayfasına yazılır.
 6. **Mevcut bileşenler kilitlidir.** `components/{home,layout,property,gallery,search}` altındaki
@@ -45,5 +48,7 @@ patterns/
 2. `patterns/<tür>/<kimlik>.tsx` oluştur (sözleşme: `contracts.ts`).
 3. `registry.ts`'e kaydını ekle (interaktifse `marker` ile).
 4. CSS gerekiyorsa desen klasöründeki `styles.ts`'e ekle.
-5. İnteraktifse yalnızca o türün istemci yükleyicisine tembel girdi ekle.
+5. İnteraktifse yalnızca o türün istemci yükleyicisine tembel girdi ekle (yükleyici yoksa
+   `<tür>/islands.tsx` oluştur ve `tests/unit/patterns.test.mjs › LOADERS`'a ekle).
+5b. Yüzey deseniyse `<tür>/surface.tsx`'e dal ekle; kimliği `surfaces.ts › planned` listesinden çıkar.
 6. `npm run test:unit` (kayıt ↔ manifest ↔ dosya sözleşmesi) ve bundle regresyon E2E testi.

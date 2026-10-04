@@ -152,6 +152,46 @@ olarak statik içe aktarmaya çevrildiğinde bu E2E testi başarısız olur (do�
 
 Adlandırma ve yeni desen ekleme adımları: `src/components/patterns/README.md`.
 
+### D7.2 — Tasarım ailesi sözleşmesi (yüzeyler) ve desen çözümleyici
+
+Bir aile yalnızca ana sayfayı değil, herkese açık sitenin **yüzeylerini** tanımlar:
+`home · navigation · footer · search · listing · property-detail · gallery · map`
+(`theme-engine/surfaces.ts` → manifest alanı; `components/patterns/surfaces.ts` → desen türü,
+rotalar, sözleşmesi hazır ama henüz uygulanmamış `planned` desenler).
+
+```
+MANIFEST (variants) ─┐
+AİLE (style.slots) ──┴─▶ compileManifest ─▶ site_configs.style ─▶ resolvePattern(view, yüzey) ─▶ DESEN
+                         (manifest > aile > tema/standart)        (yalnızca sunucu; veri yok)      │
+                                                                                                   ▼
+                     sayfa (veri katmanı: ilan, arama, seçenek) ─▶ patterns/<tür>/surface.tsx ─▶ çizim
+```
+
+- **Çözümleyici** (`patterns/resolver.ts`, `server-only`): yalnızca SiteView verisini okur; ilan
+  sorgusu, CRM, Supabase, kimlik doğrulama, yetki YOK. Seçim yok/bilinmiyor/planlanmış → yüzeyin
+  mevcut standart bileşeni (eski kiracı → eski manifest → eski görünüm).
+- **Yüzey çizicileri** (`patterns/{gallery,search,listing,property-detail,map}/surface.tsx`):
+  sunucu bileşeni; standart dal = mevcut bileşen (değişmedi). İnteraktif varyant yalnızca türün
+  istemci yükleyicisinden (`gallery/islands.tsx`, `interaction/islands.tsx`).
+- **Sayfalar**: ilan listesi gövdesi `components/site/site-listing.tsx`'e taşındı (kiracı ve
+  önizleme ortak); ilan detayı `PropertyDetailSurface` ile çizilir.
+- **Manifest** yalnızca ekleme ile genişler (D7.2: `GALLERY_LAYOUTS` + `grid`, `carousel`); mevcut
+  değerler silinmez/yeniden adlandırılmaz; eski kayıtlar taşınmaz. Ailenin `style.slots` kararı
+  manifest varyantıyla birleşir (önceden manifest slotu ailenin slotlarını tümüyle ezebiliyordu;
+  mevcut 6 ailede slot olmadığından davranış değişmedi).
+- **Önizleme**: `/site-onizleme?s=ana-sayfa|ilanlar|ilan` (KARAY, örnek içerik) ve
+  `/site-onizleme/ofis?aile=&s=` (ofis paneli › Site tasarımı › Önizle; oturumun ofisi,
+  `settings.manage`, yalnızca `org_design_family_access` ailesi, ofisin kendi yayındaki verisi,
+  hiçbir şey yazılmaz). İkisi de `site-preview/render.tsx` üzerinden aynı Site Engine bileşenlerini
+  kullanır. `/site-onizleme/ofis` proxy'de `/admin` ile aynı kuralla (ofis paneli) açılır; KARAY
+  önizlemesi kiracı alan adında hâlâ 404'tür.
+
+**Testler:** `tests/unit/patterns.test.mjs` (yüzey sözleşmesi, planlanmış ∩ uygulanmış = ∅,
+çözümleyici geri dönüşü, çözümleyicinin istemciye girmemesi, desenlerde veri sorgusu olmaması,
+aile sözleşmesi: önizleme (manifest) = kiracı (çözümleyici)); `tests/e2e/pattern-bundle.spec.ts`
+(desen kaydından üretilen kiracılarla her interaktif desen çifti için "seçmeyene inmez"; galeri
+varyantları ilan detayında); `tests/e2e/design-preview.spec.ts` (PV-01…05).
+
 ## Theme Engine (`src/theme-engine`)
 
 | Dosya | İçerik |
@@ -198,6 +238,7 @@ Her kökün kendi `not-found.tsx`'i vardır. `tests/e2e/surface-isolation.spec.t
 | Yeni müşteri sitesi | KARAY › Yeni site oluştur (veri; kod veya müşteri klasörü yok) |
 | Yeni yapısal parça (hero, header, kart, footer, bölüm) | D7: `components/patterns/<tür>/<kimlik>.tsx` + `theme-engine/ids.ts` kimliği + `patterns/registry.ts`; yalnızca seçen siteye gider |
 | Yeni interaktif davranış (harita, galeri, filtre paneli) | D7: desen klasöründe ada + yalnızca istemci yükleyicisinden tembel yükleme |
+| Yeni yüzey varyantı (arama, ilan listesi, ilan detayı, galeri, harita) | D7.2: `patterns/surfaces.ts` `planned` → `theme-engine/ids.ts` kapalı listesi + kayıt + `<tür>/surface.tsx` dalı |
 | Public ilan sayfası, arama, menü, footer | Site Engine |
 | Public site SEO çıktısı | Site Engine + Site Config (`seo` bölümü) + `modules/seo` |
 | Kullanıcı yetkisi, oturum | Core (`platform/auth`) |

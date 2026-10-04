@@ -18,6 +18,7 @@ import {
   TESTIMONIAL_SECTIONS,
 } from '@/theme-engine/ids';
 import { findPalette } from '@/theme-engine/palettes';
+import type { SiteSurface } from '@/theme-engine/surfaces';
 import { resolveStyle, THEMES } from '@/theme-engine/themes';
 import { homeSectionSchema, SECTION_SCHEMAS, type FeatureKey, type HomeSectionConfig, type HomeSectionType, type PageKey, type SiteConfig } from '@/site-config/schema';
 import { findDesignFamily } from '@/site-factory/families';
@@ -73,6 +74,8 @@ export const siteManifestSchema = z
 export type SiteManifest = z.infer<typeof siteManifestSchema>;
 
 export class ManifestError extends Error {}
+
+const SLOT_KEYS = ['navigation', 'grid', 'search', 'listingDetail', 'gallery', 'mapList', 'agents', 'testimonials', 'interactions'] as const;
 
 /** Kimliklerin katalogda olduğunu doğrular; bilinmeyen tip/aile/palet reddedilir */
 export function parseManifest(raw: unknown): { manifest: SiteManifest; family: DesignFamily; siteType: SiteType } {
@@ -142,11 +145,11 @@ export function compileManifest(raw: unknown, current: SiteConfig): CompiledMani
   const placed = new Set(order);
   for (const s of existing) if (s.type !== 'text' && !placed.has(s.type)) sections.push({ ...s, enabled: false });
 
-  const slots = Object.fromEntries(
-    (['navigation', 'grid', 'search', 'listingDetail', 'gallery', 'mapList', 'agents', 'testimonials', 'interactions'] as const)
-      .filter((k) => (Array.isArray(v[k]) ? (v[k] as unknown[]).length > 0 : v[k]))
-      .map((k) => [k, v[k]]),
-  );
+  // Yüzey kararları: manifest varyantı > ailenin kararı (family.style.slots) > standart
+  const slots = {
+    ...(family.style.slots ?? {}),
+    ...Object.fromEntries(SLOT_KEYS.filter((k) => (Array.isArray(v[k]) ? (v[k] as unknown[]).length > 0 : v[k])).map((k) => [k, v[k]])),
+  };
   const style = {
     ...family.style,
     ...(v.hero ? { hero: v.hero } : {}),
@@ -199,7 +202,10 @@ export function manifestFromConfig(config: SiteConfig): SiteManifest | null {
     ...(config.typography.heading && config.typography.heading !== family.typography?.heading ? { headingFont: config.typography.heading } : {}),
     ...(config.typography.body && config.typography.body !== family.typography?.body ? { bodyFont: config.typography.body } : {}),
     ...(origin?.homepage && origin.homepage !== 'family' ? { homepage: origin.homepage as HomepageComposition } : {}),
-    ...(s.slots ?? {}),
+    // Yalnızca ailenin kararından farklı yüzey seçimleri manifest varyantıdır
+    ...Object.fromEntries(
+      SLOT_KEYS.filter((k) => s.slots?.[k] !== undefined && JSON.stringify(s.slots[k]) !== JSON.stringify(family.style.slots?.[k])).map((k) => [k, s.slots![k]]),
+    ),
   };
   const palette = config.colors.mode === 'preset' && config.colors.preset && config.colors.preset !== family.palette ? config.colors.preset : undefined;
   return { siteType: findSiteType(origin!.siteType)?.id ?? DEFAULT_SITE_TYPE, designFamily: family.id, ...(palette ? { palette } : {}), variants };
@@ -209,6 +215,7 @@ export function manifestFromConfig(config: SiteConfig): SiteManifest | null {
 export function resolvedVariants(raw: unknown) {
   const { manifest, family } = parseManifest(raw);
   const v = manifest.variants;
+  const slots = family.style.slots ?? {};
   const theme = THEMES[family.theme];
   const style = resolveStyle({
     theme: family.theme,
@@ -233,14 +240,33 @@ export function resolvedVariants(raw: unknown) {
     bodyFont: v.bodyFont ?? family.typography?.body ?? theme.fonts.body,
     homepage: v.homepage ?? 'family',
     palette: manifest.palette ?? family.palette,
-    navigation: v.navigation ?? 'standard',
-    grid: v.grid ?? 'standard',
-    search: v.search ?? 'standard',
-    listingDetail: v.listingDetail ?? 'standard',
-    gallery: v.gallery ?? 'standard',
-    mapList: v.mapList ?? 'standard',
-    agents: v.agents ?? 'none',
-    testimonials: v.testimonials ?? 'none',
-    interactions: v.interactions ?? [],
+    navigation: v.navigation ?? slots.navigation ?? 'standard',
+    grid: v.grid ?? slots.grid ?? 'standard',
+    search: v.search ?? slots.search ?? 'standard',
+    listingDetail: v.listingDetail ?? slots.listingDetail ?? 'standard',
+    gallery: v.gallery ?? slots.gallery ?? 'standard',
+    mapList: v.mapList ?? slots.mapList ?? 'standard',
+    agents: v.agents ?? slots.agents ?? 'none',
+    testimonials: v.testimonials ?? slots.testimonials ?? 'none',
+    interactions: v.interactions?.length ? v.interactions : (slots.interactions ?? []),
+  };
+}
+
+/**
+ * TASARIM AİLESİ SÖZLEŞMESİ (D7.2): manifestin her site yüzeyi için seçtiği desen kimliği
+ * (manifest varyantı > ailenin kararı > tema varsayılanı / standart). Site Engine'in çözümleyicisi
+ * derlenmiş yapılandırmadan aynı sonucu üretir (tests/unit/patterns.test.mjs).
+ */
+export function manifestSurfaces(raw: unknown): Record<SiteSurface, string> {
+  const r = resolvedVariants(raw);
+  return {
+    home: r.hero,
+    navigation: r.header,
+    footer: r.footer,
+    search: r.search,
+    listing: r.grid,
+    'property-detail': r.listingDetail,
+    gallery: r.gallery,
+    map: r.mapList,
   };
 }

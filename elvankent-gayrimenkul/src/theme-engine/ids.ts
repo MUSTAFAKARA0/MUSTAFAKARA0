@@ -34,8 +34,13 @@ export const NAVIGATION_STYLES = ['standard'] as const;
 export const GRID_LAYOUTS = ['standard'] as const;
 export const SEARCH_STYLES = ['standard'] as const;
 export const LISTING_DETAIL_LAYOUTS = ['standard'] as const;
-export const GALLERY_LAYOUTS = ['standard'] as const;
+export const GALLERY_LAYOUTS = ['standard', 'grid', 'carousel'] as const;
 export const MAP_LIST_LAYOUTS = ['standard'] as const;
+export type SearchStyle = (typeof SEARCH_STYLES)[number];
+export type GridLayout = (typeof GRID_LAYOUTS)[number];
+export type ListingDetailLayout = (typeof LISTING_DETAIL_LAYOUTS)[number];
+export type GalleryLayout = (typeof GALLERY_LAYOUTS)[number];
+export type MapListLayout = (typeof MAP_LIST_LAYOUTS)[number];
 export const AGENT_SECTIONS = ['none'] as const;
 export const TESTIMONIAL_SECTIONS = ['none'] as const;
 

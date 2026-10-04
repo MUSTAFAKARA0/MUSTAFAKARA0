@@ -127,7 +127,7 @@ const nextConfig: NextConfig = {
     // kendi şirket sayfası (/karay) — dizinlenme KARAY ayarlarından (sayfanın robots etiketi)
     // yönetilir; kiracı (demo) sitelerinin noindex kuralı değişmez.
     const robots = isIndexable() ? [] : [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }];
-    // KARAY site önizlemesi yalnızca KARAY'ın kendi sayfasında (sihirbaz) çerçeve içinde açılır:
+    // Site önizlemeleri (KARAY sihirbazı, ofis tasarım önizlemesi) yalnızca kendi panellerinde çerçeve içinde açılır:
     // aynı köken dışında çerçevelenemez (yalnızca bu yolda 'none' → 'self')
     const previewHeaders = securityHeaders.map((h) =>
       h.key === 'Content-Security-Policy' ? { ...h, value: csp.replace("frame-ancestors 'none'", "frame-ancestors 'self'") } : h.key === 'X-Frame-Options' ? { ...h, value: 'SAMEORIGIN' } : h,
@@ -135,6 +135,8 @@ const nextConfig: NextConfig = {
     return [
       { source: '/:path*', headers: securityHeaders },
       { source: '/site-onizleme', headers: previewHeaders },
+      // Ofis tasarım önizlemesi: yalnızca ofis panelinin kendi sayfasında (aynı köken) çerçevelenir
+      { source: '/site-onizleme/ofis', headers: previewHeaders },
       ...(robots.length ? [{ source: '/:path((?!karay(?:/|$)).*)', headers: robots }] : []),
     ];
   },

@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { ArrowDownRight, CalendarDays, EyeOff, Info, MapPin, PencilLine, RefreshCcw } from 'lucide-react';
 import { Breadcrumbs } from '@/components/common/breadcrumbs';
-import { PropertyGallery } from '@/components/gallery/property-gallery';
-import { LazyMap } from '@/components/common/maps/lazy-map';
+import { GallerySurface } from '@/components/patterns/gallery/surface';
+import { MapSurface } from '@/components/patterns/map/surface';
+import type { PatternView } from '@/components/patterns/resolver';
 import { PropertyBadges } from '@/components/property/property-badges';
 import { CompareToggle, FavoriteButton, ShareButton } from '@/components/property/property-actions';
 import { ContactPanel, MobileContactBar } from '@/components/property/contact-panel';
@@ -35,10 +36,12 @@ interface PropertyDetailViewProps {
   /** preview: yönetim paneli taslak önizlemesi (iletişim ve etkileşimler kapalı) */
   mode?: 'public' | 'preview';
   deletedAt?: string | null;
+  /** Sitenin tasarım seçimi (galeri/harita desenleri); yoksa standart bileşenler */
+  view?: PatternView | null;
 }
 
 /** İlan detay sayfasının gövdesi (herkese açık sayfa ve yönetim önizlemesi ortak kullanır) */
-export function PropertyDetailView({ tenant, p, similar, mode = 'public', deletedAt }: PropertyDetailViewProps) {
+export function PropertyDetailView({ tenant, p, similar, mode = 'public', deletedAt, view }: PropertyDetailViewProps) {
   const preview = mode === 'preview';
   const s = tenant.settings;
   const url = tenantUrl(tenant, `/ilan/${p.slug}`);
@@ -127,7 +130,7 @@ export function PropertyDetailView({ tenant, p, similar, mode = 'public', delete
         </header>
 
         <div className="mt-6">
-          <PropertyGallery images={p.images} title={p.title} />
+          <GallerySurface view={view} images={p.images} title={p.title} />
         </div>
 
         {(p.status === 'sold' || p.status === 'rented') && (
@@ -191,7 +194,8 @@ export function PropertyDetailView({ tenant, p, similar, mode = 'public', delete
                   <MapPin className="size-4" aria-hidden /> {location}
                   {p.locationPrecision !== 'exact' && <span>· {PRECISION_LABELS[p.locationPrecision]} gösterilmektedir.</span>}
                 </p>
-                <LazyMap
+                <MapSurface
+                  view={view}
                   center={{ lat: p.latitude, lng: p.longitude }}
                   mode={p.locationPrecision === 'exact' ? 'pin' : 'area'}
                   radiusMeters={p.locationPrecision === 'neighborhood' ? 700 : 300}

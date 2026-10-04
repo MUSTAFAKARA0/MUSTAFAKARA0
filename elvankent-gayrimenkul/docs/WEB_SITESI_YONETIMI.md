@@ -8,6 +8,8 @@ KARAY süper admin panelinin iki görevi vardır: **platform yönetimi** (organi
 
 **Tasarım kataloğu** (`/platform/siteler/tasarim-katalogu`): bütün aileler, global aç/kapat. **Site › Tema › Ofisin seçebileceği tasarımlar**: ofis yöneticisinin kendi panelindeki **Site tasarımı** (`/admin/tasarim`) sayfasında görebileceği aileler.
 
+**Tasarım önizlemesi (D7.2):** ofis yöneticisi **Site tasarımı › Önizle** (`/admin/tasarim/onizleme`) ile izinli bir aileyi YAYINLAMADAN kendi sitesinin gerçek ilanları ve içerikleriyle görür: Ana sayfa, Arama / ilanlar ve İlan detayı; masaüstü ve telefon genişliğinde. Önizleme hiçbir şeyi yazmaz; yalnızca ofise izinli ve global açık aileler listelenir; başka ofisin verisi veya örnek/uydurma içerik gösterilmez (yayında ilan yoksa boş durum). KARAY'ın Yeni Site Oluştur sihirbazındaki önizleme de aynı üç sayfayı (örnek içerikle) gösterir.
+
 ## Ekranlar
 
 `/platform/siteler` — tüm kiracı siteleri: durum, alan adı, tema, son yayın. Her satırda **Önizle**, **Yönet** ve ⋯ menüsü (Siteyi görüntüle, Site ayarları, Tema, Sayfalar, SEO, Alan adı, Gelişmiş, Yayından kaldır / bakım modu). Telefonda tablo yerine kart listesi.

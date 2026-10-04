@@ -668,6 +668,13 @@ function VariantStep({ catalog, family, variants, setVariants, palette, setPalet
   );
 }
 
+/** Önizlenen yüzeyler (site-onizleme ?s=): kiracı sitesinin aynı bileşenleri */
+const PREVIEW_PAGES = [
+  { id: 'ana-sayfa', label: 'Ana sayfa' },
+  { id: 'ilanlar', label: 'Arama' },
+  { id: 'ilan', label: 'İlan detayı' },
+] as const;
+
 function PreviewStep({ manifest, info }: { manifest: object; info: Info }) {
   // Dar ekranda (telefon) önizleme telefon genişliğinde açılır; masaüstü küçültülmüş hâlde okunmaz
   const [device, setDevice] = useState<(typeof DEVICES)[number]['id']>(() => (typeof window !== 'undefined' && window.innerWidth < 700 ? 'mobile' : 'desktop'));
@@ -681,8 +688,9 @@ function PreviewStep({ manifest, info }: { manifest: object; info: Info }) {
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  const [surface, setSurface] = useState<(typeof PREVIEW_PAGES)[number]['id']>('ana-sayfa');
   const d = DEVICES.find((x) => x.id === device)!;
-  const src = useMemo(() => `/site-onizleme?p=${encodePreviewPayload({ manifest: manifest as never, info: info as SiteInfoInput })}`, [manifest, info]);
+  const src = useMemo(() => `/site-onizleme?p=${encodePreviewPayload({ manifest: manifest as never, info: info as SiteInfoInput })}&s=${surface}`, [manifest, info, surface]);
   const scale = boxWidth ? Math.min(1, boxWidth / d.width) : 1;
   const height = 760;
   return (
@@ -690,6 +698,23 @@ function PreviewStep({ manifest, info }: { manifest: object; info: Info }) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-xl text-[13.5px] text-muted-foreground">Sitenin gerçek bileşenleriyle, seçilen paketle ve örnek içerikle çizilir. Oluşturulan site bu manifestin aynısını kullanır.</p>
         <div className="flex flex-wrap items-center gap-2">
+          <div role="radiogroup" aria-label="Önizlenen sayfa" className="flex flex-wrap rounded-full bg-surface-muted p-1 ring-1 ring-border">
+            {PREVIEW_PAGES.map((x) => (
+              <button
+                key={x.id}
+                type="button"
+                role="radio"
+                aria-checked={surface === x.id}
+                onClick={() => {
+                  setLoading(true);
+                  setSurface(x.id);
+                }}
+                className={cn('rounded-full px-3 py-1.5 text-[12.5px] font-medium transition', surface === x.id ? 'bg-surface text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
+              >
+                {x.label}
+              </button>
+            ))}
+          </div>
           <div role="radiogroup" aria-label="Cihaz" className="flex rounded-full bg-surface-muted p-1 ring-1 ring-border">
             {DEVICES.map((x) => (
               <button

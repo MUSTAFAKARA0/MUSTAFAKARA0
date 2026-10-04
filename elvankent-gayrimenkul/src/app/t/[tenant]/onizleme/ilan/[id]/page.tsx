@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
-import { PropertyDetailView } from '@/components/property/property-detail-view';
+import { PropertyDetailSurface } from '@/components/patterns/property-detail/surface';
 import { getPropertyForPreview } from '@/modules/properties/queries';
 import { getSessionUser } from '@/platform/auth/session';
-import { requireSiteTenant } from '@/site-config/load';
+import { getSiteView, requireSiteTenant } from '@/site-config/load';
 
 export const metadata: Metadata = {
   title: 'İlan önizleme',
@@ -25,5 +25,6 @@ export default async function PropertyPreviewPage({ params }: PageProps<'/t/[ten
   const result = await getPropertyForPreview(session.supabase, id);
   if (!result || result.property.organizationId !== tenant.id) notFound();
 
-  return <PropertyDetailView tenant={tenant} p={result.property} similar={[]} mode="preview" deletedAt={result.deletedAt} />;
+  const view = await getSiteView(tenant);
+  return <PropertyDetailSurface view={view} tenant={tenant} p={result.property} similar={[]} mode="preview" deletedAt={result.deletedAt} />;
 }

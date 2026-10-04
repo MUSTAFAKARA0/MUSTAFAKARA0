@@ -78,6 +78,12 @@ describe('KARAY alan adlarında yönlendirme', () => {
     assert.deepEqual(kind('/site-onizleme', 'localhost:3000'), { kind: 'panel', area: 'platform' });
     assert.deepEqual(kind('/site-onizlemeler', 'ornekemlak.com'), { kind: 'tenant-site' });
   });
+  test('PREVIEW: ofis tasarım önizlemesi (/site-onizleme/ofis) ofis paneliyle aynı kuralla açılır; KARAY önizlemesi kiracıda kapalı kalır', () => {
+    assert.deepEqual(kind('/site-onizleme/ofis', 'ornekemlak.com', withKaray), { kind: 'panel', area: 'admin' });
+    assert.deepEqual(kind('/site-onizleme/ofis', 'localhost:3000'), { kind: 'panel', area: 'admin' });
+    for (const p of ['/site-onizleme', '/site-onizleme/ofisler', '/site-onizleme/x', '/site-onizleme/ofis-x'])
+      assert.deepEqual(kind(p, 'ornekemlak.com', withKaray), { kind: 'not-found' }, p);
+  });
   test('KARAY_HOSTS tanımlıyken /karay yalnızca KARAY alan adındadır (konsol önizlemede açık kalır)', () => {
     assert.deepEqual(kind('/karay', 'proje.vercel.app', withKaray), { kind: 'not-found' });
     assert.deepEqual(kind('/platform', 'proje.vercel.app', withKaray), { kind: 'panel', area: 'platform' });

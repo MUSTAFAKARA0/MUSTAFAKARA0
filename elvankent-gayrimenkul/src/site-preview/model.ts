@@ -1,6 +1,8 @@
 import 'server-only';
 import type { HomeData } from '@/components/site/site-home';
-import type { PropertyCard } from '@/modules/properties/types';
+import type { ListingPageData } from '@/components/site/site-listing';
+import { parseListingQuery } from '@/modules/properties/filters';
+import type { PropertyCard, PropertyDetail } from '@/modules/properties/types';
 import type { RegionPage } from '@/modules/content/queries';
 import { defaultSettings } from '@/platform/tenant/default-settings';
 import type { Tenant } from '@/platform/tenant/tenant';
@@ -20,8 +22,8 @@ import { resolveStyle } from '@/theme-engine/themes';
  */
 const PREVIEW_ID = '00000000-0000-4000-8000-000000000000';
 
-const demo = (folder: string) => ({
-  id: `ornek-${folder}`,
+const demo = (folder: string, i = 0) => ({
+  id: `ornek-${folder}-${i}`,
   public_base: `/demo/${folder}`,
   legacy_path: null,
   variant_widths: [320, 640, 960, 1440, 1920],
@@ -29,8 +31,8 @@ const demo = (folder: string) => ({
   height: 1280,
   alt_text: null,
   blur_data_url: null,
-  sort_order: 0,
-  is_cover: true,
+  sort_order: i,
+  is_cover: i === 0,
 });
 
 type Sample = [folder: string, title: string, type: [slug: string, name: string], category: PropertyCard['category'], listing: PropertyCard['listingType'], price: number, rooms: string | null, m2: number];
@@ -106,6 +108,10 @@ export interface PreviewModel {
   tenant: Tenant;
   view: SiteView;
   data: HomeData;
+  /** İlan listesi / arama sayfası (örnek ilanlarla) */
+  listing: ListingPageData;
+  /** İlan detayı (örnek ilan; açıkça "Örnek ilan" ve demo notuyla) */
+  detail: { property: PropertyDetail; similar: PropertyCard[] };
   /** Kiracıya yazılacak yapılandırmayla AYNI derleme çıktısı (testler eşitliği doğrular) */
   config: ReturnType<typeof parseSiteConfig>;
 }
@@ -175,5 +181,73 @@ export function buildPreviewModel(payload: { manifest: PreviewPayload['manifest'
     regionCounts: [],
     posts: [],
   };
-  return { tenant, view, data, config };
+  return { tenant, view, data, config, listing: sampleListing(cards, data.options, info.address.city ?? null), detail: sampleDetail(cards, PREVIEW_ID) };
+}
+
+/** Örnek ilan listesi: gerçek /ilanlar rotasının başlığı ve boş filtreli sorgusuyla */
+function sampleListing(cards: PropertyCard[], options: HomeData['options'], city: string | null): ListingPageData {
+  const area = city ? `${city} ` : '';
+  return {
+    route: { path: '/ilanlar', preset: {}, heading: 'Tüm ilanlar', label: 'Tüm ilanlar', description: `${area}satılık ve kiralık konut, ticari gayrimenkul ve arsa ilanları.`.trim() },
+    query: parseListingQuery({}, {}),
+    options,
+    result: { items: cards, total: cards.length, page: 1, pageCount: 1 },
+    regionPage: null,
+    hrefFor: () => '/ilanlar',
+  };
+}
+
+/** Örnek ilan detayı: ilk örnek kart + uygulamanın demo görselleri. Konum/özellik uydurulmaz. */
+const DETAIL_IMAGES = ['villa', 'living-room', 'kitchen', 'bedroom', 'bathroom', 'balcony-view'];
+function sampleDetail(cards: PropertyCard[], orgId: string): PreviewModel['detail'] {
+  const card = cards[0];
+  const now = new Date().toISOString();
+  const images = DETAIL_IMAGES.map((f, i) => demo(f, i));
+  const property: PropertyDetail = {
+    ...card,
+    organizationId: orgId,
+    description: 'Bu sayfa örnek içerikle gösterilmektedir. Sitenizde bu alanda ilanınızın kendi açıklaması, fotoğrafları ve özellikleri yer alır.',
+    seoTitle: null,
+    seoDescription: null,
+    createdAt: now,
+    updatedAt: now,
+    priceNegotiable: false,
+    dues: null,
+    deposit: null,
+    cityId: null,
+    districtId: null,
+    neighborhoodId: null,
+    citySlug: null,
+    districtSlug: null,
+    neighborhoodSlug: null,
+    latitude: null,
+    longitude: null,
+    locationPrecision: 'neighborhood',
+    livingRoomCount: null,
+    bathroomCount: null,
+    balconyCount: null,
+    heating: null,
+    hasElevator: null,
+    parking: null,
+    isFurnished: null,
+    inComplex: null,
+    complexName: null,
+    hasAirConditioning: null,
+    creditEligible: null,
+    investmentSuitable: null,
+    deedStatus: null,
+    usageStatus: null,
+    facades: [],
+    views: [],
+    swapAvailable: null,
+    zoningStatus: null,
+    floorAreaRatio: null,
+    heightLimit: null,
+    images,
+    features: [],
+    ogImage: images[0],
+    priceDroppedAt: null,
+    imageCount: images.length,
+  };
+  return { property, similar: cards.slice(1, 5) };
 }

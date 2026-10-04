@@ -2,6 +2,7 @@ import type { SectionOverride } from '@/components/home/sections';
 import type { HomeData } from '@/components/site/site-home';
 import type { PropertyCard, PropertyDetail, PropertyImage } from '@/modules/properties/types';
 import type { SearchOptions } from '@/modules/properties/search-types';
+import type { ListingPreset, ListingQuery } from '@/modules/properties/filters';
 import type { Tenant } from '@/platform/tenant/tenant';
 import type { SiteView } from '@/site-config/load';
 import type { HomeSectionConfig } from '@/site-config/schema';
@@ -25,7 +26,7 @@ import type { HomeSectionConfig } from '@/site-config/schema';
  * Mevcut bileşenler (components/home, layout, property, gallery, search) "standart" ve eski
  * varyantlardır; DEĞİŞTİRİLMEZ. Yeni varyantlar bu klasörde yeni dosya olarak eklenir.
  */
-export const PATTERN_KINDS = ['hero', 'header', 'listing-card', 'gallery', 'search', 'property-detail', 'footer', 'section', 'navigation', 'interaction'] as const;
+export const PATTERN_KINDS = ['hero', 'header', 'listing-card', 'gallery', 'search', 'property-detail', 'footer', 'section', 'navigation', 'interaction', 'listing', 'map'] as const;
 export type PatternKind = (typeof PATTERN_KINDS)[number];
 
 export interface PatternMeta {
@@ -75,8 +76,44 @@ export interface GalleryPatternProps {
   images: PropertyImage[];
   title: string;
 }
+/** Ana sayfa (hero) araması */
 export interface SearchPatternProps {
   options: SearchOptions;
+}
+/**
+ * İlan listesi/arama sayfasının arama yüzeyi (klasik filtre, premium arama, kenar çubuğu,
+ * harita öncelikli, mobil filtre paneli, kompakt). Sorgu ve seçenekler veri katmanından gelir;
+ * desen yalnızca URL'yi değiştirir (ilan sorgusu yapmaz).
+ */
+export interface ListingSearchPatternProps {
+  query: ListingQuery;
+  preset: ListingPreset;
+  options: SearchOptions;
+}
+/**
+ * İlan sonuçları yüzeyi (ızgara, kompakt ızgara, yatay, öne çıkan, harita sonuçları). Sonuçlar
+ * ve sayfalama veri katmanından hazır gelir.
+ */
+export interface ListingResultsPatternProps {
+  items: PropertyCard[];
+  page: number;
+  pageCount: number;
+  hrefFor: (page: number) => string;
+  priorityCount?: number;
+}
+/**
+ * Harita yüzeyi (Map First altyapısı). Harita sağlayıcısı, karo sunucusu ve koordinatlar mevcut
+ * sistemden gelir (modules/maps); desen yalnızca sunumu seçer, harita arka ucunu değiştirmez.
+ */
+export interface MapPatternProps {
+  center: { lat: number; lng: number };
+  mode: 'pin' | 'area';
+  radiusMeters?: number;
+  zoom?: number;
+  attribution: string;
+  maxZoom?: number;
+  ariaLabel: string;
+  className?: string;
 }
 export interface PropertyDetailPatternProps extends PatternContext {
   property: PropertyDetail;

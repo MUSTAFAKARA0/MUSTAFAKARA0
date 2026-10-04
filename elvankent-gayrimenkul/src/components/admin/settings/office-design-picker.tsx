@@ -1,9 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Check, ExternalLink, Lock, Palette } from 'lucide-react';
+import { Check, Eye, ExternalLink, Lock, Palette } from 'lucide-react';
 import { applyOfficeDesign } from '@/app/actions/admin-design';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -100,9 +101,14 @@ export function OfficeDesignPicker({ available, families, current }: { available
                     </li>
                   ))}
                 </ul>
-                <div className="mt-auto pt-5">
+                <div className="mt-auto flex flex-wrap items-start gap-2 pt-5">
+                  <Button asChild size="sm" variant="ghost">
+                    <Link href={`/admin/tasarim/onizleme?aile=${f.id}`}>
+                      <Eye /> Önizle
+                    </Link>
+                  </Button>
                   {active ? null : confirming === f.id ? (
-                    <div className="rounded-xl bg-surface-muted p-3">
+                    <div className="basis-full rounded-xl bg-surface-muted p-3">
                       <p className="text-[13px]">Siteniz bu tasarımla hemen yayınlanır. İlanlarınız, metinleriniz ve markanız değişmez.</p>
                       <div className="mt-3 flex gap-2">
                         <Button size="sm" loading={pending === f.id} onClick={() => apply(f.id)}>

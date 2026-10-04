@@ -12,6 +12,7 @@ import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { buildPreviewModel } from '@/site-preview/model';
+import { parsePreviewSurface, PREVIEW_SURFACES } from '@/site-preview/surfaces';
 import { decodePreviewPayload, encodePreviewPayload, initialSiteSections } from '@/site-factory/site-info';
 import { CATALOG } from '@/site-factory/catalog';
 import { SITE_TYPES } from '@/site-factory/site-types';
@@ -73,7 +74,29 @@ describe('PREVIEW: önizleme = kiracı', () => {
 
   test('kiracı sitesi ve önizleme aynı Site Renderer bileşenlerini kullanır', () => {
     const src = (p) => readFileSync(new URL(`../../src/${p}`, import.meta.url), 'utf8');
-    for (const p of ['app/t/[tenant]/layout.tsx', 'app/site-onizleme/page.tsx']) assert.match(src(p), /from '@\/components\/site\/site-frame'/, p);
-    for (const p of ['app/t/[tenant]/page.tsx', 'app/site-onizleme/page.tsx']) assert.match(src(p), /<SiteHome /, p);
+    // Önizlemeler (KARAY ve ofis) ortak çizici site-preview/render.tsx üzerinden aynı bileşenleri kullanır
+    for (const p of ['app/t/[tenant]/layout.tsx', 'site-preview/render.tsx']) assert.match(src(p), /from '@\/components\/site\/site-frame'/, p);
+    for (const p of ['app/t/[tenant]/page.tsx', 'site-preview/render.tsx']) assert.match(src(p), /<SiteHome /, p);
+    for (const p of ['app/t/[tenant]/[slug]/page.tsx', 'site-preview/render.tsx']) assert.match(src(p), /<SiteListing\s/, p);
+    for (const p of ['app/t/[tenant]/ilan/[slug]/page.tsx', 'site-preview/render.tsx']) assert.match(src(p), /<PropertyDetailSurface /, p);
+    for (const p of ['app/site-onizleme/page.tsx', 'app/site-onizleme/ofis/page.tsx']) assert.match(src(p), /<PreviewPage\s/, p);
+  });
+
+  test('önizleme yüzeyleri: ana sayfa + arama + ilan detayı; örnek içerik açıkça örnektir', () => {
+    const m = buildPreviewModel({ manifest: { siteType: 'real-estate-office', designFamily: 'klasik-guven', variants: {} }, info }, 'http://localhost');
+    assert.deepEqual(PREVIEW_SURFACES.map((s) => s.id), ['ana-sayfa', 'ilanlar', 'ilan']);
+    assert.equal(parsePreviewSurface('ilan'), 'ilan');
+    assert.equal(parsePreviewSurface('<script>'), 'ana-sayfa');
+    assert.equal(parsePreviewSurface(undefined), 'ana-sayfa');
+    assert.equal(m.listing.result.items.length, m.data.latestPool.length);
+    assert.equal(m.listing.route.path, '/ilanlar');
+    const p = m.detail.property;
+    assert.ok(p.isDemo, 'örnek ilan demo olarak işaretli');
+    assert.match(p.title, /^Örnek ilan/);
+    assert.ok(p.images.length >= 5 && p.images.every((i) => i.public_base.startsWith('/demo/')), 'yalnızca uygulamanın demo görselleri');
+    assert.equal(p.latitude, null, 'konum uydurulmaz');
+    assert.deepEqual(p.features, []);
+    assert.equal(p.organizationId, m.tenant.id);
+    assert.ok(m.detail.similar.every((c) => c.isDemo));
   });
 });
