@@ -121,7 +121,7 @@ export async function notifyNewLead(tenant: Pick<Tenant, 'id' | 'name' | 'baseUr
     if (!lead) return;
 
     const message = buildLeadEmail(tenant, lead as unknown as LeadForEmail, serverEnv.email.leadDetails);
-    const result = await sendEmail({ ...message, to: emails });
+    const result = await sendEmail({ ...message, to: emails }, { idempotencyKey: `lead-created/${leadId}` });
     if (result.ok) await record('sent', result.provider, { id: result.id });
     else await record(result.skipped ? 'skipped' : 'failed', result.provider, { error: result.error });
     if (!result.ok && !result.skipped) console.error('[notify] lead email failed', result.provider, result.error);

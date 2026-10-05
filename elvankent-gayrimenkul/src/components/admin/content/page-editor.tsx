@@ -81,7 +81,7 @@ export function PageEditor({
     }
     setSavedAt(res.data.updatedAt);
     setSnapshot(JSON.stringify([title, body, seoTitle, seoDescription, reviewed]));
-    toast.success('Sayfa kaydedildi.');
+    toast.success('Sayfa kaydedildi ve sitede yayına alındı.');
     router.refresh();
   }
 
@@ -129,8 +129,12 @@ export function PageEditor({
 
       <aside className="space-y-6">
         <section className="rounded-2xl border border-border bg-surface p-5 shadow-xs">
-          <h2 className="text-[15.5px] font-bold">Kaydet</h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">
+          <h2 className="text-[15.5px] font-bold">Kaydet ve yayınla</h2>
+          <p className="mt-2 rounded-lg bg-warning-soft px-3 py-2 text-[12.5px] font-medium text-warning" data-testid="page-live-notice">
+            Bu sayfanın metni taslak akışında değildir: kaydettiğinizde sitede hemen görünür. Sayfanın başlığı, görünürlüğü ve
+            paylaşım ayarları Site yönetimi › Sayfalar ekranında taslağa kaydedilir.
+          </p>
+          <p className="mt-2 text-[13px] text-muted-foreground">
             {initial.saved || savedAt ? `Son kayıt: ${savedAt ? formatDateTime(savedAt) : '—'}` : 'Bu sayfa henüz özelleştirilmedi; sitede varsayılan şablon gösteriliyor.'}
           </p>
           {legal && (
@@ -150,7 +154,7 @@ export function PageEditor({
           )}
           <div className="mt-4 grid gap-2">
             <Button onClick={() => void save()} loading={pending}>
-              {!pending && <Save />} Kaydet
+              {!pending && <Save />} Kaydet ve yayınla
             </Button>
             <Button asChild variant="ghost">
               <a href={`${siteBase}${path}`} target="_blank" rel="noopener noreferrer">

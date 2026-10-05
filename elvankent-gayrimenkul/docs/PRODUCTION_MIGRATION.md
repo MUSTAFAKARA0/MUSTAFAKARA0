@@ -1,4 +1,4 @@
-# Production veritabanı geçişi (V1 → V2 + Stage 3)
+# Production veritabanı geçişi (V1 → güncel şema: V2, Stage 3, KARAY, P0.1–P0.5)
 
 > **Bu işlem sizin açık onayınız olmadan yapılmaz ve geri dönüşü zor bir işlemdir.** Önce demo projesinde prova edin (docs/DEMO_SETUP.md). Geliştirme ortamından canlı veritabanına hiçbir işlem yapılmadı.
 
@@ -20,6 +20,11 @@ V1 şeması + V1 demo verisi + gerçekçi canlı kayıtlar (yönetici, gerçek i
 | Eski ilan adresi | `/ilan/…-100009` → `/ilan/…` kalıcı yönlendirme (308) |
 | Stage 3 dosyalarını ikinci kez çalıştırma | sorunsuz (tekrar çalıştırılabilir) |
 | Yedekten yeni veritabanına geri yükleme | V1 sayıları birebir aynı |
+| **FAZ 0 provası (05.10.2026):** V1 yedeği (`pg_restore`) → ön kontrol → 25 dosya sırayla, her biri tek işlem | 25/25 başarılı (dosya başına < 0,4 sn); son kontrol **21/21 TAMAM (25 satır; 4'ü önceki sayılarla KARŞILAŞTIRMA satırı)**; ilan 8→8, fotoğraf 24→24, talep 3→3, yönlendirme 3→11 (8'i eski ilan adresi yönlendirmesi, beklenen) |
+| FAZ 0: 2026-10-04…10 dosyalarını iki kez daha çalıştırma | sorunsuz (tekrar çalıştırılabilir); son kontrol yine TAMAM |
+| FAZ 0 negatif kontrol: yalnızca ilk 18 dosya uygulanmış kopya | son kontrol 19–25 numaralı satırlarda HATA verir (eksik migration yakalanır) |
+
+**Not (FAZ 0):** Önceki sürümde bu listede yalnızca 18 dosya vardı; P0.1–P0.5 dosyaları eksikti. Güncel uygulama kodu bu dosyalar olmadan çalışmaz (davet, alan adı, ofis site yönetimi). Son kontrol artık eksik dosyayı HATA olarak gösterir; `npm run prelaunch -- --production` da şema sürümünü denetler.
 
 Prova Supabase'e benzeyen yerel bir PostgreSQL 16 üzerinde yapıldı. Ayrıca aynı migration'lar gerçek Supabase'te **boş** demo projesine (`elvankent-demo`, SQL Editor, `supabase/demo/01–04`) sorunsuz uygulandı. Henüz yapılmayan: gerçek Supabase'te **V1 verisi bulunan** bir veritabanında yükseltme provası → aşağıdaki "Canlıdan önce son prova" adımı.
 
@@ -46,7 +51,16 @@ V1'de `20260922000001…04` zaten uygulanmıştır — **tekrar çalıştırmay�
 20260930000002_site_builder.sql
 20261001000001_site_brand_publish.sql
 20261002000001_karay_platform.sql
+20261004000001_design_family_access.sql
+20261005000001_office_site_management.sql
+20261006000001_brand_content_draft.sql
+20261007000001_seo_draft.sql
+20261008000001_owner_invitations.sql
+20261009000001_custom_domains.sql
+20261010000001_password_reset_requests.sql
 ```
+
+Toplam **25 dosya** (V1'in 4 dosyası hariç). Son 7 dosyanın her biri kendi içinde tek işlemdir ve tekrar çalıştırılabilir; geri dönüş SQL'i her dosyanın başındaki yorum bloğundadır.
 
 `20260929000001_platform_owner_isolation.sql` (platform sahibi KARAY ↔ kiracı yalıtımı): kiracı listesinin, ayarlarının ve alan adlarının herkese açık anahtarla **toplu** çekilmesini kapatır; site ofisini yalnızca adresiyle/alan adıyla tek tek bulur (`public_tenant*` fonksiyonları). Veri değiştirmez, tekrar çalıştırılabilir. Uygulama kodu bu dosya uygulanmadan önce de sonra da çalışır. Geri dönüş SQL'i dosyanın sonundadır.
 
@@ -67,7 +81,7 @@ V1'de `20260922000001…04` zaten uygulanmıştır — **tekrar çalıştırmay�
 
 Canlı veritabanının bir kopyası üzerinde, canlıya dokunmadan tam prova:
 1. Supabase › **canlı proje** › Database › **Backups** › son yedeğin yanında **Restore to a new project** (Pro planı gerekir). Pro yoksa: bilgisayarınızda `pg_dump` ile yedek alın (aşağıda 2. adım) ve Supabase'te yeni boş bir proje açıp `pg_restore --no-owner` ile yükleyin.
-2. Yeni (kopya) projede aşağıdaki "Adım adım" 3–5'i uygulayın (ön kontrol, 18 dosya, son kontrol).
+2. Yeni (kopya) projede aşağıdaki "Adım adım" 3–5'i uygulayın (ön kontrol, 25 dosya, son kontrol).
 3. Demo Vercel projesinin ortam değişkenlerini geçici olarak bu kopya projeye çevirip siteyi ve paneli kontrol edin; sonra demo değerlerine geri alın.
 4. Her şey TAMAM ise kopya projeyi silin ve canlı geçiş için bakım penceresi belirleyin.
 
@@ -80,7 +94,7 @@ Canlı veritabanının bir kopyası üzerinde, canlıya dokunmadan tam prova:
    - Doğrulama: `pg_restore --list yedek-v1-….dump | head` (hata vermemeli) ve dosya boyutu > 0.
    - Fotoğraflar: `npm run backup:storage -- --out=./yedek/storage-v1` (docs/BACKUP_RESTORE.md).
 3. **Ön kontrol:** SQL Editor'de `supabase/ops/preflight_v1.sql` → çıktıyı saklayın. HATA varsa durun.
-4. **Migration:** yukarıdaki 18 dosya, sırayla.
+4. **Migration:** yukarıdaki 25 dosya, sırayla.
 5. **Son kontrol:** `supabase/ops/postflight_v2.sql` → tüm "durum"lar TAMAM olmalı; sayıları ön kontrolle karşılaştırın (ilan, fotoğraf = media_assets, talep = leads).
 6. Uygulamayı yayına alın (docs/DEPLOYMENT_RUNBOOK.md, adım 8+).
 

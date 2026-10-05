@@ -22,7 +22,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { canonicalHostname, isUnderSuffix, parseDomainInput } from '../../src/modules/domains/hostname.ts';
 import { domainConfigFromEnv } from '../../src/modules/domains/config.ts';
 import { dohResolver } from '../../src/modules/domains/dns.ts';
-import { DEFAULT_TENANT_KEY, karayHostConfigFromEnv, resolveRequestSurface, tenantKeyForHost } from '../../src/platform/tenant/host.ts';
+import { DEFAULT_TENANT_KEY, karayHostConfigFromEnv, resolveRequestSurface, tenantBaseUrls, tenantKeyForHost } from '../../src/platform/tenant/host.ts';
 
 // Sunucu imza anahtarı (yalnızca test değeri; modül yüklenmeden önce)
 process.env.IP_HASH_SALT ||= 'unit-test-salt-not-a-secret';
@@ -291,7 +291,9 @@ describe('CD-10 kanonik adres ve bağlantı hedefi', () => {
   test('kiracı baseUrl birincil AKTİF alan adından (public_tenant_domains), sitemap/metadata/OG aynı baseUrl', () => {
     const tenant = read('src/platform/tenant/tenant.ts');
     assert.match(tenant, /const primaryDomain = domainsRes\.data\?\.find\(\(d\) => d\.is_primary\)\?\.hostname;/);
-    assert.match(tenant, /\? `https:\/\/\$\{primaryDomain\}`/);
+    // FAZ 0: kök hesabı saf fonksiyona taşındı (tenantBaseUrls); davranış aynı — birincil aktif alan adı
+    assert.match(tenant, /tenantBaseUrls\(\{\s*primaryDomain,/);
+    assert.equal(tenantBaseUrls({ primaryDomain: 'ofis.example', slug: 'ofis', isDefault: false, siteUrl: 'https://varsayilan.example', karayHosts: [] }).siteBaseUrl, 'https://ofis.example');
     assert.match(read('src/app/t/[tenant]/layout.tsx'), /baseUrl: tenant\.baseUrl/);
   });
   test('DNS hedefi ortamdan; kodda sabit Vercel değeri kullanılmaz (servis ve ekranlar)', () => {

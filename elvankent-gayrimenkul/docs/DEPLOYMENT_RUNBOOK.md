@@ -15,13 +15,13 @@
 
 | # | Adım | Nasıl | Kontrol |
 | --- | --- | --- | --- |
-| 0 | Prova | docs/PRODUCTION_MIGRATION.md › "Canlıdan önce son prova" (canlı yedeğin kopyasında) | kopya projede postflight TAMAM, site çalışıyor |
+| 0 | Prova | docs/PRODUCTION_MIGRATION.md › "Canlıdan önce son prova" (canlı yedeğin kopyasında) | kopya projede postflight 21/21 TAMAM (25 satır; 4'ü önceki sayılarla KARŞILAŞTIRMA satırı), site çalışıyor |
 | 1 | Yedek | Supabase Backups/PITR + `pg_dump -Fc` + `npm run backup:storage` | dosyalar oluştu |
 | 2 | Yedek doğrulama | `pg_restore --list`, `manifest.json` dosya sayısı | hata yok, sayılar mantıklı |
-| 3 | Veritabanı migration | docs/PRODUCTION_MIGRATION.md (18 dosya, sırayla) | `postflight_v2.sql` 18/18 TAMAM |
+| 3 | Veritabanı migration | docs/PRODUCTION_MIGRATION.md (25 dosya, sırayla) | `postflight_v2.sql` 21/21 TAMAM (25 satır; 4'ü önceki sayılarla KARŞILAŞTIRMA satırı) |
 | 4 | Ortam değişkenleri | Vercel › Production: tablo aşağıda | `npm run prelaunch -- --production` (yerelde canlı değerlerle) kritik yok |
 | 5 | Depolama | Supabase › Storage: 4 kova; `media-originals` özel | postflight #12 TAMAM |
-| 6 | Auth | Site URL, Redirect URL `/admin/auth/callback`, sign-up kapalı, TOTP açık, özel SMTP (Resend) | test hesabıyla şifre sıfırlama e-postası geliyor |
+| 6 | Auth | Site URL, Redirect URL `/admin/auth/callback`, sign-up kapalı, TOTP açık. Şifre sıfırlama ve davet e-postaları KARAY'ın sağlayıcısıyla (EMAIL_PROVIDER) gider; Supabase'te özel SMTP isteğe bağlıdır | test hesabıyla şifre sıfırlama e-postası geliyor (ofis alan adında da) |
 | 7 | RLS | postflight #2–#4 | TAMAM |
 | 8 | Build | Vercel production build (CI `quality` yeşil) | build başarılı |
 | 9 | Deploy | Vercel › Promote to Production | dağıtım "Ready" |
@@ -45,7 +45,9 @@ Sunucu fonksiyonları veritabanıyla aynı bölgede çalışmalıdır: her panel
 | `NEXT_PUBLIC_SITE_URL` | evet | `https://elvankentgayrimenkul.com` |
 | `DEFAULT_TENANT_SLUG` | isteğe bağlı | `elvankent` — tanımsızsa veritabanındaki varsayılan kiracı (`is_default`) kullanılır |
 | `IP_HASH_SALT`, `CRON_SECRET` | evet | 32+ karakter rastgele (gizli) |
-| `EMAIL_PROVIDER`, `RESEND_API_KEY`, `EMAIL_FROM` | evet | talep bildirimleri (docs/OPERATIONS.md) |
+| `EMAIL_PROVIDER`, `RESEND_API_KEY`, `EMAIL_FROM` | evet | davet, şifre sıfırlama ve talep bildirimleri (docs/OPERATIONS.md); gönderici alan adında SPF/DKIM/DMARC |
+| `KARAY_HOSTS` (veya `PLATFORM_ROOT_DOMAIN`) | evet | alan adı henüz bağlanmamış ofislerin davet bağlantıları KARAY alan adına gider (yoksa varsayılan kiracının alan adına düşer) |
+| `DOMAIN_TARGET_CNAME`, `DOMAIN_TARGET_A` | önerilir | Vercel › Domains'in verdiği gerçek değerler; yoksa özel alan adı bağlantısını yalnızca süper admin elle onaylar |
 | `SENTRY_DSN` veya `ERROR_WEBHOOK_URL` | önerilir | hata iletimi |
 | `MAP_PROVIDER`, `MAP_API_KEY` | önerilir | MapTiler/Stadia |
 | `PLATFORM_ADMIN_MFA_REQUIRED` | önerilir | `true` |

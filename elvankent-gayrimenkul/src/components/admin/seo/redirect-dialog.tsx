@@ -47,7 +47,7 @@ export function RedirectDialog({ initial }: { initial?: { id: number; fromPath: 
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent title={initial ? 'Yönlendirmeyi düzenle' : 'Yeni yönlendirme'} description="Eski bir adrese gelen ziyaretçileri ve arama motorlarını yeni adrese gönderir." size="lg">
+      <DialogContent title={initial ? 'Yönlendirmeyi düzenle' : 'Yeni yönlendirme'} description="Eski bir adrese gelen ziyaretçileri ve arama motorlarını yeni adrese gönderir. Taslak yoktur: kaydedildiği anda sitede etkin olur." size="lg">
         <form
           className="mt-5 space-y-4"
           noValidate

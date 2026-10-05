@@ -50,6 +50,9 @@ jobs:
       RCLONE_CONFIG_DEST_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
       RCLONE_CONFIG_DEST_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: elvankent-gayrimenkul/supabase/ops
       - name: Araçları kur (pg_dump 17, rclone)
         run: |
           sudo apt-get update -qq
@@ -65,10 +68,16 @@ jobs:
           set -euo pipefail
           STAMP=$(date -u +%Y-%m-%dT%H%MZ)
           echo "STAMP=$STAMP" >> "$GITHUB_ENV"
-          pg_dump "$SUPABASE_DB_URL" --format=custom --no-owner --no-privileges --file "db-$STAMP.dump"
+          # Yetkiler (GRANT/REVOKE) yedekte KALIR: --no-privileges ile alınan yedekten geri yüklemede
+          # yalnızca sunucuya açık fonksiyonlar (davet, alan adı, şifre sıfırlama sınırı) herkese açılır.
+          pg_dump "$SUPABASE_DB_URL" --format=custom --no-owner --file "db-$STAMP.dump"
           pg_restore --list "db-$STAMP.dump" > /dev/null   # yedeğin okunabilir olduğunu doğrula
+          # Kritik veri parmak izi: geri yüklemeden sonra aynı betiğin çıktısıyla birebir karşılaştırılır
+          psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -f elvankent-gayrimenkul/supabase/ops/backup_fingerprint.sql > "db-$STAMP.fingerprint.txt"
+          cat "db-$STAMP.fingerprint.txt" | cut -d'|' -f1-3
           ls -lh "db-$STAMP.dump"
           rclone copyto "db-$STAMP.dump" "dest:$BUCKET/db/db-$STAMP.dump" --s3-no-check-bucket
+          rclone copyto "db-$STAMP.fingerprint.txt" "dest:$BUCKET/db/db-$STAMP.fingerprint.txt" --s3-no-check-bucket
 
       - name: Fotoğraf ve marka dosyaları (Storage)
         run: |
@@ -82,6 +91,6 @@ jobs:
       - name: Saklama süresi
         run: |
           set -euo pipefail
-          rclone delete "dest:$BUCKET/db" --min-age "${RETENTION_DAYS}d"
+          rclone delete "dest:$BUCKET/db" --min-age "${RETENTION_DAYS}d"   # .dump ve .fingerprint.txt birlikte
           rclone delete "dest:$BUCKET/storage/deleted" --min-age 90d
           rclone rmdirs "dest:$BUCKET/storage/deleted" --leave-root || true

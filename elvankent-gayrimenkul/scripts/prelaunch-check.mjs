@@ -10,6 +10,9 @@
  * Çıkış kodu: kritik hata varsa 1 (CI veya dağıtım betiğinde kapı olarak kullanılabilir).
  * Gizli değerler ekrana yazılmaz; yalnızca tanımlı olup olmadıkları raporlanır.
  */
+import { readdirSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 
 const flags = Object.fromEntries(
@@ -53,6 +56,17 @@ if (emailProvider === 'none') add(production ? 'error' : 'warn', 'bildirim', 'EM
 if (emailProvider === 'resend' && !env('RESEND_API_KEY')) add('error', 'bildirim', 'EMAIL_PROVIDER=resend için RESEND_API_KEY gerekli');
 if (emailProvider !== 'none' && !env('EMAIL_FROM')) add('error', 'bildirim', 'EMAIL_FROM tanımlı değil (ör. "Elvankent Gayrimenkul <bildirim@alanadiniz.com>")');
 
+if (production && emailProvider === 'log') add('error', 'bildirim', 'EMAIL_PROVIDER=log production\'da kullanılamaz (davet ve şifre sıfırlama e-postaları gönderilmez)');
+
+// Ofis paneli bağlantıları (davet / aktivasyon): kendi adresi olmayan ofis için KARAY'ın alan adı
+// kullanılır. İkisi de yoksa davet bağlantısı varsayılan kiracının (başka bir müşterinin) alan adına düşer.
+if (!env('KARAY_HOSTS') && !env('PLATFORM_ROOT_DOMAIN')) {
+  add(production ? 'error' : 'info', 'alan adı', 'KARAY_HOSTS (veya PLATFORM_ROOT_DOMAIN) tanımlı değil: alan adı henüz bağlanmamış ofislerin davet bağlantıları varsayılan kiracının alan adına gider');
+}
+if (!env('DOMAIN_TARGET_CNAME') && !env('DOMAIN_TARGET_A')) {
+  add(production ? 'warn' : 'info', 'alan adı', 'DOMAIN_TARGET_CNAME / DOMAIN_TARGET_A tanımlı değil: özel alan adı bağlantısını yalnızca süper admin elle onaylayabilir');
+}
+
 if (!env('SENTRY_DSN') && !env('ERROR_WEBHOOK_URL')) add(production ? 'warn' : 'info', 'izleme', 'Hata izleme hedefi yok (SENTRY_DSN veya ERROR_WEBHOOK_URL); hatalar yalnızca Vercel loglarında görünür');
 
 // ---------------------------------------------------------------- Veritabanı
@@ -60,6 +74,14 @@ const url = env('NEXT_PUBLIC_SUPABASE_URL');
 const key = env('SUPABASE_SERVICE_ROLE_KEY');
 if (url && key) {
   const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+
+  // Şema sürümü: veritabanındaki son KARAY migration'ı, depodaki son migration dosyasıyla aynı olmalı
+  const migrationsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'supabase', 'migrations');
+  const expectedVersion = readdirSync(migrationsDir).filter((f) => /^\d{14}_.+\.sql$/.test(f)).sort().at(-1)?.slice(0, 14) ?? null;
+  const { data: dbVersion, error: versionError } = await db.rpc('karay_schema_version');
+  if (versionError) add('error', 'veritabanı', `Şema sürümü okunamadı (karay_schema_version yok): migration'lar eksik — docs/PRODUCTION_MIGRATION.md (beklenen ${expectedVersion})`);
+  else if (expectedVersion && dbVersion !== expectedVersion) add('error', 'veritabanı', `Şema sürümü ${dbVersion}, beklenen ${expectedVersion}: eksik migration var — docs/PRODUCTION_MIGRATION.md`);
+  else add('info', 'veritabanı', `Şema sürümü ${dbVersion} (güncel)`);
   const { data: org, error } = await (orgSlug ? db.from('organizations').select('id, name, status').eq('slug', orgSlug) : db.from('organizations').select('id, name, status').eq('is_default', true)).maybeSingle();
   if (error) add('error', 'veritabanı', `Bağlantı/şema hatası: ${error.message} (V2 migration'ları uygulandı mı?)`);
   else if (!org) add('error', 'veritabanı', orgSlug ? `"${orgSlug}" organizasyonu bulunamadı` : 'varsayılan organizasyon (is_default) bulunamadı');

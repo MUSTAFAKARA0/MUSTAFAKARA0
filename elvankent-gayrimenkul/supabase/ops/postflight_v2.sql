@@ -112,5 +112,74 @@ checks as (
                and not has_function_privilege('anon', 'public.submit_platform_lead(text, text, text, text, text, text, text, boolean, text, text)', 'execute')
                and has_function_privilege('anon', 'public.public_platform_profile()', 'execute')
               then 'TAMAM' else 'HATA' end
+  union all
+  select 19, 'Tasarım ailesi yetkileri (design_family_settings, organization_design_families)',
+         case when to_regclass('public.organization_design_families') is null then 'tablo yok' else 'var' end,
+         case when to_regclass('public.design_family_settings') is null or to_regclass('public.organization_design_families') is null
+              then 'HATA: 20261004000001_design_family_access.sql uygulanmamış'
+              when (select relrowsecurity from pg_class where oid = to_regclass('public.design_family_settings'))
+               and (select relrowsecurity from pg_class where oid = to_regclass('public.organization_design_families'))
+               and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'org_design_family_access')
+              then 'TAMAM' else 'HATA' end
+  union all
+  select 20, 'Ofis site yönetimi (site_discard_draft, assert_site_editor)',
+         case when exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'assert_site_editor') then 'var' else 'yok' end,
+         case when exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'site_discard_draft')
+               and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'assert_site_editor')
+              then 'TAMAM' else 'HATA: 20261005000001_office_site_management.sql uygulanmamış' end
+  union all
+  select 21, 'Marka ve içerik taslağı (hizmet alanı, çalışma saatleri, ana sayfa metni taslakta)',
+         case when exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'site_brand_columns') then 'var' else 'yok' end,
+         case when not exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'site_brand_columns')
+                or not exists (select 1 from pg_trigger where tgrelid = 'public.organization_settings'::regclass and not tgisinternal
+                                 and tgfoid = (select oid from pg_proc where pronamespace = 'public'::regnamespace and proname = 'organization_settings_guard' limit 1))
+              then 'HATA: 20261006000001_brand_content_draft.sql uygulanmamış'
+              when (xpath('/row/n/text()', query_to_xml('select (''service_area'' = any (public.site_brand_columns()) and ''hero_title'' = any (public.site_brand_columns()))::int as n', false, true, '')))[1]::text = '1'
+              then 'TAMAM' else 'HATA: 20261006000001_brand_content_draft.sql uygulanmamış' end
+  union all
+  select 22, 'SEO taslağı (doğrulama kodu marka taslağında)',
+         case when exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'site_seo_brand_columns') then 'var' else 'yok' end,
+         case when not exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'site_seo_brand_columns')
+                or not exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'site_brand_columns')
+              then 'HATA: 20261007000001_seo_draft.sql uygulanmamış'
+              when (xpath('/row/n/text()', query_to_xml('select (''google_site_verification'' = any (public.site_brand_columns()))::int as n', false, true, '')))[1]::text = '1'
+              then 'TAMAM' else 'HATA: 20261007000001_seo_draft.sql uygulanmamış' end
+  union all
+  select 23, 'Sahip daveti (organization_invitations; fonksiyonlar yalnızca sunucu anahtarıyla)',
+         case when to_regclass('public.organization_invitations') is null then 'tablo yok'
+              else (xpath('/row/n/text()', query_to_xml('select count(*) as n from public.organization_invitations where status = ''pending''', false, true, '')))[1]::text || ' bekleyen davet' end,
+         case when to_regclass('public.organization_invitations') is null then 'HATA: 20261008000001_owner_invitations.sql uygulanmamış'
+              when (select relrowsecurity from pg_class where oid = to_regclass('public.organization_invitations'))
+               and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'invitation_accept')
+               and not exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace
+                                 and p.proname in ('invitation_accept', 'invitation_lookup', 'invitation_release')
+                                 and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute')))
+              then 'TAMAM' else 'HATA: davet fonksiyonları istemciye açık veya eksik' end
+  union all
+  select 24, 'Özel alan adı (bekliyor / doğrulandı / aktif; birincil yalnızca aktif)',
+         case when not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'organization_domains' and column_name = 'status')
+              then 'durum sütunu yok'
+              else (xpath('/row/n/text()', query_to_xml('select coalesce(string_agg(status || '': '' || n, '', '' order by status), ''alan adı yok'') as n from (select status, count(*) n from public.organization_domains group by status) s', false, true, '')))[1]::text end,
+         case when not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'organization_domains' and column_name = 'status')
+              then 'HATA: 20261009000001_custom_domains.sql uygulanmamış'
+              when to_regclass('public.organization_domains_bound_idx') is not null
+               and exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'domain_add')
+               and not exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace
+                                 and p.proname in ('domain_add', 'domain_mark_verified', 'domain_mark_active', 'domain_remove', 'domain_set_primary')
+                                 and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute')))
+               and (xpath('/row/n/text()', query_to_xml('select count(*) as n from public.organization_domains where is_primary and status <> ''active''', false, true, '')))[1]::text::int = 0
+              then 'TAMAM' else 'HATA: alan adı fonksiyonları istemciye açık, eksik veya aktif olmayan birincil alan adı var' end
+  union all
+  select 25, 'Şema sürümü + şifre sıfırlama hız sınırı (yalnızca sunucu anahtarıyla)',
+         case when exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'karay_schema_version')
+              then (xpath('/row/n/text()', query_to_xml('select public.karay_schema_version() as n', false, true, '')))[1]::text else 'sürüm yok' end,
+         case when not exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'karay_schema_version')
+                or not exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'auth_password_reset_allowed')
+              then 'HATA: 20261010000001_password_reset_requests.sql uygulanmamış'
+              when exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = 'auth_password_reset_allowed'
+                             and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute')))
+              then 'HATA: auth_password_reset_allowed istemciye açık'
+              when (xpath('/row/n/text()', query_to_xml('select public.karay_schema_version() as n', false, true, '')))[1]::text >= '20261010000001'
+              then 'TAMAM' else 'HATA: şema sürümü eski' end
 )
 select sira, kontrol, deger, durum from checks order by sira;

@@ -1,12 +1,17 @@
 'use server';
 
-import { cookies, headers } from 'next/headers';
+import { createHash, createHmac } from 'node:crypto';
+import { cookies } from 'next/headers';
+import { after } from 'next/server';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { maskEmail } from '@/lib/format';
 import { getRequestFingerprint } from '@/lib/request';
-import { createSessionClient } from '@/lib/supabase/server';
+import { serverEnv } from '@/lib/server-env';
+import { createServiceClient, createSessionClient } from '@/lib/supabase/server';
+import { isEmailConfigured } from '@/modules/notifications/email';
+import { sendPasswordResetEmail } from '@/modules/notifications/auth-emails';
 import { logSecurityEvent } from '@/platform/audit';
 import { authPasswordErrorMessage, passwordSchema } from '@/platform/auth/password-policy';
 import { writeSessionScopeCookie } from '@/platform/auth/scope-cookie';
@@ -19,7 +24,7 @@ import {
 } from '@/platform/auth/session';
 import { requestHostSurface } from '@/platform/tenant/config';
 import { platformConsoleAllowed } from '@/platform/tenant/host';
-import { getTenantFromRequest } from '@/platform/tenant/tenant';
+import { getTenantFromRequest, trustedRequestOrigin } from '@/platform/tenant/tenant';
 
 export interface AuthFormState {
   error?: string;
@@ -170,17 +175,21 @@ async function platformScopeAllowedHere(): Promise<boolean> {
   return platformConsoleAllowed(await requestHostSurface());
 }
 
-async function requestOrigin(): Promise<string> {
-  const h = await headers();
-  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
-  const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https');
-  return `${proto}://${host}`;
+/** Şifre sıfırlama hız sınırı anahtarı: e-postanın tuzlu özeti (düz e-posta veritabanına yazılmaz) */
+function resetEmailHash(email: string): string {
+  const key = serverEnv.ipHashSalt || serverEnv.supabaseServiceRoleKey || 'eg-default-salt';
+  return createHmac('sha256', key).update(`eg-password-reset|${email}`).digest('hex');
 }
 
 /**
- * Şifre sıfırlama bağlantısı ister. Hesabın var olup olmadığı açığa
- * çıkarılmaz (kullanıcı listesi tahmin edilemez); Supabase Auth kendi hız
- * sınırlarını uygular.
+ * Şifre sıfırlama bağlantısı ister. Hesabın var olup olmadığı açığa çıkarılmaz: yanıt metni ve
+ * süresi aynıdır (bağlantı üretimi ve gönderim yanıttan SONRA, after() içinde yapılır).
+ *
+ * Üretim yolu (FAZ 0): e-posta KARAY'ın sağlayıcısıyla gider (EMAIL_PROVIDER). Bağlantı Auth
+ * yönetici API'siyle (generateLink) üretilir ve GÜVENİLİR kök adrese (trustedRequestOrigin) ait
+ * /admin/auth/callback?token_hash=… adresine işaret eder; hız sınırı veritabanında (e-posta başına
+ * saatte 3, IP başına 10). E-posta yapılandırılmamışsa (yerel geliştirme) Supabase Auth'un kendi
+ * e-postasına (resetPasswordForEmail) düşülür.
  */
 export async function requestPasswordReset(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get('email') ?? '').trim().toLowerCase();
@@ -190,16 +199,38 @@ export async function requestPasswordReset(_prev: AuthFormState, formData: FormD
   // Kiracı alan adında platform sıfırlaması yapılmaz (bağlantı orada 404 olan sayfaya giderdi).
   // Yanıt, hesabın varlığını açığa çıkarmamak için normal yanıtla aynıdır; e-posta gönderilmez.
   if (platformReset && !(await platformScopeAllowedHere())) return { message: RESET_SENT_MESSAGE };
-  const supabase = await createSessionClient();
-  const origin = await requestOrigin();
+  const origin = await trustedRequestOrigin();
   // KARAY platform girişinden istenen sıfırlama, KARAY markalı sayfaya döner (ofis paneline değil).
-  // Dönüş adresi aynı callback'tir → Supabase'teki izinli adres listesinde değişiklik gerekmez.
   const next = platformReset ? '/platform/sifre-yenile' : '/admin/sifre-yenile';
+  const { ipHash } = await getRequestFingerprint();
+
+  const service = createServiceClient();
+  if (service && isEmailConfigured()) {
+    const { data: allowed, error } = await service.rpc('auth_password_reset_allowed', { p_email_hash: resetEmailHash(parsed.data), p_ip_hash: ipHash });
+    if (!error) {
+      if (!allowed) return { error: 'Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin.', email };
+      after(async () => {
+        const { data, error: linkError } = await service.auth.admin.generateLink({ type: 'recovery', email: parsed.data });
+        const tokenHash = data?.properties?.hashed_token;
+        // Hesap yoksa (veya Auth hatası) e-posta gönderilmez; yanıt zaten aynıdır
+        if (linkError || !tokenHash) return;
+        const link = `${origin}/admin/auth/callback?token_hash=${encodeURIComponent(tokenHash)}&type=recovery&next=${encodeURIComponent(next)}`;
+        const sent = await sendPasswordResetEmail(parsed.data, { link, platform: platformReset, idempotencyKey: `password-reset/${createHash('sha256').update(tokenHash).digest('hex').slice(0, 32)}` });
+        // Ayrıntı yalnızca güvenli tanımlayıcılarla loglanır (bağlantı / token / e-posta yok)
+        if (!sent.ok && !sent.skipped) console.error('[password-reset] email failed', { provider: sent.provider, error: sent.error, attempts: sent.attempts });
+      });
+      return { message: RESET_SENT_MESSAGE };
+    }
+    // Fonksiyon yoksa (20261010000001 henüz uygulanmamış) Supabase Auth yoluna düşülür
+    console.warn('[password-reset] rate check unavailable', error.code);
+  }
+
+  const supabase = await createSessionClient();
+  // Dönüş adresi aynı callback'tir → Supabase'teki izinli adres listesinde tanımlı olmalıdır.
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
     redirectTo: `${origin}/admin/auth/callback?next=${next}`,
   });
   if (error?.status === 429) return { error: 'Çok fazla istek gönderildi. Lütfen biraz sonra tekrar deneyin.', email };
-  const { ipHash } = await getRequestFingerprint();
   await logSecurityEvent({ orgId: null, action: 'auth.password_reset_requested', metadata: { email: maskEmail(parsed.data) }, ipHash });
   return { message: RESET_SENT_MESSAGE };
 }

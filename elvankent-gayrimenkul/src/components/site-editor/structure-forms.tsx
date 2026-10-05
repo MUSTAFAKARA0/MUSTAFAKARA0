@@ -1081,6 +1081,11 @@ export function PagesForm({
     setPages((p) => ({ ...p, [k]: { ...get(k), ...patch } }));
   return (
     <div className="max-w-4xl">
+      <p className="mb-3 text-[13px] text-muted-foreground" data-testid="pages-draft-scope">
+        Buradaki görünürlük, başlık ve arama/paylaşım ayarları taslağa kaydedilir ve &quot;Yayınla&quot; ile sitede
+        görünür. Sayfa metinleri (Hakkımızda, KVKK vb.) ofis panelinde İçerikler › Sayfalar ekranından düzenlenir ve
+        kaydedildiği anda yayına çıkar.
+      </p>
       <ul className="space-y-2">
         {PAGE_KEYS.map((k) => {
           const p = get(k);

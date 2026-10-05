@@ -76,7 +76,7 @@ export interface KarayHostConfig {
 }
 
 /** Geliştirme ve önizleme adresleri (yüzey ve kiracı çözümlemesi AYNI listeyi kullanır) */
-function isDevOrPreviewHost(host: string): boolean {
+export function isDevOrPreviewHost(host: string): boolean {
   return host === 'localhost' || host.endsWith('.localhost') || IPV4.test(host) || host.startsWith('[') || host.endsWith('.vercel.app');
 }
 
@@ -166,6 +166,37 @@ export function karayHostsFromEnv(value: string | undefined): string[] {
     .split(',')
     .map((h) => normalizeHost(h))
     .filter((h) => HOSTNAME.test(h) || h === 'localhost');
+}
+
+/**
+ * Kiracının iki kökü (FAZ 0):
+ *  - siteBaseUrl: kanonik site adresi (SEO, sitemap, paylaşım) — birincil aktif alan adı, yoksa
+ *    {slug}.{kök alan adı}, varsayılan kiracıda NEXT_PUBLIC_SITE_URL.
+ *  - panelBaseUrl: ofis paneli bağlantıları (davet / aktivasyon). Kiracının kendi adresi yoksa
+ *    NEXT_PUBLIC_SITE_URL (= varsayılan kiracının, yani BAŞKA bir müşterinin alan adı) KULLANILMAZ;
+ *    KARAY'ın kendi alan adına (KARAY_HOSTS) düşülür. Hiçbiri yoksa (tek kiracılı kurulum) eski davranış.
+ */
+export function tenantBaseUrls(input: {
+  primaryDomain?: string | null;
+  slug: string;
+  isDefault: boolean;
+  siteUrl: string;
+  platformRootDomain?: string;
+  karayHosts: string[];
+}): { siteBaseUrl: string; panelBaseUrl: string } {
+  const siteUrl = input.siteUrl.replace(/\/+$/, '');
+  if (input.primaryDomain) {
+    const own = `https://${input.primaryDomain}`;
+    return { siteBaseUrl: own, panelBaseUrl: own };
+  }
+  if (input.isDefault) return { siteBaseUrl: siteUrl, panelBaseUrl: siteUrl };
+  const root = (input.platformRootDomain ?? '').toLowerCase();
+  if (root) {
+    const sub = `https://${input.slug}.${root}`;
+    return { siteBaseUrl: sub, panelBaseUrl: sub };
+  }
+  const karay = input.karayHosts.find((h) => h !== 'localhost');
+  return { siteBaseUrl: siteUrl, panelBaseUrl: karay ? `https://${karay}` : siteUrl };
 }
 
 /** NEXT_PUBLIC_SITE_URL'den varsayılan alan adlarını üretir (www dahil). */

@@ -65,8 +65,9 @@ export async function sendOwnerInvitation(session: SessionUser, orgId: string): 
   const row = data?.[0];
   if (!row) throw new ActionError('Davet oluşturulamadı. Lütfen tekrar deneyin.');
 
-  const message = buildInvitationEmail({ organizationName: org.name, link: invitationLink(tenant.baseUrl, token), expiresAt: row.expires_at });
-  const sent = await sendEmail({ ...message, to: [row.email] });
+  const message = buildInvitationEmail({ organizationName: org.name, link: invitationLink(tenant.panelBaseUrl, token), expiresAt: row.expires_at });
+  // Aynı token için yeniden deneme çift e-posta göndermez; "tekrar gönder" yeni token → yeni anahtar
+  const sent = await sendEmail({ ...message, to: [row.email] }, { idempotencyKey: `invitation/${row.invitation_id}/${hash.slice(0, 24)}` });
   if (!sent.ok) {
     // Ayrıntı yalnızca güvenli tanımlayıcılarla loglanır (token / bağlantı / e-posta yok)
     console.error('[invitation] email failed', { invitation: row.invitation_id, org: orgId, provider: sent.provider, error: sent.error });

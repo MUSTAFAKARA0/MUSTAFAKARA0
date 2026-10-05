@@ -37,6 +37,6 @@ export async function notifyPlatformLead(leadId: string): Promise<void> {
     .filter(([, v]) => v)
     .map(([k, v]) => `<tr><td style="padding:2px 12px 2px 0;color:#5b6b85">${k}</td><td>${escapeHtml(v!)}</td></tr>`)
     .join('')}</table><p>Platform › KARAY talepleri ekranından yanıtlayın.</p>`;
-  const result = await sendEmail({ to, subject: `KARAY · ${kind}: ${lead.full_name}`, text, html, replyTo: lead.email ?? undefined });
+  const result = await sendEmail({ to, subject: `KARAY · ${kind}: ${lead.full_name}`, text, html, replyTo: lead.email ?? undefined }, { idempotencyKey: `platform-lead/${leadId}` });
   if (!result.ok && !('skipped' in result && result.skipped)) console.warn('[karay-lead] bildirim gönderilemedi', result.error);
 }

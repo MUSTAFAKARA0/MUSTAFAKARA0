@@ -2310,6 +2310,13 @@ export type Database = {
         Args: never
         Returns: undefined
       }
+      auth_password_reset_allowed: {
+        Args: {
+          p_email_hash: string
+          p_ip_hash?: string
+        }
+        Returns: boolean
+      }
       audit_actor_label: {
         Args: {
           p_user: string
@@ -2530,6 +2537,10 @@ export type Database = {
           created_at: string
           account_pending: boolean
         }[]
+      }
+      karay_schema_version: {
+        Args: never
+        Returns: string
       }
       invitation_ttl: {
         Args: never

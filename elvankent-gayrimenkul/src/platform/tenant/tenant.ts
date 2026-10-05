@@ -6,7 +6,7 @@ import { cacheTags } from '@/lib/cache-tags';
 import { isSupabaseConfigured, publicEnv } from '@/lib/env';
 import { serverEnv } from '@/lib/server-env';
 import { createPublicClient, createServiceClient } from '@/lib/supabase/server';
-import { DEFAULT_TENANT_KEY, isValidTenantKey, tenantKeyForHost } from '@/platform/tenant/host';
+import { DEFAULT_TENANT_KEY, hostSurface, isDevOrPreviewHost, isValidTenantKey, karayHostConfigFromEnv, karayHostsFromEnv, normalizeHost, tenantBaseUrls, tenantKeyForHost } from '@/platform/tenant/host';
 import { tenantHostConfig } from '@/platform/tenant/config';
 import { parseFeatureOverrides, type FeatureOverrides, type SiteStatus } from '@/platform/tenant/site-state';
 
@@ -41,6 +41,11 @@ export interface Tenant {
   settings: OrgSettings;
   /** Kanonik site kökü (sonunda / olmadan): SEO, sitemap, paylaşım bağlantıları */
   baseUrl: string;
+  /**
+   * Ofis paneli bağlantılarının kökü (davet / aktivasyon e-postaları). Kiracının kendi adresi
+   * yoksa KARAY'ın alan adıdır — başka bir müşterinin (varsayılan kiracının) alan adı değil.
+   */
+  panelBaseUrl: string;
   features: TenantFeatures;
   site: TenantSite;
 }
@@ -124,11 +129,14 @@ async function loadTenant(key: string): Promise<Tenant | null> {
 
   const settings = settingsRes.data ?? defaultSettings(org.id, org.name);
   const primaryDomain = domainsRes.data?.find((d) => d.is_primary)?.hostname;
-  const baseUrl = primaryDomain
-    ? `https://${primaryDomain}`
-    : org.is_default || !serverEnv.platformRootDomain
-      ? publicEnv.siteUrl
-      : `https://${org.slug}.${serverEnv.platformRootDomain}`;
+  const { siteBaseUrl: baseUrl, panelBaseUrl } = tenantBaseUrls({
+    primaryDomain,
+    slug: org.slug,
+    isDefault: org.is_default,
+    siteUrl: publicEnv.siteUrl,
+    platformRootDomain: serverEnv.platformRootDomain,
+    karayHosts: karayHostsFromEnv(process.env.KARAY_HOSTS),
+  });
   const plan = planRes.data?.[0];
 
   return {
@@ -140,6 +148,7 @@ async function loadTenant(key: string): Promise<Tenant | null> {
     referencePrefix: org.reference_prefix,
     settings,
     baseUrl,
+    panelBaseUrl,
     features: {
       crm: plan?.crm_enabled ?? false,
       analytics: plan?.analytics_enabled ?? false,
@@ -177,6 +186,29 @@ export async function getTenantKeyFromRequest(): Promise<string> {
 /** Yeniden yazılmamış rotalar (yönetim paneli, not-found) için Host başlığından kiracı. */
 export async function getTenantFromRequest(): Promise<Tenant | null> {
   return getTenant(await getTenantKeyFromRequest());
+}
+
+/**
+ * E-posta bağlantıları (şifre sıfırlama) için GÜVENİLİR kök adres. İstemcinin değiştirebileceği
+ * X-Forwarded-Host'a bakılmaz; Host başlığı da ancak şu durumlarda kullanılır:
+ *  - ortamda tanımlı adresler (KARAY_HOSTS, NEXT_PUBLIC_SITE_URL, PLATFORM_ROOT_DOMAIN ve www),
+ *  - geliştirme / önizleme adresleri (localhost, IP, *.vercel.app),
+ *  - veritabanında AKTİF alan adı veya platform alt alan adı olarak çözülen gerçek bir kiracı.
+ * Aksi halde NEXT_PUBLIC_SITE_URL döner. Böylece sahte Host ile "şifre sıfırlama zehirlemesi"
+ * (bağlantının saldırganın alan adına üretilmesi) yapılamaz.
+ */
+export async function trustedRequestOrigin(): Promise<string> {
+  const fallback = publicEnv.siteUrl.replace(/\/+$/, '');
+  const raw = ((await headers()).get('host') ?? '').trim().toLowerCase();
+  const host = normalizeHost(raw);
+  if (!host || !/^[a-z0-9.:[\]-]+$/.test(raw)) return fallback;
+  if (isDevOrPreviewHost(host)) {
+    const local = host === 'localhost' || host.endsWith('.localhost') || /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.startsWith('[');
+    return `${local ? 'http' : 'https'}://${raw}`;
+  }
+  if (hostSurface(host, karayHostConfigFromEnv(process.env)) !== 'tenant' || tenantHostConfig().defaultHosts.includes(host)) return `https://${host}`;
+  const tenant = await getTenant(tenantKeyForHost(host, tenantHostConfig())).catch(() => null);
+  return tenant ? `https://${host}` : fallback;
 }
 
 /** Kiracı sitesinde mutlak adres üretir. */
