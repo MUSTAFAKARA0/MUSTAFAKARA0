@@ -1,0 +1,92 @@
+/**
+ * Mimari katman sınırları (eslint.config.mjs) gerçekten uygulanıyor mu?
+ * Sanal dosya yollarıyla ESLint çalıştırılır; diske dosya yazılmaz.
+ * Çalıştırma: npm run test:unit
+ */
+import { describe, test } from 'node:test';
+import assert from 'node:assert/strict';
+import { ESLint } from 'eslint';
+
+const eslint = new ESLint({ cwd: new URL('../../', import.meta.url).pathname });
+
+async function violations(filePath, source) {
+  const [result] = await eslint.lintText(`${source}\nexport const x = 1;\n`, { filePath });
+  return result.messages.filter((m) => m.ruleId === 'no-restricted-imports' || m.ruleId === 'no-restricted-syntax').map((m) => m.ruleId);
+}
+
+const CASES = [
+  // [açıklama, dosya, içe aktarım, yasak mı]
+  ['site-engine → ofis paneli', 'src/components/layout/__x.tsx', "import { A } from '@/components/admin/admin-shell';", true],
+  ['site-engine → KARAY konsolu', 'src/app/t/[tenant]/__x.tsx', "import { A } from '@/components/platform/karay-forms';", true],
+  ['site-engine → KARAY sayfası', 'src/components/property/__x.tsx', "import { A } from '@/modules/karay/profile';", true],
+  ['site-engine → KARAY işlemi', 'src/components/forms/__x.tsx', "import { A } from '@/app/actions/site-builder';", true],
+  ['ofis paneli → KARAY konsolu', 'src/components/admin/__x.tsx', "import { A } from '@/components/platform/platform-nav';", true],
+  ['ofis paneli → KARAY işlemi', 'src/app/admin/(panel)/__x.tsx', "import { A } from '@/app/actions/platform';", true],
+  ['KARAY konsolu → ofis paneli', 'src/app/platform/(konsol)/__x.tsx', "import { A } from '@/components/admin/admin-shell';", true],
+  ['KARAY konsolu → ofis işlemi', 'src/components/platform/__x.tsx', "import { A } from '@/app/actions/admin-settings';", true],
+  ['KARAY sayfası → ofis paneli', 'src/components/karay/__x.tsx', "import { A } from '@/components/admin/ui';", true],
+  ['KARAY sayfası → KARAY konsolu', 'src/app/karay/__x.tsx', "import { A } from '@/components/site-editor/site-actions';", true],
+  ['alt katman (site-config) → site bileşeni', 'src/site-config/__x.ts', "import { A } from '@/components/layout/site-header';", true],
+  ['alt katman (modules) → arama bileşeni', 'src/modules/properties/__x.ts', "import { A } from '@/components/search/hero-search';", true],
+  ['alt katman (ui) → ofis paneli', 'src/components/panel/__x.tsx', "import { A } from '@/components/admin/admin-shell';", true],
+  ['theme-engine → site-config', 'src/theme-engine/__x.ts', "import { A } from '@/site-config/schema';", true],
+  ['theme-engine → site bileşeni', 'src/theme-engine/preview/__x.tsx', "import { A } from '@/components/layout/site-header';", true],
+  ['theme-engine → ofis paneli', 'src/theme-engine/__x.ts', "import { A } from '@/components/admin/ui';", true],
+  ['core → site-config', 'src/platform/tenant/__x.ts', "import { A } from '@/site-config/load';", true],
+  ['core → theme-engine', 'src/lib/__x.ts', "import { A } from '@/theme-engine';", true],
+  ['ortak arayüz → site-config', 'src/components/panel/__x.tsx', "import { A } from '@/site-config/schema';", true],
+  ['site-config → KARAY konsolu (site oluşturucu)', 'src/site-config/__x.ts', "import { A } from '@/app/actions/site-builder';", true],
+  ['ofis paneli → kiracı sitesi bileşeni', 'src/components/admin/__x.tsx', "import { A } from '@/components/property/property-card';", true],
+  ['site oluşturucu → kiracı sitesi bileşeni', 'src/components/platform/site/__x.tsx', "import { A } from '@/components/layout/site-header';", true],
+  ['KARAY sayfası → kiracı sitesi bileşeni', 'src/components/karay/__x.tsx', "import { A } from '@/components/home/hero';", true],
+  ['site-engine → core requireTenant (önizleme markası atlanır)', 'src/app/t/[tenant]/__x.tsx', "import { requireTenant } from '@/platform/tenant/tenant';", true],
+  ['SITE-FACTORY: site-engine → Site Factory kataloğu', 'src/app/t/[tenant]/__x.tsx', "import { DESIGN_FAMILIES } from '@/site-factory/families';", true],
+  ['SITE-FACTORY: site bileşeni → Site Factory derleyicisi', 'src/components/home/__x.tsx', "import { compileDesign } from '@/site-factory/compile';", true],
+  ['SITE-FACTORY: ofis paneli → önizleme', 'src/components/admin/__x.tsx', "import { A } from '@/site-preview/model';", true],
+  ['SITE-FACTORY: theme-engine → Site Factory', 'src/theme-engine/__x.ts', "import { A } from '@/site-factory/families';", true],
+  ['SITE-FACTORY: site-config → Site Factory', 'src/site-config/__x.ts', "import { A } from '@/site-factory/families';", true],
+  ['SITE-FACTORY: core → Site Factory', 'src/lib/__x.ts', "import { A } from '@/site-factory/compile';", true],
+  ['SITE-FACTORY: KARAY sayfası → Site Factory', 'src/components/karay/__x.tsx', "import { A } from '@/site-factory/families';", true],
+  ['SITE-FACTORY: Site Factory → site bileşeni', 'src/site-factory/__x.ts', "import { A } from '@/components/home/hero';", true],
+  ['PREVIEW: kiracı sitesi → önizleme', 'src/app/t/[tenant]/__x.tsx', "import { buildPreviewModel } from '@/site-preview/model';", true],
+  ['PREVIEW: site bileşeni → önizleme rotası', 'src/components/site/__x.tsx', "import P from '@/app/site-onizleme/page';", true],
+  ['PREVIEW: sihirbaz (KARAY konsolu) → önizleme kodu', 'src/components/platform/__x.tsx', "import { buildPreviewModel } from '@/site-preview/model';", true],
+  ['PREVIEW: Site Factory → önizleme', 'src/site-factory/__x.ts', "import { A } from '@/site-preview/model';", true],
+  ['PREVIEW: önizleme → KARAY konsolu', 'src/site-preview/__x.ts', "import { A } from '@/components/platform/platform-nav';", true],
+  ['PREVIEW: önizleme → ofis paneli', 'src/app/site-onizleme/__x.tsx', "import { A } from '@/components/admin/admin-shell';", true],
+  ['göreli üst klasör yolu', 'src/components/layout/__x.tsx', "import { A } from '../admin/admin-shell';", true],
+  ['SITE-EDITOR: ortak düzenleyici → ofis paneli', 'src/components/site-editor/__x.tsx', "import { A } from '@/components/admin/admin-shell';", true],
+  ['SITE-EDITOR: ortak düzenleyici → KARAY konsolu', 'src/site-editor/__x.ts', "import { A } from '@/app/actions/site-builder';", true],
+  ['SITE-EDITOR: ortak düzenleyici → ofis işlemi', 'src/components/site-editor/__x.tsx', "import { A } from '@/app/actions/admin-site';", true],
+  ['SITE-EDITOR: kiracı sitesi → ortak düzenleyici', 'src/components/layout/__x.tsx', "import { A } from '@/components/site-editor/structure-forms';", true],
+  ['SITE-EDITOR: site-config → ortak düzenleyici', 'src/site-config/__x.ts', "import { A } from '@/site-editor/service';", true],
+  // İzin verilenler
+  ['SITE-EDITOR: ofis paneli → ortak düzenleyici', 'src/app/admin/(panel)/__x.tsx', "import { A } from '@/components/site-editor/structure-forms';\nimport { B } from '@/site-editor/service';", false],
+  ['SITE-EDITOR: KARAY konsolu → ortak düzenleyici', 'src/app/platform/(konsol)/__x.tsx', "import { A } from '@/components/site-editor/structure-forms';\nimport { B } from '@/site-editor/service';", false],
+  ['site-engine → ui / modules / theme-engine', 'src/components/layout/__x.tsx', "import { A } from '@/components/ui/button';\nimport { B } from '@/modules/properties/queries';\nimport { C } from '@/theme-engine/themes';", false],
+  ['ofis paneli → ortak bileşenler (görsel, harita, sayı girişi)', 'src/components/admin/__x.tsx', "import { A } from '@/components/common/media-image';\nimport { B } from '@/components/common/maps/lazy-map';\nimport { C } from '@/components/ui/number-input';", false],
+  ['ofis paneli → ortak panel arayüzü', 'src/app/admin/(panel)/__x.tsx', "import { A } from '@/components/panel/ui';", false],
+  ['KARAY konsolu → ortak panel arayüzü ve marka', 'src/app/platform/(konsol)/__x.tsx', "import { A } from '@/components/panel/audit-list';\nimport { B } from '@/components/brand/platform-wordmark';", false],
+  ['KARAY sayfası → tema önizlemesi', 'src/components/karay/__x.tsx', "import { A } from '@/theme-engine/preview/live-preview';", false],
+  ['site-engine → theme-engine', 'src/app/t/[tenant]/__x.tsx', "import { applyTheme } from '@/theme-engine';", false],
+  ['site-engine → core tenant yardımcıları', 'src/components/layout/__x.tsx', "import { tenantUrl, type Tenant } from '@/platform/tenant/tenant';", false],
+  ['site-engine → site-config', 'src/app/t/[tenant]/__x.tsx', "import { A } from '@/site-config/load';", false],
+  ['KARAY konsolu (site oluşturucu) → site-config', 'src/components/platform/site/__x.tsx', "import { A } from '@/site-config/schema';", false],
+  ['site-config → core', 'src/site-config/__x.ts', "import { A } from '@/platform/tenant/tenant';", false],
+  ['PERMISSION: ofis paneli (Tasarım, sunucu) → Site Factory', 'src/app/admin/(panel)/__x.tsx', "import { DESIGN_FAMILIES } from '@/site-factory/families';", false],
+  ['KARAY konsolu (Site Builder) → Site Factory', 'src/app/platform/(konsol)/__x.tsx', "import { DESIGN_FAMILIES } from '@/site-factory/families';", false],
+  ['PREVIEW: önizleme → gerçek site bileşenleri + Site Factory', 'src/app/site-onizleme/__x.tsx', "import { SiteFrame } from '@/components/site/site-frame';\nimport { decodePreviewPayload } from '@/site-factory/site-info';\nimport { buildPreviewModel } from '@/site-preview/model';", false],
+  ['Site Factory → site-config / theme-engine', 'src/site-factory/__x.ts', "import { A } from '@/site-config/schema';\nimport { B } from '@/theme-engine/ids';", false],
+  ['site-config → theme-engine', 'src/site-config/__x.ts', "import { A } from '@/theme-engine/settings';", false],
+  ['theme-engine → core / ui', 'src/theme-engine/__x.ts', "import { A } from '@/platform/branding/theme';\nimport { B } from '@/components/ui/button';", false],
+];
+
+describe('Katman sınırları', () => {
+  for (const [name, file, source, forbidden] of CASES) {
+    test(`${forbidden ? 'yasak' : 'izinli'}: ${name}`, async () => {
+      const found = await violations(file, source);
+      if (forbidden) assert.ok(found.length > 0, `${file} içinde "${source}" yakalanmadı`);
+      else assert.deepEqual(found, [], `${file} içinde izinli içe aktarım engellendi`);
+    });
+  }
+});
