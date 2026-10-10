@@ -1,4 +1,5 @@
 import { mkdirSync } from 'node:fs';
+import { createServer } from 'node:http';
 import path from 'node:path';
 import sharp from 'sharp';
 import { createClient } from '@supabase/supabase-js';
@@ -374,11 +375,29 @@ test.describe('Yönetim paneli (telefon)', () => {
     await expect(page).toHaveURL(/\/admin\/giris/);
   });
 
-  test('Emlakçı hesabı: sahip olarak eklenir, ilk girişte şifre değiştirir, /platform açılmaz', async ({ page, browser }) => {
+  test('Emlakçı hesabı: sahip olarak eklenir, davet bağlantısıyla şifresini belirler, /platform açılmaz', async ({ page, browser }) => {
     test.skip(!supabaseUrl || !serviceKey, 'Temizlik için service role anahtarı gerekir');
+    // FAZ 1: e-posta yapılandırılmışsa geçici şifre YOK — tek kullanımlık davet (sahte Resend sunucusu)
     const agentEmail = `emlakci-kabul-${Date.now().toString(36)}@example.com`;
     const service = createClient(supabaseUrl!, serviceKey!, { auth: { persistSession: false } });
-    let temp = '';
+    const mails: { to: string[]; text: string }[] = [];
+    const mailServer = createServer((req, res) => {
+      let body = '';
+      req.on('data', (c) => (body += c));
+      req.on('end', () => {
+        try {
+          mails.push(JSON.parse(body || '{}'));
+        } catch {
+          // geçersiz gövde yok sayılır
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ id: `kabul-${mails.length}` }));
+      });
+    });
+    await new Promise<void>((resolve, reject) => {
+      mailServer.once('error', reject);
+      mailServer.listen(4010, '127.0.0.1', () => resolve());
+    });
     try {
       await login(page);
       await page.goto('/admin/kullanicilar');
@@ -389,18 +408,25 @@ test.describe('Yönetim paneli (telefon)', () => {
       await dialog.getByLabel('Rol').selectOption('owner');
       await dialog.getByRole('button', { name: 'Kullanıcıyı ekle' }).click();
       const added = page.getByRole('dialog', { name: 'Kullanıcı eklendi' });
-      temp = (await added.locator('code').first().innerText()).trim();
-      expect(temp.length).toBeGreaterThanOrEqual(10);
+      await expect(added.getByText(/tek kullanımlık davet bağlantısı gönderildi/)).toBeVisible({ timeout: 20_000 });
+      await expect(added.locator('code')).toHaveCount(0);
+      await expect.poll(() => mails.filter((m) => m.to?.includes(agentEmail)).length, { timeout: 15_000 }).toBeGreaterThan(0);
+      const link = /https?:\/\/[^\s"<>]+\/admin\/davet#t=[A-Za-z0-9_-]{43}/.exec(mails.find((m) => m.to.includes(agentEmail))!.text)?.[0];
+      expect(link).toBeTruthy();
+      await added.getByRole('button', { name: 'Tamam' }).click();
+      // Listede "davet bekliyor"
+      await page.reload();
+      await expect(page.getByRole('row').filter({ hasText: agentEmail }).getByText('Davet bekliyor')).toBeVisible();
 
       const ctx = await (browser as Browser).newContext({ ...test.info().project.use });
       const p = await ctx.newPage();
-      await login(p, agentEmail, temp);
-      await expect(p).toHaveURL(/\/admin\/hesap\?sifre=degistir/);
+      await p.goto(link!.replace(/^https?:\/\/[^/]+/, ''));
+      await expect(p.getByTestId('activation-form')).toBeVisible({ timeout: 15_000 });
       const newPass = `Kabul-${Date.now()}-Sifre9`;
       await p.getByLabel('Yeni şifre', { exact: true }).fill(newPass);
       await p.getByLabel('Yeni şifre (tekrar)').fill(newPass);
-      await p.getByRole('button', { name: 'Şifreyi kaydet' }).click();
-      await expect(p.getByText(/Şifreniz (güncellendi|değiştirildi)/).first()).toBeVisible({ timeout: 20_000 });
+      await p.getByRole('button', { name: 'Hesabımı etkinleştir' }).click();
+      await p.waitForURL((u) => u.pathname.startsWith('/admin') && !u.pathname.startsWith('/admin/davet'), { timeout: 30_000 });
       await p.goto('/admin');
       await openMenu(p);
       await expect(p.getByRole('link', { name: /platform yönetimi/i })).toHaveCount(0);
@@ -408,7 +434,14 @@ test.describe('Yönetim paneli (telefon)', () => {
       expect(res?.status()).toBe(404);
       await expect(p.getByRole('img', { name: 'KARAY' })).toHaveCount(0);
       await ctx.close();
+      // Rol bağı: üyelik rolü = davet rolü (sahip); hesap etkin
+      const { data: users } = await service.auth.admin.listUsers({ perPage: 1000 });
+      const u = users.users.find((x) => x.email === agentEmail)!;
+      expect(u.email_confirmed_at).toBeTruthy();
+      const { data: m } = await service.from('organization_members').select('role, status').eq('user_id', u.id).single();
+      expect(m).toMatchObject({ role: 'owner', status: 'active' });
     } finally {
+      await new Promise<void>((resolve) => mailServer.close(() => resolve()));
       const { data } = await service.auth.admin.listUsers({ perPage: 200 });
       const u = data?.users.find((x) => x.email === agentEmail);
       if (u) await service.auth.admin.deleteUser(u.id);

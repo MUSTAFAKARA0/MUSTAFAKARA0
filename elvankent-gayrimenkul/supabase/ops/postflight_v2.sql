@@ -181,5 +181,31 @@ checks as (
               then 'HATA: auth_password_reset_allowed istemciye açık'
               when (xpath('/row/n/text()', query_to_xml('select public.karay_schema_version() as n', false, true, '')))[1]::text >= '20261010000001'
               then 'TAMAM' else 'HATA: şema sürümü eski' end
+
+  union all
+  select 26, 'Müşteri operasyonları (ekip daveti, kurulum durumu, KARAY notları)',
+         case when to_regclass('public.platform_org_notes') is null then 'not tablosu yok'
+              else (xpath('/row/n/text()', query_to_xml('select count(*) as n from public.platform_org_notes', false, true, '')))[1]::text || ' not' end,
+         case when to_regclass('public.platform_org_notes') is null
+                or not exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'org_send_member_invitation')
+                or not exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'platform_customer_overview')
+              then 'HATA: 20261011000001_customer_operations.sql uygulanmamış'
+              when exists (select 1 from pg_constraint where conname = 'organization_invitations_role_check')
+              then 'HATA: davet rol kısıtı kaldırılmamış'
+              -- to_regclass: tablo yoksa (migration uygulanmamış) sorgu çökmez; yukarıdaki satır HATA verir
+              when not coalesce((select c.relrowsecurity from pg_class c where c.oid = to_regclass('public.platform_org_notes')), false)
+                or has_table_privilege('anon', to_regclass('public.platform_org_notes'), 'select')
+                or has_table_privilege('authenticated', to_regclass('public.platform_org_notes'), 'update')
+                or has_table_privilege('authenticated', to_regclass('public.platform_org_notes'), 'delete')
+              then 'HATA: platform_org_notes RLS / yetki hatalı'
+              when exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace
+                             and p.proname in ('org_send_member_invitation', '_org_onboarding_flags')
+                             and (has_function_privilege('anon', p.oid, 'execute') or has_function_privilege('authenticated', p.oid, 'execute')))
+                or exists (select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace
+                             and p.proname in ('platform_customer_overview', 'org_onboarding', 'org_member_account_states')
+                             and has_function_privilege('anon', p.oid, 'execute'))
+              then 'HATA: müşteri operasyon fonksiyonları istemciye açık'
+              when (xpath('/row/n/text()', query_to_xml('select public.karay_schema_version() as n', false, true, '')))[1]::text >= '20261011000001'
+              then 'TAMAM' else 'HATA: şema sürümü eski' end
 )
 select sira, kontrol, deger, durum from checks order by sira;

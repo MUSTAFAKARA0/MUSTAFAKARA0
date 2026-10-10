@@ -32,7 +32,7 @@ export default async function Page() {
       <Panel title="Alan adları" description="Kendi alan adınızı bağlayın: önce sahipliği TXT kaydıyla doğrulayın, sonra alan adını KARAY'a yönlendirin.">
         <DomainManager
           domains={domains}
-          fallbackUrl={tenant?.baseUrl ?? null}
+          fallbackUrl={tenant?.siteAddress ?? null}
           canAdd={canAdd}
           addDisabledReason="Planınız özel alan adını içermiyor. Planınızı yükseltmek için KARAY ile iletişime geçin."
           actions={{
@@ -47,10 +47,12 @@ export default async function Page() {
       </Panel>
       <aside className="space-y-6">
         <Panel title="Geçerli adres">
-          {tenant ? (
-            <a href={tenant.baseUrl} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-2 font-semibold break-all text-primary hover:underline">
-              {tenant.baseUrl.replace(/^https?:\/\//, '')} <ExternalLink className="size-4 shrink-0" aria-hidden />
+          {tenant?.siteAddress ? (
+            <a href={tenant.siteAddress} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-2 font-semibold break-all text-primary hover:underline">
+              {tenant.siteAddress.replace(/^https?:\/\//, '')} <ExternalLink className="size-4 shrink-0" aria-hidden />
             </a>
+          ) : tenant ? (
+            <p className="text-sm text-muted-foreground">Sitenin henüz bir adresi yok: alan adı bağlanana (veya KARAY alt alan adı tanımlanana) kadar site hiçbir adreste açılmaz.</p>
           ) : (
             <p className="text-sm text-muted-foreground">Siteniz şu anda yayında değil.</p>
           )}

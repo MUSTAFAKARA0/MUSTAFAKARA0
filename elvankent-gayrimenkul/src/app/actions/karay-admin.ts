@@ -91,3 +91,22 @@ export async function updateKarayProfile(input: KarayProfileInput): Promise<Acti
     return null;
   }, 'KARAY ayarları kaydedildi.');
 }
+
+/**
+ * KARAY iç notu (FAZ 1): müşteriyle ilgili destek / satış notu. Yalnızca süper admin yazar ve okur
+ * (platform_org_notes RLS); not düzenlenmez / silinmez (iz kaydı gibi). Ofis notu hiçbir zaman görmez.
+ */
+export async function addOrgNote(orgId: string, body: string): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    if (!isUuid(orgId)) throw new ActionError('Organizasyon bulunamadı.');
+    const text = typeof body === 'string' ? body.trim() : '';
+    if (!text) throw new ActionError('Not boş olamaz.', 'validation', { body: ['Not boş olamaz.'] });
+    if (text.length > 2000) throw new ActionError('Not en fazla 2000 karakter olabilir.', 'validation', { body: ['Not en fazla 2000 karakter olabilir.'] });
+    const session = await requireSuperAdmin();
+    const { error } = await session.supabase.from('platform_org_notes').insert({ organization_id: orgId, author_id: session.user.id, body: text });
+    assertNoDbError(error);
+    revalidatePath(`/platform/organizasyonlar/${orgId}`);
+    revalidatePath('/platform/organizasyonlar');
+    return null;
+  }, 'Not eklendi.');
+}

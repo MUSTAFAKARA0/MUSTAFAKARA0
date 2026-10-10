@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox, Field, Input, Select, Textarea } from '@/components/ui/form-controls';
 import { SaveBar } from '@/components/site-editor/site-actions';
 import { LEAD_STATUS } from '@/modules/karay/lead-status';
-import { updateKarayLead, updateKarayProfile, type KarayProfileInput } from '@/app/actions/karay-admin';
+import { addOrgNote, updateKarayLead, updateKarayProfile, type KarayProfileInput } from '@/app/actions/karay-admin';
 
 
 /** KARAY talebi: durum ve iç not (yalnızca süper admin) */
@@ -149,5 +149,37 @@ export function KarayProfileForm({ initial }: { initial: Values }) {
         }}
       />
     </div>
+  );
+}
+
+/** KARAY iç notu ekleme (müşteri detayında; yalnızca süper admin) */
+export function OrgNoteForm({ orgId }: { orgId: string }) {
+  const router = useRouter();
+  const [text, setText] = useState('');
+  const [pending, setPending] = useState(false);
+  const [, startTransition] = useTransition();
+  return (
+    <form
+      className="grid gap-3"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setPending(true);
+        const res = await addOrgNote(orgId, text);
+        setPending(false);
+        if (!res.ok) return void toast.error(res.error);
+        toast.success(res.message ?? 'Not eklendi.');
+        setText('');
+        startTransition(() => router.refresh());
+      }}
+    >
+      <Field label="Yeni not" htmlFor="org-note">
+        <Textarea id="org-note" rows={3} value={text} maxLength={2000} onChange={(e) => setText(e.target.value)} placeholder="Görüşme, destek talebi, teslim notu… Yalnızca KARAY ekibi görür." />
+      </Field>
+      <div>
+        <Button type="submit" size="sm" loading={pending} disabled={!text.trim()}>
+          Not ekle
+        </Button>
+      </div>
+    </form>
   );
 }

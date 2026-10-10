@@ -15,14 +15,16 @@ export default async function Page({ params }: PageProps<'/platform/siteler/[id]
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <Panel title="Alan adları" description="Alan adı önce TXT kaydıyla doğrulanır, sonra KARAY&apos;a yönlendirilir; site yalnızca AKTİF alan adında açılır.">
-        <PlatformDomainsPanel session={session} orgId={site.org.id} fallbackUrl={tenant?.baseUrl ?? null} />
+        <PlatformDomainsPanel session={session} orgId={site.org.id} fallbackUrl={tenant?.siteAddress ?? null} />
       </Panel>
       <aside className="space-y-6">
         <Panel title="Geçerli adres">
-          {tenant ? (
-            <a href={tenant.baseUrl} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-2 font-semibold break-all text-primary hover:underline">
-              {tenant.baseUrl.replace(/^https?:\/\//, '')} <ExternalLink className="size-4 shrink-0" aria-hidden />
+          {tenant?.siteAddress ? (
+            <a href={tenant.siteAddress} target="_blank" rel="noopener noreferrer" className="inline-flex max-w-full items-center gap-2 font-semibold break-all text-primary hover:underline">
+              {tenant.siteAddress.replace(/^https?:\/\//, '')} <ExternalLink className="size-4 shrink-0" aria-hidden />
             </a>
+          ) : tenant ? (
+            <p className="text-sm text-muted-foreground">Sitenin henüz bir adresi yok: alan adı bağlanana (veya KARAY alt alan adı tanımlanana) kadar site hiçbir adreste açılmaz.</p>
           ) : (
             <p className="text-sm text-muted-foreground">Organizasyon aktif değil; site yayında değil.</p>
           )}

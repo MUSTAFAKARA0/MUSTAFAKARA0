@@ -14,6 +14,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { WhatsAppIcon } from '@/components/common/brand-icons';
+import { OnboardingChecklist } from '@/components/admin/onboarding-checklist';
+import { parseOnboardingFlags } from '@/modules/platform/customer-status';
 import { AreaChart, BarList } from '@/components/admin/charts';
 import { AdminPageHeader, EmptyPanel, ListingStatusBadge, Panel, StatCard } from '@/components/panel/ui';
 import { MediaImage } from '@/components/common/media-image';
@@ -52,7 +54,9 @@ export default async function DashboardPage({ searchParams }: PageProps<'/admin'
   const canAnalytics = ctx.can('analytics.read');
   const canAppointments = ctx.plan.features.crm && ctx.can('appointments.read');
 
-  const [dashboardRes, recentRes, leadsRes, appointmentsRes] = await Promise.all([
+  // Kurulum listesi yalnızca site ayarlarını yönetebilenlere (sahip / yönetici)
+  const canSetup = ctx.can('settings.manage');
+  const [dashboardRes, recentRes, leadsRes, appointmentsRes, onboardingRes] = await Promise.all([
     ctx.supabase.rpc('org_dashboard', { p_org: ctx.org.id, p_days: days }),
     ctx.supabase
       .from('properties')
@@ -83,7 +87,10 @@ export default async function DashboardPage({ searchParams }: PageProps<'/admin'
           .order('scheduled_at')
           .limit(5)
       : Promise.resolve({ data: [] }),
+    canSetup ? ctx.supabase.rpc('org_onboarding', { p_org: ctx.org.id }) : Promise.resolve({ data: null, error: null }),
   ]);
+  // Hata (ör. migration uygulanmamış) → liste gösterilmez; panel çalışmaya devam eder
+  const checklist = canSetup && !onboardingRes.error && onboardingRes.data ? <OnboardingChecklist flags={parseOnboardingFlags(onboardingRes.data)} /> : null;
 
   const d = dashboardRes.data as unknown as DashboardData | null;
   const firstName = (ctx.profile.fullName ?? '').split(' ')[0];
@@ -117,6 +124,7 @@ export default async function DashboardPage({ searchParams }: PageProps<'/admin'
     return (
       <>
         {header}
+        {checklist}
         <Panel>
           <EmptyPanel icon={Sparkles} title="Özet yüklenemedi" description="Sayfayı yenileyerek tekrar deneyin." />
         </Panel>
@@ -155,6 +163,7 @@ export default async function DashboardPage({ searchParams }: PageProps<'/admin'
   return (
     <>
       {header}
+      {checklist}
 
       {p.demo > 0 && (
         <div role="note" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-warning/25 bg-warning-soft px-5 py-3.5 text-sm text-warning">

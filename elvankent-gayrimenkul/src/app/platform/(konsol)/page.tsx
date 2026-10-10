@@ -5,7 +5,8 @@ import { AdminPageHeader, Panel, StatCard } from '@/components/panel/ui';
 import { OrgTable } from '@/components/platform/org-table';
 import { Button } from '@/components/ui/button';
 import { formatBytes, formatNumber } from '@/lib/format';
-import { listPlans, listPlatformOrgs } from '@/modules/platform/queries';
+import { listPlans } from '@/modules/platform/queries';
+import { customerMetrics, listCustomers } from '@/modules/platform/customers';
 import { listAuditLogs } from '@/modules/audit/queries';
 import { AuditList } from '@/components/panel/audit-list';
 import { requireSuperAdminPage } from '@/platform/auth/session';
@@ -17,7 +18,7 @@ export const metadata: Metadata = { title: 'Genel bakış' };
 export default async function PlatformOverviewPage() {
   const session = await requireSuperAdminPage();
   const [orgs, plans, { data: users }, { data: sitesData }, leadsRes, logs] = await Promise.all([
-    listPlatformOrgs(session),
+    listCustomers(session),
     listPlans(session),
     session.supabase.rpc('platform_users', { p_limit: 500 }),
     session.supabase.rpc('platform_sites'),
@@ -34,6 +35,17 @@ export default async function PlatformOverviewPage() {
   const sum = (key: 'property_count' | 'published_count' | 'storage_bytes' | 'leads_30d' | 'member_count') => orgs.reduce((acc, o) => acc + Number(o[key] ?? 0), 0);
   const active = orgs.filter((o) => o.status === 'active').length;
   const userCount = users?.length ?? 0;
+  const m = customerMetrics(orgs);
+  const planNames = new Map(plans.map((p) => [p.id, p.name]));
+  const ops: { label: string; value: number; href: string; hint: string; warn?: boolean }[] = [
+    { label: 'Dikkat', value: m.attention, href: '/platform/organizasyonlar?durum=attention', hint: 'süresi dolan davet, ödeme, bekleyen alan adı…', warn: m.attention > 0 },
+    { label: 'Davet bekliyor', value: m.pendingInvitations, href: '/platform/organizasyonlar?durum=invited', hint: 'sahip hesabı etkinleşmedi' },
+    { label: 'Kurulumda', value: m.setup, href: '/platform/organizasyonlar?durum=setup', hint: 'kurulum adımları eksik' },
+    { label: 'Yayına hazır', value: m.ready, href: '/platform/organizasyonlar?durum=ready', hint: 'KARAY teslimi bekliyor' },
+    { label: 'Yayında', value: m.live, href: '/platform/organizasyonlar?durum=live', hint: `${formatNumber(m.publishedSites)} yayınlanmış site açık` },
+    { label: 'Alan adı bekliyor', value: m.domainsWaiting, href: '/platform/siteler', hint: 'doğrulama veya yönlendirme' },
+    { label: 'Askıda', value: m.suspended, href: '/platform/organizasyonlar?durum=suspended', hint: 'askıda veya kapatılmış' },
+  ];
 
   return (
     <>
@@ -88,6 +100,29 @@ export default async function PlatformOverviewPage() {
         <StatCard label="Depolama" value={formatBytes(sum('storage_bytes'))} icon={HardDrive} hint="orijinaller + boyutlar" />
         <StatCard label="Talep (30 gün)" value={formatNumber(sum('leads_30d'))} icon={Inbox} />
       </div>
+      <Panel className="mt-6" title="Müşteri operasyonları" description="Mevcut kayıtlardan hesaplanır: sahip hesabı, site, alan adı ve abonelik durumu">
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7" data-customer-metrics>
+          {ops.map((o) => (
+            <li key={o.label}>
+              <Link href={o.href} className="block h-full rounded-xl border border-border px-3.5 py-3 hover:border-border-strong">
+                <span className="block text-[12.5px] text-muted-foreground">{o.label}</span>
+                <span className={cn('numeric mt-1 block text-2xl font-semibold', o.warn && 'text-danger')}>{formatNumber(o.value)}</span>
+                <span className="mt-0.5 block text-[11.5px] leading-4 text-muted-foreground">{o.hint}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 border-t border-border pt-4">
+          <p className="text-[12.5px] font-semibold tracking-wide text-muted-foreground uppercase">Plan dağılımı (kapatılmış hariç)</p>
+          <ul className="mt-2 flex flex-wrap gap-2 text-[13.5px]">
+            {[...m.plans.entries()].map(([id, n]) => (
+              <li key={id} className="rounded-full bg-surface-muted px-3 py-1">
+                {planNames.get(id) ?? id} <span className="numeric font-semibold">{formatNumber(n)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Panel>
       <div className="mt-6 grid gap-6 xl:grid-cols-3 xl:items-start">
         <Panel title="Web siteleri" description="Yayın, bakım ve taslak durumu (gerçek kayıtlar)">
           <dl className="grid grid-cols-2 gap-4 text-[14px]">

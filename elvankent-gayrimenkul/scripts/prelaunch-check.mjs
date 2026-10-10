@@ -63,6 +63,12 @@ if (production && emailProvider === 'log') add('error', 'bildirim', 'EMAIL_PROVI
 if (!env('KARAY_HOSTS') && !env('PLATFORM_ROOT_DOMAIN')) {
   add(production ? 'error' : 'info', 'alan adı', 'KARAY_HOSTS (veya PLATFORM_ROOT_DOMAIN) tanımlı değil: alan adı henüz bağlanmamış ofislerin davet bağlantıları varsayılan kiracının alan adına gider');
 }
+// FAZ 1: Başlangıç ve Profesyonel planlarda özel alan adı yok; bu ofislerin sitesi yalnızca
+// {slug}.{PLATFORM_ROOT_DOMAIN} adresinde açılır. Kök alan adı yoksa site (ve önizlemesi) hiçbir adreste
+// açılmaz. Her alt alan adı barındırmaya (Vercel › Domains) tek tek veya joker (*.kök) olarak eklenir.
+if (!env('PLATFORM_ROOT_DOMAIN')) {
+  add(production ? 'error' : 'info', 'alan adı', 'PLATFORM_ROOT_DOMAIN tanımlı değil: özel alan adı olmayan ofislerin sitesi ve önizlemesi hiçbir adreste açılmaz');
+}
 if (!env('DOMAIN_TARGET_CNAME') && !env('DOMAIN_TARGET_A')) {
   add(production ? 'warn' : 'info', 'alan adı', 'DOMAIN_TARGET_CNAME / DOMAIN_TARGET_A tanımlı değil: özel alan adı bağlantısını yalnızca süper admin elle onaylayabilir');
 }

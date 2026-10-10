@@ -1405,10 +1405,17 @@ describe('P0.4: sahip daveti ve hesap aktivasyonu', { skip }, () => {
     assert.equal((await row(legacy.data)).length, 0);
   });
 
-  test('rol bağı: davet yalnızca "owner" olabilir (tablo kısıtı); rol istemciden gelmez', async () => {
+  // FAZ 1: davet tablosu ekip davetleri için her rolü kabul eder (owner-only tablo kısıtı kaldırıldı,
+  // 20261011000001). Güvenlik özelliği aynı: istemci davet yazamaz ve kabul, davetin rolü ÜYELİK
+  // rolüyle aynı değilse reddedilir — davet rolünü değiştirmek yetki yükseltmez.
+  test('rol bağı: istemci davet yazamaz; davet rolü üyelik rolünden farklıysa kabul edilmez; rol istemciden gelmez', async () => {
     const o = await invitedOrg('role');
-    const bad = await service.from('organization_invitations').update({ role: 'admin' }).eq('organization_id', o.orgId);
-    assert.ok(bad.error, 'davet rolü owner dışına çevrildi');
+    for (const c of [anon, T.A.users.owner.client, outsider.client]) {
+      assert.ok(denied(await c.from('organization_invitations').update({ role: 'admin' }).eq('organization_id', o.orgId).select('id')), 'istemci davet rolünü değiştirdi');
+    }
+    assert.ifError((await service.from('organization_invitations').update({ role: 'admin' }).eq('organization_id', o.orgId)).error);
+    assert.equal((await accept(o.token)).data[0].result, 'invalid', 'üyelik rolüyle uyuşmayan davet kabul edildi');
+    assert.ifError((await service.from('organization_invitations').update({ role: 'owner' }).eq('organization_id', o.orgId)).error);
     const res = await accept(o.token);
     assert.equal(res.data[0].result, 'ok');
     const profile = await service.from('profiles').select('is_super_admin').eq('id', o.userId).single();
@@ -1740,5 +1747,195 @@ describe('P0.5: özel alan adı yaşam döngüsü ve kiracı çözümlemesi', { 
     assert.ok(bad.error, 'verified_at olmadan aktif kayıt');
     const bad2 = await service.from('organization_domains').insert({ organization_id: T.A.orgId, hostname: host('cons2'), status: 'active', verified_at: new Date().toISOString() });
     assert.ok(bad2.error, 'activated_at olmadan aktif kayıt');
+  });
+});
+
+// -----------------------------------------------------------------------------
+describe('FAZ 1: müşteri operasyonları (ekip daveti, kurulum durumu, KARAY notları, müşteri görünümü)', { skip }, () => {
+  let platformAdmin;
+  const sha = (t) => createHash('sha256').update(t).digest('hex');
+  const hash = () => sha(randomBytes(32).toString('base64url'));
+  const send = (actor, org, user, tokenHash = hash()) => service.rpc('org_send_member_invitation', { p_actor: actor, p_org: org, p_user: user, p_token_hash: tokenHash });
+
+  /** Ofise eklenmiş, hesabını etkinleştirmemiş üye (davet bekleyen ekip üyesi) */
+  async function pendingMember(key, role, label) {
+    const email = `rls-${RUN}-team-${label}@example.test`;
+    const { data, error } = await service.auth.admin.createUser({ email, email_confirm: false });
+    assert.ifError(error);
+    createdUsers.push(data.user.id);
+    assert.ifError((await service.from('organization_members').insert({ organization_id: T[key].orgId, user_id: data.user.id, role, status: 'active' })).error);
+    return { id: data.user.id, email };
+  }
+
+  before(async () => {
+    if (missing) return;
+    platformAdmin = await makeUser('ops-platform');
+    assert.ifError((await service.from('profiles').update({ is_super_admin: true }).eq('id', platformAdmin.id)).error);
+  });
+
+  test('ekip daveti fonksiyonu istemciye kapalı (yalnızca sunucu anahtarı)', async () => {
+    const m = await pendingMember('A', 'agent', 'client');
+    for (const c of [anon, T.A.users.owner.client, platformAdmin.client]) {
+      assert.ok((await c.rpc('org_send_member_invitation', { p_actor: T.A.users.owner.id, p_org: T.A.orgId, p_user: m.id, p_token_hash: hash() })).error, 'istemci ekip daveti gönderdi');
+      assert.ok((await c.rpc('org_mark_member_invitation_sent', { p_invitation: randomUUID() })).error, 'istemci gönderildi işaretledi');
+    }
+  });
+
+  test('işlemi yapanın yetkisi veritabanında: users.manage yoksa, başka ofisteyse veya kendine ise reddedilir', async () => {
+    const m = await pendingMember('A', 'agent', 'perm');
+    for (const role of ['agent', 'editor', 'viewer']) {
+      assert.match((await send(T.A.users[role].id, T.A.orgId, m.id)).error?.message ?? '', /forbidden/, `${role} davet gönderdi`);
+    }
+    assert.match((await send(T.B.users.owner.id, T.A.orgId, m.id)).error?.message ?? '', /forbidden/, "B'nin sahibi A'ya davet gönderdi");
+    assert.match((await send(outsider.id, T.A.orgId, m.id)).error?.message ?? '', /forbidden/);
+    assert.match((await send(m.id, T.A.orgId, m.id)).error?.message ?? '', /forbidden/, 'kendine davet');
+    // Askıdaki ofiste davet gönderilemez
+    assert.ifError((await service.from('organizations').update({ status: 'suspended' }).eq('id', T.A.orgId)).error);
+    const suspended = await send(T.A.users.owner.id, T.A.orgId, m.id);
+    await service.from('organizations').update({ status: 'active' }).eq('id', T.A.orgId);
+    assert.match(suspended.error?.message ?? '', /forbidden/, 'askıdaki ofiste davet gönderildi');
+  });
+
+  test('hedef: başka ofisin üyesi / etkin hesap / sahibe yönetici daveti reddedilir', async () => {
+    const other = await pendingMember('B', 'agent', 'otherorg');
+    assert.match((await send(T.A.users.owner.id, T.A.orgId, other.id)).error?.message ?? '', /not_found/, 'başka ofisin üyesine davet');
+    assert.match((await send(T.A.users.owner.id, T.A.orgId, T.A.users.agent.id)).error?.message ?? '', /account_active/, 'etkin hesaba davet');
+    const pendingOwner = await pendingMember('A', 'owner', 'owner2');
+    assert.match((await send(T.A.users.admin.id, T.A.orgId, pendingOwner.id)).error?.message ?? '', /forbidden/, 'yönetici sahibe davet gönderdi');
+    // Yetkili (sahip rolündeki) kişi kendine davet gönderemez
+    assert.match((await send(pendingOwner.id, T.A.orgId, pendingOwner.id)).error?.message ?? '', /forbidden/, 'sahip kendine davet gönderdi');
+    const sent = await send(T.A.users.owner.id, T.A.orgId, pendingOwner.id);
+    assert.ifError(sent.error);
+    assert.equal(sent.data[0].role, 'owner');
+    // Sahip rolündeki ekip daveti de "gönderildi" olarak işaretlenir
+    assert.ifError((await service.rpc('org_mark_member_invitation_sent', { p_invitation: sent.data[0].invitation_id })).error);
+    const inv = await service.from('organization_invitations').select('last_sent_at').eq('id', sent.data[0].invitation_id).single();
+    assert.ok(inv.data.last_sent_at, 'sahip rolündeki ekip daveti gönderildi işaretlenmedi');
+  });
+
+  test('davet: rol üyelikten, "gönderildi" ayrı işaretlenir; tekrar gönderim eskiyi geçersiz kılar; kabul rolü korur', async () => {
+    const m = await pendingMember('A', 'editor', 'flow');
+    const t1 = randomBytes(32).toString('base64url');
+    const r1 = await send(T.A.users.admin.id, T.A.orgId, m.id, sha(t1));
+    assert.ifError(r1.error);
+    assert.equal(r1.data[0].role, 'editor');
+    assert.equal(r1.data[0].resent, false);
+    let inv = (await service.from('organization_invitations').select('status, role, last_sent_at, created_by').eq('id', r1.data[0].invitation_id).single()).data;
+    assert.deepEqual([inv.status, inv.role, inv.last_sent_at, inv.created_by], ['pending', 'editor', null, T.A.users.admin.id]);
+    const states = await T.A.users.owner.client.rpc('org_member_account_states', { p_org: T.A.orgId });
+    assert.ifError(states.error);
+    assert.equal(states.data.find((r) => r.user_id === m.id)?.invitation_status, 'not_sent');
+    assert.ifError((await service.rpc('org_mark_member_invitation_sent', { p_invitation: r1.data[0].invitation_id })).error);
+    inv = (await service.from('organization_invitations').select('last_sent_at').eq('id', r1.data[0].invitation_id).single()).data;
+    assert.ok(inv.last_sent_at);
+    // Tekrar gönder: eski token geçersiz
+    const t2 = randomBytes(32).toString('base64url');
+    const r2 = await send(T.A.users.owner.id, T.A.orgId, m.id, sha(t2));
+    assert.ifError(r2.error);
+    assert.equal(r2.data[0].resent, true);
+    const ipHash = () => `rls-${RUN}-team-${randomBytes(4).toString('hex')}`;
+    assert.equal((await service.rpc('invitation_accept', { p_token_hash: sha(t1), p_ip_hash: ipHash() })).data[0].result, 'invalid', 'eski ekip daveti çalıştı');
+    const ok = await service.rpc('invitation_accept', { p_token_hash: sha(t2), p_ip_hash: ipHash() });
+    assert.equal(ok.data[0].result, 'ok');
+    assert.equal(ok.data[0].organization_id, T.A.orgId);
+    const mem = await service.from('organization_members').select('role, status').eq('organization_id', T.A.orgId).eq('user_id', m.id).single();
+    assert.deepEqual(mem.data, { role: 'editor', status: 'active' });
+    // Sahip daveti ekranı ekip davetlerini görmez (B'de yalnızca ekip daveti var → boş)
+    const mb = await pendingMember('B', 'agent', 'ownerview');
+    assert.ifError((await send(T.B.users.owner.id, T.B.orgId, mb.id)).error);
+    const bView = await platformAdmin.client.rpc('platform_owner_invitation', { p_org: T.B.orgId });
+    assert.ifError(bView.error);
+    assert.equal(bView.data.length, 0, 'sahip davet ekranı ekip davetini gösterdi');
+    assert.ifError((await service.from('organization_members').update({ role: 'viewer' }).eq('organization_id', T.A.orgId).eq('user_id', m.id)).error);
+    const ownerInv = await platformAdmin.client.rpc('platform_owner_invitation', { p_org: T.A.orgId });
+    assert.ifError(ownerInv.error);
+    assert.ok(ownerInv.data.every((r) => r.email !== m.email), 'sahip davet ekranı ekip davetini gösterdi');
+  });
+
+  test('hız sınırı: ofis başına saatte 20 ekip daveti', async () => {
+    const m = await pendingMember('B', 'agent', 'rate');
+    const rows = Array.from({ length: 20 }, () => ({ organization_id: T.B.orgId, actor_id: T.B.users.owner.id, action: 'invitation.member_sent', target_type: 'user', target_id: m.id, metadata: {} }));
+    assert.ifError((await service.from('audit_logs').insert(rows)).error);
+    assert.match((await send(T.B.users.owner.id, T.B.orgId, m.id)).error?.message ?? '', /rate_limited/);
+  });
+
+  test('kullanıcı hesap durumu listesi: yalnızca users.manage ve kendi ofisi', async () => {
+    assert.ifError((await T.A.users.admin.client.rpc('org_member_account_states', { p_org: T.A.orgId })).error);
+    for (const role of ['agent', 'editor', 'viewer']) assert.ok((await T.A.users[role].client.rpc('org_member_account_states', { p_org: T.A.orgId })).error, role);
+    assert.ok((await T.A.users.owner.client.rpc('org_member_account_states', { p_org: T.B.orgId })).error, "A, B'nin kullanıcılarını gördü");
+    assert.ok((await anon.rpc('org_member_account_states', { p_org: T.A.orgId })).error);
+  });
+
+  test('kurulum durumu: settings.manage ve kendi ofisi; iç fonksiyon istemciye kapalı; bayraklar gerçek veriden', async () => {
+    const before = await T.A.users.owner.client.rpc('org_onboarding', { p_org: T.A.orgId });
+    assert.ifError(before.error);
+    assert.equal(before.data.listing, true, 'yayındaki gerçek ilan sayılmadı');
+    assert.ifError((await service.from('properties').update({ is_demo: true }).eq('id', T.A.publishedId)).error);
+    const demo = await T.A.users.owner.client.rpc('org_onboarding', { p_org: T.A.orgId });
+    await service.from('properties').update({ is_demo: false }).eq('id', T.A.publishedId);
+    assert.equal(demo.data.listing, false, 'demo ilan kurulum adımını tamamladı');
+    assert.equal(before.data.domain_available, true, 'kurumsal planda alan adı');
+    assert.ifError((await service.from('organization_settings').update({ phone: '05320000001', address_city: 'Ankara' }).eq('organization_id', T.A.orgId)).error);
+    const after = await T.A.users.admin.client.rpc('org_onboarding', { p_org: T.A.orgId });
+    assert.equal(after.data.company, true);
+    assert.equal(after.data.contact, true);
+    for (const role of ['agent', 'editor', 'viewer']) assert.ok((await T.A.users[role].client.rpc('org_onboarding', { p_org: T.A.orgId })).error, role);
+    assert.ok((await T.A.users.owner.client.rpc('org_onboarding', { p_org: T.B.orgId })).error, "A, B'nin kurulumunu gördü");
+    assert.ok((await anon.rpc('org_onboarding', { p_org: T.A.orgId })).error);
+    for (const c of [anon, T.A.users.owner.client, platformAdmin.client]) assert.ok((await c.rpc('_org_onboarding_flags', { p_org: T.A.orgId })).error, 'iç fonksiyon istemciye açık');
+    assert.ifError((await platformAdmin.client.rpc('org_onboarding', { p_org: T.B.orgId })).error);
+  });
+
+  test('müşteri genel görünümü yalnızca süper admin; sahip / site / kurulum alanları döner', async () => {
+    for (const c of [anon, T.A.users.owner.client, outsider.client]) assert.ok((await c.rpc('platform_customer_overview')).error, 'müşteri görünümü süper admin dışına açık');
+    const res = await platformAdmin.client.rpc('platform_customer_overview');
+    assert.ifError(res.error);
+    const a = res.data.find((r) => r.organization_id === T.A.orgId);
+    assert.ok(a);
+    assert.equal(a.owner_user_id, T.A.users.owner.id);
+    assert.equal(a.owner_pending, false);
+    assert.equal(typeof a.onboarding, 'object');
+    assert.equal(a.onboarding.listing, true);
+    // Organizasyonla açılan sahip daveti e-postası gönderilmeden "not_sent"
+    const email = `rls-${RUN}-ops-owner@example.test`;
+    const { data: u } = await service.auth.admin.createUser({ email, email_confirm: false });
+    createdUsers.push(u.user.id);
+    const org = await platformAdmin.client.rpc('platform_create_organization', { p_slug: `rlstest-${RUN}-ops`, p_name: 'RLS Ops', p_prefix: `O${letters(3)}`, p_plan: 'baslangic', p_owner: u.user.id, p_invite_token_hash: hash() });
+    assert.ifError(org.error);
+    try {
+      const row = (await platformAdmin.client.rpc('platform_customer_overview')).data.find((r) => r.organization_id === org.data);
+      assert.equal(row.owner_pending, true);
+      assert.equal(row.invitation_status, 'not_sent');
+      // Aynı ofiste sonradan gönderilen ekip daveti sahip davet durumunu değiştirmez
+      const { data: tm } = await service.auth.admin.createUser({ email: `rls-${RUN}-ops-team@example.test`, email_confirm: false });
+      createdUsers.push(tm.user.id);
+      assert.ifError((await service.from('organization_members').insert({ organization_id: org.data, user_id: tm.user.id, role: 'agent', status: 'active' })).error);
+      assert.ifError((await service.from('organization_members').insert({ organization_id: org.data, user_id: T.A.users.owner.id, role: 'owner', status: 'active' })).error);
+      const ti = await send(T.A.users.owner.id, org.data, tm.user.id);
+      assert.ifError(ti.error);
+      assert.ifError((await service.rpc('org_mark_member_invitation_sent', { p_invitation: ti.data[0].invitation_id })).error);
+      const again = (await platformAdmin.client.rpc('platform_customer_overview')).data.find((r) => r.organization_id === org.data);
+      assert.equal(again.invitation_status, 'not_sent', 'ekip daveti sahip davet durumunu ezdi');
+      assert.equal(row.onboarding.domain_available, false, 'başlangıç planında alan adı yok');
+    } finally {
+      await service.from('organizations').delete().eq('id', org.data);
+    }
+  });
+
+  test('KARAY notları: yalnızca süper admin okur/yazar; yazar başkası olamaz; düzenleme/silme yok', async () => {
+    const own = await platformAdmin.client.from('platform_org_notes').insert({ organization_id: T.A.orgId, author_id: platformAdmin.id, body: 'RLS test notu' }).select('id').single();
+    assert.ifError(own.error);
+    assert.ok(denied(await platformAdmin.client.from('platform_org_notes').insert({ organization_id: T.A.orgId, author_id: T.A.users.owner.id, body: 'sahte yazar' }).select('id')), 'başkası adına not');
+    for (const c of [anon, T.A.users.owner.client, T.A.users.admin.client, outsider.client]) {
+      assert.ok(denied(await c.from('platform_org_notes').select('id').eq('organization_id', T.A.orgId)), 'kiracı KARAY notunu okudu');
+      assert.ok(denied(await c.from('platform_org_notes').insert({ organization_id: T.A.orgId, author_id: T.A.users.owner.id, body: 'x' }).select('id')), 'kiracı not yazdı');
+    }
+    assert.ok(denied(await platformAdmin.client.from('platform_org_notes').update({ body: 'değişti' }).eq('id', own.data.id).select('id')), 'not düzenlendi');
+    assert.ok(denied(await platformAdmin.client.from('platform_org_notes').delete().eq('id', own.data.id).select('id')), 'not silindi');
+    const read = await platformAdmin.client.from('platform_org_notes').select('body').eq('id', own.data.id).single();
+    assert.equal(read.data.body, 'RLS test notu');
+    // Boş / çok uzun not veritabanında da reddedilir
+    assert.ok((await platformAdmin.client.from('platform_org_notes').insert({ organization_id: T.A.orgId, author_id: platformAdmin.id, body: '' })).error);
+    assert.ok((await platformAdmin.client.from('platform_org_notes').insert({ organization_id: T.A.orgId, author_id: platformAdmin.id, body: 'x'.repeat(2001) })).error);
   });
 });

@@ -175,6 +175,9 @@ export function karayHostsFromEnv(value: string | undefined): string[] {
  *  - panelBaseUrl: ofis paneli bağlantıları (davet / aktivasyon). Kiracının kendi adresi yoksa
  *    NEXT_PUBLIC_SITE_URL (= varsayılan kiracının, yani BAŞKA bir müşterinin alan adı) KULLANILMAZ;
  *    KARAY'ın kendi alan adına (KARAY_HOSTS) düşülür. Hiçbiri yoksa (tek kiracılı kurulum) eski davranış.
+ *  - ownAddress (FAZ 1): kiracının sitesi gerçekten kendi adresinde mi açılıyor (birincil alan adı,
+ *    varsayılan kiracı veya {slug}.{kök}). false ise siteBaseUrl BAŞKA bir müşterinin (varsayılan
+ *    kiracının) adresidir: "Siteyi aç" / önizleme bağlantısı üretilmez, ofise ve KARAY'a nedeni söylenir.
  */
 export function tenantBaseUrls(input: {
   primaryDomain?: string | null;
@@ -183,20 +186,20 @@ export function tenantBaseUrls(input: {
   siteUrl: string;
   platformRootDomain?: string;
   karayHosts: string[];
-}): { siteBaseUrl: string; panelBaseUrl: string } {
+}): { siteBaseUrl: string; panelBaseUrl: string; ownAddress: boolean } {
   const siteUrl = input.siteUrl.replace(/\/+$/, '');
   if (input.primaryDomain) {
     const own = `https://${input.primaryDomain}`;
-    return { siteBaseUrl: own, panelBaseUrl: own };
+    return { siteBaseUrl: own, panelBaseUrl: own, ownAddress: true };
   }
-  if (input.isDefault) return { siteBaseUrl: siteUrl, panelBaseUrl: siteUrl };
+  if (input.isDefault) return { siteBaseUrl: siteUrl, panelBaseUrl: siteUrl, ownAddress: true };
   const root = (input.platformRootDomain ?? '').toLowerCase();
   if (root) {
     const sub = `https://${input.slug}.${root}`;
-    return { siteBaseUrl: sub, panelBaseUrl: sub };
+    return { siteBaseUrl: sub, panelBaseUrl: sub, ownAddress: true };
   }
   const karay = input.karayHosts.find((h) => h !== 'localhost');
-  return { siteBaseUrl: siteUrl, panelBaseUrl: karay ? `https://${karay}` : siteUrl };
+  return { siteBaseUrl: siteUrl, panelBaseUrl: karay ? `https://${karay}` : siteUrl, ownAddress: false };
 }
 
 /** NEXT_PUBLIC_SITE_URL'den varsayılan alan adlarını üretir (www dahil). */

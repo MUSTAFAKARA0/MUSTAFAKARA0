@@ -148,6 +148,7 @@ export function buildPreviewModel(payload: { manifest: PreviewPayload['manifest'
     settings,
     baseUrl: origin,
     panelBaseUrl: origin,
+    siteAddress: null,
     features: { crm: false, analytics: false, pdf: false, customDomain: false },
     site: { published: config, version: 0, status: 'active', maintenanceMessage: null, overrides: f },
   };

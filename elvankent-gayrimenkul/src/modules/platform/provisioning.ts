@@ -17,6 +17,10 @@ import { createInvitationToken } from '@/modules/platform/invitations/token';
  *     yazar) ve e-postası doğrulanmamış hesap açılır (giriş yapılamaz); platform_create_organization
  *     organizasyon + sahip üyeliği + bekleyen daveti TEK işlemde oluşturur. Geçici şifre yoktur; sahip şifresini davet bağlantısıyla kendisi
  *     belirler. Davet e-postası platform ekranındaki "Davet gönder" ile gönderilir.
+ *
+ * Site durumu (FAZ 1): yeni müşterinin sitesi "taslak" açılır (ziyaretçiye "çok yakında" sayfası,
+ * önizleme çalışır). Siteyi ziyaretçiye açmak KARAY'ın teslim (handoff) adımıdır: Web Siteleri ›
+ * Yayın durumu › Yayında. İki açılış yolu (Organizasyonlar ve sihirbaz) bu kuralı burada paylaşır.
  *   • Organizasyon açılamazsa yeni açılan hesap silinir (yarım müşteri / sahipsiz hesap kalmaz).
  */
 export type OwnerAccountState = 'invitation_pending' | 'existing_account';
@@ -56,6 +60,10 @@ export async function provisionOrganization(session: SessionUser, raw: CreateOrg
     if (createdUser) await service.auth.admin.deleteUser(ownerId);
     if (error.code === '23505') throw new ActionError('Lütfen işaretli alanları kontrol edin.', 'validation', { slug: ['Bu kısa ad veya önek başka bir organizasyonda kullanılıyor.'] });
     assertNoDbError(error);
+  }
+  const draft = await session.supabase.rpc('site_set_status', { p_org: orgId as string, p_status: 'draft', p_message: undefined });
+  if (draft.error) {
+    throw new ActionError(`Organizasyon oluşturuldu (${input.slug}) ancak site taslak durumuna alınamadı. Web Siteleri › Yayın durumu ekranından "Taslak" seçin.`);
   }
   if (createdUser) {
     await logSecurityEvent({ orgId: orgId as string, action: 'user.created', actorId: session.user.id, targetType: 'user', targetId: ownerId, targetLabel: input.owner_name, metadata: { role: 'owner', activation: 'invitation' } });

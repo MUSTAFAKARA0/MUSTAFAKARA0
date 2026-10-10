@@ -10,16 +10,22 @@ import { formatDate, formatRelativeDate } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { assignableRoles, PERMISSION_LABELS, ROLE_DESCRIPTIONS, ROLE_LABELS, ROLE_PERMISSIONS, ROLES, type OrgRole } from '@/platform/auth/permissions';
 import { requirePagePermission } from '@/platform/auth/session';
+import { memberInvitationsAvailable } from '@/modules/platform/invitations/member';
 
 export const metadata: Metadata = { title: 'Kullanıcılar' };
 
 export default async function UsersPage() {
   const ctx = await requirePagePermission('users.manage');
-  const [{ data, error }, { data: mfaRows }, { data: org }] = await Promise.all([
+  const [{ data, error }, { data: mfaRows }, { data: org }, { data: accountRows }] = await Promise.all([
     ctx.supabase.rpc('list_org_members', { p_org: ctx.org.id }),
     ctx.supabase.rpc('org_member_mfa_status', { p_org: ctx.org.id }),
     ctx.supabase.from('organizations').select('require_admin_mfa').eq('id', ctx.org.id).maybeSingle(),
+    ctx.supabase.rpc('org_member_account_states', { p_org: ctx.org.id }),
   ]);
+  // Hesabını henüz etkinleştirmemiş üyeler (davet bekliyor); fonksiyon yoksa (migration öncesi) boş
+  const accounts = new Map((accountRows ?? []).map((r) => [r.user_id, r]));
+  const canInvite = memberInvitationsAvailable();
+  const INVITE_LABEL: Record<string, string> = { not_sent: 'Davet gönderilmedi', pending: 'Davet bekliyor', expired: 'Davetin süresi doldu' };
   const members = data ?? [];
   const mfaOn = new Set((mfaRows ?? []).filter((r) => r.mfa_enabled).map((r) => r.user_id));
   const active = members.filter((m) => m.status === 'active').length;
@@ -62,7 +68,13 @@ export default async function UsersPage() {
                       <p className="flex flex-wrap items-center gap-1.5 font-semibold">
                         <span className="truncate">{name}</span>
                         {self && <Badge variant="primary-soft">Siz</Badge>}
-                        {m.password_change_required && <Badge variant="warning">Şifre değişikliği bekliyor</Badge>}
+                        {accounts.get(m.user_id)?.account_pending ? (
+                          <Badge variant={accounts.get(m.user_id)?.invitation_status === 'pending' ? 'info' : 'warning'}>
+                            {INVITE_LABEL[accounts.get(m.user_id)?.invitation_status ?? 'not_sent'] ?? 'Hesap etkinleştirilmedi'}
+                          </Badge>
+                        ) : (
+                          m.password_change_required && <Badge variant="warning">Şifre değişikliği bekliyor</Badge>
+                        )}
                         {mfaOn.has(m.user_id) ? (
                           <Badge variant="success">2 adımlı doğrulama</Badge>
                         ) : (
@@ -91,7 +103,7 @@ export default async function UsersPage() {
                     <td className={cn(td, 'whitespace-nowrap text-muted-foreground')}>{m.last_sign_in_at ? formatRelativeDate(m.last_sign_in_at) : 'Hiç giriş yapmadı'}</td>
                     <td className={cn(td, 'whitespace-nowrap text-muted-foreground')}>{formatDate(m.created_at)}</td>
                     <td className={cn(td, 'text-right')}>
-                      {!locked && <MemberMenu userId={m.user_id} name={name} email={m.email} status={m.status} canReset={m.role !== 'owner' || ctx.role === 'owner'} mfaEnabled={mfaOn.has(m.user_id)} />}
+                      {!locked && <MemberMenu userId={m.user_id} name={name} email={m.email} status={m.status} canReset={m.role !== 'owner' || ctx.role === 'owner'} mfaEnabled={mfaOn.has(m.user_id)} canInvite={canInvite && Boolean(accounts.get(m.user_id)?.account_pending)} />}
                     </td>
                   </tr>
                 );

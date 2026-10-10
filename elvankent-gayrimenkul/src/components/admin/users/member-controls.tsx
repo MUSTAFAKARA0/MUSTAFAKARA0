@@ -3,13 +3,13 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
-import { Copy, KeyRound, MoreHorizontal, Power, ShieldOff, UserMinus, UserPlus } from 'lucide-react';
+import { Copy, KeyRound, Mail, MoreHorizontal, Power, ShieldOff, UserMinus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Field, Input, Select } from '@/components/ui/form-controls';
-import { createMember, removeMember, resetMemberMfa, resetMemberPassword, setMemberStatus } from '@/app/actions/admin-users';
+import { createMember, removeMember, resendMemberInvitation, resetMemberMfa, resetMemberPassword, setMemberStatus } from '@/app/actions/admin-users';
 import { ROLE_DESCRIPTIONS, ROLE_LABELS, type OrgRole } from '@/platform/auth/permissions';
 
 /** Geçici şifre yalnızca bir kez gösterilir; kaydedilmez ve loglanmaz */
@@ -54,7 +54,7 @@ export function NewMemberDialog({ roles, disabledReason }: { roles: OrgRole[]; d
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [role, setRole] = useState<OrgRole>(roles.includes('agent') ? 'agent' : roles[roles.length - 1]);
-  const [result, setResult] = useState<{ email: string; password: string | null; existing: boolean } | null>(null);
+  const [result, setResult] = useState<{ email: string; password: string | null; existing: boolean; invited: boolean; invitationSent: boolean } | null>(null);
 
   return (
     <Dialog
@@ -76,7 +76,17 @@ export function NewMemberDialog({ roles, disabledReason }: { roles: OrgRole[]; d
       <DialogContent title={result ? 'Kullanıcı eklendi' : 'Yeni kullanıcı'} description={result ? undefined : 'Ekibinize danışman, editör veya yönetici ekleyin.'} size="lg">
         {result ? (
           <>
-            {result.password ? (
+            {result.invited ? (
+              result.invitationSent ? (
+                <p className="mt-5 rounded-xl bg-success-soft p-4 text-[14px] text-success" data-member-invited>
+                  {result.email} adresine tek kullanımlık davet bağlantısı gönderildi. Kişi bağlantıyla kendi şifresini belirleyip hesabını etkinleştirir; şifre kimseye gösterilmez.
+                </p>
+              ) : (
+                <p className="mt-5 rounded-xl bg-warning-soft p-4 text-[14px] text-warning" data-member-invited>
+                  Kullanıcı eklendi ancak davet e-postası gönderilemedi. Kullanıcı listesinden &quot;Daveti tekrar gönder&quot; ile yeniden deneyin.
+                </p>
+              )
+            ) : result.password ? (
               <TemporaryPassword email={result.email} password={result.password} />
             ) : (
               <p className="mt-5 rounded-xl bg-success-soft p-4 text-[14px] text-success">
@@ -106,7 +116,7 @@ export function NewMemberDialog({ roles, disabledReason }: { roles: OrgRole[]; d
                 if (!Object.keys(next).length) setFormError(res.error);
                 return;
               }
-              setResult({ email: res.data.email, password: res.data.temporaryPassword, existing: res.data.existing });
+              setResult({ email: res.data.email, password: res.data.temporaryPassword, existing: res.data.existing, invited: res.data.invited, invitationSent: res.data.invitationSent });
               router.refresh();
             }}
           >
@@ -152,6 +162,7 @@ export function MemberMenu({
   status,
   canReset,
   mfaEnabled = false,
+  canInvite = false,
 }: {
   userId: string;
   name: string;
@@ -159,6 +170,8 @@ export function MemberMenu({
   status: 'active' | 'disabled';
   canReset: boolean;
   mfaEnabled?: boolean;
+  /** Hesap henüz etkinleştirilmedi ve e-posta yapılandırılmış: davet (yeniden) gönderilebilir */
+  canInvite?: boolean;
 }) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -194,7 +207,12 @@ export function MemberMenu({
               <Power /> Yeniden etkinleştir
             </DropdownMenuItem>
           )}
-          {canReset && (
+          {canInvite && status === 'active' && (
+            <DropdownMenuItem onSelect={() => void run(() => resendMemberInvitation(userId))}>
+              <Mail /> Daveti tekrar gönder
+            </DropdownMenuItem>
+          )}
+          {canReset && !canInvite && (
             <DropdownMenuItem onSelect={() => setConfirm('reset')}>
               <KeyRound /> Geçici şifre oluştur
             </DropdownMenuItem>

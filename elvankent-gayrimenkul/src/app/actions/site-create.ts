@@ -87,8 +87,7 @@ export async function createSite(raw: CreateSiteInput): Promise<ActionResult<{ i
     const db = session.supabase;
     const warnings: string[] = [];
     try {
-      // Yapılandırma tamamlanana kadar site ziyaretçiye kapalıdır
-      assertNoDbError((await db.rpc('site_set_status', { p_org: orgId, p_status: 'draft', p_message: undefined })).error);
+      // Site provisionOrganization'da "taslak" açıldı: yapılandırma tamamlanana kadar ziyaretçiye kapalı
       for (const section of DESIGN_SECTIONS) {
         const { error } = await db.rpc('site_save_draft', { p_org: orgId, p_section: section, p_value: sections[section] as Json });
         assertNoDbError(error);

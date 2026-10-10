@@ -23,6 +23,9 @@ V1 şeması + V1 demo verisi + gerçekçi canlı kayıtlar (yönetici, gerçek i
 | **FAZ 0 provası (05.10.2026):** V1 yedeği (`pg_restore`) → ön kontrol → 25 dosya sırayla, her biri tek işlem | 25/25 başarılı (dosya başına < 0,4 sn); son kontrol **21/21 TAMAM (25 satır; 4'ü önceki sayılarla KARŞILAŞTIRMA satırı)**; ilan 8→8, fotoğraf 24→24, talep 3→3, yönlendirme 3→11 (8'i eski ilan adresi yönlendirmesi, beklenen) |
 | FAZ 0: 2026-10-04…10 dosyalarını iki kez daha çalıştırma | sorunsuz (tekrar çalıştırılabilir); son kontrol yine TAMAM |
 | FAZ 0 negatif kontrol: yalnızca ilk 18 dosya uygulanmış kopya | son kontrol 19–25 numaralı satırlarda HATA verir (eksik migration yakalanır) |
+| **FAZ 1 provası (10.10.2026):** aynı V1 yedeği (`pg_restore`) → 26 dosya sırayla, her biri tek işlem | 26/26 başarılı (dosya başına < 0,3 sn); son kontrol **22/22 TAMAM (26 satır; 4'ü önceki sayılarla KARŞILAŞTIRMA satırı)**; ilan 8→8, fotoğraf 24→24, talep 3→3, yönlendirme 3→11 |
+| FAZ 1: 2026-10-04…11 dosyalarını ikinci kez çalıştırma | sorunsuz; son kontrol yine 22/22 TAMAM |
+| FAZ 1 negatif kontrol: 26. dosya (`customer_operations`) uygulanmamış kopya | son kontrol 26. satırda `HATA: 20261011000001_customer_operations.sql uygulanmamış` (ilk sürümde bu durumda son kontrol çöküyordu — düzeltildi, birim testi CO-12) |
 
 **Not (FAZ 0):** Önceki sürümde bu listede yalnızca 18 dosya vardı; P0.1–P0.5 dosyaları eksikti. Güncel uygulama kodu bu dosyalar olmadan çalışmaz (davet, alan adı, ofis site yönetimi). Son kontrol artık eksik dosyayı HATA olarak gösterir; `npm run prelaunch -- --production` da şema sürümünü denetler.
 
@@ -58,9 +61,10 @@ V1'de `20260922000001…04` zaten uygulanmıştır — **tekrar çalıştırmay�
 20261008000001_owner_invitations.sql
 20261009000001_custom_domains.sql
 20261010000001_password_reset_requests.sql
+20261011000001_customer_operations.sql
 ```
 
-Toplam **25 dosya** (V1'in 4 dosyası hariç). Son 7 dosyanın her biri kendi içinde tek işlemdir ve tekrar çalıştırılabilir; geri dönüş SQL'i her dosyanın başındaki yorum bloğundadır.
+Toplam **26 dosya** (V1'in 4 dosyası hariç). Son 8 dosyanın her biri kendi içinde tek işlemdir ve tekrar çalıştırılabilir; geri dönüş SQL'i her dosyanın başındaki yorum bloğundadır.
 
 `20260929000001_platform_owner_isolation.sql` (platform sahibi KARAY ↔ kiracı yalıtımı): kiracı listesinin, ayarlarının ve alan adlarının herkese açık anahtarla **toplu** çekilmesini kapatır; site ofisini yalnızca adresiyle/alan adıyla tek tek bulur (`public_tenant*` fonksiyonları). Veri değiştirmez, tekrar çalıştırılabilir. Uygulama kodu bu dosya uygulanmadan önce de sonra da çalışır. Geri dönüş SQL'i dosyanın sonundadır.
 
@@ -81,7 +85,7 @@ Toplam **25 dosya** (V1'in 4 dosyası hariç). Son 7 dosyanın her biri kendi i�
 
 Canlı veritabanının bir kopyası üzerinde, canlıya dokunmadan tam prova:
 1. Supabase › **canlı proje** › Database › **Backups** › son yedeğin yanında **Restore to a new project** (Pro planı gerekir). Pro yoksa: bilgisayarınızda `pg_dump` ile yedek alın (aşağıda 2. adım) ve Supabase'te yeni boş bir proje açıp `pg_restore --no-owner` ile yükleyin.
-2. Yeni (kopya) projede aşağıdaki "Adım adım" 3–5'i uygulayın (ön kontrol, 25 dosya, son kontrol).
+2. Yeni (kopya) projede aşağıdaki "Adım adım" 3–5'i uygulayın (ön kontrol, 26 dosya, son kontrol).
 3. Demo Vercel projesinin ortam değişkenlerini geçici olarak bu kopya projeye çevirip siteyi ve paneli kontrol edin; sonra demo değerlerine geri alın.
 4. Her şey TAMAM ise kopya projeyi silin ve canlı geçiş için bakım penceresi belirleyin.
 
@@ -94,7 +98,7 @@ Canlı veritabanının bir kopyası üzerinde, canlıya dokunmadan tam prova:
    - Doğrulama: `pg_restore --list yedek-v1-….dump | head` (hata vermemeli) ve dosya boyutu > 0.
    - Fotoğraflar: `npm run backup:storage -- --out=./yedek/storage-v1` (docs/BACKUP_RESTORE.md).
 3. **Ön kontrol:** SQL Editor'de `supabase/ops/preflight_v1.sql` → çıktıyı saklayın. HATA varsa durun.
-4. **Migration:** yukarıdaki 25 dosya, sırayla.
+4. **Migration:** yukarıdaki 26 dosya, sırayla.
 5. **Son kontrol:** `supabase/ops/postflight_v2.sql` → tüm "durum"lar TAMAM olmalı; sayıları ön kontrolle karşılaştırın (ilan, fotoğraf = media_assets, talep = leads).
 6. Uygulamayı yayına alın (docs/DEPLOYMENT_RUNBOOK.md, adım 8+).
 

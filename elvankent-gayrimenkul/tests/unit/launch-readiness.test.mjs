@@ -88,7 +88,7 @@ describe('LR-03 yedek', () => {
 describe('LR-04 panel bağlantısı kökü', () => {
   const base = { slug: 'yeni-ofis', isDefault: false, siteUrl: 'https://ilk-musteri.com/', karayHosts: [] };
   test('aktif birincil alan adı varsa site ve panel o adreste', () => {
-    assert.deepEqual(tenantBaseUrls({ ...base, primaryDomain: 'yeniofis.com', karayHosts: ['karay.com.tr'] }), { siteBaseUrl: 'https://yeniofis.com', panelBaseUrl: 'https://yeniofis.com' });
+    assert.deepEqual(tenantBaseUrls({ ...base, primaryDomain: 'yeniofis.com', karayHosts: ['karay.com.tr'] }), { siteBaseUrl: 'https://yeniofis.com', panelBaseUrl: 'https://yeniofis.com', ownAddress: true });
   });
   test('alan adı yoksa ve KARAY alan adı tanımlıysa panel KARAY adresinde; başka müşterinin alan adında DEĞİL', () => {
     const r = tenantBaseUrls({ ...base, karayHosts: ['karay.com.tr', 'www.karay.com.tr'] });
@@ -96,10 +96,10 @@ describe('LR-04 panel bağlantısı kökü', () => {
     assert.notEqual(new URL(r.panelBaseUrl).host, 'ilk-musteri.com');
   });
   test('platform kök alan adı varsa alt alan adı', () => {
-    assert.deepEqual(tenantBaseUrls({ ...base, platformRootDomain: 'KARAY.app', karayHosts: ['karay.com.tr'] }), { siteBaseUrl: 'https://yeni-ofis.karay.app', panelBaseUrl: 'https://yeni-ofis.karay.app' });
+    assert.deepEqual(tenantBaseUrls({ ...base, platformRootDomain: 'KARAY.app', karayHosts: ['karay.com.tr'] }), { siteBaseUrl: 'https://yeni-ofis.karay.app', panelBaseUrl: 'https://yeni-ofis.karay.app', ownAddress: true });
   });
   test('varsayılan kiracı kendi adresini kullanır', () => {
-    assert.deepEqual(tenantBaseUrls({ ...base, isDefault: true, karayHosts: ['karay.com.tr'] }), { siteBaseUrl: 'https://ilk-musteri.com', panelBaseUrl: 'https://ilk-musteri.com' });
+    assert.deepEqual(tenantBaseUrls({ ...base, isDefault: true, karayHosts: ['karay.com.tr'] }), { siteBaseUrl: 'https://ilk-musteri.com', panelBaseUrl: 'https://ilk-musteri.com', ownAddress: true });
   });
   test('yerel geliştirme: localhost KARAY adresi panel kökü olmaz (port kaybolur)', () => {
     assert.equal(tenantBaseUrls({ ...base, siteUrl: 'http://localhost:3000', karayHosts: ['localhost'] }).panelBaseUrl, 'http://localhost:3000');

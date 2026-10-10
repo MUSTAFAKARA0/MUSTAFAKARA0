@@ -27,6 +27,7 @@ import { THEMES } from "@/theme-engine/themes";
 import type { ThemeId } from "@/site-config/schema";
 import { publicEnv } from "@/lib/env";
 import { serverEnv } from "@/lib/server-env";
+import { tenantBaseUrls } from "@/platform/tenant/host";
 
 export const metadata: Metadata = { title: "Web Siteleri" };
 
@@ -35,22 +36,20 @@ export default async function SitesPage() {
   const session = await requireSuperAdminPage();
   const { data } = await session.supabase.rpc("platform_sites");
   const sites = data ?? [];
-  const siteHost = (() => {
-    try {
-      return new URL(publicEnv.siteUrl).host;
-    } catch {
-      return null;
-    }
-  })();
-  // Kiracı çözümlemesiyle aynı kural: birincil alan adı → varsayılan kiracı → alt alan adı
-  const siteUrl = (s: (typeof sites)[number]) =>
-    s.org_status !== "active"
-      ? null
-      : s.primary_domain
-        ? `https://${s.primary_domain}`
-        : s.is_default || !serverEnv.platformRootDomain
-          ? publicEnv.siteUrl
-          : `https://${s.slug}.${serverEnv.platformRootDomain}`;
+  // Kiracı çözümlemesiyle aynı kural (tenantBaseUrls): kendi adresi olmayan sitede bağlantı yok
+  // (NEXT_PUBLIC_SITE_URL varsayılan kiracının — başka bir müşterinin — adresidir)
+  const siteUrl = (s: (typeof sites)[number]) => {
+    if (s.org_status !== "active") return null;
+    const urls = tenantBaseUrls({
+      primaryDomain: s.primary_domain,
+      slug: s.slug,
+      isDefault: s.is_default,
+      siteUrl: publicEnv.siteUrl,
+      platformRootDomain: serverEnv.platformRootDomain,
+      karayHosts: [],
+    });
+    return urls.ownAddress ? urls.siteBaseUrl : null;
+  };
   return (
     <>
       <AdminPageHeader
@@ -96,8 +95,8 @@ export default async function SitesPage() {
                     (s.site_status as keyof typeof SITE_STATUS_META) ?? "active"
                   ] ?? SITE_STATUS_META.active;
                 const org = ORG_STATUS_LABELS[s.org_status];
-                const domain =
-                  s.primary_domain ?? (s.is_default ? siteHost : null);
+                const url = siteUrl(s);
+                const domain = url ? new URL(url).host : null;
                 return (
                   <tr key={s.organization_id}>
                     <td className={td}>
@@ -133,7 +132,7 @@ export default async function SitesPage() {
                           {domain}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-muted-foreground">{s.org_status === "active" ? "Adres yok" : "—"}</span>
                       )}
                     </td>
                     <td className={td}>
@@ -168,7 +167,7 @@ export default async function SitesPage() {
                         <SiteRowMenu
                           orgId={s.organization_id}
                           name={s.name}
-                          siteUrl={siteUrl(s)}
+                          siteUrl={url}
                         />
                       </div>
                     </td>
@@ -184,8 +183,8 @@ export default async function SitesPage() {
                 SITE_STATUS_META[
                   (s.site_status as keyof typeof SITE_STATUS_META) ?? "active"
                 ] ?? SITE_STATUS_META.active;
-              const domain =
-                s.primary_domain ?? (s.is_default ? siteHost : null);
+              const url = siteUrl(s);
+              const domain = url ? new URL(url).host : null;
               return (
                 <li
                   key={s.organization_id}
@@ -226,7 +225,7 @@ export default async function SitesPage() {
                     <SiteRowMenu
                       orgId={s.organization_id}
                       name={s.name}
-                      siteUrl={siteUrl(s)}
+                      siteUrl={url}
                       size="sm"
                     />
                   </div>

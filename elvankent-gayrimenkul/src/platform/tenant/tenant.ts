@@ -46,6 +46,12 @@ export interface Tenant {
    * yoksa KARAY'ın alan adıdır — başka bir müşterinin (varsayılan kiracının) alan adı değil.
    */
   panelBaseUrl: string;
+  /**
+   * Sitenin kendi adresi (FAZ 1): birincil alan adı, varsayılan kiracı veya {slug}.{kök}. null ise
+   * site henüz hiçbir adreste açılmaz (baseUrl başka müşterinin adresidir): "Siteyi aç" ve
+   * önizleme bağlantısı bu değerle üretilir.
+   */
+  siteAddress: string | null;
   features: TenantFeatures;
   site: TenantSite;
 }
@@ -129,7 +135,7 @@ async function loadTenant(key: string): Promise<Tenant | null> {
 
   const settings = settingsRes.data ?? defaultSettings(org.id, org.name);
   const primaryDomain = domainsRes.data?.find((d) => d.is_primary)?.hostname;
-  const { siteBaseUrl: baseUrl, panelBaseUrl } = tenantBaseUrls({
+  const { siteBaseUrl: baseUrl, panelBaseUrl, ownAddress } = tenantBaseUrls({
     primaryDomain,
     slug: org.slug,
     isDefault: org.is_default,
@@ -149,6 +155,7 @@ async function loadTenant(key: string): Promise<Tenant | null> {
     settings,
     baseUrl,
     panelBaseUrl,
+    siteAddress: ownAddress ? baseUrl : null,
     features: {
       crm: plan?.crm_enabled ?? false,
       analytics: plan?.analytics_enabled ?? false,

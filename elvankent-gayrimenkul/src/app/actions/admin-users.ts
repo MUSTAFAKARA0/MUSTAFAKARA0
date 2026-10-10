@@ -9,6 +9,7 @@ import { ActionError, assertNoDbError, ForbiddenError, NotFoundError, runAction,
 import { logSecurityEvent } from '@/platform/audit';
 import { ROLES, type OrgRole } from '@/platform/auth/permissions';
 import { requirePermission, type OrgContext } from '@/platform/auth/session';
+import { memberInvitationsAvailable, sendMemberInvitation } from '@/modules/platform/invitations/member';
 
 /**
  * Ekip yönetimi. Üyelik satırları oturum istemcisiyle (RLS: users.manage)
@@ -17,6 +18,10 @@ import { requirePermission, type OrgContext } from '@/platform/auth/session';
  * kullanıcı limitini VERİTABANINDA uygular. Yalnızca Auth hesabı oluşturma ve
  * şifre belirleme sunucuda service_role ile yapılır (anahtar tarayıcıya gitmez).
  * Şifreler hiçbir koşulda loglanmaz.
+ *
+ * Yeni kullanıcı (FAZ 1): e-posta yapılandırılmışsa hesap ŞİFRESİZ ve doğrulanmamış açılır, kişiye
+ * tek kullanımlık davet bağlantısı gider (sahip daveti ile aynı aktivasyon). E-posta yoksa eski
+ * yol: geçici şifre (bir kez gösterilir, ilk girişte değiştirilmesi zorunlu).
  */
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
@@ -90,7 +95,17 @@ const memberSchema = z.object({
 
 export type MemberInput = z.input<typeof memberSchema>;
 
-export async function createMember(raw: MemberInput): Promise<ActionResult<{ temporaryPassword: string | null; existing: boolean; email: string }>> {
+export type CreateMemberResult = {
+  temporaryPassword: string | null;
+  existing: boolean;
+  email: string;
+  /** Şifresiz hesap + davet yolu kullanıldı */
+  invited: boolean;
+  /** Davet e-postası sağlayıcıya teslim edildi (false: listeden "Daveti tekrar gönder") */
+  invitationSent: boolean;
+};
+
+export async function createMember(raw: MemberInput): Promise<ActionResult<CreateMemberResult>> {
   return runAction(async () => {
     const ctx = await requirePermission('users.manage');
     const input = memberSchema.parse(raw);
@@ -106,13 +121,14 @@ export async function createMember(raw: MemberInput): Promise<ActionResult<{ tem
 
     let userId: string;
     let existing = false;
-    const password = temporaryPassword();
-    const { data: created, error: createError } = await service.auth.admin.createUser({
-      email: input.email,
-      password,
-      email_confirm: true,
-      user_metadata: { full_name: input.full_name },
-    });
+    const invite = memberInvitationsAvailable();
+    const password = invite ? null : temporaryPassword();
+    const { data: created, error: createError } = await service.auth.admin.createUser(
+      invite
+        ? // Şifre verilmez (Auth kimsenin bilmediği rastgele özet yazar), e-posta doğrulanmamış: davetle etkinleşir
+          { email: input.email, email_confirm: false, user_metadata: { full_name: input.full_name } }
+        : { email: input.email, password: password!, email_confirm: true, user_metadata: { full_name: input.full_name } },
+    );
     if (createError || !created?.user) {
       const exists = createError?.code === 'email_exists' || /already (been )?registered|already exists/i.test(createError?.message ?? '');
       if (!exists) {
@@ -125,7 +141,7 @@ export async function createMember(raw: MemberInput): Promise<ActionResult<{ tem
       existing = true;
     } else {
       userId = created.user.id;
-      await service.from('profiles').update({ full_name: input.full_name, password_change_required: true }).eq('id', userId);
+      await service.from('profiles').update({ full_name: input.full_name, password_change_required: !invite }).eq('id', userId);
     }
 
     const { data: current } = await ctx.supabase.from('organization_members').select('status').eq('organization_id', ctx.org.id).eq('user_id', userId).maybeSingle();
@@ -146,11 +162,39 @@ export async function createMember(raw: MemberInput): Promise<ActionResult<{ tem
     }
 
     if (!existing) {
-      await logSecurityEvent({ orgId: ctx.org.id, action: 'user.created', actorId: ctx.user.id, targetType: 'user', targetId: userId, targetLabel: input.full_name, metadata: { role: input.role } });
+      await logSecurityEvent({
+        orgId: ctx.org.id,
+        action: 'user.created',
+        actorId: ctx.user.id,
+        targetType: 'user',
+        targetId: userId,
+        targetLabel: input.full_name,
+        metadata: { role: input.role, activation: invite ? 'invitation' : 'temporary_password' },
+      });
+    }
+    // Davet: üyelik açıldıktan sonra (veritabanı hedefin aktif üye olmasını şart koşar). E-posta
+    // gönderilemezse üyelik kalır; davet listeden tekrar gönderilir.
+    let invitationSent = false;
+    if (invite && !existing) {
+      invitationSent = (await sendMemberInvitation(ctx, userId)).sent;
     }
     refresh();
-    return { temporaryPassword: existing ? null : password, existing, email: input.email };
+    return { temporaryPassword: existing ? null : password, existing, email: input.email, invited: invite && !existing, invitationSent };
   });
+}
+
+/** Hesabını henüz etkinleştirmemiş üyeye daveti (yeniden) gönderir; önceki bağlantı geçersiz olur */
+export async function resendMemberInvitation(userId: string): Promise<ActionResult<{ email: string; expiresAt: string }>> {
+  return runAction(async () => {
+    const ctx = await requirePermission('users.manage');
+    assertNotSelf(ctx, userId);
+    const member = await loadMember(ctx, userId);
+    assertOwnerRules(ctx, member.role);
+    const res = await sendMemberInvitation(ctx, userId);
+    refresh();
+    if (!res.sent) throw new ActionError('Davet e-postası gönderilemedi. Birazdan tekrar deneyin.', 'email_failed');
+    return { email: res.email, expiresAt: res.expiresAt };
+  }, 'Davet e-postası gönderildi. Önceki davet bağlantıları artık geçersiz.');
 }
 
 // -----------------------------------------------------------------------------

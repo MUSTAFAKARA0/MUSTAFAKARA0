@@ -15,10 +15,10 @@
 
 | # | Adım | Nasıl | Kontrol |
 | --- | --- | --- | --- |
-| 0 | Prova | docs/PRODUCTION_MIGRATION.md › "Canlıdan önce son prova" (canlı yedeğin kopyasında) | kopya projede postflight 21/21 TAMAM (25 satır; 4'ü önceki sayılarla KARŞILAŞTIRMA satırı), site çalışıyor |
+| 0 | Prova | docs/PRODUCTION_MIGRATION.md › "Canlıdan önce son prova" (canlı yedeğin kopyasında) | kopya projede postflight 22/22 TAMAM (26 satır; 4'ü önceki sayılarla KARŞILAŞTIRMA satırı), site çalışıyor |
 | 1 | Yedek | Supabase Backups/PITR + `pg_dump -Fc` + `npm run backup:storage` | dosyalar oluştu |
 | 2 | Yedek doğrulama | `pg_restore --list`, `manifest.json` dosya sayısı | hata yok, sayılar mantıklı |
-| 3 | Veritabanı migration | docs/PRODUCTION_MIGRATION.md (25 dosya, sırayla) | `postflight_v2.sql` 21/21 TAMAM (25 satır; 4'ü önceki sayılarla KARŞILAŞTIRMA satırı) |
+| 3 | Veritabanı migration | docs/PRODUCTION_MIGRATION.md (26 dosya, sırayla) | `postflight_v2.sql` 22/22 TAMAM (26 satır; 4'ü önceki sayılarla KARŞILAŞTIRMA satırı) |
 | 4 | Ortam değişkenleri | Vercel › Production: tablo aşağıda | `npm run prelaunch -- --production` (yerelde canlı değerlerle) kritik yok |
 | 5 | Depolama | Supabase › Storage: 4 kova; `media-originals` özel | postflight #12 TAMAM |
 | 6 | Auth | Site URL, Redirect URL `/admin/auth/callback`, sign-up kapalı, TOTP açık. Şifre sıfırlama ve davet e-postaları KARAY'ın sağlayıcısıyla (EMAIL_PROVIDER) gider; Supabase'te özel SMTP isteğe bağlıdır | test hesabıyla şifre sıfırlama e-postası geliyor (ofis alan adında da) |

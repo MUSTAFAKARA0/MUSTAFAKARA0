@@ -187,11 +187,17 @@ test('E1 + E9 + E2 + E3 + E4: ofis A alan adını ekler → bekliyor (site açı
   expect(await status(DOM_A)).toBe(404);
 
   // E2: kayıt yokken / yanlış kayıtla doğrulama başarısız
-  await r.getByRole('button', { name: 'Doğrula' }).click();
+  // Her denemede sunucu işleminin bitmesi beklenir (aksi halde önceki bildirim görünürken DNS değiştirilir
+  // ve uçuştaki doğrulama yeni kaydı okur — test yarışı)
+  const verify = r.getByRole('button', { name: 'Doğrula' });
+  await verify.click();
   await expect(page.getByText('Doğrulama kaydı bulunamadı', { exact: false }).first()).toBeVisible();
+  await expect(verify).toBeEnabled();
   setRecord(`_karay-verification.${DOM_A}`, 'TXT', 'karay-site-verification=yanlis-deger');
-  await r.getByRole('button', { name: 'Doğrula' }).click();
-  await expect(page.getByText('Doğrulama kaydı bulunamadı', { exact: false }).first()).toBeVisible();
+  const toasts = await page.getByText('Doğrulama kaydı bulunamadı', { exact: false }).count();
+  await verify.click();
+  await expect.poll(() => page.getByText('Doğrulama kaydı bulunamadı', { exact: false }).count()).toBeGreaterThan(toasts);
+  await expect(verify).toBeEnabled();
   await expect(r).toHaveAttribute('data-status', 'pending');
   setRecord(`_karay-verification.${DOM_A}`, 'TXT', value);
   await r.getByRole('button', { name: 'Doğrula' }).click();

@@ -9,7 +9,8 @@ import { expect, test, type Browser, type BrowserContext, type Page } from '@pla
  *
  *  LC-1  KARAY yöneticisi yeni müşteri açar (kurumsal plan) → sahip daveti e-postası
  *  LC-2  Hata yolu: bozuk davet bağlantısı reddedilir → geçerli bağlantıyla aktivasyon → /admin
- *  LC-3  Özel alan adı: ekle (bekliyor, site kapalı) → TXT → doğrulandı → CNAME → aktif → site açılır
+ *  LC-3  Özel alan adı: ekle (bekliyor, site kapalı) → TXT → doğrulandı → CNAME → aktif → site "çok yakında"
+ *        (FAZ 1: yeni müşteri sitesi taslak açılır) → KARAY teslimi: Yayın durumu › Yayında → site açılır
  *  LC-4  Özel alan adında /admin oturumu: taslak → ziyaretçi ESKİYİ görür → önizleme YENİYİ → yayın → geri alma
  *  LC-5  Eşzamanlılık: aynı taslak iki oturumdan → eski sürümle kaydeden reddedilir (stale_draft)
  *  LC-6  Güvenlik: A'nın sahibi B'nin (varsayılan ofis) verisini okuyamaz/değiştiremez; Host / x-tenant-key sahteciliği
@@ -175,8 +176,10 @@ test('LC-1: KARAY yöneticisi yeni müşteri açar ve sahip davetini gönderir',
   expect(org!.status).toBe('active');
   const { data: sub } = await service!.from('subscriptions').select('plan_id, status').eq('organization_id', S.orgId).single();
   expect(sub).toMatchObject({ plan_id: 'kurumsal', status: 'trialing' });
-  const { data: site } = await service!.from('site_configs').select('organization_id').eq('organization_id', S.orgId).single();
+  const { data: site } = await service!.from('site_configs').select('organization_id, site_status').eq('organization_id', S.orgId).single();
   expect(site!.organization_id).toBe(S.orgId);
+  // FAZ 1: yeni müşterinin sitesi ziyaretçiye kapalı (taslak) açılır; yayına açmak KARAY'ın teslim adımı
+  expect(site!.site_status).toBe('draft');
 
   const before = mails.length;
   await page.getByTestId('owner-invitation').getByRole('button', { name: 'Davet gönder' }).click();
@@ -234,10 +237,27 @@ test('LC-3: özel alan adı bekliyor → doğrulandı → aktif; site yalnızca 
   await row(page).getByRole('button', { name: 'Bağlantıyı kontrol et' }).click();
   await expect(row(page)).toHaveAttribute('data-status', 'active', { timeout: 15_000 });
   await expect(row(page)).toHaveAttribute('data-primary', 'true');
+  // Alan adı aktif ama site henüz teslim edilmedi: ziyaretçi "çok yakında" sayfasını görür
+  const soon = await rawGet(DOMAIN, '/');
+  expect(soon.status).toBe(200);
+  expect(soon.body).toContain('Sitemiz çok yakında yayında');
+  await ctx.close();
+
+  // KARAY teslimi (handoff): Web siteleri › Yayın durumu › Yayında
+  const kctx = await freshContext(browser);
+  const karay = await kctx.newPage();
+  await loginPlatform(karay);
+  await karay.goto(`/platform/organizasyonlar/${S.orgId}`);
+  await expect(karay.locator('[data-customer-status]').first()).toBeVisible();
+  await karay.goto(`/platform/siteler/${S.orgId}`);
+  await karay.locator('#site-status').selectOption('active');
+  await karay.getByRole('button', { name: 'Durumu kaydet' }).click();
+  await expect(karay.getByText('Site durumu güncellendi', { exact: false }).or(karay.getByText('Kaydedildi', { exact: false })).first()).toBeVisible({ timeout: 15_000 });
+  await kctx.close();
+  await expect.poll(async () => (await rawGet(DOMAIN, '/')).body.includes('Sitemiz çok yakında yayında'), { timeout: 15_000 }).toBe(false);
   const home = await rawGet(DOMAIN, '/');
   expect(home.status).toBe(200);
   expect(home.body).toContain(NAME);
-  await ctx.close();
 });
 
 test('LC-4: özel alan adında panel — taslak → ziyaretçi eskiyi, önizleme yeniyi görür → yayın → geri alma', async ({ browser }) => {

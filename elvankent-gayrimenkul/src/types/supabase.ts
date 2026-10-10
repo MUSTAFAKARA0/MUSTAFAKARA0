@@ -1342,6 +1342,24 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_org_notes: {
+        Row: {
+          id: string
+          organization_id: string
+          author_id: string | null
+          body: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          author_id?: string | null
+          body: string
+          created_at?: string
+        }
+        Update: never
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           id: boolean
@@ -2429,6 +2447,45 @@ export type Database = {
           mfa_enabled: boolean
         }[]
       }
+      org_mark_member_invitation_sent: {
+        Args: {
+          p_invitation: string
+        }
+        Returns: undefined
+      }
+      org_member_account_states: {
+        Args: {
+          p_org: string
+        }
+        Returns: {
+          user_id: string
+          account_pending: boolean
+          invitation_status: string | null
+          invitation_expires_at: string | null
+          invitation_sent_at: string | null
+        }[]
+      }
+      org_onboarding: {
+        Args: {
+          p_org: string
+        }
+        Returns: Json
+      }
+      org_send_member_invitation: {
+        Args: {
+          p_actor: string
+          p_org: string
+          p_user: string
+          p_token_hash: string
+        }
+        Returns: {
+          invitation_id: string
+          email: string
+          role: Database["public"]["Enums"]["org_role"]
+          expires_at: string
+          resent: boolean
+        }[]
+      }
       org_plan: {
         Args: {
           p_org: string
@@ -2557,6 +2614,26 @@ export type Database = {
       invitation_release: {
         Args: { p_invitation: string }
         Returns: undefined
+      }
+      platform_customer_overview: {
+        Args: never
+        Returns: {
+          organization_id: string
+          owner_user_id: string | null
+          owner_email: string | null
+          owner_pending: boolean
+          invitation_status: string | null
+          invitation_expires_at: string | null
+          site_status: string
+          published_version: number
+          published_at: string | null
+          domains_active: number
+          domains_waiting: number
+          domain_waiting_since: string | null
+          onboarding: Json
+          notes_count: number
+          last_note_at: string | null
+        }[]
       }
       platform_organizations: {
         Args: never

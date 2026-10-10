@@ -5,6 +5,9 @@ import type { SessionUser } from '@/platform/auth/session';
 import { getTenant } from '@/platform/tenant/tenant';
 import { createPreviewToken } from '@/site-config/preview';
 
+export const NO_SITE_ADDRESS =
+  'Bu sitenin henüz bir adresi yok. Önizleme ve yayın için alan adı bağlanmalı (Alan adı) veya KARAY platform alt alan adı (PLATFORM_ROOT_DOMAIN) tanımlanmalıdır.';
+
 /**
  * Taslak önizleme bağlantısı (KARAY ve ofis ortak; 1 saat geçerli, yalnızca bağlantıyı açan
  * tarayıcı taslağı görür). Organizasyon oturum istemcisiyle okunur: kiracı yalnızca kendi
@@ -19,6 +22,8 @@ export async function createPreviewUrl(db: SessionUser['supabase'], orgId: strin
   const tenant = await getTenant(org.slug);
   const token = createPreviewToken(orgId);
   if (!tenant || !token) throw new ActionError('Önizleme bağlantısı oluşturulamadı.');
+  // Önizleme sitenin kendi adresinde açılır (belirteç yalnızca o adresin kiracısında geçerlidir)
+  if (!tenant.siteAddress) throw new ActionError(NO_SITE_ADDRESS);
   const to = typeof path === 'string' && path.startsWith('/') && !path.startsWith('//') ? path : '/';
-  return `${tenant.baseUrl}/api/site-preview?token=${encodeURIComponent(token)}&to=${encodeURIComponent(to)}`;
+  return `${tenant.siteAddress}/api/site-preview?token=${encodeURIComponent(token)}&to=${encodeURIComponent(to)}`;
 }
