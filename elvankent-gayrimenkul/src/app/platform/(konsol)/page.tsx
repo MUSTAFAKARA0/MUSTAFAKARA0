@@ -1,0 +1,192 @@
+import type { Metadata } from 'next';
+import Link from '@/components/common/intent-link';
+import { Building2, HardDrive, Home, Inbox, Plus, Users } from 'lucide-react';
+import { AdminPageHeader, Panel, StatCard } from '@/components/panel/ui';
+import { OrgTable } from '@/components/platform/org-table';
+import { Button } from '@/components/ui/button';
+import { formatBytes, formatNumber } from '@/lib/format';
+import { listPlans } from '@/modules/platform/queries';
+import { customerMetrics, listCustomers } from '@/modules/platform/customers';
+import { listAuditLogs } from '@/modules/audit/queries';
+import { AuditList } from '@/components/panel/audit-list';
+import { requireSuperAdminPage } from '@/platform/auth/session';
+import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
+import { cn } from '@/lib/utils';
+
+export const metadata: Metadata = { title: 'Genel bakış' };
+
+export default async function PlatformOverviewPage() {
+  const session = await requireSuperAdminPage();
+  const [orgs, plans, { data: users }, { data: sitesData }, leadsRes, logs] = await Promise.all([
+    listCustomers(session),
+    listPlans(session),
+    session.supabase.rpc('platform_users', { p_limit: 500 }),
+    session.supabase.rpc('platform_sites'),
+    session.supabase.from('platform_leads').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+    listAuditLogs(session.supabase, { page: 1 }),
+  ]);
+  const sites = sitesData ?? [];
+  const liveSites = sites.filter((x) => x.org_status === 'active' && x.site_status === 'active').length;
+  const pausedSites = sites.filter((x) => x.org_status === 'active' && x.site_status !== 'active');
+  const pendingDrafts = sites.filter((x) => x.has_unpublished_changes);
+  const withDomain = sites.filter((x) => x.primary_domain).length;
+  const newLeads = leadsRes.error ? null : (leadsRes.count ?? 0);
+  const orgNames = new Map(orgs.map((o) => [o.id, o.name]));
+  const sum = (key: 'property_count' | 'published_count' | 'storage_bytes' | 'leads_30d' | 'member_count') => orgs.reduce((acc, o) => acc + Number(o[key] ?? 0), 0);
+  const active = orgs.filter((o) => o.status === 'active').length;
+  const userCount = users?.length ?? 0;
+  const m = customerMetrics(orgs);
+  const planNames = new Map(plans.map((p) => [p.id, p.name]));
+  const ops: { label: string; value: number; href: string; hint: string; warn?: boolean }[] = [
+    { label: 'Dikkat', value: m.attention, href: '/platform/organizasyonlar?durum=attention', hint: 'süresi dolan davet, ödeme, bekleyen alan adı…', warn: m.attention > 0 },
+    { label: 'Davet bekliyor', value: m.pendingInvitations, href: '/platform/organizasyonlar?durum=invited', hint: 'sahip hesabı etkinleşmedi' },
+    { label: 'Kurulumda', value: m.setup, href: '/platform/organizasyonlar?durum=setup', hint: 'kurulum adımları eksik' },
+    { label: 'Yayına hazır', value: m.ready, href: '/platform/organizasyonlar?durum=ready', hint: 'KARAY teslimi bekliyor' },
+    { label: 'Yayında', value: m.live, href: '/platform/organizasyonlar?durum=live', hint: `${formatNumber(m.publishedSites)} yayınlanmış site açık` },
+    { label: 'Alan adı bekliyor', value: m.domainsWaiting, href: '/platform/siteler', hint: 'doğrulama veya yönlendirme' },
+    { label: 'Askıda', value: m.suspended, href: '/platform/organizasyonlar?durum=suspended', hint: 'askıda veya kapatılmış' },
+  ];
+
+  return (
+    <>
+      <AdminPageHeader
+        title="Genel bakış"
+        description={`${PLATFORM_BRAND.name} ${PLATFORM_BRAND.product} — müşteri ofisleri, web siteleri, kullanım ve abonelik durumu.`}
+        actions={
+          <Button asChild>
+            <Link href="/platform/organizasyonlar/yeni">
+              <Plus /> Yeni organizasyon
+            </Link>
+          </Button>
+        }
+      />
+      {/* Hiyerarşi: KARAY platform sahibi; emlak ofisleri müşteri (kiracı), her birinin kendi sitesi */}
+      <section aria-label="Platform yapısı" className="mb-6 overflow-hidden rounded-2xl border border-border bg-surface shadow-xs">
+        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element -- KARAY simgesi (logo paketi) */}
+            <img src={PLATFORM_BRAND.icons.svg} alt="" width={40} height={40} className="size-10" />
+            <div>
+              <p className="text-[15px] font-bold text-foreground">{PLATFORM_BRAND.name}</p>
+              <p className="text-[12.5px] text-muted-foreground">Platform sahibi · {PLATFORM_BRAND.product}</p>
+            </div>
+          </div>
+          <span className="hidden text-muted-foreground sm:block" aria-hidden>
+            →
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[12.5px] font-semibold tracking-wide text-muted-foreground uppercase">Müşteri ofisleri ({formatNumber(orgs.length)})</p>
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {[...orgs]
+                .sort((a, b) => a.created_at.localeCompare(b.created_at))
+                .slice(0, 8)
+                .map((o, i) => (
+                  <li key={o.id}>
+                    <Link href={`/platform/siteler/${o.id}`} className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-muted/60 px-3 py-1.5 text-[13px] font-semibold hover:border-border-strong">
+                      <span className={cn('size-2 rounded-full', o.status === 'active' ? 'bg-emerald-500' : 'bg-amber-500')} aria-hidden />
+                      {o.name}
+                      {i === 0 && <span className="text-[11.5px] font-medium text-muted-foreground">· ilk müşteri</span>}
+                    </Link>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <StatCard label="Müşteri ofisi" value={formatNumber(orgs.length)} icon={Building2} tone="primary" hint={`${formatNumber(active)} aktif · ${formatNumber(orgs.length - active)} pasif`} href="/platform/organizasyonlar" />
+        <StatCard label="Kullanıcı hesabı" value={userCount >= 500 ? '500+' : formatNumber(userCount)} icon={Users} hint={`${formatNumber(sum('member_count'))} aktif üyelik`} href="/platform/kullanicilar" />
+        <StatCard label="İlan" value={formatNumber(sum('property_count'))} icon={Home} hint={`${formatNumber(sum('published_count'))} yayında`} />
+        <StatCard label="Depolama" value={formatBytes(sum('storage_bytes'))} icon={HardDrive} hint="orijinaller + boyutlar" />
+        <StatCard label="Talep (30 gün)" value={formatNumber(sum('leads_30d'))} icon={Inbox} />
+      </div>
+      <Panel className="mt-6" title="Müşteri operasyonları" description="Mevcut kayıtlardan hesaplanır: sahip hesabı, site, alan adı ve abonelik durumu">
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7" data-customer-metrics>
+          {ops.map((o) => (
+            <li key={o.label}>
+              <Link href={o.href} className="block h-full rounded-xl border border-border px-3.5 py-3 hover:border-border-strong">
+                <span className="block text-[12.5px] text-muted-foreground">{o.label}</span>
+                <span className={cn('numeric mt-1 block text-2xl font-semibold', o.warn && 'text-danger')}>{formatNumber(o.value)}</span>
+                <span className="mt-0.5 block text-[11.5px] leading-4 text-muted-foreground">{o.hint}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-4 border-t border-border pt-4">
+          <p className="text-[12.5px] font-semibold tracking-wide text-muted-foreground uppercase">Plan dağılımı (kapatılmış hariç)</p>
+          <ul className="mt-2 flex flex-wrap gap-2 text-[13.5px]">
+            {[...m.plans.entries()].map(([id, n]) => (
+              <li key={id} className="rounded-full bg-surface-muted px-3 py-1">
+                {planNames.get(id) ?? id} <span className="numeric font-semibold">{formatNumber(n)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Panel>
+      <div className="mt-6 grid gap-6 xl:grid-cols-3 xl:items-start">
+        <Panel title="Web siteleri" description="Yayın, bakım ve taslak durumu (gerçek kayıtlar)">
+          <dl className="grid grid-cols-2 gap-4 text-[14px]">
+            <div>
+              <dt className="text-[12.5px] text-muted-foreground">Yayında</dt>
+              <dd className="numeric mt-1 text-2xl font-semibold">{formatNumber(liveSites)}</dd>
+            </div>
+            <div>
+              <dt className="text-[12.5px] text-muted-foreground">Bakımda / yayında değil</dt>
+              <dd className="numeric mt-1 text-2xl font-semibold">{formatNumber(pausedSites.length)}</dd>
+            </div>
+            <div>
+              <dt className="text-[12.5px] text-muted-foreground">Yayınlanmamış taslak</dt>
+              <dd className="numeric mt-1 text-2xl font-semibold">{formatNumber(pendingDrafts.length)}</dd>
+            </div>
+            <div>
+              <dt className="text-[12.5px] text-muted-foreground">Özel alan adı bağlı</dt>
+              <dd className="numeric mt-1 text-2xl font-semibold">
+                {formatNumber(withDomain)} / {formatNumber(sites.length)}
+              </dd>
+            </div>
+          </dl>
+          {pendingDrafts.length > 0 && (
+            <ul className="mt-4 space-y-1.5 border-t border-border pt-4 text-[13.5px]">
+              {pendingDrafts.slice(0, 5).map((x) => (
+                <li key={x.organization_id}>
+                  <Link href={`/platform/siteler/${x.organization_id}`} className="font-semibold hover:underline">
+                    {x.name}
+                  </Link>{' '}
+                  <span className="text-muted-foreground">· taslak bekliyor</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+        <Panel title="KARAY talepleri" description="KARAY sayfasındaki formdan gelen emlak ofisi adayları">
+          {newLeads === null ? (
+            <p className="text-sm text-muted-foreground">Talep kaydı henüz kurulmamış (migration 20261002000001).</p>
+          ) : (
+            <>
+              <p className="numeric text-3xl font-semibold">{formatNumber(newLeads)}</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">yeni (henüz yanıtlanmamış) talep</p>
+              <Button asChild variant="outline" size="sm" className="mt-4">
+                <Link href="/platform/talepler">Talepleri aç</Link>
+              </Button>
+            </>
+          )}
+        </Panel>
+        <Panel title="Son işlemler" description="Tüm platform ve müşteri ofislerinde" bodyClassName="p-0 sm:p-0">
+          {logs.rows.length === 0 ? (
+            <p className="px-5 py-4 text-sm text-muted-foreground">Henüz kayıt yok.</p>
+          ) : (
+            <AuditList rows={logs.rows.slice(0, 6)} orgNames={orgNames} linkTargets={false} />
+          )}
+          <div className="border-t border-border px-5 py-3">
+            <Link href="/platform/kayitlar" className="text-[13px] font-semibold text-primary-ink hover:underline">
+              Tüm kayıtlar →
+            </Link>
+          </div>
+        </Panel>
+      </div>
+      <Panel className="mt-6" title="Müşteri ofisleri (organizasyonlar)" bodyClassName="p-0 sm:p-0">
+        <OrgTable orgs={orgs} plans={new Map(plans.map((p) => [p.id, p.name]))} />
+      </Panel>
+    </>
+  );
+}
