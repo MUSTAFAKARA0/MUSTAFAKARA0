@@ -13,7 +13,7 @@
  * Gerekli: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (yalnızca okuma yapılır).
  */
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 
@@ -51,7 +51,8 @@ for (const bucket of buckets) {
     if (!target.startsWith(path.join(out, bucket.id))) { failed++; continue; } // yol dışına yazmayı engelle
     if (existsSync(target) && file.size !== null && statSync(target).size === file.size) {
       skipped++;
-      manifest.buckets[bucket.id].files.push({ path: file.path, size: file.size, skipped: true });
+      // Atlanan dosyanın da özeti yazılır: geri yüklemede (restore-storage.mjs) her dosya doğrulanabilir
+      manifest.buckets[bucket.id].files.push({ path: file.path, size: file.size, skipped: true, sha256: createHash('sha256').update(readFileSync(target)).digest('hex') });
       continue;
     }
     const { data, error: dlError } = await db.storage.from(bucket.id).download(file.path);
