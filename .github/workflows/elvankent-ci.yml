@@ -106,7 +106,9 @@ jobs:
             echo "IP_HASH_SALT=ci-$(openssl rand -hex 16)"
             echo "CRON_SECRET=ci-$(openssl rand -hex 32)"
             echo "NEXT_IMAGE_ALLOW_LOCAL_IP=1"
-            echo "SITE_ENV=development"
+            # E2E demo ortamını bekler (DEMO ORTAMI şeridi, noindex; demo verisi yukarıda yüklenir):
+            # tests/e2e/acceptance.spec.ts ve visitor.spec.ts. Yerel çalıştırmalarla aynı ortam.
+            echo "SITE_ENV=demo"
             # P0.4 davet e-postası: gerçek gönderim yok; E2E sahte Resend sunucusunu (127.0.0.1:4010) kendisi açar
             echo "EMAIL_PROVIDER=resend"
             echo "RESEND_API_KEY=ci-test-key"
@@ -122,7 +124,9 @@ jobs:
       - name: E2E hazırlık (yönetici hesabı, build, sunucu)
         run: |
           set -euo pipefail
-          npm run create-admin -- e2e-admin@example.test 'E2e-Password-12345' --role=owner
+          # E2E yöneticisi hem ofis sahibi hem KARAY süper admini olmalı (acceptance.spec.ts ön koşulu;
+          # /platform testleri bu hesapla giriş yapar)
+          npm run create-admin -- e2e-admin@example.test 'E2e-Password-12345' --role=owner --super-admin
           npx playwright install --with-deps chromium
           set -a; . ./.env.local; set +a
           npm run build

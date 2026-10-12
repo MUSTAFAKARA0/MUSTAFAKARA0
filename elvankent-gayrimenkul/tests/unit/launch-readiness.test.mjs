@@ -8,11 +8,13 @@
  *  LR-05  E-posta: geçici hatada sınırlı yeniden deneme, kalıcı hatada deneme yok, aynı anahtar
  *  LR-06  Şifre sıfırlama: KARAY e-posta sağlayıcısı, güvenilir kök adres, hız sınırı, after()
  *  LR-07  Anında yayına çıkan düzenleyiciler bunu açıkça söyler (taslak sanılmaz)
+ *  LR-08  CI'nin veritabanı işi E2E ön koşullarını sağlar: demo ortamı, ofis sahibi + süper admin yönetici
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { tenantBaseUrls } from '../../src/platform/tenant/host.ts';
+import { isIndexable, showsDemoNotice } from '../../src/lib/site-env.ts';
 
 const root = new URL('../../', import.meta.url);
 const read = (p) => readFileSync(new URL(p, root), 'utf8');
@@ -251,5 +253,34 @@ describe('LR-07 anında yayına çıkan düzenleyiciler', () => {
   });
   test('site yönetimi › sayfalar kapsamı ayırır', () => {
     assert.match(read('src/components/site-editor/structure-forms.tsx'), /data-testid="pages-draft-scope"/);
+  });
+});
+
+describe('LR-08 CI E2E ortamı', () => {
+  // E2E ön koşulları (tests/e2e/acceptance.spec.ts): demo ortamı (DEMO ORTAMI şeridi, noindex) ve hem ofis
+  // sahibi hem KARAY süper admini olan bir yönetici. CI bunları sağlamazsa testler yerelde geçip CI'da düşer.
+  const wf = read('../.github/workflows/elvankent-ci.yml');
+  const database = wf.split(/\n {2}database:\n/)[1]?.split(/\n {2}[a-z][\w-]*:\n/)[0] ?? '';
+  test('veritabanı işi uygulamayı ve testleri demo ortamında çalıştırır', () => {
+    assert.ok(database, 'database işi bulundu');
+    const env = [...database.matchAll(/echo "SITE_ENV=([a-z]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(env, ['demo']);
+    const prev = process.env.SITE_ENV;
+    process.env.SITE_ENV = env[0];
+    try {
+      assert.equal(showsDemoNotice(), true, 'DEMO ORTAMI şeridi görünür');
+      assert.equal(isIndexable(), false, 'noindex');
+    } finally {
+      if (prev === undefined) delete process.env.SITE_ENV;
+      else process.env.SITE_ENV = prev;
+    }
+  });
+  test('E2E yöneticisi ofis sahibi ve süper admin olarak oluşturulur', () => {
+    const line = database.split('\n').find((l) => /npm run create-admin -- /.test(l) && !/^\s*#/.test(l));
+    assert.ok(line, 'create-admin satırı var');
+    assert.match(line, /--role=owner\b/);
+    assert.match(line, /--super-admin\b/);
+    assert.match(line, /e2e-admin@example\.test/);
+    assert.match(database, /E2E_ADMIN_EMAIL: e2e-admin@example\.test/);
   });
 });

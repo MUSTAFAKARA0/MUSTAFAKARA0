@@ -49,7 +49,7 @@ Mantık: `src/platform/tenant/host.ts › karayHostKind`, uygulama: `src/proxy.t
 
 ## Görseller
 
-Ürün ekran görüntüleri (`public/karay/ekran-*.png`) gerçek Site Kontrol Merkezi ekranlarıdır; geçici "Örnek Gayrimenkul" kiracısıyla alınmış, kiracı sonra silinmiştir. Sahte müşteri, istatistik, yorum veya referans yoktur. Görseller `next/image` ile AVIF/WebP ve boyutlandırılmış sunulur.
+Ürün ekran görüntüleri (`src/app/karay/_images/ekran-*.png`) gerçek Site Kontrol Merkezi ekranlarıdır; geçici "Örnek Gayrimenkul" kiracısıyla alınmış, kiracı sonra silinmiştir. Sahte müşteri, istatistik, yorum veya referans yoktur. Görseller `next/image` ile AVIF/WebP ve boyutlandırılmış sunulur. Sayfa bu dosyaları **statik import** ile kullanır (`/_next/static/media`): `/karay/` yolu proxy'de alan adına göre korunduğu için görsel iyileştiricinin Host başlığı taşımayan iç isteği bu yoldan görsel okuyamaz (P3-F1). Yeni KARAY sayfa görselleri de aynı yolla eklenmelidir; `images.localPatterns`'e korumalı bir yol eklenmez (birim testi: `surface.test.mjs`). `public/karay/` altında yalnızca paylaşım görseli (`og-karay.png`) kalır; o, tarayıcıların ve botların KARAY adresinden doğrudan istediği bir dosyadır.
 
 ## Ortam değişkenleri
 

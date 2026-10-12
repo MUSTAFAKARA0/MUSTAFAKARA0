@@ -107,7 +107,10 @@ const nextConfig: NextConfig = {
     deviceSizes: [640, 960, 1440, 2048, 2880],
     imageSizes: [160, 320, 480],
     remotePatterns,
-    localPatterns: [{ pathname: '/demo/**' }, { pathname: '/karay/**' }, { pathname: '/og-default.png' }, { pathname: '/placeholder-property.svg' }],
+    // Proxy'nin alan adına göre koruduğu yollar (/karay, /platform…) burada yer almaz: iyileştirici yerel
+    // görseli Host'suz bir iç istekle okur ve o istek bu yollarda 404 alır (P3-F1). KARAY sayfası
+    // görselleri statik import eder (/_next/static/media; Next bu yolu kendisi ekler).
+    localPatterns: [{ pathname: '/demo/**' }, { pathname: '/og-default.png' }, { pathname: '/placeholder-property.svg' }],
     // Yerel Supabase ile geliştirme/test için (canlıda kapalı kalmalı)
     dangerouslyAllowLocalIP: process.env.NEXT_IMAGE_ALLOW_LOCAL_IP === '1',
   },

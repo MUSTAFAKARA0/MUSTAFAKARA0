@@ -4,7 +4,8 @@
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_TENANT_KEY, hostSurface, isValidTenantKey, karayHostConfigFromEnv, karayHostKind, resolveRequestSurface, tenantKeyForHost } from '../../src/platform/tenant/host.ts';
+import { readFileSync, readdirSync } from 'node:fs';
+import { DEFAULT_TENANT_KEY, hostSurface, isUnderPath, isValidTenantKey, karayHostConfigFromEnv, karayHostKind, resolveRequestSurface, tenantKeyForHost } from '../../src/platform/tenant/host.ts';
 
 const plain = karayHostConfigFromEnv({});
 const withRoot = karayHostConfigFromEnv({ PLATFORM_ROOT_DOMAIN: 'karayapp.com' });
@@ -122,5 +123,40 @@ describe('Varsayılan kiracı kodda yazılı değil', () => {
     assert.equal(isValidTenantKey(DEFAULT_TENANT_KEY), true);
     assert.equal(/^[a-z0-9]+(-[a-z0-9]+)*$/.test(DEFAULT_TENANT_KEY), false);
     assert.equal(isValidTenantKey('_x'), false);
+  });
+});
+
+describe('Görsel iyileştirici ve yüzey koruması (P3-F1)', () => {
+  // Next'in görsel iyileştiricisi yerel görseli Host başlığı taşımayan bir iç istekle okur. Host'suz istek
+  // kiracı sayılır (kapalı varsayılan) ve proxy'nin koruduğu yollarda 404 alır: bu yollar next/image
+  // kaynağı olamaz. KARAY sayfası görselleri statik import eder (/_next/static/media proxy'den geçmez).
+  const root = new URL('../../', import.meta.url);
+  const read = (p) => readFileSync(new URL(p, root), 'utf8');
+  const guarded = [...read('src/proxy.ts').matchAll(/'(\/[a-z-]+)\/:path\*'/g)].map((m) => m[1]);
+  const isGuarded = (p) => guarded.some((g) => isUnderPath(p, g));
+
+  test("Host'suz istek korumalı yoldaki görsele 404 alır (kapalı varsayılan korunur)", () => {
+    assert.ok(guarded.includes('/karay') && guarded.includes('/platform'), 'proxy eşleştiricisi okundu');
+    assert.deepEqual(kind('/karay/ekran-kontrol-merkezi.png', undefined), { kind: 'not-found' });
+  });
+  test('images.localPatterns korumalı bir yola izin vermez', () => {
+    const block = read('next.config.ts').match(/localPatterns:\s*\[([^\]]*)\]/);
+    assert.ok(block, 'localPatterns bulundu');
+    const paths = [...block[1].matchAll(/pathname:\s*'([^']+)'/g)].map((m) => m[1]);
+    assert.ok(paths.length > 0);
+    for (const p of paths) assert.equal(isGuarded(p.replace(/\/\*\*$/, '')), false, p);
+  });
+  test('next/image bileşenleri korumalı yollardan görsel istemez', () => {
+    let images = 0;
+    for (const f of readdirSync(new URL('src/', root), { recursive: true }).filter((x) => x.endsWith('.tsx'))) {
+      const code = read(`src/${f}`);
+      if (!code.includes("from 'next/image'")) continue;
+      for (const [el] of code.matchAll(/<Image\b[\s\S]*?\/>/g)) {
+        images++;
+        const src = el.match(/\bsrc="([^"]+)"/)?.[1];
+        if (src) assert.equal(isGuarded(src), false, `${f}: ${src}`);
+      }
+    }
+    assert.ok(images > 0, 'next/image kullanımları tarandı');
   });
 });

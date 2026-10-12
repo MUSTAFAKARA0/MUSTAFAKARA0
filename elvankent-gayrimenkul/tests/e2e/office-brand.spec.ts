@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
+import sharp from 'sharp';
 import { createClient } from '@supabase/supabase-js';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
@@ -37,7 +38,9 @@ const NEW_NAME = `Yeni Marka ${RUN}`;
 const OLD_PHONE = '0312 555 10 10';
 const NEW_PHONE = '0312 555 20 20';
 const B_NAME = `B Marka ${RUN}`;
-const logoFile = path.join(__dirname, '.fixtures', 'kabul-logo.png');
+// Logo test görseli bellekte üretilir (kabul testindekiyle aynı 600×200 PNG): başka bir spec'in
+// diske bıraktığı dosyaya bağlı kalınmaz, test tek başına ve temiz checkout'ta da çalışır
+const logoPng = () => sharp({ create: { width: 600, height: 200, channels: 4, background: { r: 16, g: 80, b: 70, alpha: 1 } } }).png().toBuffer();
 
 test.use({
   launchOptions: {
@@ -147,7 +150,7 @@ test('OBR-A: marka değişikliği taslak → önizleme → yayın → geri alma 
   await page.getByRole('button', { name: 'Taslağa kaydet' }).click();
   await expect(page.getByText('Taslağa kaydedildi', { exact: false }).first()).toBeVisible();
   // 4) Logo (görsel taslağa yüklenir)
-  await page.locator('#branding-logo').setInputFiles(logoFile);
+  await page.locator('#branding-logo').setInputFiles({ name: 'kabul-logo.png', mimeType: 'image/png', buffer: await logoPng() });
   await expect(page.getByText('Logo taslağa kaydedildi', { exact: false })).toBeVisible({ timeout: 30_000 });
   await page.reload();
   await expect(page.getByTestId('site-status')).toContainText('Taslak değişiklikler var');
@@ -224,7 +227,7 @@ test('OBR-B: A kullanıcısı B kiracısının markasına, iletişimine, logosun
   }
   // Görsel uç noktası istemciden kurum kimliği kabul etmez: yükleme A'nın taslağına gider
   const res = await page.request.post('/api/admin/branding', {
-    multipart: { kind: 'logo', orgId: S.b!, organization_id: S.b!, file: { name: 'logo.png', mimeType: 'image/png', buffer: (await import('node:fs')).readFileSync(logoFile) } },
+    multipart: { kind: 'logo', orgId: S.b!, organization_id: S.b!, file: { name: 'logo.png', mimeType: 'image/png', buffer: await logoPng() } },
     headers: { origin: baseURL },
   });
   expect(res.status()).toBe(201);
