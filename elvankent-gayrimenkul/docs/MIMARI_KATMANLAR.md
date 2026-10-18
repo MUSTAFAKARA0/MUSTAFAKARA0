@@ -104,6 +104,8 @@ Theme Engine: applyTheme → tokenlar + designCss(tema, manifest) → YALNIZCA s
 
 **Yazı tipleri (FONT-ISOLATION, Aşama D1):** kiracı sitesi yalnızca kendi başlık/gövde yazı tipinin `@font-face` bildirimlerini satır içi alır ve yalnızca o dosyaları önceden yükler (`theme-engine/typography/font-css.ts`; dosyalar `scripts/fonts/build-site-fonts.mjs` ile next/font'un kendi fonksiyonlarından üretilir, birebir aynı). Önceki "katalog genelinde @font-face" sınırı kaldırıldı (157 → 17 bildirim).
 
+**Yazı tipleri build'de ağa çıkmaz (K-13):** ofis paneli (Manrope, Fraunces) ve KARAY (Poppins) yazı tipleri `next/font/local` ile depodaki dosyalardan yüklenir; build Google Fonts'a bağlanmaz (önceden `next/font/google` build sırasında Google'ın yanıtına bağlıydı ve aralıklı olarak düşüyordu). Tanımlar `scripts/fonts/build-local-fonts.mjs` ile next/font'un kendi fonksiyonlarından üretilir: eski çıktıyla aynı dosyalar, alt kümeler, unicode-range'ler, ağırlıklar, CSS değişkenleri ve yedek metrikleri. Her alt küme ayrı bir modüldür ve aynı adı dışa aktarır (next/font/local aile adını değişken adından alır; tek bileşik aile oluşur). Klasörler: `src/components/ui/fonts/` (Manrope ve Fraunces dosyaları Klasik tema paketiyle ortak, `public/fonts/site/`) ve `src/platform/branding/fonts/` (Poppins). Lisanslar `assets/fonts/OFL-*.txt`. `tests/unit/local-fonts.test.mjs` build girdilerinde `next/font/google`, Google Fonts adresi ve harici CSS `@import` bulunmasını engeller.
+
 ## Yeni Site Oluştur (Aşama D)
 
 ```
@@ -394,7 +396,7 @@ alan adının 404'ü aktif olunca önbellekte kalmaz).
 | `themes.ts` | tema kaydı: her tema yalnızca veri (yazı tipleri, köşe, yoğunluk, kart/düğme/hero/header/footer varsayılanları); `resolveStyle()` |
 | `tokens.ts` | yapılandırma → CSS değişkenleri (renk, kontrast düzeltme, köşe, aralık, yazı tipi) |
 | `palettes.ts` | hazır paletler |
-| `typography/` | yazı tipi kataloğu (`catalog.ts`) ve next/font tanımları (`fonts.ts`) |
+| `typography/` | yazı tipi kataloğu (`catalog.ts`), seçili paketlerin CSS'i (`font-css.ts`) ve üretilmiş paketler (`packages.generated.ts`) |
 | `settings.ts` | tema ayarlarının zod şemaları (site-config bunları belgesine katar) |
 | `runtime.ts` | `applyTheme()` → `{ css, attributes, style, theme }` |
 | `design-css.ts` | seçilmiş tasarım paketi: tema karakteri ve varyant sunum kuralları; `applyTheme` yalnızca sitenin seçtiği parçaları satır içi yazar |
