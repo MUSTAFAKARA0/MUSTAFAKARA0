@@ -8,11 +8,14 @@
  *  LR-05  E-posta: geçici hatada sınırlı yeniden deneme, kalıcı hatada deneme yok, aynı anahtar
  *  LR-06  Şifre sıfırlama: KARAY e-posta sağlayıcısı, güvenilir kök adres, hız sınırı, after()
  *  LR-07  Anında yayına çıkan düzenleyiciler bunu açıkça söyler (taslak sanılmaz)
- *  LR-08  CI'nin veritabanı işi E2E ön koşullarını sağlar: demo ortamı, ofis sahibi + süper admin yönetici
+ *  LR-08  CI'nin veritabanı işi E2E ön koşullarını sağlar: demo ortamı, ofis sahibi + süper admin yönetici;
+ *         CI'da RLS ve E2E testleri yalnızca geçici yerel Supabase'e bağlanır (production'a yönelirse durur)
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { tenantBaseUrls } from '../../src/platform/tenant/host.ts';
 import { isIndexable, showsDemoNotice } from '../../src/lib/site-env.ts';
 
@@ -282,5 +285,17 @@ describe('LR-08 CI E2E ortamı', () => {
     assert.match(line, /--super-admin\b/);
     assert.match(line, /e2e-admin@example\.test/);
     assert.match(database, /E2E_ADMIN_EMAIL: e2e-admin@example\.test/);
+  });
+  test("CI'da RLS ve E2E testleri yerel olmayan bir Supabase'e bağlanmadan durur", () => {
+    const run = (args, env) => spawnSync(process.execPath, args, { cwd: fileURLToPath(root), env: { ...process.env, CI: 'true', ...env }, encoding: 'utf8', timeout: 60_000 });
+    const remote = { NEXT_PUBLIC_SUPABASE_URL: 'https://ornek-proje.supabase.co', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'x', SUPABASE_SERVICE_ROLE_KEY: 'x' };
+    const config = ['--input-type=module', '-e', "await import('./playwright.config.ts')"];
+    for (const args of [['tests/security/rls.test.mjs'], config]) {
+      const r = run(args, remote);
+      assert.notEqual(r.status, 0, args.join(' '));
+      assert.match(r.stderr, /CI: NEXT_PUBLIC_SUPABASE_URL yerel değil/, args.join(' '));
+    }
+    // Yerel adreste koruma devreye girmez (yalnızca yapılandırma yüklenir; ağ isteği yapılmaz)
+    assert.equal(run(config, { NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321' }).status, 0);
   });
 });

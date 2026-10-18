@@ -31,6 +31,11 @@ import { freshTotp } from './totp.mjs';
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// CI'da (GitHub Actions, CI=true) yalnızca işin kendi geçici yerel Supabase'i kullanılır: test kiracı ve
+// kullanıcı oluşturup siler; production veya paylaşılan bir projeye yönelirse hiç başlamaz
+if (process.env.CI && url && !/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(url)) {
+  throw new Error("CI: NEXT_PUBLIC_SUPABASE_URL yerel değil; RLS testleri CI'da yalnızca geçici yerel Supabase ile çalışır");
+}
 const missing = !url || !anonKey || !serviceKey;
 const skip = missing ? 'NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY ve SUPABASE_SERVICE_ROLE_KEY tanımlı değil' : false;
 
