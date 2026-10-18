@@ -35,6 +35,11 @@ export default defineConfig({
     locale: 'tr-TR',
     timezoneId: 'Europe/Istanbul',
     userAgent,
+    // Headless'ta da tam Chromium: varsayılan Chrome Headless Shell --unsafely-treat-insecure-origin-as-secure
+    // bayrağını uygulamaz, önizleme testlerinin Secure çerezleri http test alan adlarında reddedilir.
+    // launchOptions'ın dışında durur; testler test.use ile launchOptions'ı bütünüyle değiştirir.
+    // PLAYWRIGHT_CHROMIUM_PATH verilirse executablePath önceliklidir.
+    channel: 'chromium',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: { executablePath },
