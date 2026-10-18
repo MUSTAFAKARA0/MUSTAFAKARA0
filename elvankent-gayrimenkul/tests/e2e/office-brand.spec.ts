@@ -119,7 +119,12 @@ const draftOf = async (org: string) => (await service!.from('site_configs').sele
 
 /** Sitedeki marka: başlıktaki ad, iletişim sayfasındaki telefon bağlantıları, header logosu */
 async function siteBrand(p: Page, site: string) {
-  await p.goto(`${site}/iletisim`, { waitUntil: 'networkidle' });
+  // networkidle beklenmez (K-12): sayfa henüz boşa çıkmamış bir site belgesindeyken (yeni açılan önizleme) eski belgenin
+  // prefetch istekleri gezinme sırasında kesilip yeniden denenir; belge değişirken başlayanlar hiç bitmez, networkidle
+  // oluşmaz. Marka sunucuda işlenir: belge yüklendikten sonra okunan başlık ve iletişim telefonu görünür olmalıdır.
+  await p.goto(`${site}/iletisim`, { waitUntil: 'load' });
+  await expect(p.getByRole('banner')).toBeVisible();
+  await expect(p.getByRole('main').locator('a[href^="tel:"]').first()).toBeVisible();
   const html = await p.content();
   const tels = await p.locator('a[href^="tel:"]').evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
   const logos = await p.getByRole('banner').locator('img[src*="branding"]').evaluateAll((els) => els.map((e) => (e as HTMLImageElement).currentSrc || e.getAttribute('src') || ''));
