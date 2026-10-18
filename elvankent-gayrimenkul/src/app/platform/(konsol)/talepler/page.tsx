@@ -9,7 +9,7 @@ import { formatDateTime } from '@/lib/format';
 import { cn, firstParam } from '@/lib/utils';
 import { requireSuperAdminPage } from '@/platform/auth/session';
 
-export const metadata: Metadata = { title: 'KARAY talepleri' };
+export const metadata: Metadata = { title: 'KARAYS talepleri' };
 
 const FILTERS = [
   { key: 'acik', label: 'Açık', statuses: ['new', 'contacted', 'qualified'] },
@@ -36,8 +36,8 @@ export default async function KarayLeadsPage({ searchParams }: PageProps<'/platf
   return (
     <>
       <AdminPageHeader
-        title="KARAY talepleri"
-        description="KARAY şirket sayfasındaki (/karay) Bilgi al / Demo talep et formundan gelen emlak ofisi adayları. Ofislerin kendi müşteri talepleriyle karışmaz."
+        title="KARAYS talepleri"
+        description="KARAYS şirket sayfasındaki (/karay) Bilgi al / Demo talep et formundan gelen emlak ofisi adayları. Ofislerin kendi müşteri talepleriyle karışmaz."
         actions={
           <a href="/karay#iletisim" target="_blank" rel="noopener noreferrer" className="text-[13.5px] font-semibold text-primary-ink hover:underline">
             Formu görüntüle ↗
@@ -56,9 +56,9 @@ export default async function KarayLeadsPage({ searchParams }: PageProps<'/platf
           </Link>
         ))}
       </nav>
-      {error && <p className="mb-4 rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning">Talepler yüklenemedi. KARAY migration&apos;ı (20261002000001) uygulanmış mı?</p>}
+      {error && <p className="mb-4 rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning">Talepler yüklenemedi. Platform migration&apos;ı (20261002000001) uygulanmış mı?</p>}
       {rows.length === 0 ? (
-        <EmptyPanel icon={Inbox} title="Bu filtrede talep yok" description="KARAY sayfasından gelen talepler burada listelenir." />
+        <EmptyPanel icon={Inbox} title="Bu filtrede talep yok" description="KARAYS sayfasından gelen talepler burada listelenir." />
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => {

@@ -62,9 +62,10 @@ V1'de `20260922000001…04` zaten uygulanmıştır — **tekrar çalıştırmay�
 20261009000001_custom_domains.sql
 20261010000001_password_reset_requests.sql
 20261011000001_customer_operations.sql
+20261018000001_karays_brand.sql
 ```
 
-Toplam **26 dosya** (V1'in 4 dosyası hariç). Son 8 dosyanın her biri kendi içinde tek işlemdir ve tekrar çalıştırılabilir; geri dönüş SQL'i her dosyanın başındaki yorum bloğundadır.
+Toplam **27 dosya** (V1'in 4 dosyası hariç). Son 9 dosyanın her biri kendi içinde tek işlemdir ve tekrar çalıştırılabilir; geri dönüş SQL'i her dosyanın başındaki yorum bloğundadır.
 
 `20260929000001_platform_owner_isolation.sql` (platform sahibi KARAY ↔ kiracı yalıtımı): kiracı listesinin, ayarlarının ve alan adlarının herkese açık anahtarla **toplu** çekilmesini kapatır; site ofisini yalnızca adresiyle/alan adıyla tek tek bulur (`public_tenant*` fonksiyonları). Veri değiştirmez, tekrar çalıştırılabilir. Uygulama kodu bu dosya uygulanmadan önce de sonra da çalışır. Geri dönüş SQL'i dosyanın sonundadır.
 
@@ -75,6 +76,8 @@ Toplam **26 dosya** (V1'in 4 dosyası hariç). Son 8 dosyanın her biri kendi i�
 `20261001000001_site_brand_publish.sql` (marka da taslak → önizleme → yayın → geri alma akışında): yalnızca fonksiyonlar (`site_save_draft`, `site_publish`, `site_rollback` güncellenir; `site_brand_columns`, `site_brand_snapshot`, `site_apply_brand` eklenir). Tablo yapısı ve veri değişmez. KARAY › Marka değişiklikleri taslağa yazılır; yayında `organization_settings`'e uygulanır, sürüm kaydına markanın anlık görüntüsü yazılır. Tekrar çalıştırılabilir; geri dönüş dosyanın sonunda.
 
 `20261002000001_karay_platform.sql` (KARAY şirket sayfası `/karay`): iki **yeni** tablo — `platform_settings` (KARAY'ın kendi şirket/iletişim/SEO bilgileri; tek satır, iletişim alanları boş başlar — gerçek bilgiler Platform › KARAY ayarları'ndan girilir) ve `platform_leads` (KARAY sayfasındaki "Bilgi al / Demo talep et" formundan gelen emlak ofisi adayları). Kiracıların `leads`/`customers` tablolarına dokunmaz; KARAY talepleri hiçbir kiracının CRM'ine düşmez. Her iki tabloyu yalnızca süper admin okur/günceller. `submit_platform_lead` yalnızca sunucu (service role) tarafından çağrılabilir: IP özeti zorunlu, IP başına 10 dakikada 3 / günde 10, genel saatte 300 sınırı. `public_platform_profile` herkese açıktır ama bildirim adreslerini döndürmez. Mevcut veri değişmez; tekrar çalıştırılabilir; geri dönüş dosyanın sonunda. Uygulama tablo yoksa KARAY sayfasını iletişim bilgisi olmadan açar; form "şu anda kullanılamıyor" der.
+
+`20261018000001_karays_brand.sql` (KARAYS marka geçişi, K-15): `platform_settings.company_name` varsayılanı `'KARAYS'` olur; satır hâlâ eski varsayılan `'KARAY'` ise `'KARAYS'` yapılır (Platform › KARAYS ayarlarından girilmiş başka bir ada dokunulmaz). Ad, KARAYS sayfasının alt bilgisinde ve Organization yapılandırılmış verisinde görünür. Tablo/fonksiyon adları, `/karay` rotası ve `KARAY_HOSTS` değişmez; `karay_schema_version()` `20261018000001` döndürür. Uygulama kodu dosya uygulanmadan önce de sonra da çalışır; tekrar çalıştırılabilir; geri dönüş dosyanın başında. Son kontrol 27. satır.
 
 - `supabase db push` hangi dosyaların uygulandığını `supabase_migrations.schema_migrations` tablosundan takip eder. V1 SQL Editor ile uygulandıysa bu tabloda kayıt yoktur ve CLI V1 dosyalarını da çalıştırmaya çalışır — bu durumda **SQL Editor ile dosya dosya** ilerleyin veya önce V1 sürümlerini `supabase migration repair --status applied 20260922000001 20260922000002 20260922000003 20260922000004` ile işaretleyin.
 - SQL Editor'de her dosyanın tamamını **ayrı bir sorgu** olarak tek seferde çalıştırın; hata verirse **sonraki dosyaya geçmeyin** (her dosya kendi içinde bütündür). `v2_enums` dosyası mutlaka tek başına çalıştırılmalıdır (yeni enum değerleri ancak o sorgu bittikten sonra kullanılabilir).

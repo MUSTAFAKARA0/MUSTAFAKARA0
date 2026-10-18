@@ -85,11 +85,11 @@ export async function updateKarayProfile(input: KarayProfileInput): Promise<Acti
       .update({ ...parsed.data, updated_at: new Date().toISOString(), updated_by: session.user.id })
       .eq('id', true);
     assertNoDbError(error);
-    await logSecurityEvent({ orgId: null, action: 'platform.settings_updated', actorId: session.user.id, targetType: 'platform', targetLabel: 'KARAY ayarları' });
+    await logSecurityEvent({ orgId: null, action: 'platform.settings_updated', actorId: session.user.id, targetType: 'platform', targetLabel: 'KARAYS ayarları' });
     updateTag(cacheTags.karay);
     revalidatePath('/platform/ayarlar');
     return null;
-  }, 'KARAY ayarları kaydedildi.');
+  }, 'KARAYS ayarları kaydedildi.');
 }
 
 /**

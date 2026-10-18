@@ -280,7 +280,7 @@ export function AdminShell({ nav, org, orgs, user, siteUrl, canCreateListing, pa
       <div className="border-t border-border px-3 py-3">
         <UserMenu user={user} siteUrl={siteUrl} />
         {/* Hiyerarşi: ofis, KARAY altyapısının müşterisidir (platform yönetimine erişim yoktur) */}
-        <p className="mt-2 px-2 text-[11px] text-muted-foreground/80">KARAY altyapısıyla çalışır</p>
+        <p className="mt-2 px-2 text-[11px] text-muted-foreground/80">KARAYS altyapısıyla çalışır</p>
       </div>
     </div>
   );

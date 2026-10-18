@@ -12,7 +12,7 @@ function escapeHtml(value: string): string {
  * (konuda yok); süresi Supabase Auth'un e-posta bağlantısı süresidir (varsayılan 1 saat).
  */
 export function buildPasswordResetEmail(input: { link: string; platform: boolean }): Omit<EmailMessage, 'to'> {
-  const product = input.platform ? 'KARAY platform' : 'Yönetim paneli';
+  const product = input.platform ? 'KARAYS platform' : 'Yönetim paneli';
   const subject = `${product} şifre yenileme`;
   const intro = `${product} hesabınız için şifre yenileme istendi. Yeni şifrenizi belirlemek için aşağıdaki bağlantıyı kullanın.`;
   const note = 'Bağlantı tek kullanımlıktır ve kısa süre geçerlidir. Bu isteği siz yapmadıysanız e-postayı yok sayabilirsiniz; şifreniz değişmez.';

@@ -177,12 +177,12 @@ async function scrollThrough(page: Page) {
 test('KARAY-01: KARAY şirket sayfası açılır (kendi header, menü, bölümler, footer)', async ({ page }) => {
   const res = await page.goto('/karay');
   expect(res?.status()).toBe(200);
-  await expect(page).toHaveTitle(/KARAY/);
+  await expect(page).toHaveTitle(/KARAYS/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Emlak ofisinizin');
-  const nav = page.getByRole('navigation', { name: 'KARAY menüsü' });
+  const nav = page.getByRole('navigation', { name: 'KARAYS menüsü' });
   for (const name of ['Platform', 'Özellikler', 'Temalar', 'Nasıl çalışır?', 'Hakkımızda', 'İletişim']) await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
   for (const id of ['platform', 'ozellikler', 'temalar', 'nasil-calisir', 'hakkimizda', 'iletisim']) await expect(page.locator(`#${id}`), id).toBeAttached();
-  await expect(page.getByRole('contentinfo')).toContainText('KARAY');
+  await expect(page.getByRole('contentinfo')).toContainText('KARAYS');
   // Gerçek ürün ekran görüntüleri, header/footer logoları ve simgeler oturumsuz ziyaretçide yüklenir
   // (kırık görsel yok; K-15: logolar /platform altındayken giriş sayfasına yönleniyordu)
   await scrollThrough(page);
@@ -379,7 +379,7 @@ test('KARAY-10: kiracı B tema değişikliği Elvankent\'i etkilemez', async ({ 
 
 test('KARAY-11: kiracı markası KARAY markasını değiştirmez', async ({ browser }) => {
   const k = await open(browser, '/karay');
-  await expect(k.page.getByRole('link', { name: 'KARAY ana sayfa' })).toBeVisible();
+  await expect(k.page.getByRole('link', { name: 'KARAYS ana sayfa' })).toBeVisible();
   const html = await k.page.content();
   expect(html).not.toContain(B_NAME);
   expect(html.toLowerCase()).not.toContain('#7a1f5c');
@@ -420,7 +420,7 @@ test('KARAY-13: KARAY sayfası telefonda çalışır (menü, form, taşma yok)',
   const m = await open(browser, '/karay', { width: 390, height: 844 });
   await expect(m.page.getByRole('heading', { level: 1 })).toBeVisible();
   await m.page.getByRole('button', { name: 'Menüyü aç' }).click();
-  const menu = m.page.getByRole('navigation', { name: 'KARAY mobil menü' });
+  const menu = m.page.getByRole('navigation', { name: 'KARAYS mobil menü' });
   await expect(menu).toBeVisible();
   await menu.getByRole('link', { name: 'İletişim' }).click();
   await expect(menu).toBeHidden();
@@ -455,7 +455,7 @@ test('KARAY-16: KARAY rotası kiracı rotalarıyla karışmaz', async ({ browser
   // Kiracının kendi alan adında /karay yoktur (kiracı sitesine yeniden yazılır → 404)
   const b = await open(browser, `${SITE_B}/karay`);
   expect(b.res?.status()).toBe(404);
-  await expect(b.page.getByRole('link', { name: 'KARAY ana sayfa' })).toHaveCount(0);
+  await expect(b.page.getByRole('link', { name: 'KARAYS ana sayfa' })).toHaveCount(0);
   await b.close();
   const bLead = await open(browser, `${SITE_B}/karay/yasal/kvkk`);
   expect(bLead.res?.status()).toBe(404);
@@ -466,7 +466,7 @@ test('KARAY-16: KARAY rotası kiracı rotalarıyla karışmaz', async ({ browser
   expect(karayHtml).not.toContain(S.elvName!);
   expect(karayHtml).not.toContain(B_NAME);
   const home = await open(browser, '/');
-  await expect(home.page.getByRole('link', { name: 'KARAY ana sayfa' })).toHaveCount(0);
+  await expect(home.page.getByRole('link', { name: 'KARAYS ana sayfa' })).toHaveCount(0);
   expect(await siteTheme(home.page)).toBe(S.elvTheme);
   await home.close();
   // Kiracı yolu /t/<slug>/karay dışarıdan açılamaz
@@ -483,7 +483,7 @@ test('KARAY-17: kiracı kullanıcısı platforma (KARAY talepleri/ayarları dahi
     // Ofis oturumuna platform alanı hiç yokmuş gibi davranır (404; varlığı da sızdırılmaz)
     const res = await page.goto(p);
     expect(res?.status(), p).toBe(404);
-    await expect(page.getByText('KARAY talepleri'), p).toHaveCount(0);
+    await expect(page.getByText('KARAYS talepleri'), p).toHaveCount(0);
   }
   const settings = await S.eClient!.from('platform_settings').select('*');
   expect(settings.data ?? []).toHaveLength(0);
@@ -518,7 +518,7 @@ test('KARAY-18: platform kullanıcısı yetkisiz olarak kiracı verisine erişem
 test('KARAY-19: platform giriş sayfasının logosu ve simgeleri oturumsuz ziyaretçide yüklenir', async ({ page }) => {
   // K-15: logo ve simgeler /platform altındayken proxy onları da konsol rotası sayıp girişe yönlendiriyordu
   await page.goto('/platform/giris');
-  const logo = page.getByRole('img', { name: 'KARAY', exact: true });
+  const logo = page.getByRole('img', { name: 'KARAYS', exact: true });
   await expect(logo).toBeVisible();
   await expect.poll(() => logo.evaluate((img: HTMLImageElement) => (img.complete ? img.naturalWidth : 0))).toBeGreaterThan(0);
   await expectIconsServed(page);

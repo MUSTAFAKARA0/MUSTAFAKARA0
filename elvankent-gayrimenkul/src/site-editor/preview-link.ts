@@ -6,7 +6,7 @@ import { getTenant } from '@/platform/tenant/tenant';
 import { createPreviewToken } from '@/site-config/preview';
 
 export const NO_SITE_ADDRESS =
-  'Bu sitenin henüz bir adresi yok. Önizleme ve yayın için alan adı bağlanmalı (Alan adı) veya KARAY platform alt alan adı (PLATFORM_ROOT_DOMAIN) tanımlanmalıdır.';
+  'Bu sitenin henüz bir adresi yok. Önizleme ve yayın için alan adı bağlanmalı (Alan adı) veya KARAYS platform alt alan adı (PLATFORM_ROOT_DOMAIN) tanımlanmalıdır.';
 
 /**
  * Taslak önizleme bağlantısı (KARAY ve ofis ortak; 1 saat geçerli, yalnızca bağlantıyı açan

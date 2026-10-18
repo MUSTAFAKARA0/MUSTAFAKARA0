@@ -218,7 +218,7 @@ test('SURF-10: dosya uzantısı hilesiyle (ör. /platform/x.png) proxy ve yüzey
     for (const headers of [{}, { 'x-request-surface': 'karay' }] as Record<string, string>[]) {
       const res = await raw(tenantHost(), p, { headers });
       expect(res.status, `${p} ${JSON.stringify(headers)}`).toBe(404);
-      expect(res.body, p).not.toMatch(/Platform yönetimi|KARAY ana sayfa/);
+      expect(res.body, p).not.toMatch(/Platform yönetimi|KARAYS? ana sayfa/);
     }
   }
   // İç kiracı rotası uzantıyla da kapalı

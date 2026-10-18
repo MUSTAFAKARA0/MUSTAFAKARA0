@@ -41,7 +41,7 @@ export function KarayLeadEditor({ id, status, note }: { id: string; status: stri
         </Select>
       </Field>
       <Field label="İç not" htmlFor={`nt-${id}`} optional>
-        <Input id={`nt-${id}`} value={text} maxLength={2000} onChange={(e) => setText(e.target.value)} placeholder="Yalnızca KARAY ekibi görür" />
+        <Input id={`nt-${id}`} value={text} maxLength={2000} onChange={(e) => setText(e.target.value)} placeholder="Yalnızca KARAYS ekibi görür" />
       </Field>
       <Button type="submit" size="md" loading={pending} disabled={!dirty}>
         Kaydet
@@ -55,7 +55,7 @@ type Values = { [K in keyof Omit<KarayProfileInput, 'indexable'>]: string } & { 
 const GROUPS: { title: string; description: string; fields: { key: keyof Omit<Values, 'indexable'>; label: string; type?: string; textarea?: boolean; hint?: string; max: number }[] }[] = [
   {
     title: 'Şirket',
-    description: 'KARAY şirket sayfasında (/karay) ve alt bilgide gösterilir.',
+    description: 'KARAYS şirket sayfasında (/karay) ve alt bilgide gösterilir.',
     fields: [
       { key: 'company_name', label: 'Şirket adı', max: 80 },
       { key: 'tagline', label: 'Kısa tanım', max: 160, hint: 'Ör. Gayrimenkul Teknolojileri ve SaaS Platformu' },
@@ -84,7 +84,7 @@ const GROUPS: { title: string; description: string; fields: { key: keyof Omit<Va
     ],
   },
   {
-    title: 'SEO (KARAY sayfası)',
+    title: 'SEO (KARAYS sayfası)',
     description: 'Kiracı (emlak ofisi) sitelerinin SEO ayarlarından tamamen ayrıdır.',
     fields: [
       { key: 'seo_title', label: 'Sayfa başlığı', max: 70 },
@@ -93,7 +93,7 @@ const GROUPS: { title: string; description: string; fields: { key: keyof Omit<Va
   },
   {
     title: 'Talep bildirimleri',
-    description: 'KARAY formuna gelen taleplerin e-posta ile bildirileceği adresler (en fazla 5, virgülle ayırın). E-posta sağlayıcısı yapılandırılmamışsa talepler yine de Talepler ekranında görünür.',
+    description: 'KARAYS formuna gelen taleplerin e-posta ile bildirileceği adresler (en fazla 5, virgülle ayırın). E-posta sağlayıcısı yapılandırılmamışsa talepler yine de Talepler ekranında görünür.',
     fields: [{ key: 'lead_notify_emails', label: 'Bildirim adresleri', textarea: true, max: 900 }],
   },
 ];
@@ -126,7 +126,7 @@ export function KarayProfileForm({ initial }: { initial: Values }) {
               <Checkbox
                 checked={values.indexable}
                 onChange={(e) => setValues((v) => ({ ...v, indexable: e.target.checked }))}
-                label="KARAY sayfası arama motorlarına açık"
+                label="KARAYS sayfası arama motorlarına açık"
                 description="Kapalıyken sayfa noindex etiketi taşır ve site haritası boş döner."
               />
             </div>
@@ -137,7 +137,7 @@ export function KarayProfileForm({ initial }: { initial: Values }) {
         pending={pending}
         dirty={dirty}
         saveLabel="Kaydet"
-        note="Kaydedilince KARAY sayfasında (5 dk önbellek yenilenerek) hemen görünür."
+        note="Kaydedilince KARAYS sayfasında (5 dk önbellek yenilenerek) hemen görünür."
         onReset={() => setValues(initial)}
         onSave={async () => {
           setPending(true);
@@ -173,7 +173,7 @@ export function OrgNoteForm({ orgId }: { orgId: string }) {
       }}
     >
       <Field label="Yeni not" htmlFor="org-note">
-        <Textarea id="org-note" rows={3} value={text} maxLength={2000} onChange={(e) => setText(e.target.value)} placeholder="Görüşme, destek talebi, teslim notu… Yalnızca KARAY ekibi görür." />
+        <Textarea id="org-note" rows={3} value={text} maxLength={2000} onChange={(e) => setText(e.target.value)} placeholder="Görüşme, destek talebi, teslim notu… Yalnızca KARAYS ekibi görür." />
       </Field>
       <div>
         <Button type="submit" size="sm" loading={pending} disabled={!text.trim()}>

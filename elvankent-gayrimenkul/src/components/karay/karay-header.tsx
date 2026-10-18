@@ -7,6 +7,7 @@ import { PlatformWordmark } from '@/components/brand/platform-wordmark';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger, SheetContent } from '@/components/ui/dialog';
 import { KARAY_NAV } from '@/modules/karay/nav';
+import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 
 
 /**
@@ -18,10 +19,10 @@ export function KarayHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-[#e3e8f0] bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:h-[72px]">
-        <Link href="/karay" className="flex shrink-0 items-center rounded-lg" aria-label="KARAY ana sayfa">
+        <Link href="/karay" className="flex shrink-0 items-center rounded-lg" aria-label={`${PLATFORM_BRAND.name} ana sayfa`}>
           <PlatformWordmark tone="light" tagline={false} height={30} />
         </Link>
-        <nav aria-label="KARAY menüsü" className="hidden lg:block">
+        <nav aria-label={`${PLATFORM_BRAND.name} menüsü`} className="hidden lg:block">
           <ul className="flex items-center gap-1">
             {KARAY_NAV.map((l) => (
               <li key={l.href}>
@@ -45,8 +46,8 @@ export function KarayHeader() {
                 <Menu className="size-6" />
               </button>
             </DialogTrigger>
-            <SheetContent title="KARAY" description="Gayrimenkul Teknolojileri" className="platform-scope">
-              <nav aria-label="KARAY mobil menü">
+            <SheetContent title={PLATFORM_BRAND.name} description={PLATFORM_BRAND.product} className="platform-scope">
+              <nav aria-label={`${PLATFORM_BRAND.name} mobil menü`}>
                 <ul className="space-y-1">
                   {KARAY_NAV.map((l) => (
                     <li key={l.href}>

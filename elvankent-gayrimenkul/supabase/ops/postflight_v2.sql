@@ -207,5 +207,18 @@ checks as (
               then 'HATA: müşteri operasyon fonksiyonları istemciye açık'
               when (xpath('/row/n/text()', query_to_xml('select public.karay_schema_version() as n', false, true, '')))[1]::text >= '20261011000001'
               then 'TAMAM' else 'HATA: şema sürümü eski' end
+
+  union all
+  select 27, 'KARAYS marka geçişi (platform_settings.company_name)',
+         case when to_regclass('public.platform_settings') is null then 'tablo yok'
+              else coalesce((xpath('/row/n/text()', query_to_xml('select company_name as n from public.platform_settings', false, true, '')))[1]::text, 'satır yok') end,
+         case when not exists (select 1 from information_schema.columns
+                                where table_schema = 'public' and table_name = 'platform_settings'
+                                  and column_name = 'company_name' and column_default = '''KARAYS''::text')
+              then 'HATA: 20261018000001_karays_brand.sql uygulanmamış'
+              when (xpath('/row/n/text()', query_to_xml('select count(*) as n from public.platform_settings where company_name = ''KARAY''', false, true, '')))[1]::text::int > 0
+              then 'HATA: company_name hâlâ KARAY'
+              when (xpath('/row/n/text()', query_to_xml('select public.karay_schema_version() as n', false, true, '')))[1]::text >= '20261018000001'
+              then 'TAMAM' else 'HATA: şema sürümü eski' end
 )
 select sira, kontrol, deger, durum from checks order by sira;

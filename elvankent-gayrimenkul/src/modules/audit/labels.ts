@@ -187,9 +187,9 @@ export function describeAudit(row: AuditRow): { text: string; detail: string | n
     case 'site.features_changed':
       return { text: 'Site özelliklerini (özellik bayrakları) değiştirdi', detail: featureDiff(m.old, m.new), tone: 'warning' };
     case 'site.brand_updated':
-      return { text: 'Marka ve iletişim bilgilerini güncelledi (KARAY)', detail: fieldList(m.fields), tone: 'neutral' };
+      return { text: 'Marka ve iletişim bilgilerini güncelledi (KARAYS)', detail: fieldList(m.fields), tone: 'neutral' };
     case 'site.branding_uploaded':
-      return { text: `${target || 'Marka görseli'} yüklendi (KARAY)`, detail: null, tone: 'neutral' };
+      return { text: `${target || 'Marka görseli'} yüklendi (KARAYS)`, detail: null, tone: 'neutral' };
     case 'domain.added':
       return { text: `${target} alan adını ekledi`, detail: null, tone: 'neutral' };
     case 'domain.removed':
@@ -223,9 +223,9 @@ export function describeAudit(row: AuditRow): { text: string; detail: string | n
     case 'plan.updated':
       return { text: `${target} planını güncelledi`, detail: null, tone: 'neutral' };
     case 'platform.lead_updated':
-      return { text: 'KARAY talebinin durumunu güncelledi', detail: m.old_status || m.new_status ? `${m.old_status ?? ''} → ${m.new_status ?? ''}` : null, tone: 'neutral' };
+      return { text: 'KARAYS talebinin durumunu güncelledi', detail: m.old_status || m.new_status ? `${m.old_status ?? ''} → ${m.new_status ?? ''}` : null, tone: 'neutral' };
     case 'platform.settings_updated':
-      return { text: 'KARAY şirket ayarlarını güncelledi', detail: null, tone: 'neutral' };
+      return { text: 'KARAYS şirket ayarlarını güncelledi', detail: null, tone: 'neutral' };
     case 'subscription.changed':
       return { text: 'Abonelik planını değiştirdi', detail: m.plan ? `Plan: ${m.plan}` : null, tone: 'neutral' };
     default:

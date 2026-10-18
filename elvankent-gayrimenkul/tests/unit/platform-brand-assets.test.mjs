@@ -1,5 +1,10 @@
 /**
- * K-15 — platform marka dosyaları proxy'nin rota olarak yakaladığı yollarda tutulmaz.
+ * K-15 — KARAYS platform markası: görünen ad ve marka dosyaları.
+ *
+ * Görünen platform adı KARAYS'tır (eski adı KARAY). /karay rotası, KARAY_HOSTS ve kod adları
+ * teknik kimliktir ve değişmez; ancak kullanıcıya görünen metinlerde eski ad kalmamalıdır.
+ *
+ * Platform marka dosyaları proxy'nin rota olarak yakaladığı yollarda tutulmaz.
  *
  * Giriş ekranının, /karay header/footer'ının logoları ve platform simgeleri /platform/ altındaydı.
  * Proxy bu yolu (uzantısı ne olursa olsun) konsol rotası sayar ve oturumsuz isteği /platform/giris'e
@@ -10,7 +15,7 @@
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 
@@ -41,5 +46,35 @@ describe('Platform marka dosyaları (K-15)', () => {
       for (const p of PREFIXES) assert.ok(!a.startsWith(`${p}/`), `${a} → ${p} rotası`);
       assert.match(a, STATIC, `${a}: uzantı proxy'den geçer`);
     }
+  });
+});
+
+/** Yorumlar ayıklanmış kaynak: blok/JSX yorumları ve satır yorumları (https:// gibi adresler korunur) */
+function code(file) {
+  return readFileSync(file, 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[\s;{}(])\/\/.*$/gm, '$1');
+}
+
+function sources(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = path.join(dir, e.name);
+    return e.isDirectory() ? sources(p) : /\.(ts|tsx)$/.test(e.name) ? [p] : [];
+  });
+}
+
+describe('Görünen marka adı (K-15)', () => {
+  test('platform adı KARAYS', () => {
+    assert.equal(PLATFORM_BRAND.name, 'KARAYS');
+  });
+
+  test('kaynakta görünen metin olarak eski ad (KARAY) kalmadı', () => {
+    // Kelime sınırı: KARAYS, KARAY_HOSTS, KarayHeader gibi tanımlayıcılar eşleşmez
+    const OLD = /\bKARAY\b(?!_)|\bKaray\b/;
+    const hits = sources(path.join(ROOT, 'src'))
+      .map((f) => [path.relative(ROOT, f), code(f).split('\n').find((l) => OLD.test(l))])
+      .filter(([, line]) => line)
+      .map(([f, line]) => `${f}: ${line.trim().slice(0, 120)}`);
+    assert.deepEqual(hits, []);
   });
 });

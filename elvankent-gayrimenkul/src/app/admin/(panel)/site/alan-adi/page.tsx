@@ -29,12 +29,12 @@ export default async function Page() {
   const canAdd = ctx.plan.features.customDomain;
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-      <Panel title="Alan adları" description="Kendi alan adınızı bağlayın: önce sahipliği TXT kaydıyla doğrulayın, sonra alan adını KARAY'a yönlendirin.">
+      <Panel title="Alan adları" description="Kendi alan adınızı bağlayın: önce sahipliği TXT kaydıyla doğrulayın, sonra alan adını KARAYS'a yönlendirin.">
         <DomainManager
           domains={domains}
           fallbackUrl={tenant?.siteAddress ?? null}
           canAdd={canAdd}
-          addDisabledReason="Planınız özel alan adını içermiyor. Planınızı yükseltmek için KARAY ile iletişime geçin."
+          addDisabledReason="Planınız özel alan adını içermiyor. Planınızı yükseltmek için KARAYS ile iletişime geçin."
           actions={{
             add: addOfficeDomain,
             verify: verifyOfficeDomain,
@@ -52,7 +52,7 @@ export default async function Page() {
               {tenant.siteAddress.replace(/^https?:\/\//, '')} <ExternalLink className="size-4 shrink-0" aria-hidden />
             </a>
           ) : tenant ? (
-            <p className="text-sm text-muted-foreground">Sitenin henüz bir adresi yok: alan adı bağlanana (veya KARAY alt alan adı tanımlanana) kadar site hiçbir adreste açılmaz.</p>
+            <p className="text-sm text-muted-foreground">Sitenin henüz bir adresi yok: alan adı bağlanana (veya KARAYS alt alan adı tanımlanana) kadar site hiçbir adreste açılmaz.</p>
           ) : (
             <p className="text-sm text-muted-foreground">Siteniz şu anda yayında değil.</p>
           )}

@@ -224,7 +224,7 @@ test('TEST-OWNER-06: Elvankent süper admin oluşturamaz, başka kiracıya kulla
 
 test('TEST-OWNER-07: Süper admin (KARAY) kiracıları yönetebilir', async ({ page }) => {
   await loginPlatform(page);
-  await expect(page.getByRole('banner').getByRole('img', { name: 'KARAY' })).toBeVisible();
+  await expect(page.getByRole('banner').getByRole('img', { name: 'KARAYS', exact: true })).toBeVisible();
   await page.goto('/platform/organizasyonlar');
   await expect(page.getByRole('link', { name: 'Elvankent Gayrimenkul' }).first()).toBeVisible();
   await page.getByRole('link', { name: S.bName }).click();
@@ -274,7 +274,7 @@ test("TEST-OWNER-08: Elvankent kendi markasını değiştirir; tema yalnızca o 
   const icons = await k.page.locator('link[rel="icon"], link[rel="apple-touch-icon"]').evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
   expect(icons.length).toBeGreaterThan(0);
   for (const href of icons) expect(href, 'platform simgesi').toMatch(/^\/brand\/karay\//);
-  await expect(k.page.getByRole('img', { name: 'KARAY' }).first()).toBeVisible();
+  await expect(k.page.getByRole('img', { name: 'KARAYS', exact: true }).first()).toBeVisible();
   await k.ctx.close();
 
   // B ofisinin kaydı Elvankent'in değişikliğinden etkilenmez
@@ -335,7 +335,7 @@ test('TEST-OWNER-10: KARAY şifre yenileme KARAY sayfalarında kalır; ofis pane
     await page.goto('/platform/giris');
     await page.getByRole('link', { name: 'Şifremi unuttum' }).click();
     await expect(page).toHaveURL(/\/platform\/sifremi-unuttum$/);
-    await expect(page.getByRole('img', { name: 'KARAY' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'KARAYS', exact: true })).toBeVisible();
     await expect(page.getByText('Elvankent')).toHaveCount(0);
     // Geçersiz bağlantı → KARAY sayfasına döner
     await page.goto('/admin/auth/callback?token_hash=gecersiz&type=recovery&next=/platform/sifre-yenile');
@@ -349,7 +349,7 @@ test('TEST-OWNER-10: KARAY şifre yenileme KARAY sayfalarında kalır; ofis pane
     expect(link.error).toBeNull();
     await page.goto(`/admin/auth/callback?token_hash=${link.data.properties!.hashed_token}&type=recovery&next=/platform/sifre-yenile`);
     await expect(page).toHaveURL(/\/platform\/sifre-yenile$/);
-    await expect(page.getByRole('img', { name: 'KARAY' })).toBeVisible();
+    await expect(page.getByRole('img', { name: 'KARAYS', exact: true })).toBeVisible();
     const newPassword = `Karay-${Date.now()}-Yeni9`;
     await page.getByLabel('Yeni şifre', { exact: true }).fill(newPassword);
     await page.getByLabel('Yeni şifre (tekrar)').fill(newPassword);

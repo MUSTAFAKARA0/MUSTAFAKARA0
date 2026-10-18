@@ -118,7 +118,7 @@ export function DomainManager({ domains, actions, canAdd = true, addDisabledReas
                       d.connection.map((r) => <Record key={`${r.type}-${r.value}`} record={r} />)
                     ) : (
                       <p className="rounded-xl bg-surface-muted px-3.5 py-2.5 text-[13px] text-muted-foreground" data-testid="target-unknown">
-                        Yönlendirme kaydı (hedef adres) KARAY tarafından bildirilir; bağlantıyı KARAY ekibi onaylar.
+                        Yönlendirme kaydı (hedef adres) KARAYS tarafından bildirilir; bağlantıyı KARAYS ekibi onaylar.
                       </p>
                     )}
                   </div>

@@ -1,10 +1,10 @@
 import { buildTheme, themeCss } from '@/platform/branding/theme';
 
 /**
- * Platform sahibinin (KARAY) marka kimliği — platform seviyesinde, kodla gelir.
+ * Platform sahibinin (KARAYS) marka kimliği — platform seviyesinde, kodla gelir.
  *
  * Hiyerarşi:
- *   KARAY (platform sahibi, SaaS altyapı sağlayıcısı)
+ *   KARAYS (platform sahibi, SaaS altyapı sağlayıcısı)
  *     └─ Kiracılar (müşteri emlak ofisleri): her biri kendi markası ve alan adıyla
  *
  * Kiracı markası (logo, renk, şirket bilgisi) organization_settings tablosunda ve
@@ -12,14 +12,17 @@ import { buildTheme, themeCss } from '@/platform/branding/theme';
  * markası ise yalnızca /platform (süper admin) alanında kullanılır. İkisi birbirini
  * etkilemez: kiracı tema değişikliği platformu, platform teması kiracıyı değiştirmez.
  *
- * Logo ve renkler KARAY logo paketinden alınmıştır (public/brand/karay/). Logo dosyaları
- * düzenlenmez, yeniden çizilmez; oranları ve renkleri değiştirilmez (paket kuralları).
+ * Görünen ad KARAYS'tır (eski adı KARAY). Logo, simge ve renkler hâlâ eski KARAY logo
+ * paketindendir (public/brand/karay/; logolardaki yazı "karay"): onaylı KARAYS logo ailesi
+ * eklenince yalnızca bu dosyadaki yollar değişir. Logo dosyaları düzenlenmez, yeniden çizilmez;
+ * oranları ve renkleri değiştirilmez (paket kuralları). /karay rotası, KARAY_HOSTS, veritabanı
+ * ve kod adları teknik kimliktir; marka geçişinde değişmez.
  * Dosyalar /platform altında tutulmaz: o yol konsol rotasıdır ve proxy oturumsuz isteği
  * giriş sayfasına yönlendirir (giriş ekranında ve /karay'da logo ile simgeler kırılırdı).
  */
 export const PLATFORM_BRAND = {
   /** Platform sahibi şirket */
-  name: 'KARAY',
+  name: 'KARAYS',
   /** Resmî slogan (sloganlı logoda da yer alır) */
   product: 'Gayrimenkul Teknolojileri',
   /** Platform yönetim alanının adı */

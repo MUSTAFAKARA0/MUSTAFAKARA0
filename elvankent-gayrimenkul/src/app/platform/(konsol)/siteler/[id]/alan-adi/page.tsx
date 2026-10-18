@@ -14,7 +14,7 @@ export default async function Page({ params }: PageProps<'/platform/siteler/[id]
   const tenant = site.org.status === 'active' ? await getTenant(site.org.slug) : null;
   return (
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-      <Panel title="Alan adları" description="Alan adı önce TXT kaydıyla doğrulanır, sonra KARAY&apos;a yönlendirilir; site yalnızca AKTİF alan adında açılır.">
+      <Panel title="Alan adları" description="Alan adı önce TXT kaydıyla doğrulanır, sonra KARAYS&apos;a yönlendirilir; site yalnızca AKTİF alan adında açılır.">
         <PlatformDomainsPanel session={session} orgId={site.org.id} fallbackUrl={tenant?.siteAddress ?? null} />
       </Panel>
       <aside className="space-y-6">
@@ -24,7 +24,7 @@ export default async function Page({ params }: PageProps<'/platform/siteler/[id]
               {tenant.siteAddress.replace(/^https?:\/\//, '')} <ExternalLink className="size-4 shrink-0" aria-hidden />
             </a>
           ) : tenant ? (
-            <p className="text-sm text-muted-foreground">Sitenin henüz bir adresi yok: alan adı bağlanana (veya KARAY alt alan adı tanımlanana) kadar site hiçbir adreste açılmaz.</p>
+            <p className="text-sm text-muted-foreground">Sitenin henüz bir adresi yok: alan adı bağlanana (veya KARAYS alt alan adı tanımlanana) kadar site hiçbir adreste açılmaz.</p>
           ) : (
             <p className="text-sm text-muted-foreground">Organizasyon aktif değil; site yayında değil.</p>
           )}

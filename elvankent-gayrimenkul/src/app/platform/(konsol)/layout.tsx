@@ -30,7 +30,7 @@ export default async function PlatformConsoleLayout({ children }: LayoutProps<'/
             <div className="flex items-center gap-2">
               {/* KARAY'ın kendi şirket sayfası (kiracı sitesi değil); kiracı sitesi için Web Siteleri › Siteyi gör */}
               <a href="/karay" target="_blank" rel="noopener noreferrer" className="hidden items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-semibold text-white/80 hover:bg-white/10 hover:text-white sm:inline-flex">
-                <ExternalLink className="size-4" aria-hidden /> KARAY sitesi
+                <ExternalLink className="size-4" aria-hidden /> {PLATFORM_BRAND.name} sitesi
               </a>
               <span className="hidden max-w-56 truncate text-[13px] text-white/70 md:block">{session.user.email}</span>
               <form action={signOutPlatform}>

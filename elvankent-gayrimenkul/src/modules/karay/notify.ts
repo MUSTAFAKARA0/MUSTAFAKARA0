@@ -32,11 +32,11 @@ export async function notifyPlatformLead(leadId: string): Promise<void> {
   const text = `${kind}\n\n${rows
     .filter(([, v]) => v)
     .map(([k, v]) => `${k}: ${v}`)
-    .join('\n')}\n\nPlatform › KARAY talepleri ekranından yanıtlayın.`;
+    .join('\n')}\n\nPlatform › KARAYS talepleri ekranından yanıtlayın.`;
   const html = `<p><strong>${kind}</strong></p><table>${rows
     .filter(([, v]) => v)
     .map(([k, v]) => `<tr><td style="padding:2px 12px 2px 0;color:#5b6b85">${k}</td><td>${escapeHtml(v!)}</td></tr>`)
-    .join('')}</table><p>Platform › KARAY talepleri ekranından yanıtlayın.</p>`;
-  const result = await sendEmail({ to, subject: `KARAY · ${kind}: ${lead.full_name}`, text, html, replyTo: lead.email ?? undefined }, { idempotencyKey: `platform-lead/${leadId}` });
+    .join('')}</table><p>Platform › KARAYS talepleri ekranından yanıtlayın.</p>`;
+  const result = await sendEmail({ to, subject: `KARAYS · ${kind}: ${lead.full_name}`, text, html, replyTo: lead.email ?? undefined }, { idempotencyKey: `platform-lead/${leadId}` });
   if (!result.ok && !('skipped' in result && result.skipped)) console.warn('[karay-lead] bildirim gönderilemedi', result.error);
 }

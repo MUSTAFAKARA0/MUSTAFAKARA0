@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   const orgId = verifyPreviewToken(token);
   const tenant = await getTenantFromRequest().catch(() => null);
   if (!orgId || !tenant || tenant.id !== orgId) {
-    return new NextResponse('Önizleme bağlantısı geçersiz veya süresi dolmuş. KARAY panelinden yeni bağlantı oluşturun.', {
+    return new NextResponse('Önizleme bağlantısı geçersiz veya süresi dolmuş. KARAYS panelinden yeni bağlantı oluşturun.', {
       status: 403,
       headers: { 'Content-Type': 'text/plain; charset=utf-8', ...noStore },
     });

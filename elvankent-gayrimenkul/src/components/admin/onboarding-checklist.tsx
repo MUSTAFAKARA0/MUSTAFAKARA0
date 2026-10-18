@@ -19,7 +19,7 @@ export function OnboardingChecklist({ flags }: { flags: OnboardingFlags }) {
       title="Sitenizi kurun"
       description={
         progress.done === progress.total
-          ? 'Tüm adımlar tamam. KARAY ekibi sitenizi kontrol edip ziyaretçilere açacak.'
+          ? 'Tüm adımlar tamam. KARAYS ekibi sitenizi kontrol edip ziyaretçilere açacak.'
           : `${progress.done}/${progress.total} adım tamam. Her adım ilgili ekranı açar; değişiklikleri önizleyip yayınladığınızda sitede görünür.`
       }
     >

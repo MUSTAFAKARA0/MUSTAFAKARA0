@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { findKarayLegal, KARAY_LEGAL } from '@/modules/karay/legal';
+import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 
 export function generateStaticParams() {
   return KARAY_LEGAL.map((d) => ({ slug: d.slug }));
@@ -21,7 +22,7 @@ export default async function KarayLegalPage({ params }: PageProps<'/karay/yasal
     <article className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:py-20">
       <nav aria-label="Konum" className="text-[13px] text-[#5b6b85]">
         <Link href="/karay" className="hover:text-[#0b1b3a]">
-          KARAY
+          {PLATFORM_BRAND.name}
         </Link>{' '}
         › <span className="text-[#0b1b3a]">{doc.title}</span>
       </nav>

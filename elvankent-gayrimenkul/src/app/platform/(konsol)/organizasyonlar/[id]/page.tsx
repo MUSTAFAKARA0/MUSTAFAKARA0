@@ -86,7 +86,7 @@ export default async function PlatformOrgPage({ params }: PageProps<'/platform/o
         <div className="min-w-0 space-y-6">
           <Panel
             title="Müşteri durumu"
-            description="Kurulum adımları ofis panelindeki listeyle aynıdır. Kurulum bitince siteyi ziyaretçiye açmak KARAY'ın teslim adımıdır (Web sitesi › Yayın durumu › Yayında)."
+            description="Kurulum adımları ofis panelindeki listeyle aynıdır. Kurulum bitince siteyi ziyaretçiye açmak KARAYS'ın teslim adımıdır (Web sitesi › Yayın durumu › Yayında)."
           >
             <div className="flex flex-wrap items-center gap-2" data-customer-status={org.customer.key}>
               <Badge variant={org.customer.tone}>{org.customer.label}</Badge>
@@ -132,11 +132,11 @@ export default async function PlatformOrgPage({ params }: PageProps<'/platform/o
             <PlanForm orgId={org.id} plans={plans.map((p) => ({ id: p.id, name: p.name }))} current={org.plan_id} status={org.subscription_status} />
           </Panel>
 
-          <Panel title="Alan adları" description="TXT ile doğrulanan ve KARAY'a yönlendirilen (aktif) alan adında site açılır.">
+          <Panel title="Alan adları" description="TXT ile doğrulanan ve KARAYS'a yönlendirilen (aktif) alan adında site açılır.">
             <PlatformDomainsPanel session={session} orgId={org.id} fallbackUrl={tenant?.siteAddress ?? null} />
           </Panel>
 
-          <Panel title="KARAY notları" description="Destek, satış ve teslim notları. Yalnızca KARAY ekibi görür; notlar düzenlenmez ve silinmez.">
+          <Panel title="KARAYS notları" description="Destek, satış ve teslim notları. Yalnızca KARAYS ekibi görür; notlar düzenlenmez ve silinmez.">
             <OrgNoteForm orgId={org.id} />
             {notes.length > 0 && (
               <ul className="mt-5 divide-y divide-border border-t border-border" data-org-notes>

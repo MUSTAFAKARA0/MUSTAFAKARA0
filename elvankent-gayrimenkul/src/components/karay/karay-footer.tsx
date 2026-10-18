@@ -3,6 +3,7 @@ import { PlatformWordmark } from '@/components/brand/platform-wordmark';
 import { KARAY_NAV } from '@/modules/karay/nav';
 import { KARAY_LEGAL } from '@/modules/karay/legal';
 import type { KarayProfile } from '@/modules/karay/profile';
+import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 
 /**
  * KARAY alt bilgisi. Kiracı sitelerinin alt bilgisinden tamamen ayrıdır. Sosyal medya
@@ -34,7 +35,7 @@ export function KarayFooter({ profile }: { profile: KarayProfile }) {
             </ul>
           )}
         </div>
-        <nav aria-label="KARAY alt menü">
+        <nav aria-label={`${PLATFORM_BRAND.name} alt menü`}>
           <h2 className="text-[12px] font-bold tracking-[0.14em] text-white/50 uppercase">Platform</h2>
           <ul className="mt-4 space-y-2.5 text-[14.5px]">
             {KARAY_NAV.map((l) => (

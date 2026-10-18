@@ -78,8 +78,8 @@ const STEPS = [
 ];
 
 const FAQ = [
-  { q: 'KARAY bir emlak ofisi mi?', a: 'Hayır. KARAY, emlak ofislerine yazılım altyapısı sağlayan bir gayrimenkul teknolojileri şirketidir. İlan sahibi değildir, emlak hizmeti vermez.' },
-  { q: 'Sitemde KARAY adı görünür mü?', a: 'Hayır. Siteniz kendi logonuz, adınız, renkleriniz ve alan adınızla yayınlanır (beyaz etiket).' },
+  { q: 'KARAYS bir emlak ofisi mi?', a: 'Hayır. KARAYS, emlak ofislerine yazılım altyapısı sağlayan bir gayrimenkul teknolojileri şirketidir. İlan sahibi değildir, emlak hizmeti vermez.' },
+  { q: 'Sitemde KARAYS adı görünür mü?', a: 'Hayır. Siteniz kendi logonuz, adınız, renkleriniz ve alan adınızla yayınlanır (beyaz etiket).' },
   { q: 'Mevcut alan adımı kullanabilir miyim?', a: 'Evet. Alan adınız platforma bağlanır; gerekli DNS kayıtları panelde adım adım gösterilir.' },
   { q: 'Verilerim diğer ofislerle karışır mı?', a: 'Hayır. Her ofisin ilanları, müşterileri ve talepleri veritabanı düzeyinde ayrıdır; bir ofis başka bir ofisin verisini göremez.' },
   { q: 'Sitenin görünümünü kendim değiştirebilir miyim?', a: `Evet. ${THEME_LIST.length} tema, renk paletleri, yazı tipleri, menü, ana sayfa bölümleri ve footer ayarlanabilir. Değişiklikler önce taslakta önizlenir, sonra yayınlanır.` },
@@ -139,11 +139,11 @@ export default async function KarayPage() {
                 <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
                 <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
                 <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
-                <span className="ml-3 truncate text-[11.5px] text-[#5b6b85]">KARAY · Site Kontrol Merkezi</span>
+                <span className="ml-3 truncate text-[11.5px] text-[#5b6b85]">{PLATFORM_BRAND.name} · Site Kontrol Merkezi</span>
               </div>
               <Image
                 src={ekranKontrolMerkezi}
-                alt="KARAY Site Kontrol Merkezi: bir emlak ofisi sitesinin tema galerisi, canlı ve taslak durumu"
+                alt={`${PLATFORM_BRAND.name} Site Kontrol Merkezi: bir emlak ofisi sitesinin tema galerisi, canlı ve taslak durumu`}
                 sizes="(min-width: 1024px) 600px, 100vw"
                 priority
                 className="h-auto w-full"
@@ -158,12 +158,12 @@ export default async function KarayPage() {
       <section id="hakkimizda" aria-labelledby="karay-nedir" className="scroll-mt-20 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
           <div className="max-w-3xl">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#2f6bff] uppercase">KARAY nedir?</p>
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#2f6bff] uppercase">{PLATFORM_BRAND.name} nedir?</p>
             <h2 id="karay-nedir" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
               Emlak ofisleri için geliştirilen bir gayrimenkul teknolojileri platformu
             </h2>
             <p className="mt-5 text-[17px] leading-relaxed text-[#33415c]">
-              KARAY bir emlak ofisi değildir; emlak ofislerine yazılım altyapısı sağlar. Her ofis platformda kendi markasıyla, kendi alan adında, kendi web sitesini ve iş süreçlerini yönetir. Ofislerin verileri birbirinden tamamen ayrıdır.
+              {PLATFORM_BRAND.name} bir emlak ofisi değildir; emlak ofislerine yazılım altyapısı sağlar. Her ofis platformda kendi markasıyla, kendi alan adında, kendi web sitesini ve iş süreçlerini yönetir. Ofislerin verileri birbirinden tamamen ayrıdır.
             </p>
           </div>
           <div className="mt-14 grid gap-6 lg:grid-cols-2">
@@ -179,7 +179,7 @@ export default async function KarayPage() {
               </ul>
             </div>
             <div className="rounded-2xl bg-[#0b1b3a] p-7 text-white sm:p-9">
-              <h3 className="text-[18px] font-semibold">KARAY ile</h3>
+              <h3 className="text-[18px] font-semibold">{PLATFORM_BRAND.name} ile</h3>
               <ul className="mt-5 space-y-3.5">
                 {SOLUTIONS.map((s) => (
                   <li key={s} className="flex gap-3 text-[15px] leading-relaxed text-white/85">
@@ -340,7 +340,7 @@ export default async function KarayPage() {
               Ofisiniz için konuşalım
             </h2>
             <p className="mt-5 text-[16.5px] leading-relaxed text-[#33415c]">
-              Bilgi almak veya platformu canlı görmek için formu doldurun. Talebiniz yalnızca KARAY ekibine iletilir; herhangi bir emlak ofisiyle paylaşılmaz.
+              Bilgi almak veya platformu canlı görmek için formu doldurun. Talebiniz yalnızca {PLATFORM_BRAND.name} ekibine iletilir; herhangi bir emlak ofisiyle paylaşılmaz.
             </p>
             {(profile.email || profile.phone || profile.address) && (
               <dl className="mt-8 space-y-3 text-[15px]">

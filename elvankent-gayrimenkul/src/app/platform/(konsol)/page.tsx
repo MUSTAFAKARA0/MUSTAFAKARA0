@@ -41,7 +41,7 @@ export default async function PlatformOverviewPage() {
     { label: 'Dikkat', value: m.attention, href: '/platform/organizasyonlar?durum=attention', hint: 'süresi dolan davet, ödeme, bekleyen alan adı…', warn: m.attention > 0 },
     { label: 'Davet bekliyor', value: m.pendingInvitations, href: '/platform/organizasyonlar?durum=invited', hint: 'sahip hesabı etkinleşmedi' },
     { label: 'Kurulumda', value: m.setup, href: '/platform/organizasyonlar?durum=setup', hint: 'kurulum adımları eksik' },
-    { label: 'Yayına hazır', value: m.ready, href: '/platform/organizasyonlar?durum=ready', hint: 'KARAY teslimi bekliyor' },
+    { label: 'Yayına hazır', value: m.ready, href: '/platform/organizasyonlar?durum=ready', hint: 'KARAYS teslimi bekliyor' },
     { label: 'Yayında', value: m.live, href: '/platform/organizasyonlar?durum=live', hint: `${formatNumber(m.publishedSites)} yayınlanmış site açık` },
     { label: 'Alan adı bekliyor', value: m.domainsWaiting, href: '/platform/siteler', hint: 'doğrulama veya yönlendirme' },
     { label: 'Askıda', value: m.suspended, href: '/platform/organizasyonlar?durum=suspended', hint: 'askıda veya kapatılmış' },
@@ -158,7 +158,7 @@ export default async function PlatformOverviewPage() {
             </ul>
           )}
         </Panel>
-        <Panel title="KARAY talepleri" description="KARAY sayfasındaki formdan gelen emlak ofisi adayları">
+        <Panel title="KARAYS talepleri" description="KARAYS sayfasındaki formdan gelen emlak ofisi adayları">
           {newLeads === null ? (
             <p className="text-sm text-muted-foreground">Talep kaydı henüz kurulmamış (migration 20261002000001).</p>
           ) : (

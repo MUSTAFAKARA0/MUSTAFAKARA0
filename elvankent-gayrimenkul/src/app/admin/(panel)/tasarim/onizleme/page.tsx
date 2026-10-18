@@ -60,7 +60,7 @@ export default async function OfficeDesignPreviewPage({ searchParams }: PageProp
         <div className="rounded-2xl border border-border bg-surface p-6 text-center">
           <Lock className="mx-auto size-6 text-muted-foreground" aria-hidden />
           <p className="mt-3 text-[15px] font-semibold">Önizlenebilecek tasarım yok</p>
-          <p className="mx-auto mt-1 max-w-md text-[13.5px] text-muted-foreground">KARAY ekibi sizin için tasarım açtığında burada önizleyebilirsiniz.</p>
+          <p className="mx-auto mt-1 max-w-md text-[13.5px] text-muted-foreground">KARAYS ekibi sizin için tasarım açtığında burada önizleyebilirsiniz.</p>
         </div>
       ) : (
         <div className="min-w-0">

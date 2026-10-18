@@ -8,7 +8,7 @@ import { PLATFORM_BRAND, PLATFORM_SCOPE, platformThemeCss } from '@/platform/bra
 import { platformFont } from '@/platform/branding/platform-font';
 import '@/app/globals.css';
 
-const DEFAULT_TITLE = 'KARAY · Gayrimenkul Teknolojileri ve SaaS Platformu';
+const DEFAULT_TITLE = `${PLATFORM_BRAND.name} · ${PLATFORM_BRAND.product} ve SaaS Platformu`;
 const DEFAULT_DESCRIPTION =
   'Emlak ofisleri için web sitesi, ilan yönetimi, CRM, müşteri talepleri, marka ve tema yönetimini tek platformda toplayan gayrimenkul teknolojileri altyapısı.';
 
@@ -37,7 +37,7 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description,
       url: base.path('/'),
-      images: [{ url: '/karay/og-karay.png', width: 1200, height: 630, alt: 'KARAY Gayrimenkul Teknolojileri' }],
+      images: [{ url: '/karay/og-karay.png', width: 1200, height: 630, alt: `${PLATFORM_BRAND.name} ${PLATFORM_BRAND.product}` }],
     },
     twitter: { card: 'summary_large_image', title, description, images: ['/karay/og-karay.png'] },
     icons: {

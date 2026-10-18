@@ -3,7 +3,7 @@ import { AdminPageHeader } from '@/components/panel/ui';
 import { KarayProfileForm } from '@/components/platform/karay-forms';
 import { requireSuperAdminPage } from '@/platform/auth/session';
 
-export const metadata: Metadata = { title: 'KARAY ayarları' };
+export const metadata: Metadata = { title: 'KARAYS ayarları' };
 
 /** KARAY (platform sahibi) kurumsal bilgileri: şirket sayfası iletişim, sosyal, SEO, bildirim */
 export default async function KarayProfilePage() {
@@ -14,16 +14,16 @@ export default async function KarayProfilePage() {
   return (
     <>
       <AdminPageHeader
-        title="KARAY ayarları"
-        description="KARAY'ın kendi şirket bilgileri. Emlak ofislerinin (kiracıların) marka ve iletişim bilgileri buradan değil, Web Siteleri › Marka sekmesinden yönetilir."
+        title="KARAYS ayarları"
+        description="KARAYS'ın kendi şirket bilgileri. Emlak ofislerinin (kiracıların) marka ve iletişim bilgileri buradan değil, Web Siteleri › Marka sekmesinden yönetilir."
         actions={
           <a href="/karay" target="_blank" rel="noopener noreferrer" className="text-[13.5px] font-semibold text-primary-ink hover:underline">
-            KARAY sayfasını gör ↗
+            KARAYS sayfasını gör ↗
           </a>
         }
       />
       {error || !s ? (
-        <p className="rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning">Ayarlar yüklenemedi. KARAY migration&apos;ı (20261002000001) uygulanmış mı?</p>
+        <p className="rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning">Ayarlar yüklenemedi. Platform migration&apos;ı (20261002000001) uygulanmış mı?</p>
       ) : (
         <KarayProfileForm
           initial={{
