@@ -9,13 +9,17 @@
  *  LR-06  Şifre sıfırlama: KARAY e-posta sağlayıcısı, güvenilir kök adres, hız sınırı, after()
  *  LR-07  Anında yayına çıkan düzenleyiciler bunu açıkça söyler (taslak sanılmaz)
  *  LR-08  CI'nin veritabanı işi E2E ön koşullarını sağlar: demo ortamı, ofis sahibi + süper admin yönetici;
- *         CI'da RLS ve E2E testleri yalnızca geçici yerel Supabase'e bağlanır (production'a yönelirse durur)
+ *         CI'da RLS ve E2E testleri yalnızca geçici yerel Supabase'e bağlanır (production'a yönelirse durur);
+ *         CI'nin yazdığı .env.local bash ve Node tarafından aynı değerlerle okunur (K-11)
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseEnv } from 'node:util';
 import { tenantBaseUrls } from '../../src/platform/tenant/host.ts';
 import { isIndexable, showsDemoNotice } from '../../src/lib/site-env.ts';
 
@@ -264,12 +268,32 @@ describe('LR-08 CI E2E ortamı', () => {
   // sahibi hem KARAY süper admini olan bir yönetici. CI bunları sağlamazsa testler yerelde geçip CI'da düşer.
   const wf = read('../.github/workflows/elvankent-ci.yml');
   const database = wf.split(/\n {2}database:\n/)[1]?.split(/\n {2}[a-z][\w-]*:\n/)[0] ?? '';
-  test('veritabanı işi uygulamayı ve testleri demo ortamında çalıştırır', () => {
+  const tmp = (t) => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'karay-ci-env-'));
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    return dir;
+  };
+  const checkEnv = (file) =>
+    spawnSync(process.execPath, ['scripts/check-env-file.mjs', file], { cwd: fileURLToPath(root), encoding: 'utf8', timeout: 30_000 });
+  // CI'nin .env.local'ı yazan bloğu (env_line … } > .env.local) örnek yerel Supabase değerleriyle geçici klasörde
+  // çalıştırılır: testler YAML metnine değil, CI'nin gerçekten yazacağı dosyaya bakar
+  const writeCiEnv = (dir) => {
+    const block = database.match(/^( *)env_line\(\) \{\n[\s\S]*?^\1\} > \.env\.local$/m);
+    assert.ok(block, ".env.local'ı yazan blok bulundu");
+    const script = block[0].split('\n').map((l) => l.slice(block[1].length)).join('\n');
+    const env = { PATH: process.env.PATH, API_URL: 'http://127.0.0.1:54321', ANON_KEY: 'anon.ornek.imza', SERVICE_ROLE_KEY: 'servis.ornek.imza' };
+    const r = spawnSync('bash', ['--noprofile', '--norc', '-c', `set -euo pipefail\n${script}`], { cwd: dir, env, encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    return path.join(dir, '.env.local');
+  };
+  test('veritabanı işi uygulamayı ve testleri demo ortamında çalıştırır', (t) => {
     assert.ok(database, 'database işi bulundu');
-    const env = [...database.matchAll(/echo "SITE_ENV=([a-z]+)"/g)].map((m) => m[1]);
-    assert.deepEqual(env, ['demo']);
+    const text = readFileSync(writeCiEnv(tmp(t)), 'utf8');
+    assert.equal(text.match(/^SITE_ENV=/gm)?.length, 1, 'SITE_ENV bir kez yazılır');
+    const env = parseEnv(text).SITE_ENV;
+    assert.equal(env, 'demo');
     const prev = process.env.SITE_ENV;
-    process.env.SITE_ENV = env[0];
+    process.env.SITE_ENV = env;
     try {
       assert.equal(showsDemoNotice(), true, 'DEMO ORTAMI şeridi görünür');
       assert.equal(isIndexable(), false, 'noindex');
@@ -297,5 +321,46 @@ describe('LR-08 CI E2E ortamı', () => {
     }
     // Yerel adreste koruma devreye girmez (yalnızca yapılandırma yüklenir; ağ isteği yapılmaz)
     assert.equal(run(config, { NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321' }).status, 0);
+  });
+  test('.env.local bash ve Node tarafından aynı değerlerle okunur (K-11)', (t) => {
+    const file = writeCiEnv(tmp(t));
+    const r = checkEnv(file);
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /\d+ değişken bash ve Node tarafından aynı değerlerle okunuyor/);
+    // K-11'e yol açan değer iki tarafta da aynı metin olarak okunur ("E2E hazırlık" adımı dosyayı bash ile yükler)
+    const sender = 'KARAY CI <davet@example.test>';
+    const sh = spawnSync('bash', ['--noprofile', '--norc', '-c', 'set -euo pipefail; set -a; . "$1"; set +a; printf %s "$EMAIL_FROM"', 'bash', file], {
+      env: { PATH: process.env.PATH },
+      encoding: 'utf8',
+    });
+    assert.equal(sh.status, 0, sh.stderr);
+    assert.equal(sh.stdout, sender);
+    assert.equal(parseEnv(readFileSync(file, 'utf8')).EMAIL_FROM, sender);
+    // CI dosyayı yazar yazmaz, testlerden ve "E2E hazırlık" adımından önce denetler
+    assert.match(database, /\} > \.env\.local\n +node scripts\/check-env-file\.mjs \.env\.local\n/);
+  });
+  test('denetleyici bash ile Node farklı okuduğunda durur ve değer yazdırmaz', (t) => {
+    const dir = tmp(t);
+    const cases = [
+      // K-11'in kendisi (eski CI satırı): bash için yönlendirme ve sözdizimi hatası, Node için metin
+      ['EMAIL_FROM=KARAY CI <davet@example.test>', /bash dosyayı okuyamadı \(çıkış \d+\); satır 2: EMAIL_FROM$/m],
+      // iki taraf da okur ama farklı değerle: Node çift tırnak içinde \n'i satır sonuna çevirir, bash çevirmez
+      ['SATIR="birinci\\nikinci-5b2e"', /^ {2}- SATIR: bash ve Node farklı değer okuyor$/m],
+      // bash "true" komutunu çalıştırır ve değişkeni tanımlamaz; Node değeri "komut-degeri-3f9a true" okur
+      ['KOMUT=komut-degeri-3f9a true', /^ {2}- KOMUT: bash tanımlamıyor$/m],
+      // yalnızca bash'in tanımladığı değişken (Node satırı başka bir ad olarak okur)
+      ['declare ICINDE=bash-degeri-9d1f', /^ {2}- ICINDE: yalnızca bash tanımlıyor$/m],
+    ];
+    cases.forEach(([line, expected], i) => {
+      const file = path.join(dir, `durum-${i}.env`);
+      writeFileSync(file, `GIZLI_ORNEK='gizli-ornek-7c1d'\n${line}\n`);
+      const r = checkEnv(file);
+      assert.equal(r.status, 1, `${line}: ${r.stdout}`);
+      assert.match(r.stderr, expected, line);
+      assert.doesNotMatch(r.stdout + r.stderr, /gizli-ornek-7c1d|davet@example|ikinci-5b2e|komut-degeri-3f9a|bash-degeri-9d1f/, `${line}: değer yazdırılmaz`);
+    });
+    const quoted = path.join(dir, 'tirnakli.env');
+    writeFileSync(quoted, "EMAIL_FROM='KARAY CI <davet@example.test>'\n");
+    assert.equal(checkEnv(quoted).status, 0, 'aynı değer tek tırnakla iki tarafta da aynı okunur');
   });
 });

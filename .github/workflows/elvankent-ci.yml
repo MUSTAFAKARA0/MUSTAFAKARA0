@@ -98,27 +98,36 @@ jobs:
           supabase status -o env > /tmp/supa.env
           set -a; . /tmp/supa.env; set +a
           PGOPTIONS='-c app.allow_demo_seed=on' psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/seed.sql
+          # .env.local'ı hem Node (create-admin, RLS testleri, Playwright) hem bash ("E2E hazırlık": . ./.env.local)
+          # okur. Her değer tek tırnakla yazılır; tek tırnak veya satır sonu içeren değer yazılmaz. Yazımdan sonra
+          # iki tarafın aynı değerleri okuduğu denetlenir (K-11: tırnaksız EMAIL_FROM=Ad <e-posta> satırını Node
+          # metin olarak okuyordu, bash yönlendirme sanıp adımı düşürüyordu).
+          env_line() {
+            case "$2" in *"'"* | *$'\n'* | *$'\r'*) echo "::error::.env.local: $1 değeri tek tırnakla yazılamaz" >&2; return 1 ;; esac
+            printf "%s='%s'\n" "$1" "$2"
+          }
           {
-            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
-            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
-            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
-            echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000"
-            echo "IP_HASH_SALT=ci-$(openssl rand -hex 16)"
-            echo "CRON_SECRET=ci-$(openssl rand -hex 32)"
-            echo "NEXT_IMAGE_ALLOW_LOCAL_IP=1"
+            env_line NEXT_PUBLIC_SUPABASE_URL "$API_URL"
+            env_line NEXT_PUBLIC_SUPABASE_ANON_KEY "$ANON_KEY"
+            env_line SUPABASE_SERVICE_ROLE_KEY "$SERVICE_ROLE_KEY"
+            env_line NEXT_PUBLIC_SITE_URL http://localhost:3000
+            env_line IP_HASH_SALT "ci-$(openssl rand -hex 16)"
+            env_line CRON_SECRET "ci-$(openssl rand -hex 32)"
+            env_line NEXT_IMAGE_ALLOW_LOCAL_IP 1
             # E2E demo ortamını bekler (DEMO ORTAMI şeridi, noindex; demo verisi yukarıda yüklenir):
             # tests/e2e/acceptance.spec.ts ve visitor.spec.ts. Yerel çalıştırmalarla aynı ortam.
-            echo "SITE_ENV=demo"
+            env_line SITE_ENV demo
             # P0.4 davet e-postası: gerçek gönderim yok; E2E sahte Resend sunucusunu (127.0.0.1:4010) kendisi açar
-            echo "EMAIL_PROVIDER=resend"
-            echo "RESEND_API_KEY=ci-test-key"
-            echo "RESEND_API_BASE=http://127.0.0.1:4010"
-            echo "EMAIL_FROM=KARAY CI <davet@example.test>"
+            env_line EMAIL_PROVIDER resend
+            env_line RESEND_API_KEY ci-test-key
+            env_line RESEND_API_BASE http://127.0.0.1:4010
+            env_line EMAIL_FROM 'KARAY CI <davet@example.test>'
             # P0.5 özel alan adı: gerçek DNS yok; E2E sahte DoH sunucusunu (127.0.0.1:4011) kendisi açar
-            echo "DOMAIN_DNS_RESOLVER_URL=http://127.0.0.1:4011/dns-query"
-            echo "DOMAIN_TARGET_CNAME=sites.karay.test"
-            echo "DOMAIN_TARGET_A=203.0.113.10"
+            env_line DOMAIN_DNS_RESOLVER_URL http://127.0.0.1:4011/dns-query
+            env_line DOMAIN_TARGET_CNAME sites.karay.test
+            env_line DOMAIN_TARGET_A 203.0.113.10
           } > .env.local
+          node scripts/check-env-file.mjs .env.local
       - name: Birim + güvenlik testleri (RLS, MFA, kiracı izolasyonu)
         run: npm test
       - name: E2E hazırlık (yönetici hesabı, build, sunucu)
