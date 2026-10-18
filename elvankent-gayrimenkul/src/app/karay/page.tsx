@@ -23,6 +23,7 @@ import { ThemeShowcase } from '@/components/karay/theme-showcase';
 import { Button } from '@/components/ui/button';
 import { karaySiteUrl } from '@/modules/karay/site';
 import { getKarayProfile } from '@/modules/karay/profile';
+import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 import { parseSiteConfig } from '@/site-config/schema';
 import { THEME_LIST } from '@/theme-engine/themes';
 // Ekran görüntüleri statik import edilir: /karay/ yolu proxy'de alan adına göre korunur ve görsel
@@ -94,7 +95,7 @@ export default async function KarayPage() {
     name: profile.companyName,
     description: 'Gayrimenkul teknolojileri ve SaaS platformu',
     url: `${base.origin}${base.path('/')}`,
-    logo: `${base.origin}/platform/uygulama-ikonu-512.png`,
+    logo: `${base.origin}${PLATFORM_BRAND.icons.app}`,
     ...(profile.email ? { email: profile.email } : {}),
     ...(profile.phone ? { telephone: profile.phone } : {}),
     ...(profile.socials.length ? { sameAs: profile.socials.map((s) => s.href) } : {}),

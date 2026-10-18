@@ -158,7 +158,7 @@ test('TEST-KARAY-01: Süper admin KARAY markasını görür; Elvankent "ilk mü�
   await expect(structure.getByText('Platform sahibi', { exact: false })).toBeVisible();
   await expect(structure.getByRole('link', { name: /Elvankent Gayrimenkul/ })).toContainText('ilk müşteri');
   const icons = await page.locator('link[rel="icon"]').evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
-  expect(icons.some((h) => h.startsWith('/platform/'))).toBe(true);
+  expect(icons).toEqual(expect.arrayContaining([PLATFORM_BRAND.icons.ico, PLATFORM_BRAND.icons.svg]));
 });
 
 test('TEST-KARAY-02: Ofis kullanıcısı Elvankent markasını görür (KARAY platform menüsü yok)', async ({ page }) => {
@@ -253,12 +253,13 @@ test('TEST-KARAY-05: Elvankent tema/renk değişikliği KARAY platformunu etkile
 test('TEST-KARAY-06: KARAY platform markası kiracı sitelerine ve ofis paneline sızmaz', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('.platform-scope')).toHaveCount(0);
-  await expect(page.locator('img[src^="/platform/"]')).toHaveCount(0);
+  // Platform marka dosyaları /brand/ altındadır (K-15); kiracı sitesinde hiçbiri kullanılmaz
+  await expect(page.locator('img[src^="/brand/"]')).toHaveCount(0);
   expect(await cssVar(page, '--primary')).not.toBe(PLATFORM_BRAND.primaryColor);
   const fonts = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
   expect(fonts.toLowerCase()).not.toContain('poppins');
   const icons = await page.locator('link[rel="icon"]').evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
-  expect(icons.some((h) => h.startsWith('/platform/'))).toBe(false);
+  expect(icons.some((h) => h.startsWith('/brand/'))).toBe(false);
   await expect(page.getByText(PLATFORM_BRAND.name, { exact: true })).toHaveCount(0);
 });
 
