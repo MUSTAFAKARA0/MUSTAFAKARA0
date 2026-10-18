@@ -11,6 +11,8 @@
  *  LR-08  CI'nin veritabanı işi E2E ön koşullarını sağlar: demo ortamı, ofis sahibi + süper admin yönetici;
  *         CI'da RLS ve E2E testleri yalnızca geçici yerel Supabase'e bağlanır (production'a yönelirse durur);
  *         CI'nin yazdığı .env.local bash ve Node tarafından aynı değerlerle okunur (K-11)
+ *  LR-09  CI ve yedek iş akışlarındaki her iş sabit çalıştırıcı imajında (ubuntu-24.04) çalışır; imaj
+ *         ubuntu-latest etiketiyle kendiliğinden değişmez (K-16)
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -363,4 +365,19 @@ describe('LR-08 CI E2E ortamı', () => {
     writeFileSync(quoted, "EMAIL_FROM='KARAY CI <davet@example.test>'\n");
     assert.equal(checkEnv(quoted).status, 0, 'aynı değer tek tırnakla iki tarafta da aynı okunur');
   });
+});
+
+describe('LR-09 sabit çalıştırıcı imajı (K-16)', () => {
+  // ubuntu-latest 19.10.2026'dan itibaren Ubuntu 26'ya taşınıyor. CI'nin doğruladığı ortam ubuntu-24.04'tür;
+  // yeni imaj, CI'da doğrulanıp ayrı bir commit'le seçilir (etiket kendiliğinden kaymaz).
+  for (const file of ['elvankent-ci.yml', 'elvankent-backup.yml']) {
+    test(`${file}: her iş ubuntu-24.04 üzerinde çalışır`, () => {
+      const jobs = read(`../.github/workflows/${file}`).split(/\njobs:\n/)[1] ?? '';
+      const names = [...jobs.matchAll(/^ {2}([a-z][\w-]*):$/gm)].map((m) => m[1]);
+      const runners = [...jobs.matchAll(/^ {4}runs-on:(.*)$/gm)].map((m) => m[1].trim());
+      assert.ok(names.length >= 2, `${file}: işler bulundu`);
+      assert.equal(runners.length, names.length, `${file}: her işte runs-on var (${names.join(', ')})`);
+      assert.deepEqual([...new Set(runners)], ['ubuntu-24.04']);
+    });
+  }
 });

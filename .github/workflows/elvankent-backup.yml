@@ -19,6 +19,8 @@
 # Not: Zamanlanmış (schedule) iş akışları yalnızca deponun varsayılan dalında çalışır; GitHub yoğunlukta
 # başlatmayı geciktirebilir veya atlayabilir (gözlenen gecikme 5–6 saat). Herkese açık depoda 60 gün
 # hiç etkinlik olmazsa zamanlanmış iş akışları GitHub tarafından kapatılır.
+# Çalıştırıcı imajı sabittir: ubuntu-24.04 (gerekçe elvankent-ci.yml'de; LR-09). Araçlar (rclone,
+# PGDG deposundan postgresql-client-17) bu imajın paket kaynaklarına (noble) göre kurulur.
 name: elvankent-backup
 
 on:
@@ -37,7 +39,7 @@ jobs:
   # Yedek kapalıyken iş sessizce "atlandı" olarak bitmesin: her çalışmada görünür uyarı
   backup-disabled:
     if: ${{ vars.ELVANKENT_BACKUP_ENABLED != 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
       - name: Yedek kapalı
@@ -50,7 +52,7 @@ jobs:
 
   backup:
     if: ${{ vars.ELVANKENT_BACKUP_ENABLED == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
       BUCKET: ${{ vars.BACKUP_BUCKET }}
