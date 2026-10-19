@@ -227,7 +227,12 @@ test('PV-05: önizleme yüzeyleri 360 px genişlikte yatay taşma yapmaz', async
   await login(page, 'platform', adminEmail!, adminPassword!);
   for (const s of ['ana-sayfa', 'ilanlar', 'ilan']) {
     for (const variants of [{}, { gallery: 'grid' }, { gallery: 'carousel' }]) {
-      await page.goto(karay(s, variants), { waitUntil: 'networkidle' });
+      // networkidle beklenmez: sayfadaki bağlantıların RSC ön yüklemesi tarayıcı önbelleğinden gelir ve Chromium onu
+      // arka planda yeniden doğrular (stale-while-revalidate); sunucu yanıtı milisaniyede bitirse de tarayıcı bu isteği
+      // 8–27 sn açık tutabiliyor (K-16). Yerleşim load (stil, görseller) ve yazı tipleriyle kesinleşir.
+      await page.goto(karay(s, variants), { waitUntil: 'load' });
+      await expect(page.locator('[data-site-preview]')).toHaveAttribute('data-preview-surface', s);
+      await page.evaluate(() => document.fonts.ready);
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow, `${s} ${JSON.stringify(variants)}`).toBeLessThanOrEqual(0);
     }
