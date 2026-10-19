@@ -18,7 +18,7 @@ export function KarayFooter({ profile }: { profile: KarayProfile }) {
     <footer className="bg-[#0b1b3a] text-white">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr] lg:py-16">
         <div className="max-w-sm">
-          <PlatformWordmark tone="dark" tagline height={40} />
+          <PlatformWordmark tone="dark" height={34} />
           <p className="mt-5 text-[14.5px] leading-relaxed text-white/70">
             Emlak ofisleri için web sitesi, ilan, müşteri ve marka yönetimini tek platformda toplayan gayrimenkul teknolojileri ve SaaS altyapısı.
           </p>

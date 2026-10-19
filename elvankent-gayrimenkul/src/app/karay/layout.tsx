@@ -37,13 +37,13 @@ export async function generateMetadata(): Promise<Metadata> {
       title,
       description,
       url: base.path('/'),
-      images: [{ url: '/karay/og-karay.png', width: 1200, height: 630, alt: `${PLATFORM_BRAND.name} ${PLATFORM_BRAND.product}` }],
+      images: [{ ...PLATFORM_BRAND.ogImage, alt: `${PLATFORM_BRAND.name} ${PLATFORM_BRAND.product}` }],
     },
-    twitter: { card: 'summary_large_image', title, description, images: ['/karay/og-karay.png'] },
+    twitter: { card: 'summary_large_image', title, description, images: [PLATFORM_BRAND.ogImage.url] },
     icons: {
       icon: [
-        { url: PLATFORM_BRAND.icons.ico, sizes: '32x32' },
-        { url: PLATFORM_BRAND.icons.svg, type: 'image/svg+xml' },
+        { url: PLATFORM_BRAND.icons.ico, sizes: '64x64' },
+        { url: PLATFORM_BRAND.icons.png, sizes: '192x192', type: 'image/png' },
       ],
       apple: PLATFORM_BRAND.icons.apple,
     },

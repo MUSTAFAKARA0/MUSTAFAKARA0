@@ -20,7 +20,7 @@ export function KarayHeader() {
     <header className="sticky top-0 z-40 border-b border-[#e3e8f0] bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/85">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:h-[72px]">
         <Link href="/karay" className="flex shrink-0 items-center rounded-lg" aria-label={`${PLATFORM_BRAND.name} ana sayfa`}>
-          <PlatformWordmark tone="light" tagline={false} height={30} />
+          <PlatformWordmark height={30} />
         </Link>
         <nav aria-label={`${PLATFORM_BRAND.name} menüsü`} className="hidden lg:block">
           <ul className="flex items-center gap-1">

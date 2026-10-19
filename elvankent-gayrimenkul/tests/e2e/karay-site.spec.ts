@@ -3,7 +3,8 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 
 /**
- * KARAY şirket sayfası (/karay), KARAY talepleri ve 10 tema — KARAY-01…18.
+ * KARAY şirket sayfası (/karay), KARAY talepleri ve 10 tema — KARAY-01…18; platform giriş logosu (KARAY-19);
+ * KARAYS logo ailesi: paylaşım görseli ve simgeler (KARAY-20).
  *
  *   KARAY (platform sahibi) ── /karay (kendi markası, kendi talep tablosu: platform_leads)
  *     ├─ Elvankent (varsayılan kiracı; görünümü DEĞİŞTİRİLMEZ, yalnızca okunur)
@@ -522,4 +523,22 @@ test('KARAY-19: platform giriş sayfasının logosu ve simgeleri oturumsuz ziyar
   await expect(logo).toBeVisible();
   await expect.poll(() => logo.evaluate((img: HTMLImageElement) => (img.complete ? img.naturalWidth : 0))).toBeGreaterThan(0);
   await expectIconsServed(page);
+});
+
+test('KARAY-20: paylaşım görseli, simgeler ve yapılandırılmış veri KARAYS paketinden; eski KARAY görselleri sunulmaz', async ({ page, request }) => {
+  await page.goto('/karay');
+  for (const sel of ['meta[property="og:image"]', 'meta[name="twitter:image"]']) {
+    expect(new URL((await page.locator(sel).getAttribute('content'))!).pathname, sel).toBe('/karay/og-karays.png');
+  }
+  await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute('content', '1200');
+  await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute('content', '630');
+  const og = await request.get('/karay/og-karays.png', { maxRedirects: 0 });
+  expect(og.status()).toBe(200);
+  expect(og.headers()['content-type']).toBe('image/png');
+  const org = (await page.locator('script[type="application/ld+json"]').allTextContents()).map((t) => JSON.parse(t)).find((d) => d['@type'] === 'Organization');
+  expect(new URL(org.logo).pathname).toBe('/brand/karays/karays-icon-512.png');
+  // K-16 öncesi KARAY dosyaları kaldırıldı (yönlendirme veya yedek kopya yok)
+  for (const old of ['/karay/og-karay.png', '/brand/karay/favicon.ico', '/brand/karay/karay-logo-yatay.svg', '/brand/karay/uygulama-ikonu-512.png']) {
+    expect((await request.get(old, { maxRedirects: 0 })).status(), old).toBe(404);
+  }
 });

@@ -12,41 +12,42 @@ import { buildTheme, themeCss } from '@/platform/branding/theme';
  * markası ise yalnızca /platform (süper admin) alanında kullanılır. İkisi birbirini
  * etkilemez: kiracı tema değişikliği platformu, platform teması kiracıyı değiştirmez.
  *
- * Görünen ad KARAYS'tır (eski adı KARAY). Logo, simge ve renkler hâlâ eski KARAY logo
- * paketindendir (public/brand/karay/; logolardaki yazı "karay"): onaylı KARAYS logo ailesi
- * eklenince yalnızca bu dosyadaki yollar değişir. Logo dosyaları düzenlenmez, yeniden çizilmez;
- * oranları ve renkleri değiştirilmez (paket kuralları). /karay rotası, KARAY_HOSTS, veritabanı
- * ve kod adları teknik kimliktir; marka geçişinde değişmez.
- * Dosyalar /platform altında tutulmaz: o yol konsol rotasıdır ve proxy oturumsuz isteği
- * giriş sayfasına yönlendirir (giriş ekranında ve /karay'da logo ile simgeler kırılırdı).
+ * Görünen ad KARAYS'tır (eski adı KARAY). Görseller onaylı KARAYS paketindendir (K-16; dosyalar
+ * VARLIK_LISTESI.json ile doğrulandı ve değiştirilmeden kopyalandı):
+ *  - Sayfada çizilen logo ve amblem src/platform/branding/assets/ altındadır; bileşenler
+ *    onları statik import eder (next/image boyutlandırır, değişmez önbellekle /_next/static/media'dan
+ *    sunar; bu yol proxy'den geçmez).
+ *  - Sabit adresle istenen dosyalar burada: sekme ve ana ekran simgeleri public/brand/karays/,
+ *    paylaşım görseli public/karay/ altında. Simgeler /platform altında tutulmaz: o yol konsol
+ *    rotasıdır ve proxy oturumsuz isteği giriş sayfasına yönlendirir (K-15).
+ * Logo yeniden çizilmez, oranı ve renkleri değiştirilmez. Yazısı koyu lacivert ve pakette beyaz logo
+ * yok: koyu zeminde açık bir plaka üzerinde gösterilir (PlatformWordmark). /karay rotası, KARAY_HOSTS,
+ * veritabanı ve kod adları teknik kimliktir; marka geçişinde değişmez.
  */
 export const PLATFORM_BRAND = {
   /** Platform sahibi şirket */
   name: 'KARAYS',
-  /** Resmî slogan (sloganlı logoda da yer alır) */
+  /** Resmî slogan */
   product: 'Gayrimenkul Teknolojileri',
   /** Platform yönetim alanının adı */
   consoleName: 'Platform yönetimi',
-  logos: {
-    /** Açık zemin, sloganlı (ana versiyon; en küçük genişlik 200 px) */
-    light: '/brand/karay/karay-logo-yatay.svg',
-    /** Koyu zemin, sloganlı */
-    dark: '/brand/karay/karay-logo-yatay-koyu-zemin.svg',
-    /** Açık zemin, slogansız (küçük alanlar; en küçük genişlik 110 px) */
-    lightCompact: '/brand/karay/karay-logo-yatay-sade.svg',
-    /** Koyu zemin, slogansız */
-    darkCompact: '/brand/karay/karay-logo-yatay-sade-koyu-zemin.svg',
-  },
-  /** Logo en-boy oranı (SVG viewBox 718.57 × 192) */
-  logoAspect: 718.57 / 192,
   icons: {
-    ico: '/brand/karay/favicon.ico',
-    svg: '/brand/karay/favicon.svg',
-    apple: '/brand/karay/apple-touch-icon.png',
-    /** 512 px uygulama ikonu (KARAY sayfasının yapılandırılmış verisindeki logo) */
-    app: '/brand/karay/uygulama-ikonu-512.png',
+    /** 64 × 64 sekme simgesi (01_LOGOLAR/favicon.ico) */
+    ico: '/brand/karays/favicon.ico',
+    /** 192 × 192 PNG simge */
+    png: '/brand/karays/karays-icon-192.png',
+    /** 180 × 180 ana ekran simgesi (apple-touch-icon) */
+    apple: '/brand/karays/karays-icon-180.png',
+    /** 512 × 512 uygulama simgesi (KARAYS sayfasının yapılandırılmış verisindeki logo) */
+    app: '/brand/karays/karays-icon-512.png',
   },
-  /** Paket renkleri: KARAY Lacivert, Sinyal Mavisi, Turkuaz, Arduvaz, Bulut */
+  /**
+   * Paylaşım (Open Graph) görseli, 1200 × 630. Pakette paylaşım görseli olmadığından onaylı yatay logo
+   * ile KARO açık bir zemine, oranları korunarak yerleştirildi (yeni çizim veya yazı eklenmedi).
+   * /karay altındadır: yalnızca KARAYS sayfasının sunulduğu adreslerde açılır (kiracı adresinde 404).
+   */
+  ogImage: { url: '/karay/og-karays.png', width: 1200, height: 630 },
+  /** Platform renkleri: lacivert, sinyal mavisi, turkuaz, arduvaz, bulut */
   colors: { navy: '#0b1b3a', signal: '#2f6bff', turquoise: '#1cc8b6', slate: '#5b6b85', cloud: '#f4f7fb' },
   /** Tema: butonlar lacivert, vurgu sinyal mavisi */
   primaryColor: '#0b1b3a',

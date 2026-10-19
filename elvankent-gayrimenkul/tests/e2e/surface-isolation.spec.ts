@@ -214,7 +214,7 @@ test('SURF-08: kiracı sitesi telefonda çalışır; KARAY bağlantısı yoktur'
 });
 
 test('SURF-10: dosya uzantısı hilesiyle (ör. /platform/x.png) proxy ve yüzey kontrolü atlatılamaz', async () => {
-  for (const p of ['/platform/organizasyonlar/x.png', '/platform/giris.js', '/karay/yasal/x.png', '/karay/og-karay.png', '/api/platform/branding.css']) {
+  for (const p of ['/platform/organizasyonlar/x.png', '/platform/giris.js', '/karay/yasal/x.png', '/karay/og-karays.png', '/api/platform/branding.css']) {
     for (const headers of [{}, { 'x-request-surface': 'karay' }] as Record<string, string>[]) {
       const res = await raw(tenantHost(), p, { headers });
       expect(res.status, `${p} ${JSON.stringify(headers)}`).toBe(404);
@@ -224,7 +224,7 @@ test('SURF-10: dosya uzantısı hilesiyle (ör. /platform/x.png) proxy ve yüzey
   // İç kiracı rotası uzantıyla da kapalı
   expect((await raw(tenantHost(), `/t/e2esf-${RUN}/x.png`)).status).toBe(404);
   // KARAY adresinde KARAY görselleri sunulmaya devam eder
-  expect((await raw(`localhost:${PORT}`, '/karay/og-karay.png')).status).toBe(200);
+  expect((await raw(`localhost:${PORT}`, '/karay/og-karays.png')).status).toBe(200);
 });
 
 test('SURF-09: white-label — müşteri sitesinde ve ofis panelinde başka müşterinin adı görünmez', async ({ page }) => {

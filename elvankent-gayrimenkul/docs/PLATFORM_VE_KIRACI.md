@@ -82,21 +82,22 @@ Aynı kişi hem süper admin hem bir ofisin üyesi olsa bile iki alan **ayrı ot
 - Tekrar çalıştırılabilir, veri değiştirmez; kod migration öncesi ve sonrası çalışır; geri dönüş SQL'i dosyanın sonunda.
 - Not: bir ofisin **kamuya açık sitesindeki** bilgileri (logo, telefon, adres) doğası gereği herkese açıktır — ama yalnızca ofisin adresi bilinerek, tek tek okunabilir; liste çekilemez.
 
-## KARAY logosu ve kurumsal kimlik
+## KARAYS logosu
 
-Logo paketi (28.09.2026) platforma eklendi. Web için kullanılan dosyalar `public/platform/` klasöründedir (paketten değiştirilmeden kopyalandı):
+Platformun görünen adı KARAYS'tır (eski adı KARAY; `/karay` rotası, `KARAY_HOSTS` ve kod adları teknik kimlik olarak kalır). Onaylı KARAYS görsel paketinden (`KARAYS_Orijinal_Gorsel_Paketi`, K-16) yalnızca kullanılan dosyalar eklendi; her dosya paketteki `VARLIK_LISTESI.json` ile doğrulandı ve değiştirilmeden kopyalandı (birim testi SHA-256 ile denetler: `tests/unit/platform-brand-assets.test.mjs`):
 
 | Dosya | Nerede |
 | --- | --- |
-| `karay-logo-yatay-sade-koyu-zemin.svg` | Süper admin başlığı (lacivert zemin, slogansız, ≥110 px) |
-| `karay-logo-yatay.svg` | Platform girişi ve doğrulama (MFA) ekranı (açık zemin, sloganlı, ≥200 px) |
-| `karay-logo-yatay-koyu-zemin.svg`, `karay-logo-yatay-sade.svg` | Hazır (ileride koyu zeminde sloganlı / açık zeminde slogansız kullanım için) |
-| `favicon.ico`, `favicon.svg`, `apple-touch-icon.png` | Platform sekme simgesi ve ana ekran simgesi |
-| `uygulama-ikonu-192.png`, `uygulama-ikonu-512.png` | Hazır (ileride platform uygulama bildirimi için) |
+| `src/platform/branding/assets/karays-logo-yatay.webp` | Platform girişi, konsol başlığı, KARAYS sayfası başlığı ve alt bilgisi (`PlatformWordmark`) |
+| `src/platform/branding/assets/karays-amblem.webp` | Konsol › Genel bakış › Platform yapısı |
+| `public/brand/karays/favicon.ico`, `karays-icon-192.png`, `karays-icon-180.png`, `karays-icon-512.png` | Sekme ve ana ekran simgeleri; yapılandırılmış verideki logo |
+| `public/karay/og-karays.png` | Paylaşım görseli (1200 × 630): yatay logo ve KARO, oranları korunarak (pakette paylaşım görseli yoktur) |
 
-Renkler (paket): KARAY Lacivert `#0B1B3A` (butonlar, başlık zemini), Sinyal Mavisi `#2F6BFF` (vurgu), Bulut `#F4F7FB` (sayfa zemini); Turkuaz ve Arduvaz tanımlı. Yazı tipi: Poppins (yalnızca platform alanında yüklenir; kiracı sitelerinin yazı tipleri değişmez).
+- Sayfada çizilen görseller statik import edilir (`next/image` boyutlandırır, `/_next/static/media` değişmez önbellek; proxy'den geçmez). Sabit adresle istenen simgeler `public/brand/karays/` altındadır; `/platform` altında tutulmaz (o yol konsol rotasıdır, proxy oturumsuz isteği giriş sayfasına yönlendirir; K-15).
+- Logodaki yazı koyu lacivert, pakette beyaz logo yok: koyu zeminde (konsol başlığı, KARAYS alt bilgisi) logo açık bir plaka üzerindedir.
+- Kiracı (emlak ofisi) sitelerinde ve ofis panelinde platform logosu kullanılmaz (white-label; birim testi ve E2E TEST-KARAY-02/06).
 
-Tümü `src/platform/branding/platform-brand.ts` içinde tanımlıdır. Logo dosyaları yeniden çizilmez, renkleri/oranları değiştirilmez (paket kullanım kuralları). Baskı (PDF/CMYK), dikey logo ve sosyal medya dosyaları web için gerekmediğinden depoya eklenmedi.
+Renkler: Lacivert `#0B1B3A` (butonlar, başlık zemini), Sinyal Mavisi `#2F6BFF` (vurgu), Bulut `#F4F7FB` (sayfa zemini); Turkuaz ve Arduvaz tanımlı. Yazı tipi: Poppins (yalnızca platform alanında yüklenir; kiracı sitelerinin yazı tipleri değişmez). Tümü `src/platform/branding/platform-brand.ts` içinde tanımlıdır.
 
 ## Hesapları ayırma (demo için öneri)
 

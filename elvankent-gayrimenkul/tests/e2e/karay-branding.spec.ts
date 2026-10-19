@@ -158,7 +158,7 @@ test('TEST-KARAY-01: Süper admin KARAY markasını görür; Elvankent "ilk mü�
   await expect(structure.getByText('Platform sahibi', { exact: false })).toBeVisible();
   await expect(structure.getByRole('link', { name: /Elvankent Gayrimenkul/ })).toContainText('ilk müşteri');
   const icons = await page.locator('link[rel="icon"]').evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
-  expect(icons).toEqual(expect.arrayContaining([PLATFORM_BRAND.icons.ico, PLATFORM_BRAND.icons.svg]));
+  expect(icons).toEqual(expect.arrayContaining([PLATFORM_BRAND.icons.ico, PLATFORM_BRAND.icons.png]));
 });
 
 test('TEST-KARAY-02: Ofis kullanıcısı Elvankent markasını görür (KARAY platform menüsü yok)', async ({ page }) => {
@@ -167,6 +167,8 @@ test('TEST-KARAY-02: Ofis kullanıcısı Elvankent markasını görür (KARAY pl
   await expect(page.getByText('Elvankent Gayrimenkul').first()).toBeVisible();
   await expect(page.getByText('Ofis Yönetimi').first()).toBeVisible();
   await expect(page.getByRole('img', { name: PLATFORM_BRAND.name })).toHaveCount(0);
+  // Platform logosu (data-platform-brand) ofis panelinde yok
+  await expect(page.locator('[data-platform-brand]')).toHaveCount(0);
   await expect(page.getByRole('link', { name: /Web Siteleri|Organizasyonlar|Platform/i })).toHaveCount(0);
   await expect(page.getByRole('link', { name: 'Marka ve Görünüm' })).toBeVisible();
   expect(await bodyVar(page, '--primary')).not.toBe(PLATFORM_BRAND.primaryColor);
@@ -253,8 +255,9 @@ test('TEST-KARAY-05: Elvankent tema/renk değişikliği KARAY platformunu etkile
 test('TEST-KARAY-06: KARAY platform markası kiracı sitelerine ve ofis paneline sızmaz', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('.platform-scope')).toHaveCount(0);
-  // Platform marka dosyaları /brand/ altındadır (K-15); kiracı sitesinde hiçbiri kullanılmaz
-  await expect(page.locator('img[src^="/brand/"]')).toHaveCount(0);
+  // Platform logosu (K-16: data-platform-brand) kiracı sitesinde kullanılmaz
+  await expect(page.locator('[data-platform-brand]')).toHaveCount(0);
+  await expect(page.locator('img[src*="karays-"]')).toHaveCount(0);
   expect(await cssVar(page, '--primary')).not.toBe(PLATFORM_BRAND.primaryColor);
   const fonts = await page.evaluate(() => getComputedStyle(document.body).fontFamily);
   expect(fonts.toLowerCase()).not.toContain('poppins');

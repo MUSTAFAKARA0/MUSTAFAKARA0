@@ -43,13 +43,15 @@ Mantık: `src/platform/tenant/host.ts › karayHostKind`, uygulama: `src/proxy.t
 
 ## SEO
 
-- `/karay` indekslenebilir (ayar ile kapatılabilir), kanonik adres, Open Graph görseli (`/karay/og-karay.png`), `Organization` JSON-LD, `/karay/sitemap.xml`, `/karay/robots.txt`.
+- `/karay` indekslenebilir (ayar ile kapatılabilir), kanonik adres, Open Graph görseli (`/karay/og-karays.png`), `Organization` JSON-LD, `/karay/sitemap.xml`, `/karay/robots.txt`.
 - Demo ortamında kiracı sayfalarındaki `X-Robots-Tag: noindex` aynen korunur; yalnızca `/karay` bu kuralın dışındadır (`next.config.ts`). Test: KARAY-02.
 - Yasal metinler (`/karay/yasal/*`) **TASLAK** olarak işaretlidir ve noindex'tir. Hukuk onayından ve gerçek şirket bilgileri girilmeden yayına alınmamalıdır.
 
 ## Görseller
 
-Ürün ekran görüntüleri (`src/app/karay/_images/ekran-*.png`) gerçek Site Kontrol Merkezi ekranlarıdır; geçici "Örnek Gayrimenkul" kiracısıyla alınmış, kiracı sonra silinmiştir. Sahte müşteri, istatistik, yorum veya referans yoktur. Görseller `next/image` ile AVIF/WebP ve boyutlandırılmış sunulur. Sayfa bu dosyaları **statik import** ile kullanır (`/_next/static/media`): `/karay/` yolu proxy'de alan adına göre korunduğu için görsel iyileştiricinin Host başlığı taşımayan iç isteği bu yoldan görsel okuyamaz (P3-F1). Yeni KARAY sayfa görselleri de aynı yolla eklenmelidir; `images.localPatterns`'e korumalı bir yol eklenmez (birim testi: `surface.test.mjs`). `public/karay/` altında yalnızca paylaşım görseli (`og-karay.png`) kalır; o, tarayıcıların ve botların KARAY adresinden doğrudan istediği bir dosyadır.
+Ürün ekran görüntüleri (`src/app/karay/_images/ekran-*.png`) gerçek Site Kontrol Merkezi ekranlarıdır; geçici "Örnek Gayrimenkul" kiracısıyla alınmış, kiracı sonra silinmiştir. Sahte müşteri, istatistik, yorum veya referans yoktur. Görseller `next/image` ile AVIF/WebP ve boyutlandırılmış sunulur. Sayfa bu dosyaları **statik import** ile kullanır (`/_next/static/media`): `/karay/` yolu proxy'de alan adına göre korunduğu için görsel iyileştiricinin Host başlığı taşımayan iç isteği bu yoldan görsel okuyamaz (P3-F1). Yeni KARAY sayfa görselleri de aynı yolla eklenmelidir; `images.localPatterns`'e korumalı bir yol eklenmez (birim testi: `surface.test.mjs`). `public/karay/` altında yalnızca paylaşım görseli (`og-karays.png`) kalır; o, tarayıcıların ve botların KARAYS adresinden doğrudan istediği bir dosyadır.
+
+KARAYS görsel paketi (K-16; `PLATFORM_VE_KIRACI.md` › KARAYS logosu): paylaşım görseli onaylı yatay logo ile KARO'dan oluşur (pakette paylaşım görseli yoktur; logo ve KARO değiştirilmeden, oranları korunarak yerleştirildi).
 
 ## Ortam değişkenleri
 
@@ -60,7 +62,7 @@ Mantık: `src/platform/tenant/host.ts › karayHostKind`, uygulama: `src/proxy.t
 
 ## Testler
 
-- E2E: `tests/e2e/karay-site.spec.ts` — KARAY-01…18
+- E2E: `tests/e2e/karay-site.spec.ts` — KARAY-01…20
 - RLS: `tests/security/rls.test.mjs` › "KARAY şirket bilgileri ve KARAY talepleri"
 
 ---
