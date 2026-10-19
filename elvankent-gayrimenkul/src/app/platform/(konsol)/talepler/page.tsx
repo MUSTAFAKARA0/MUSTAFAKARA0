@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
-import { Inbox, Mail, MapPin, Phone } from 'lucide-react';
+import { Mail, MapPin, Phone } from 'lucide-react';
+import { HelperMascot } from '@/components/brand/helper-mascot';
 import { AdminPageHeader, EmptyPanel } from '@/components/panel/ui';
 import { KarayLeadEditor } from '@/components/platform/karay-forms';
 import { LEAD_STATUS } from '@/modules/karay/lead-status';
@@ -58,7 +59,7 @@ export default async function KarayLeadsPage({ searchParams }: PageProps<'/platf
       </nav>
       {error && <p className="mb-4 rounded-xl bg-warning-soft px-4 py-3 text-sm text-warning">Talepler yüklenemedi. Platform migration&apos;ı (20261002000001) uygulanmış mı?</p>}
       {rows.length === 0 ? (
-        <EmptyPanel icon={Inbox} title="Bu filtrede talep yok" description="KARAYS sayfasından gelen talepler burada listelenir." />
+        <EmptyPanel illustration={<HelperMascot width={96} className="h-auto w-24" />} title="Bu filtrede talep yok" description="KARAYS sayfasından gelen talepler burada listelenir." />
       ) : (
         <ul className="space-y-3">
           {rows.map((r) => {

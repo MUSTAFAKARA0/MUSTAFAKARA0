@@ -82,7 +82,7 @@ Aynı kişi hem süper admin hem bir ofisin üyesi olsa bile iki alan **ayrı ot
 - Tekrar çalıştırılabilir, veri değiştirmez; kod migration öncesi ve sonrası çalışır; geri dönüş SQL'i dosyanın sonunda.
 - Not: bir ofisin **kamuya açık sitesindeki** bilgileri (logo, telefon, adres) doğası gereği herkese açıktır — ama yalnızca ofisin adresi bilinerek, tek tek okunabilir; liste çekilemez.
 
-## KARAYS logosu
+## KARAYS logosu ve maskotlar
 
 Platformun görünen adı KARAYS'tır (eski adı KARAY; `/karay` rotası, `KARAY_HOSTS` ve kod adları teknik kimlik olarak kalır). Onaylı KARAYS görsel paketinden (`KARAYS_Orijinal_Gorsel_Paketi`, K-16) yalnızca kullanılan dosyalar eklendi; her dosya paketteki `VARLIK_LISTESI.json` ile doğrulandı ve değiştirilmeden kopyalandı (birim testi SHA-256 ile denetler: `tests/unit/platform-brand-assets.test.mjs`):
 
@@ -90,12 +90,17 @@ Platformun görünen adı KARAYS'tır (eski adı KARAY; `/karay` rotası, `KARAY
 | --- | --- |
 | `src/platform/branding/assets/karays-logo-yatay.webp` | Platform girişi, konsol başlığı, KARAYS sayfası başlığı ve alt bilgisi (`PlatformWordmark`) |
 | `src/platform/branding/assets/karays-amblem.webp` | Konsol › Genel bakış › Platform yapısı |
+| `src/platform/branding/assets/karo/KARO-durus.png`, `KARO-hareketli.webp` | KARO (ana maskot): KARAYS sayfası hero'su; platform giriş ve şifre ekranları (geniş ekran) |
+| `src/platform/branding/assets/karays-helper/karays-yardimci-maskot.png` | Yardımcı maskot: KARAYS sayfası › İletişim; Konsol › KARAYS talepleri boş durumu |
 | `public/brand/karays/favicon.ico`, `karays-icon-192.png`, `karays-icon-180.png`, `karays-icon-512.png` | Sekme ve ana ekran simgeleri; yapılandırılmış verideki logo |
 | `public/karay/og-karays.png` | Paylaşım görseli (1200 × 630): yatay logo ve KARO, oranları korunarak (pakette paylaşım görseli yoktur) |
 
 - Sayfada çizilen görseller statik import edilir (`next/image` boyutlandırır, `/_next/static/media` değişmez önbellek; proxy'den geçmez). Sabit adresle istenen simgeler `public/brand/karays/` altındadır; `/platform` altında tutulmaz (o yol konsol rotasıdır, proxy oturumsuz isteği giriş sayfasına yönlendirir; K-15).
 - Logodaki yazı koyu lacivert, pakette beyaz logo yok: koyu zeminde (konsol başlığı, KARAYS alt bilgisi) logo açık bir plaka üzerindedir.
-- Kiracı (emlak ofisi) sitelerinde ve ofis panelinde platform logosu kullanılmaz (white-label; birim testi ve E2E TEST-KARAY-02/06).
+- KARO: sunucu çiziminde ve "hareketi azalt" tercihinde animasyonla eşleşen sabit poz; hareket serbest ve ekran genişse (≥ 768 px) sayfa yüklendikten sonra hazır animasyon (90 kare, ≈3 sn) bir kez oynar ve sabit poza döner (otomatik hareket 5 saniyeyi geçmez). Animasyon dosyası (4,2 MB) aynı görsel öğeye istenir ve bir kez indirilir; yüklenirken sabit poz görünür kalır. Dar ekranda indirilmez.
+- Yardımcı maskotun özel adı yoktur ve statiktir; yalnızca gerçek bir destek/rehber alanının görsel yüzüdür. Sohbet, çevrimiçi durumu veya yanıt göstermez.
+- Kiracı (emlak ofisi) sitelerinde ve ofis panelinde platform logosu ve maskotlar kullanılmaz (white-label; birim testi ve E2E TEST-KARAY-02/06).
+- Eklenmeyenler: PDF/MP4 önizleme, WebM (alfa desteği tarayıcıya göre değişir; `.webm` proxy'nin statik uzantıları arasında değildir), kareler, sprite atlas, üretim betiği, HTML katalog, yalnız yazı ("karays-yazi") ve sunum referansı.
 
 Renkler: Lacivert `#0B1B3A` (butonlar, başlık zemini), Sinyal Mavisi `#2F6BFF` (vurgu), Bulut `#F4F7FB` (sayfa zemini); Turkuaz ve Arduvaz tanımlı. Yazı tipi: Poppins (yalnızca platform alanında yüklenir; kiracı sitelerinin yazı tipleri değişmez). Tümü `src/platform/branding/platform-brand.ts` içinde tanımlıdır.
 

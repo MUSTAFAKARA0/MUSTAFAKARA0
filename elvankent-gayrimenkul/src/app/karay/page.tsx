@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { JsonLd } from '@/components/common/json-ld';
 import { KarayLeadForm } from '@/components/karay/karay-lead-form';
+import { HelperMascot } from '@/components/brand/helper-mascot';
+import { KaroMascot } from '@/components/brand/karo-mascot';
 import { ThemeShowcase } from '@/components/karay/theme-showcase';
 import { Button } from '@/components/ui/button';
 import { karaySiteUrl } from '@/modules/karay/site';
@@ -134,22 +136,32 @@ export default async function KarayPage() {
             </ul>
           </div>
           <figure className="relative min-w-0">
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white shadow-[0_30px_80px_-30px_rgb(0_0_0/0.6)]">
-              <div className="flex items-center gap-1.5 border-b border-[#e3e8f0] bg-[#f4f7fb] px-4 py-2.5" aria-hidden>
-                <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
-                <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
-                <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
-                <span className="ml-3 truncate text-[11.5px] text-[#5b6b85]">{PLATFORM_BRAND.name} · Site Kontrol Merkezi</span>
+            <div className="relative">
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-white shadow-[0_30px_80px_-30px_rgb(0_0_0/0.6)]">
+                <div className="flex items-center gap-1.5 border-b border-[#e3e8f0] bg-[#f4f7fb] px-4 py-2.5" aria-hidden>
+                  <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
+                  <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
+                  <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
+                  <span className="ml-3 truncate text-[11.5px] text-[#5b6b85]">{PLATFORM_BRAND.name} · Site Kontrol Merkezi</span>
+                </div>
+                <Image
+                  src={ekranKontrolMerkezi}
+                  alt={`${PLATFORM_BRAND.name} Site Kontrol Merkezi: bir emlak ofisi sitesinin tema galerisi, canlı ve taslak durumu`}
+                  sizes="(min-width: 1024px) 600px, 100vw"
+                  priority
+                  className="h-auto w-full"
+                />
               </div>
-              <Image
-                src={ekranKontrolMerkezi}
-                alt={`${PLATFORM_BRAND.name} Site Kontrol Merkezi: bir emlak ofisi sitesinin tema galerisi, canlı ve taslak durumu`}
-                sizes="(min-width: 1024px) 600px, 100vw"
-                priority
-                className="h-auto w-full"
+              {/* KARO ziyaretçiyi karşılar: ekran görüntüsünün sol alt köşesinde (dekoratif). Sola taşması sayfa kenar boşluğunu
+                  (16 / 24 px) ve geniş ekranda sütun aralığını (48 px) aşmaz: hero overflow-hidden, KARO kırpılmamalı (KARAY-21) */}
+              <KaroMascot
+                width={168}
+                sizes="(min-width: 1024px) 168px, (min-width: 640px) 128px, 92px"
+                loading="eager"
+                className="absolute -bottom-5 -left-3 h-auto w-[92px] sm:-left-5 sm:w-[128px] lg:-bottom-8 lg:-left-12 lg:w-[168px]"
               />
             </div>
-            <figcaption className="mt-3 text-center text-[12.5px] text-white/55">Gerçek ekran görüntüsü · örnek ofis verisiyle</figcaption>
+            <figcaption className="mt-3 text-right text-[12.5px] text-white/55 lg:text-center">Gerçek ekran görüntüsü · örnek ofis verisiyle</figcaption>
           </figure>
         </div>
       </section>
@@ -372,6 +384,8 @@ export default async function KarayPage() {
                 )}
               </dl>
             )}
+            {/* Yardımcı maskot: bu bölümün gerçek destek kanalının (iletişim formu) görsel yüzü; dekoratif */}
+            <HelperMascot width={144} sizes="(min-width: 1024px) 144px, (min-width: 640px) 112px, 96px" className="mt-10 h-auto w-24 sm:w-28 lg:w-36" />
           </div>
           <div className="rounded-2xl border border-[#e3e8f0] bg-[#f8fafc] p-6 sm:p-8">
             <KarayLeadForm />

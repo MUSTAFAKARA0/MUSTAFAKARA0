@@ -12,7 +12,7 @@
  *    statik dosya olarak geçirdiği uzantılardandır.
  *  - Paylaşım görseli /karay altındadır (yalnızca KARAYS sayfasının açıldığı adreslerde sunulur).
  *  - Eski KARAY görselleri kaldırılmıştır; kaynakta onlara başvuru kalmaz.
- *  - Platform logosu kiracı (emlak ofisi) sitesi ve ofis paneli kodundan içe aktarılmaz.
+ *  - Maskotlar ve platform logosu kiracı (emlak ofisi) sitesi ve ofis paneli kodundan içe aktarılmaz.
  * Çalıştırma: npm run test:unit
  */
 import { describe, test } from 'node:test';
@@ -38,6 +38,9 @@ const sha256 = (file) => createHash('sha256').update(readFileSync(path.join(ROOT
 const PACKAGE_FILES = {
   'src/platform/branding/assets/karays-logo-yatay.webp': ['01_LOGOLAR/karays-logo-yatay.webp', '3e172a7ecbd2a02a1e7f11b84b344f99ffda690ae735c76ffeff85ad1d7dacdf'],
   'src/platform/branding/assets/karays-amblem.webp': ['01_LOGOLAR/karays-amblem.webp', 'e22a0789be25eb7903d68bf1f9df7b0ebfcf148641c92171ab4ba90c392cf761'],
+  'src/platform/branding/assets/karo/KARO-durus.png': ['02_ANA_MASKOT_KARO/KARO-durus.png', '55018528ca177fb61f4526bc9fc41ea183303dfd89dfec8a0c3b7cf07b152bc9'],
+  'src/platform/branding/assets/karo/KARO-hareketli.webp': ['04_KARO_ANIMASYON/KARO-hareketli.webp', '819c1ff4c701d86521ade8043744008e5b442966c34fe18b22efe78d72d1d720'],
+  'src/platform/branding/assets/karays-helper/karays-yardimci-maskot.png': ['03_YARDIMCI_MASKOT/karays-yardimci-maskot.png', '0eecb942934cad6773efbec0b0df069726fa66650ef603bb74e111f28239c5d9'],
   'public/brand/karays/favicon.ico': ['01_LOGOLAR/favicon.ico', '9d885aee4b800fd18677aebbc8a7450b2e7de2eddb00d8a4b4e741e11b1c0ee3'],
   'public/brand/karays/karays-icon-180.png': ['01_LOGOLAR/karays-icon-180.png', '186f5f4fe4dbb732640be0c3837f35363597a045915ce189586dcbc9033596bb'],
   'public/brand/karays/karays-icon-192.png': ['01_LOGOLAR/karays-icon-192.png', '3cebc610fd4102084563ecd293d012f634a1e96a016d8eb9c57e22202a50edb6'],
@@ -96,8 +99,8 @@ describe('Platform marka dosyaları (K-15/K-16)', () => {
     assert.deepEqual(hits, []);
   });
 
-  test('platform logosu kiracı sitesi ve ofis paneli kodundan içe aktarılmaz', () => {
-    const PLATFORM_IMAGES = /@\/components\/brand\/platform-wordmark|@\/platform\/branding\/assets\//;
+  test('maskotlar ve platform logosu kiracı sitesi ve ofis paneli kodundan içe aktarılmaz', () => {
+    const PLATFORM_IMAGES = /@\/components\/brand\/(karo-mascot|helper-mascot|platform-wordmark)|@\/platform\/branding\/assets\//;
     const tenant = ['src/app/t', 'src/app/admin', 'src/components/admin', 'src/components/layout', 'src/components/home', 'src/components/property', 'src/components/site', 'src/components/patterns'];
     const hits = tenant.flatMap((d) => sources(d)).filter((f) => PLATFORM_IMAGES.test(readFileSync(path.join(ROOT, f), 'utf8')));
     assert.deepEqual(hits, []);

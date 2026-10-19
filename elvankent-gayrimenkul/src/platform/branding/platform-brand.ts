@@ -14,7 +14,7 @@ import { buildTheme, themeCss } from '@/platform/branding/theme';
  *
  * Görünen ad KARAYS'tır (eski adı KARAY). Görseller onaylı KARAYS paketindendir (K-16; dosyalar
  * VARLIK_LISTESI.json ile doğrulandı ve değiştirilmeden kopyalandı):
- *  - Sayfada çizilen logo ve amblem src/platform/branding/assets/ altındadır; bileşenler
+ *  - Sayfada çizilen logo, amblem ve maskotlar src/platform/branding/assets/ altındadır; bileşenler
  *    onları statik import eder (next/image boyutlandırır, değişmez önbellekle /_next/static/media'dan
  *    sunar; bu yol proxy'den geçmez).
  *  - Sabit adresle istenen dosyalar burada: sekme ve ana ekran simgeleri public/brand/karays/,
