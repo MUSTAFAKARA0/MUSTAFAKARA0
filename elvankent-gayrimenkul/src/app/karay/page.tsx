@@ -146,7 +146,7 @@ export default async function KarayPage() {
                 </div>
                 <Image
                   src={ekranKontrolMerkezi}
-                  alt={`${PLATFORM_BRAND.name} Site Kontrol Merkezi: bir emlak ofisi sitesinin tema galerisi, canlı ve taslak durumu`}
+                  alt={`${PLATFORM_BRAND.name} Site Kontrol Merkezi: bir emlak ofisi sitesinin tasarım aileleri, canlı ve taslak durumu`}
                   sizes="(min-width: 1024px) 600px, 100vw"
                   priority
                   className="h-auto w-full"
