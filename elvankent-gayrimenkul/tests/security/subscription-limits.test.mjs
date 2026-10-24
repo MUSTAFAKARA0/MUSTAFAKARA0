@@ -12,6 +12,7 @@
  *          ilan, üye ve yükleme veritabanında reddedilir; mevcut ilan okunur ve düzenlenir.
  *   SL-03  Bayrak AÇIK: etkin aboneliği olan organizasyon etkilenmez; yeniden etkinleştirince haklar döner.
  *   SL-04  Bayrağı yalnızca süper admin değiştirir; ofis sahibi ve anonim ziyaretçi okuyamaz/değiştiremez.
+ *          Abonelik durumu (iptal/süresi doldu) yalnızca kurumun üyesine görünür; anonim ve başka kiracı görmez.
  *   SL-05  Eşzamanlı ilan eklemeleri plan limitini aşamaz.
  *
  * Bekleyen migration uygulanmamış bir veritabanında testler atlanır; CI'da (CI=true) atlanmaz, hata verir.
@@ -24,8 +25,9 @@ import { createClient } from '@supabase/supabase-js';
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (process.env.CI && url && !/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(url)) {
-  throw new Error("CI: NEXT_PUBLIC_SUPABASE_URL yerel değil; güvenlik testleri CI'da yalnızca geçici yerel Supabase ile çalışır");
+// Bu test tüm kiracıları etkileyen global bayrağı açıp kapatır: CI olsun olmasın YALNIZCA yerel Supabase'e bağlanır
+if (url && !/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(url)) {
+  throw new Error(`${process.env.CI ? 'CI: ' : ''}NEXT_PUBLIC_SUPABASE_URL yerel değil; abonelik limiti testleri yalnızca yerel Supabase ile çalışır`);
 }
 const missing = !url || !anonKey || !serviceKey;
 const opts = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
@@ -76,8 +78,8 @@ async function makeOrg(label, subscription) {
 }
 
 const setFlag = async (on) => assert.ifError((await service.from('platform_settings').update({ enforce_subscription_limits: on }).eq('id', true)).error);
-const plan = async (orgId) => {
-  const r = await service.rpc('org_plan', { p_org: orgId });
+const plan = async (orgId, client = service) => {
+  const r = await client.rpc('org_plan', { p_org: orgId });
   assert.ifError(r.error);
   return r.data;
 };
@@ -153,14 +155,22 @@ describe('SL-02 bayrak açık: etkin aboneliği olmayan organizasyon', { skip },
   });
 
   test('org_plan sıfır limitli tek satır döner; son aboneliğin durumu görünür, özellikler kapalı', async () => {
-    const [row, ...rest] = await plan(O.cancelled.id);
+    const [row, ...rest] = await plan(O.cancelled.id, O.cancelled.owner.client);
     assert.equal(rest.length, 0);
     assert.equal(row.plan_id, null);
     assert.equal(row.subscription_status, 'cancelled');
     assert.deepEqual([row.max_users, row.max_properties, row.max_storage_mb], [0, 0, 0]);
     assert.deepEqual([row.crm_enabled, row.analytics_enabled, row.pdf_enabled, row.custom_domain_enabled], [false, false, false, false]);
-    assert.equal((await plan(O.expired.id))[0].subscription_status, 'expired');
-    assert.equal((await plan(O.none.id))[0].subscription_status, null);
+    assert.equal((await plan(O.expired.id, O.expired.owner.client))[0].subscription_status, 'expired');
+    assert.equal((await plan(O.none.id, O.none.owner.client))[0].subscription_status, null);
+  });
+
+  test('iptal/süresi doldu durumu anonim ziyaretçiye ve başka kiracıya görünmez (limitler yine 0)', async () => {
+    for (const client of [anon, O.active.owner.client]) {
+      const [row] = await plan(O.cancelled.id, client);
+      assert.equal(row.subscription_status, null, 'abonelik durumu üye olmayana göründü');
+      assert.equal(row.max_properties, 0);
+    }
   });
 
   test('yeni ilan reddedilir (sahip oturumuyla da, sunucu anahtarıyla da)', async () => {

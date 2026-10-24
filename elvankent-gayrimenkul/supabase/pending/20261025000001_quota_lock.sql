@@ -11,6 +11,11 @@
 -- Düzeltme: ilan ve üyelik eklemeleri, limit sayımından önce organizasyon başına bir işlem kilidi
 -- alır. İstekler sırayla sayılır; READ COMMITTED'da sayım, kilit bırakıldıktan sonra öncekinin
 -- kaydını görür. Yalnızca aynı organizasyondaki eklemeler birbirini bekler.
+-- Yalnızca READ COMMITTED'da (PostgREST varsayılanı) yeterlidir: REPEATABLE READ / SERIALIZABLE bir
+-- işlem sayımı eski anlık görüntüyle yapar. Birden çok kuruma ekleme yapan toplu işlemler kurumları
+-- kimlik sırasıyla işlemelidir (kilit sırası farklı iki işlem kilitlenebilir, biri 40P01 ile iptal olur).
+-- Kilit RLS denetiminden önce alınır: başka kurum adına reddedilecek bir ekleme, o kurumun eklemelerini
+-- yalnızca bu deyim süresince bekletebilir (aynı etki bugün next_org_counter satır kilidiyle de var).
 -- Kapsam dışı: media_upload_allowed() yüklemeden ÖNCE çağrılan bir denetimdir (satır yüklemeden sonra
 -- yazılır); eşzamanlı yüklemeler depolama sınırını en fazla eşzamanlı dosya kadar aşabilir.
 --
@@ -28,7 +33,7 @@
 create or replace function public.quota_lock()
 returns trigger
 language plpgsql
-security definer
+security invoker
 set search_path = ''
 as $$
 begin
