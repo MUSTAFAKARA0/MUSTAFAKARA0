@@ -45,9 +45,12 @@ describe('SEC-06 görsel kaynakları (images.remotePatterns)', () => {
     assert.deepEqual(storageImagePatterns([null, undefined]), []);
   });
 
-  test('next.config joker *.supabase.co deseni kullanmaz', () => {
+  // next.config.ts uzantısız göreli içe aktarma kullandığından birim çalıştırıcısında yüklenemez;
+  // desenlerin davranışı yukarıda sınanır, burada yalnızca yapılandırmanın bu yardımcıya bağlı
+  // olduğu ve joker host desenine dönülmediği denetlenir.
+  test('next.config desenleri yardımcıdan alır, joker host deseni yok', () => {
     const config = readFileSync(new URL('../../next.config.ts', import.meta.url), 'utf8');
-    assert.match(config, /remotePatterns = storageImagePatterns\(\[supabaseUrl, storageUrl\]\)/);
-    assert.doesNotMatch(config, /hostname: '\*\.supabase\.co'/);
+    assert.match(config, /remotePatterns\s*=\s*storageImagePatterns\(/);
+    assert.doesNotMatch(config, /hostname:\s*['"`][^'"`]*\*/);
   });
 });

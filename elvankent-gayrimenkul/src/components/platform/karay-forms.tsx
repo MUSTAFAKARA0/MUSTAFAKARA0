@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox, Field, Input, Select, Textarea } from '@/components/ui/form-controls';
 import { SaveBar } from '@/components/site-editor/site-actions';
 import { LEAD_STATUS } from '@/modules/karay/lead-status';
-import { addOrgNote, updateKarayLead, updateKarayProfile, type KarayProfileInput } from '@/app/actions/karay-admin';
+import { addOrgNote, updateKarayLead, updateKarayProfile } from '@/app/actions/karay-admin';
+import type { KarayProfileInput } from '@/modules/karay/profile-schema';
 
 
 /** KARAY talebi: durum ve iç not (yalnızca süper admin) */
