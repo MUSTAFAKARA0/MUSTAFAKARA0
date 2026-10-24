@@ -1,0 +1,978 @@
+From 57fdbb75ad958ab23712bd4fbcd4e9ae6c3b5420 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sat, 24 Oct 2026 18:30:16 +0000
+Subject: [PATCH] fix(security): security-only patch for production ff2f7da
+ (next 16.4.3, sharp 0.35.5, zod 4.6.7)
+
+Option A of the K-18 release plan: close the advisories that affect the
+live site without the K-17 schema migration.
+
+- next 16.3.6 -> 16.4.3 (GHSA-2464-fhr4-w9xw, GHSA-673q-mjm6-r5xr,
+  GHSA-p3m5-59mp-jv5r), sharp 0.35.4 -> 0.35.5 (librsvg; the
+  GHSA-2464 workaround), zod 4.6.5 -> 4.6.7 (GHSA-mrhx-c7xc-m3w5),
+  source-map-js 1.2.1 -> 1.2.2. The lockfile changes only these
+  packages and their platform binaries.
+- media/processing.ts: file-signature check before sharp, identical to
+  4aa0ae3 on the validation branch.
+- tests/unit/security-patch.test.mjs: the SP tests from that branch
+  (backup parts left out) plus a zod check.
+
+No database calls or schema expectations change, so the code runs on
+the live schema as it is. Local: npm audit (production) 0, typecheck,
+ESLint 0 errors, unit 388/388, build 73/73. RLS/E2E need the CI database
+job (not run: needs a push, which needs approval).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_0148eusxoJiBurKT7xPz8Sh7
+---
+ elvankent-gayrimenkul/package-lock.json       | 334 +++++++++---------
+ elvankent-gayrimenkul/package.json            |   6 +-
+ .../src/modules/media/processing.ts           |  54 ++-
+ .../tests/unit/security-patch.test.mjs        | 131 +++++++
+ 4 files changed, 348 insertions(+), 177 deletions(-)
+ create mode 100644 elvankent-gayrimenkul/tests/unit/security-patch.test.mjs
+
+diff --git a/elvankent-gayrimenkul/package-lock.json b/elvankent-gayrimenkul/package-lock.json
+index 3b27628..3a46709 100644
+--- a/elvankent-gayrimenkul/package-lock.json
++++ b/elvankent-gayrimenkul/package-lock.json
+@@ -19,17 +19,17 @@
+         "clsx": "^2.1.1",
+         "leaflet": "^1.9.4",
+         "lucide-react": "^1.47.0",
+-        "next": "16.3.6",
++        "next": "16.4.3",
+         "qrcode": "^1.5.4",
+         "radix-ui": "^1.6.7",
+         "react": "19.2.8",
+         "react-dom": "19.2.8",
+         "server-only": "^0.0.1",
+-        "sharp": "^0.35.4",
++        "sharp": "^0.35.5",
+         "sonner": "^2.0.8",
+         "tailwind-merge": "^3.7.0",
+         "tus-js-client": "^4.3.1",
+-        "zod": "^4.6.5"
++        "zod": "^4.6.6"
+       },
+       "devDependencies": {
+         "@playwright/test": "^1.63.0",
+@@ -645,9 +645,9 @@
+       }
+     },
+     "node_modules/@img/sharp-darwin-arm64": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-darwin-arm64/-/sharp-darwin-arm64-0.35.4.tgz",
+-      "integrity": "sha512-Uhfl4V4lhP2nbUVF9+hyH1+luj86f1gUFeo8ALYxFoULoU+G87D43BfeMP8XHsk9boxAnCY/bf2EHwhA7MuGsA==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-darwin-arm64/-/sharp-darwin-arm64-0.35.5.tgz",
++      "integrity": "sha512-QRUlFQ0WxvdWyqqG/WtI3iupfD5rBzmCHXSdPsY91sAtVtTo7Q4cb6zOccZ3gqEqkr0f1As1ehLqmEpDsRf+lg==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -663,13 +663,13 @@
+         "url": "https://opencollective.com/libvips"
+       },
+       "optionalDependencies": {
+-        "@img/sharp-libvips-darwin-arm64": "1.3.3"
++        "@img/sharp-libvips-darwin-arm64": "1.3.4"
+       }
+     },
+     "node_modules/@img/sharp-darwin-x64": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-darwin-x64/-/sharp-darwin-x64-0.35.4.tgz",
+-      "integrity": "sha512-hWniXY3bG5qKpkKrAwPe4y+VTPmf086YQAnkxWh7uA1YrlRouWGa0M0Mxj3ZjnXFkv7/TD1bTy9lGUK26vRvWw==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-darwin-x64/-/sharp-darwin-x64-0.35.5.tgz",
++      "integrity": "sha512-+BR255RhDlpygUpOc/Jdt1nT6DQ3XG/ERo5wbcdOf5Q320dKtPCKPLR1LJs9VGXRaMa8l1uUa0tkCNOXiAxZUw==",
+       "cpu": [
+         "x64"
+       ],
+@@ -685,20 +685,20 @@
+         "url": "https://opencollective.com/libvips"
+       },
+       "optionalDependencies": {
+-        "@img/sharp-libvips-darwin-x64": "1.3.3"
++        "@img/sharp-libvips-darwin-x64": "1.3.4"
+       }
+     },
+     "node_modules/@img/sharp-freebsd-wasm32": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-freebsd-wasm32/-/sharp-freebsd-wasm32-0.35.4.tgz",
+-      "integrity": "sha512-lIsKw/BU+kjB4eZjxrYrZmwOJYi3Ajrv66iAlBmUPyKc3HpnloevB1g3wxGD9P/5BbQ1brBGl65VRRrCvQDEqA==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-freebsd-wasm32/-/sharp-freebsd-wasm32-0.35.5.tgz",
++      "integrity": "sha512-Y/z91nEZ4uIBX5X3nfTovjU9lHNKFYbL2lpHCLVNmXQK03VIZvXBBt0KxbPGp2SdGSF+2mQU4e+hQaWOt86iAw==",
+       "license": "Apache-2.0",
+       "optional": true,
+       "os": [
+         "freebsd"
+       ],
+       "dependencies": {
+-        "@img/sharp-wasm32": "0.35.4"
++        "@img/sharp-wasm32": "0.35.5"
+       },
+       "engines": {
+         "node": ">=20.9.0"
+@@ -708,9 +708,9 @@
+       }
+     },
+     "node_modules/@img/sharp-libvips-darwin-arm64": {
+-      "version": "1.3.3",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-darwin-arm64/-/sharp-libvips-darwin-arm64-1.3.3.tgz",
+-      "integrity": "sha512-suTBPTDGrI9WodccaDdwZItTSaBYASlBk1NSfElSHrUfzu3szG6lvIF58+WiFvnfzuK8ZBFS5zE00PxqxnRiPg==",
++      "version": "1.3.4",
++      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-darwin-arm64/-/sharp-libvips-darwin-arm64-1.3.4.tgz",
++      "integrity": "sha512-5R89nBYiRdUlSWJxPhO+GVtaXzXSxKnRu/xqMn3KTA3L9EB9Oy/P+Nn2f2vlhPuUdy/Zusb2DarbyTpGCfEDuw==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -724,9 +724,9 @@
+       }
+     },
+     "node_modules/@img/sharp-libvips-darwin-x64": {
+-      "version": "1.3.3",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-darwin-x64/-/sharp-libvips-darwin-x64-1.3.3.tgz",
+-      "integrity": "sha512-FVJZ5mITMobmXIz/hPDTw0EintTW5H3WfrxwLqEqjiIihlu+hVRyGrFQ60xl0Lxn7Bt3zdpevPaQi0HEzqz9fw==",
++      "version": "1.3.4",
++      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-darwin-x64/-/sharp-libvips-darwin-x64-1.3.4.tgz",
++      "integrity": "sha512-iR2OKH80yi0U+dUplyh3/xdpFvps6YkCwsXenIJxqxR1v9o+xtKTGbS9H7cps+2Vxjc8B1j96p75NmTGjIhtpQ==",
+       "cpu": [
+         "x64"
+       ],
+@@ -740,9 +740,9 @@
+       }
+     },
+     "node_modules/@img/sharp-libvips-linux-arm": {
+-      "version": "1.3.3",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linux-arm/-/sharp-libvips-linux-arm-1.3.3.tgz",
+-      "integrity": "sha512-3rbU4vqXXc3hY/OiXdl52xZvT0F1yEngWfvqudtPJg/KkyiaQw2DRsFrNzpmLvfavbwOq3qXn36GP8obHRULQA==",
++      "version": "1.3.4",
++      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linux-arm/-/sharp-libvips-linux-arm-1.3.4.tgz",
++      "integrity": "sha512-LmRtTsOHuvM2+wlO2Db37dx5MiZhB0FvSunciw48YjdOkZz9KAiRbm8ujeMOA1INqmei5NapFxYEK1D1ZSidmw==",
+       "cpu": [
+         "arm"
+       ],
+@@ -756,9 +756,9 @@
+       }
+     },
+     "node_modules/@img/sharp-libvips-linux-arm64": {
+-      "version": "1.3.3",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linux-arm64/-/sharp-libvips-linux-arm64-1.3.3.tgz",
+-      "integrity": "sha512-0DaL0A6Xu6sQSQFwe4iVCrKWU2cCTItnRsYsCdxAMm9NF6twAA9BKnoqy4hqz4+azQ0JHuA26qiUKsf1XJ/v5A==",
++      "version": "1.3.4",
++      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linux-arm64/-/sharp-libvips-linux-arm64-1.3.4.tgz",
++      "integrity": "sha512-Y3dgX/6lE2QhQb+Gxy0WZxfg9MEm/JBjamZpS2IklP7xIQoKN4hzAm7KcMVGtaVDt3neE9OKBC7vAfonA/Lr1A==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -772,9 +772,9 @@
+       }
+     },
+     "node_modules/@img/sharp-libvips-linux-ppc64": {
+-      "version": "1.3.3",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linux-ppc64/-/sharp-libvips-linux-ppc64-1.3.3.tgz",
+-      "integrity": "sha512-cdn1OvUBwsXhbC0zSzJnNzf5MZ/mTrobawDvNXBTxe8VtqKAm0sRuEY2Evzovb/w9JMk4TvRxqt1mekSuJz64w==",
++      "version": "1.3.4",
++      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linux-ppc64/-/sharp-libvips-linux-ppc64-1.3.4.tgz",
++      "integrity": "sha512-Le6boB8Tai0Nis+gIxIpKx68UDVVIqdR8Tin5Yf1z2LJJQLDJvCDRqRu+jC2qCoD+eIomonmOwB4smBRxfVpYQ==",
+       "cpu": [
+         "ppc64"
+       ],
+@@ -788,9 +788,9 @@
+       }
+     },
+     "node_modules/@img/sharp-libvips-linux-riscv64": {
+-      "version": "1.3.3",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linux-riscv64/-/sharp-libvips-linux-riscv64-1.3.3.tgz",
+-      "integrity": "sha512-HjPVx7yKz+0lqdhDlTw1tt90wamBoxhiXpvl1XZpJLiHH4RCJ5yDTqH+VlYPv2fwFs89JFw4c1IexYOcQUi4IQ==",
++      "version": "1.3.4",
++      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linux-riscv64/-/sharp-libvips-linux-riscv64-1.3.4.tgz",
++      "integrity": "sha512-aHkkIEHPRdQEegJN20MLmGtxYD9R2wQr3Cwpddnu5+YKMt6Uzax7S9h5gpZTo8wyrGuZSlfQ63OevL5mTyOC7Q==",
+       "cpu": [
+         "riscv64"
+       ],
+@@ -804,9 +804,9 @@
+       }
+     },
+     "node_modules/@img/sharp-libvips-linux-s390x": {
+-      "version": "1.3.3",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linux-s390x/-/sharp-libvips-linux-s390x-1.3.3.tgz",
+-      "integrity": "sha512-neWLh+3yCNThxnfy3c4BbVBeGgt9aftno+XbT56iK28RgeDs3UOFWviLWlUu0bArYVYJaFDK+RRohbicUNCm8Q==",
++      "version": "1.3.4",
++      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linux-s390x/-/sharp-libvips-linux-s390x-1.3.4.tgz",
++      "integrity": "sha512-ra/mB6MikESDUO7Yg+Mi95bFBb9GsObURuhnOv3OqknjGe9sZrG8tCe9q0xSIGrtLgvgw0gKnFWcK4blSgQOuQ==",
+       "cpu": [
+         "s390x"
+       ],
+@@ -820,9 +820,9 @@
+       }
+     },
+     "node_modules/@img/sharp-libvips-linux-x64": {
+-      "version": "1.3.3",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linux-x64/-/sharp-libvips-linux-x64-1.3.3.tgz",
+-      "integrity": "sha512-4vKmvAst9nrowcqquKFAyZJUDolUaIp8uRiN0mWFguJ1IplC9/pitXtlnnlU4aa/eJw3J7i67V+pwUL+wZGdsA==",
++      "version": "1.3.4",
++      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linux-x64/-/sharp-libvips-linux-x64-1.3.4.tgz",
++      "integrity": "sha512-GJ//SSXbnwSDes02umB3nDJLFcQzw8a18V8fyhqr6tV515tOEMdImjjxj1AoafMRz56F3PHgftnj1QEKSU1zkw==",
+       "cpu": [
+         "x64"
+       ],
+@@ -836,9 +836,9 @@
+       }
+     },
+     "node_modules/@img/sharp-libvips-linuxmusl-arm64": {
+-      "version": "1.3.3",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linuxmusl-arm64/-/sharp-libvips-linuxmusl-arm64-1.3.3.tgz",
+-      "integrity": "sha512-Y9kQaLMuNoB0bPYOOdcZMaseNrFpPodIWWMrx+CZyydf2xn68j9WYc6sWWRrDwNkzCQjKYfc68L7jKjGlHMibw==",
++      "version": "1.3.4",
++      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linuxmusl-arm64/-/sharp-libvips-linuxmusl-arm64-1.3.4.tgz",
++      "integrity": "sha512-hvulFwtjUcagsis6BBxHwGFwWoNZjgYmULGVrZcyfNbjA8hKILbRxGg15/7w5HDyXHXUos/j6baAWqnCyQ2DWA==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -852,9 +852,9 @@
+       }
+     },
+     "node_modules/@img/sharp-libvips-linuxmusl-x64": {
+-      "version": "1.3.3",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linuxmusl-x64/-/sharp-libvips-linuxmusl-x64-1.3.3.tgz",
+-      "integrity": "sha512-fj8Mv0HHfD1Rr+4I68+3agJynxDWtBFgicTbSOb9Bke6pIwzGcJ+RX/yHjmiEGFMCavY/dxvem7MyNaJF+wDiw==",
++      "version": "1.3.4",
++      "resolved": "https://registry.npmjs.org/@img/sharp-libvips-linuxmusl-x64/-/sharp-libvips-linuxmusl-x64-1.3.4.tgz",
++      "integrity": "sha512-6zXKeE/p39I1AmA3cJG35eyBGNqNddLnUXjhwBnsGjFPWqf5VKkDBEqaEkPDoTEtkxwi2vv8Tcr2mDyP4So7Fg==",
+       "cpu": [
+         "x64"
+       ],
+@@ -868,9 +868,9 @@
+       }
+     },
+     "node_modules/@img/sharp-linux-arm": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-linux-arm/-/sharp-linux-arm-0.35.4.tgz",
+-      "integrity": "sha512-7OAS8gI0EReKGVN2HssHlM6umJgxF5VI3xN0p9FA91p/YO+ou5hiNghLdZ5BEHztwaaK5+bLKRf8x/o2L2nk9A==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-linux-arm/-/sharp-linux-arm-0.35.5.tgz",
++      "integrity": "sha512-LEaXK2WdXVK5ykcw0buWyPMsmLLL2vpHLD6yrNSW+JGEL3BZPA4tpKN6iaMc4AxTTAoaX/sU1rOL51lcIz48ZQ==",
+       "cpu": [
+         "arm"
+       ],
+@@ -886,13 +886,13 @@
+         "url": "https://opencollective.com/libvips"
+       },
+       "optionalDependencies": {
+-        "@img/sharp-libvips-linux-arm": "1.3.3"
++        "@img/sharp-libvips-linux-arm": "1.3.4"
+       }
+     },
+     "node_modules/@img/sharp-linux-arm64": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-linux-arm64/-/sharp-linux-arm64-0.35.4.tgz",
+-      "integrity": "sha512-De4jpEnAU8Hd5oT0j1G3uL4ZvTuipVMn7YC6vPaJhy6/7EwEae0SVAoBrUMYQbkLGDm85taVWwuPc1a44LTzCQ==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-linux-arm64/-/sharp-linux-arm64-0.35.5.tgz",
++      "integrity": "sha512-LYVx5JTsOM2CBzmxreh+nl64/3H6Xb09iSLknqH47z2T2DFFxDeFLP5y4dJwe6H7uGQlHPyEEtIqyo3DYsRwdQ==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -908,13 +908,13 @@
+         "url": "https://opencollective.com/libvips"
+       },
+       "optionalDependencies": {
+-        "@img/sharp-libvips-linux-arm64": "1.3.3"
++        "@img/sharp-libvips-linux-arm64": "1.3.4"
+       }
+     },
+     "node_modules/@img/sharp-linux-ppc64": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-linux-ppc64/-/sharp-linux-ppc64-0.35.4.tgz",
+-      "integrity": "sha512-2oYZJeIl4kCcMGk4ouZVjnkCtFrpQFlNEtJ6GbxzhHQchwH0NH/qEb9ykmOl29dqwMq+JhFdZn+1ak2FKhI9fQ==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-linux-ppc64/-/sharp-linux-ppc64-0.35.5.tgz",
++      "integrity": "sha512-QVxAAq8evVRI9ia2vqgwrmWucn5Dfv+JdWzj75pD8omHLPSP7f8p20O8jxzjCcuCEQEOtYOZUmX1hkiZ0kdevA==",
+       "cpu": [
+         "ppc64"
+       ],
+@@ -930,13 +930,13 @@
+         "url": "https://opencollective.com/libvips"
+       },
+       "optionalDependencies": {
+-        "@img/sharp-libvips-linux-ppc64": "1.3.3"
++        "@img/sharp-libvips-linux-ppc64": "1.3.4"
+       }
+     },
+     "node_modules/@img/sharp-linux-riscv64": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-linux-riscv64/-/sharp-linux-riscv64-0.35.4.tgz",
+-      "integrity": "sha512-cPbNChoRURAWdebDIHSenxRpgEdy7JkPydSnUxRm9VvKD7m0/xVaR/8Fzlu81pk5nHEvHH87UZUA7cTtwnbJSA==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-linux-riscv64/-/sharp-linux-riscv64-0.35.5.tgz",
++      "integrity": "sha512-LtdreXguaavKODPIfzJ4kffx7UNt1omwtK0rch4EBbbSTXPnxWmYSayXdLJw0fJzQ97kHt1gL/yh4tvU+nCyRQ==",
+       "cpu": [
+         "riscv64"
+       ],
+@@ -952,13 +952,13 @@
+         "url": "https://opencollective.com/libvips"
+       },
+       "optionalDependencies": {
+-        "@img/sharp-libvips-linux-riscv64": "1.3.3"
++        "@img/sharp-libvips-linux-riscv64": "1.3.4"
+       }
+     },
+     "node_modules/@img/sharp-linux-s390x": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-linux-s390x/-/sharp-linux-s390x-0.35.4.tgz",
+-      "integrity": "sha512-RY0JFY8Fd6RonCBtHz+DvadaPkXDSI1AUn6yWL9TipqkZ1vY8w8evqdgyDFnkm4/K1ve1TvZiaePP5oSd4+WVQ==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-linux-s390x/-/sharp-linux-s390x-0.35.5.tgz",
++      "integrity": "sha512-UZasTOFiYzotTsGOCu42BfUzP6Tu6Do/947iRm1RsLKvlllxwGcn4RN27LibGWceix4Y+Pmw3jsnTcCQIgWjqA==",
+       "cpu": [
+         "s390x"
+       ],
+@@ -974,13 +974,13 @@
+         "url": "https://opencollective.com/libvips"
+       },
+       "optionalDependencies": {
+-        "@img/sharp-libvips-linux-s390x": "1.3.3"
++        "@img/sharp-libvips-linux-s390x": "1.3.4"
+       }
+     },
+     "node_modules/@img/sharp-linux-x64": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-linux-x64/-/sharp-linux-x64-0.35.4.tgz",
+-      "integrity": "sha512-9qvvEAuk8k89TfWUoX2htWjbAMX8p+NxCppjpcg5k6xMsjhBQPTsoIh36h9Qde4WRuGpJeYnOjdosDn/cnv+OA==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-linux-x64/-/sharp-linux-x64-0.35.5.tgz",
++      "integrity": "sha512-SxFtLTeJInhAA9Q836kux2vZNeOBQEx658qvbboZScr0wIARym3IcGmW7KpVD5sbVg0Ojy+udFQdayYIZyoNog==",
+       "cpu": [
+         "x64"
+       ],
+@@ -996,13 +996,13 @@
+         "url": "https://opencollective.com/libvips"
+       },
+       "optionalDependencies": {
+-        "@img/sharp-libvips-linux-x64": "1.3.3"
++        "@img/sharp-libvips-linux-x64": "1.3.4"
+       }
+     },
+     "node_modules/@img/sharp-linuxmusl-arm64": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-linuxmusl-arm64/-/sharp-linuxmusl-arm64-0.35.4.tgz",
+-      "integrity": "sha512-KB5jxpfWQTr0nc3xdHtWChdbifHrBGsd2SM62Eyxrl8afikm+f5qGBU75SJIZBT/S1MC8XyacdlXBMSWq6OURA==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-linuxmusl-arm64/-/sharp-linuxmusl-arm64-0.35.5.tgz",
++      "integrity": "sha512-9HbMclmI1zlNkFRs3z9/eBtDjfD0sGlrX1z6b1qwmiFY5ElDLh4BC0LPBdVp7z1DXFiKlIcznf+ZlsuZzLxQqg==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -1018,13 +1018,13 @@
+         "url": "https://opencollective.com/libvips"
+       },
+       "optionalDependencies": {
+-        "@img/sharp-libvips-linuxmusl-arm64": "1.3.3"
++        "@img/sharp-libvips-linuxmusl-arm64": "1.3.4"
+       }
+     },
+     "node_modules/@img/sharp-linuxmusl-x64": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-linuxmusl-x64/-/sharp-linuxmusl-x64-0.35.4.tgz",
+-      "integrity": "sha512-f+eZJZIQNEEd26RPSW+76chwOf1XtA2Y/O+5ocVyLliHkeih3e+jhLVBdNTd2rS3IbNXK8+ug93Vf5ZXtF5Lxg==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-linuxmusl-x64/-/sharp-linuxmusl-x64-0.35.5.tgz",
++      "integrity": "sha512-4KOphqB035HrVdqLZfCgMzzERrQkkzOwRhl4OAkRO1YCldbaFjySXMaK534Mo0V+LndnlJk+sbUyLeU0ULyD1A==",
+       "cpu": [
+         "x64"
+       ],
+@@ -1040,13 +1040,13 @@
+         "url": "https://opencollective.com/libvips"
+       },
+       "optionalDependencies": {
+-        "@img/sharp-libvips-linuxmusl-x64": "1.3.3"
++        "@img/sharp-libvips-linuxmusl-x64": "1.3.4"
+       }
+     },
+     "node_modules/@img/sharp-wasm32": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-wasm32/-/sharp-wasm32-0.35.4.tgz",
+-      "integrity": "sha512-zQnl4Kwp7Q6NHsENtU2T/00Zi+w3AQNwz3+UaTyVBy2FpXrzXzGjndpK61onhZjRtRpQXxCTeqw19bVyXOh7jA==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-wasm32/-/sharp-wasm32-0.35.5.tgz",
++      "integrity": "sha512-Ptsga1su4tQx+LLF1ECS9U6nz5kmrXKo6XVbtR48Ke3ZRxxgaWBu7IDtEe1quo8hiupwm6WFqxVlXaSf7IINGQ==",
+       "license": "Apache-2.0 AND LGPL-3.0-or-later AND MIT",
+       "optional": true,
+       "dependencies": {
+@@ -1060,16 +1060,16 @@
+       }
+     },
+     "node_modules/@img/sharp-webcontainers-wasm32": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-webcontainers-wasm32/-/sharp-webcontainers-wasm32-0.35.4.tgz",
+-      "integrity": "sha512-ESfNkywmCfPNyaZjxooddJQiQ+l/nTpGEOGthxiLnIHXC/CmcBixnfwUleX9mCz9ovrUUvKMap/pm8RYbzfwaA==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-webcontainers-wasm32/-/sharp-webcontainers-wasm32-0.35.5.tgz",
++      "integrity": "sha512-hfhF/FmoQyTUkA0bIKFOtw536BQSeBMe6BF6QyWlrPxT754+TFLaZ7sKKTfvvM0yJgKgaYTwnFCIZ/GuDw5SUA==",
+       "cpu": [
+         "wasm32"
+       ],
+       "license": "Apache-2.0",
+       "optional": true,
+       "dependencies": {
+-        "@img/sharp-wasm32": "0.35.4"
++        "@img/sharp-wasm32": "0.35.5"
+       },
+       "engines": {
+         "node": ">=20.9.0"
+@@ -1079,9 +1079,9 @@
+       }
+     },
+     "node_modules/@img/sharp-win32-arm64": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-win32-arm64/-/sharp-win32-arm64-0.35.4.tgz",
+-      "integrity": "sha512-iNdlBX9gLVvqe2I3uIJSIKTq6wckP/DYxZtcqxm09x5Gi24DnFBmPAWZmr60ZyYMG0xlzo6goG3670ar+RXvRw==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-win32-arm64/-/sharp-win32-arm64-0.35.5.tgz",
++      "integrity": "sha512-X4t7g+7ZA5DKblCBEXGjUqqemj4vczING/5viFwAL8h4N3qYeyjwdCvRLHi4EdOUI+2Z7UFlp1VM+p/AuEtm6Q==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -1098,9 +1098,9 @@
+       }
+     },
+     "node_modules/@img/sharp-win32-ia32": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-win32-ia32/-/sharp-win32-ia32-0.35.4.tgz",
+-      "integrity": "sha512-kqRsbaa5CS6KHlpxnN7WhE6vAAugXyZButpRdvDWetlv6Qv4N9WTcrWzF7tXfB9T7MsoadqdI8hmwLq6UlLvtw==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-win32-ia32/-/sharp-win32-ia32-0.35.5.tgz",
++      "integrity": "sha512-5Zm82LoBc43nhwNybZlG7Y1KO//Zhsn306fQl29ZOuStHLGTo3BWL83q3cznX0poxSAMuYL1On/BHBxkBeKr6A==",
+       "cpu": [
+         "ia32"
+       ],
+@@ -1117,9 +1117,9 @@
+       }
+     },
+     "node_modules/@img/sharp-win32-x64": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/@img/sharp-win32-x64/-/sharp-win32-x64-0.35.4.tgz",
+-      "integrity": "sha512-XtmnYhBcrORsJ4XJngyzr/EWP0hRZLAZRFaApdKuviyqF78+ylxh2y06ZmtULAMOnObJ3ucpN0AcwSWnMowTRg==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/@img/sharp-win32-x64/-/sharp-win32-x64-0.35.5.tgz",
++      "integrity": "sha512-x76eH0vEiHlcMQu8Y8IenntaACtddpT6W0wmXtWrnKcnKI7ME5DdgqhAD6SEWOEl1v2zDvkZDhFA9KnURwpfqg==",
+       "cpu": [
+         "x64"
+       ],
+@@ -1208,9 +1208,9 @@
+       }
+     },
+     "node_modules/@next/env": {
+-      "version": "16.3.6",
+-      "resolved": "https://registry.npmjs.org/@next/env/-/env-16.3.6.tgz",
+-      "integrity": "sha512-x9Vblze1EbtltQYnNH38xCPWU3TVfBd1eXqA3+w9+BTpedkkdNpAaltXlGQ/nsc1+E0mVTNrtcbX3GoO09zeLQ==",
++      "version": "16.4.3",
++      "resolved": "https://registry.npmjs.org/@next/env/-/env-16.4.3.tgz",
++      "integrity": "sha512-a7tz1QCcWWkwC/rPJcPMJk/UNRu9CFhDd3OHYE5hddbJrs8BqRTalxI6GlKCWEGzRLHN+S/B7a4PAHCtm25aBQ==",
+       "license": "MIT"
+     },
+     "node_modules/@next/eslint-plugin-next": {
+@@ -1257,9 +1257,9 @@
+       }
+     },
+     "node_modules/@next/swc-darwin-arm64": {
+-      "version": "16.3.6",
+-      "resolved": "https://registry.npmjs.org/@next/swc-darwin-arm64/-/swc-darwin-arm64-16.3.6.tgz",
+-      "integrity": "sha512-E/7GEqaUkt8mk/T8v9lAnrhzR06kdq1ZBkC12F8tAMkdIadwNp3H1KqHynDHrpcTlGCUdq/qu6vUL2aYVyYBdw==",
++      "version": "16.4.3",
++      "resolved": "https://registry.npmjs.org/@next/swc-darwin-arm64/-/swc-darwin-arm64-16.4.3.tgz",
++      "integrity": "sha512-4yq5EXBt+VDtAZwTyfijaFp5D2C5oz3Ikw5a2kiX2K9nw72vrZX2q5UuAlkPtUMO1tQz6JTKpaKWjS7OOefTDQ==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -1273,9 +1273,9 @@
+       }
+     },
+     "node_modules/@next/swc-darwin-x64": {
+-      "version": "16.3.6",
+-      "resolved": "https://registry.npmjs.org/@next/swc-darwin-x64/-/swc-darwin-x64-16.3.6.tgz",
+-      "integrity": "sha512-yBE893/nDWTlaiBD1p+qgt7NUen4U5R6FXyH0s67Npq1S3E0cVSef1WIXC2xBRgQvwAvJq6DnS6Y6PrY0cy4Ew==",
++      "version": "16.4.3",
++      "resolved": "https://registry.npmjs.org/@next/swc-darwin-x64/-/swc-darwin-x64-16.4.3.tgz",
++      "integrity": "sha512-1Rvkn/LUhnEF8WxnRkOrqGhbwXui1bkWFxONKIbN+r7C+9KHDSZ+iUoj4CzymVMWUyZIyx9szcb9+kbKhD500A==",
+       "cpu": [
+         "x64"
+       ],
+@@ -1289,9 +1289,9 @@
+       }
+     },
+     "node_modules/@next/swc-linux-arm64-gnu": {
+-      "version": "16.3.6",
+-      "resolved": "https://registry.npmjs.org/@next/swc-linux-arm64-gnu/-/swc-linux-arm64-gnu-16.3.6.tgz",
+-      "integrity": "sha512-KJDpjBqBPYlvkivmyrp+Qys6k/7ksbqGQvRVc6ZEGfR+cjQxx+nUkJaWmNZJsmoOrqYNbaXByF8wa0lBwDhB3Q==",
++      "version": "16.4.3",
++      "resolved": "https://registry.npmjs.org/@next/swc-linux-arm64-gnu/-/swc-linux-arm64-gnu-16.4.3.tgz",
++      "integrity": "sha512-dCKpXErGg3abUM6t5JTJV/ottVBTStJB5lRJTbgdUdQaQ+jNHiK56Hsc0YAEg/rinSh42hYG3HWiYmEMdilnxg==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -1305,9 +1305,9 @@
+       }
+     },
+     "node_modules/@next/swc-linux-arm64-musl": {
+-      "version": "16.3.6",
+-      "resolved": "https://registry.npmjs.org/@next/swc-linux-arm64-musl/-/swc-linux-arm64-musl-16.3.6.tgz",
+-      "integrity": "sha512-mqNg2K+hvWskSRb/QM+Ix412DvBsuSF0XV+frTSw5vmoucNnIlynFwKYew8D01bfATErMOM7Bujrf0BA5DRKFA==",
++      "version": "16.4.3",
++      "resolved": "https://registry.npmjs.org/@next/swc-linux-arm64-musl/-/swc-linux-arm64-musl-16.4.3.tgz",
++      "integrity": "sha512-WwYbhWkhYBvBtib1K4W0kL8MW2snBD2A5b3SN4vPpqalZbZs5+bQ1yzAdepVoOqrFfEW3dmREy4Zs1MrWcrFbw==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -1321,9 +1321,9 @@
+       }
+     },
+     "node_modules/@next/swc-linux-x64-gnu": {
+-      "version": "16.3.6",
+-      "resolved": "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-16.3.6.tgz",
+-      "integrity": "sha512-nFncBNGAYouRHjRVaITs9beZRfhX4ssVwpnvPIAbkZVH6LtGoAVlH4bJ8Cnf9SOo9bsXgPFer/GdHtEE3JNOkw==",
++      "version": "16.4.3",
++      "resolved": "https://registry.npmjs.org/@next/swc-linux-x64-gnu/-/swc-linux-x64-gnu-16.4.3.tgz",
++      "integrity": "sha512-QymWvfUwDEC5/lpJOsxX5VAbyoR2D13+2Jsjz4be7gT4LPqEgdpkeLIR/HFfCLgKzoMhpJbp6I/JnogyNZHcaA==",
+       "cpu": [
+         "x64"
+       ],
+@@ -1337,9 +1337,9 @@
+       }
+     },
+     "node_modules/@next/swc-linux-x64-musl": {
+-      "version": "16.3.6",
+-      "resolved": "https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-16.3.6.tgz",
+-      "integrity": "sha512-5Mf3cHDGR/Iz0ng2Bj3zUR3p5QS9YK3Hn2QiAfavFmyF48zwThAjpFoiTKNIcOHLYS4zEk+gzyJ/9deQ2ZB8yQ==",
++      "version": "16.4.3",
++      "resolved": "https://registry.npmjs.org/@next/swc-linux-x64-musl/-/swc-linux-x64-musl-16.4.3.tgz",
++      "integrity": "sha512-Vmjd9D7DpA4Vv3cUlr82QWgJD/BQZmns801vtC5VWHg6jCIA4a5vMKpQnfrM2pyCrp2eV0ENdUg4PlN3bAc2Yw==",
+       "cpu": [
+         "x64"
+       ],
+@@ -1353,9 +1353,9 @@
+       }
+     },
+     "node_modules/@next/swc-win32-arm64-msvc": {
+-      "version": "16.3.6",
+-      "resolved": "https://registry.npmjs.org/@next/swc-win32-arm64-msvc/-/swc-win32-arm64-msvc-16.3.6.tgz",
+-      "integrity": "sha512-0jkJy0C2kbrJWTk4YLa3xk80pVBpx8FCHJym7CnUfDAXe/FWv5qT7SQJbR0KuemyxaEDlEx5WT4VQJoTW+/9Qw==",
++      "version": "16.4.3",
++      "resolved": "https://registry.npmjs.org/@next/swc-win32-arm64-msvc/-/swc-win32-arm64-msvc-16.4.3.tgz",
++      "integrity": "sha512-lG1pPdPLk7gTyGb00n5JIMLdBJgjb+UEhSdZvFbhUMg0DyC6z4B7RnpSKF9VCd4imkLObVbXOFA0kFCpw7yFow==",
+       "cpu": [
+         "arm64"
+       ],
+@@ -1369,9 +1369,9 @@
+       }
+     },
+     "node_modules/@next/swc-win32-x64-msvc": {
+-      "version": "16.3.6",
+-      "resolved": "https://registry.npmjs.org/@next/swc-win32-x64-msvc/-/swc-win32-x64-msvc-16.3.6.tgz",
+-      "integrity": "sha512-/YXjI1e5OXcZ7YpxRwgP/1jAV/SBKTzeVKqN2mk7mLpcICsyn3Gl5+dIfDTJp70M0ccMhyMMRso4v6mPDCGepg==",
++      "version": "16.4.3",
++      "resolved": "https://registry.npmjs.org/@next/swc-win32-x64-msvc/-/swc-win32-x64-msvc-16.4.3.tgz",
++      "integrity": "sha512-NmQC9RkJdnPXRaMxtkCzobB3teVjqF33oSOnwDfi+XYGWWYpt+xlGK3mtktSKLbdjwaWbJu2OkkMiRFGUUncKg==",
+       "cpu": [
+         "x64"
+       ],
+@@ -7239,12 +7239,12 @@
+       "license": "MIT"
+     },
+     "node_modules/next": {
+-      "version": "16.3.6",
+-      "resolved": "https://registry.npmjs.org/next/-/next-16.3.6.tgz",
+-      "integrity": "sha512-L+otWM/aQbYTx98aZhgEoMb4bZAXx1YVW4UMA/vuCyCoWG5HJyZUili8QAkqzrcC+5///tsz3s0M+SlyB5bLMw==",
++      "version": "16.4.3",
++      "resolved": "https://registry.npmjs.org/next/-/next-16.4.3.tgz",
++      "integrity": "sha512-OqxKTGi9u80FydydsMNYNjnuje9Au+kvHlt2GZ//ftdpDHm1dxKqAaENoOOTX5wKzn+9vaKUNIfZeyZUuLhCnA==",
+       "license": "MIT",
+       "dependencies": {
+-        "@next/env": "16.3.6",
++        "@next/env": "16.4.3",
+         "@swc/helpers": "0.5.23",
+         "baseline-browser-mapping": "^2.9.19",
+         "caniuse-lite": "^1.0.30001579",
+@@ -7258,15 +7258,15 @@
+         "node": ">=20.9.0"
+       },
+       "optionalDependencies": {
+-        "@next/swc-darwin-arm64": "16.3.6",
+-        "@next/swc-darwin-x64": "16.3.6",
+-        "@next/swc-linux-arm64-gnu": "16.3.6",
+-        "@next/swc-linux-arm64-musl": "16.3.6",
+-        "@next/swc-linux-x64-gnu": "16.3.6",
+-        "@next/swc-linux-x64-musl": "16.3.6",
+-        "@next/swc-win32-arm64-msvc": "16.3.6",
+-        "@next/swc-win32-x64-msvc": "16.3.6",
+-        "sharp": "^0.35.4"
++        "@next/swc-darwin-arm64": "16.4.3",
++        "@next/swc-darwin-x64": "16.4.3",
++        "@next/swc-linux-arm64-gnu": "16.4.3",
++        "@next/swc-linux-arm64-musl": "16.4.3",
++        "@next/swc-linux-x64-gnu": "16.4.3",
++        "@next/swc-linux-x64-musl": "16.4.3",
++        "@next/swc-win32-arm64-msvc": "16.4.3",
++        "@next/swc-win32-x64-msvc": "16.4.3",
++        "sharp": "^0.35.5"
+       },
+       "peerDependencies": {
+         "@opentelemetry/api": "^1.1.0",
+@@ -8231,9 +8231,9 @@
+       }
+     },
+     "node_modules/sharp": {
+-      "version": "0.35.4",
+-      "resolved": "https://registry.npmjs.org/sharp/-/sharp-0.35.4.tgz",
+-      "integrity": "sha512-n++8XWcj+jCOr2IOl7h8LbKnGBDY4aPbmprMONBNFdn0ImXqpGVv5zliDs0V9HbmbCQLpbuo2ej9rAoOQTvMDA==",
++      "version": "0.35.5",
++      "resolved": "https://registry.npmjs.org/sharp/-/sharp-0.35.5.tgz",
++      "integrity": "sha512-Ywn4OnzGukp7CDMrp08RQ50YKmuwG47brZgIVPTvBaaAfQlRlygrRqSrxdCiL9M+LlzLBiJ68IR1QqvzHyjC7g==",
+       "license": "Apache-2.0",
+       "dependencies": {
+         "@img/colour": "^1.1.0",
+@@ -8247,31 +8247,31 @@
+         "url": "https://opencollective.com/libvips"
+       },
+       "optionalDependencies": {
+-        "@img/sharp-darwin-arm64": "0.35.4",
+-        "@img/sharp-darwin-x64": "0.35.4",
+-        "@img/sharp-freebsd-wasm32": "0.35.4",
+-        "@img/sharp-libvips-darwin-arm64": "1.3.3",
+-        "@img/sharp-libvips-darwin-x64": "1.3.3",
+-        "@img/sharp-libvips-linux-arm": "1.3.3",
+-        "@img/sharp-libvips-linux-arm64": "1.3.3",
+-        "@img/sharp-libvips-linux-ppc64": "1.3.3",
+-        "@img/sharp-libvips-linux-riscv64": "1.3.3",
+-        "@img/sharp-libvips-linux-s390x": "1.3.3",
+-        "@img/sharp-libvips-linux-x64": "1.3.3",
+-        "@img/sharp-libvips-linuxmusl-arm64": "1.3.3",
+-        "@img/sharp-libvips-linuxmusl-x64": "1.3.3",
+-        "@img/sharp-linux-arm": "0.35.4",
+-        "@img/sharp-linux-arm64": "0.35.4",
+-        "@img/sharp-linux-ppc64": "0.35.4",
+-        "@img/sharp-linux-riscv64": "0.35.4",
+-        "@img/sharp-linux-s390x": "0.35.4",
+-        "@img/sharp-linux-x64": "0.35.4",
+-        "@img/sharp-linuxmusl-arm64": "0.35.4",
+-        "@img/sharp-linuxmusl-x64": "0.35.4",
+-        "@img/sharp-webcontainers-wasm32": "0.35.4",
+-        "@img/sharp-win32-arm64": "0.35.4",
+-        "@img/sharp-win32-ia32": "0.35.4",
+-        "@img/sharp-win32-x64": "0.35.4"
++        "@img/sharp-darwin-arm64": "0.35.5",
++        "@img/sharp-darwin-x64": "0.35.5",
++        "@img/sharp-freebsd-wasm32": "0.35.5",
++        "@img/sharp-libvips-darwin-arm64": "1.3.4",
++        "@img/sharp-libvips-darwin-x64": "1.3.4",
++        "@img/sharp-libvips-linux-arm": "1.3.4",
++        "@img/sharp-libvips-linux-arm64": "1.3.4",
++        "@img/sharp-libvips-linux-ppc64": "1.3.4",
++        "@img/sharp-libvips-linux-riscv64": "1.3.4",
++        "@img/sharp-libvips-linux-s390x": "1.3.4",
++        "@img/sharp-libvips-linux-x64": "1.3.4",
++        "@img/sharp-libvips-linuxmusl-arm64": "1.3.4",
++        "@img/sharp-libvips-linuxmusl-x64": "1.3.4",
++        "@img/sharp-linux-arm": "0.35.5",
++        "@img/sharp-linux-arm64": "0.35.5",
++        "@img/sharp-linux-ppc64": "0.35.5",
++        "@img/sharp-linux-riscv64": "0.35.5",
++        "@img/sharp-linux-s390x": "0.35.5",
++        "@img/sharp-linux-x64": "0.35.5",
++        "@img/sharp-linuxmusl-arm64": "0.35.5",
++        "@img/sharp-linuxmusl-x64": "0.35.5",
++        "@img/sharp-webcontainers-wasm32": "0.35.5",
++        "@img/sharp-win32-arm64": "0.35.5",
++        "@img/sharp-win32-ia32": "0.35.5",
++        "@img/sharp-win32-x64": "0.35.5"
+       },
+       "peerDependenciesMeta": {
+         "@types/node": {
+@@ -8413,9 +8413,9 @@
+       }
+     },
+     "node_modules/source-map-js": {
+-      "version": "1.2.1",
+-      "resolved": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.1.tgz",
+-      "integrity": "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==",
++      "version": "1.2.2",
++      "resolved": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.2.tgz",
++      "integrity": "sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==",
+       "license": "BSD-3-Clause",
+       "engines": {
+         "node": ">=0.10.0"
+@@ -9350,9 +9350,9 @@
+       }
+     },
+     "node_modules/zod": {
+-      "version": "4.6.5",
+-      "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.5.tgz",
+-      "integrity": "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==",
++      "version": "4.6.7",
++      "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz",
++      "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==",
+       "license": "MIT",
+       "funding": {
+         "url": "https://github.com/sponsors/colinhacks"
+diff --git a/elvankent-gayrimenkul/package.json b/elvankent-gayrimenkul/package.json
+index 4f54374..2ffc0cf 100644
+--- a/elvankent-gayrimenkul/package.json
++++ b/elvankent-gayrimenkul/package.json
+@@ -34,17 +34,17 @@
+     "clsx": "^2.1.1",
+     "leaflet": "^1.9.4",
+     "lucide-react": "^1.47.0",
+-    "next": "16.3.6",
++    "next": "16.4.3",
+     "qrcode": "^1.5.4",
+     "radix-ui": "^1.6.7",
+     "react": "19.2.8",
+     "react-dom": "19.2.8",
+     "server-only": "^0.0.1",
+-    "sharp": "^0.35.4",
++    "sharp": "^0.35.5",
+     "sonner": "^2.0.8",
+     "tailwind-merge": "^3.7.0",
+     "tus-js-client": "^4.3.1",
+-    "zod": "^4.6.5"
++    "zod": "^4.6.6"
+   },
+   "devDependencies": {
+     "@playwright/test": "^1.63.0",
+diff --git a/elvankent-gayrimenkul/src/modules/media/processing.ts b/elvankent-gayrimenkul/src/modules/media/processing.ts
+index b3cf3f1..abc980d 100644
+--- a/elvankent-gayrimenkul/src/modules/media/processing.ts
++++ b/elvankent-gayrimenkul/src/modules/media/processing.ts
+@@ -14,12 +14,12 @@ import { MEDIA_LIMITS, planVariantWidths } from '@/modules/media/variants';
+  */
+ 
+ export class MediaValidationError extends Error {
+-  constructor(
+-    message: string,
+-    public readonly code: 'unsupported' | 'too_small' | 'too_large' | 'corrupt',
+-  ) {
++  // Alan açıkça tanımlanır (TS parametre özelliği değil): birim testleri modülü tip silme kipinde yükleyebilir
++  readonly code: 'unsupported' | 'too_small' | 'too_large' | 'corrupt';
++  constructor(message: string, code: MediaValidationError['code']) {
+     super(message);
+     this.name = 'MediaValidationError';
++    this.code = code;
+   }
+ }
+ 
+@@ -40,14 +40,54 @@ export interface ProcessedImage {
+ 
+ const INPUT_OPTIONS = { limitInputPixels: MEDIA_LIMITS.maxPixels, failOn: 'error' as const };
+ 
++const UNSUPPORTED_MESSAGE = 'Bu dosya desteklenmeyen bir formatta. JPG, PNG, WEBP veya AVIF yükleyin.';
++const CORRUPT_MESSAGE = 'Dosya okunamadı. Bozuk veya desteklenmeyen bir görsel olabilir.';
++
++export type ImageContainer = 'jpeg' | 'png' | 'webp' | 'isobmff' | 'svg' | 'gif' | 'tiff';
++
++/**
++ * Dosyanın ilk baytlarından kapsayıcı türünü belirler (çözücü çalıştırmadan).
++ * isobmff = HEIF/AVIF ("ftyp" kutusu); hangi kodek olduğuna sonra sharp bakar.
++ */
++export function sniffImageContainer(input: Buffer): ImageContainer | null {
++  const ascii = (start: number, end: number) => input.subarray(start, end).toString('latin1');
++  if (input.length >= 3 && input[0] === 0xff && input[1] === 0xd8 && input[2] === 0xff) return 'jpeg';
++  if (input.length >= 8 && input.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'png';
++  if (input.length >= 12 && ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP') return 'webp';
++  if (input.length >= 12 && ascii(4, 8) === 'ftyp') return 'isobmff';
++  if (input.length >= 6 && /^GIF8[79]a$/.test(ascii(0, 6))) return 'gif';
++  if (input.length >= 4 && (ascii(0, 4) === 'II*\0' || ascii(0, 4) === 'MM\0*')) return 'tiff';
++  // SVG / XML: isteğe bağlı UTF-8 BOM ve boşluktan sonra "<"
++  let i = input.length >= 3 && input[0] === 0xef && input[1] === 0xbb && input[2] === 0xbf ? 3 : 0;
++  while (i < input.length && i < 1024 && (input[i] === 0x20 || input[i] === 0x09 || input[i] === 0x0a || input[i] === 0x0d)) i++;
++  if (input[i] === 0x3c) return 'svg';
++  return null;
++}
++
++/** Çözücüye (libvips) ulaşmasına izin verilen kapsayıcılar: JPEG, PNG, WebP, HEIF/AVIF */
++const DECODABLE: ReadonlySet<ImageContainer> = new Set(['jpeg', 'png', 'webp', 'isobmff']);
++
+ function qualityFor(width: number): number {
+   if (width <= 640) return 76;
+   if (width <= 1440) return 80;
+   return 84;
+ }
+ 
+-/** Dosyanın gerçek biçimini ve boyutlarını doğrular. */
++/**
++ * Dosyanın gerçek biçimini ve boyutlarını doğrular.
++ *
++ * Önce dosya imzası denetlenir: yalnızca JPEG, PNG, WebP ve HEIF/AVIF kapsayıcıları sharp'a
++ * (libvips) verilir. SVG/XML, GIF, TIFF ve diğer biçimler hiç ayrıştırılmadan reddedilir; çözücü
++ * yüzeyi daralır (ör. librsvg açığı GHSA-wq5f-xc86-pv6w bu yoldan erişilebiliyordu). Kabul edilen
++ * biçimler değişmedi; önceden reddedilen her dosya yine reddedilir. Tek fark mesajdadır: "<" ile
++ * başlayıp geçerli SVG olmayan içerik (HTML, bozuk SVG) "Dosya okunamadı" yerine "desteklenmeyen
++ * format" mesajı alır (önceden librsvg ayrıştırmayı deneyip hata veriyordu).
++ */
+ export async function inspectImage(input: Buffer): Promise<InspectedImage> {
++  const container = sniffImageContainer(input);
++  if (!container) throw new MediaValidationError(CORRUPT_MESSAGE, 'corrupt');
++  if (!DECODABLE.has(container)) throw new MediaValidationError(UNSUPPORTED_MESSAGE, 'unsupported');
++
+   let meta: Metadata;
+   try {
+     meta = await sharp(input, INPUT_OPTIONS).metadata();
+@@ -56,7 +96,7 @@ export async function inspectImage(input: Buffer): Promise<InspectedImage> {
+     if (/pixel limit/i.test(message)) {
+       throw new MediaValidationError('Bu görselin çözünürlüğü çok yüksek (en fazla 100 megapiksel).', 'too_large');
+     }
+-    throw new MediaValidationError('Dosya okunamadı. Bozuk veya desteklenmeyen bir görsel olabilir.', 'corrupt');
++    throw new MediaValidationError(CORRUPT_MESSAGE, 'corrupt');
+   }
+ 
+   let mime: InspectedImage['mime'];
+@@ -78,7 +118,7 @@ export async function inspectImage(input: Buffer): Promise<InspectedImage> {
+       mime = 'image/avif';
+       break;
+     default:
+-      throw new MediaValidationError('Bu dosya desteklenmeyen bir formatta. JPG, PNG, WEBP veya AVIF yükleyin.', 'unsupported');
++      throw new MediaValidationError(UNSUPPORTED_MESSAGE, 'unsupported');
+   }
+ 
+   const rawWidth = meta.width ?? 0;
+diff --git a/elvankent-gayrimenkul/tests/unit/security-patch.test.mjs b/elvankent-gayrimenkul/tests/unit/security-patch.test.mjs
+new file mode 100644
+index 0000000..e7883b3
+--- /dev/null
++++ b/elvankent-gayrimenkul/tests/unit/security-patch.test.mjs
+@@ -0,0 +1,131 @@
++/**
++ * Production (ff2f7da) için yalnız güvenlik yaması — veritabanına dokunmaz.
++ *  SP-01  next ≥ 16.4.1, sharp ≥ 0.35.5 (librsvg ≥ 2.63.2), source-map-js ≥ 1.2.2
++ *  SP-02…SP-05  inspectImage dosya imzasını sharp'tan ÖNCE denetler (doğrulama dalındaki 4aa0ae3 ile aynı)
++ *  SP-06  zod ≥ 4.6.6
++ * Testler doğrulama dalındaki tests/unit/security-backup.test.mjs'ten alınmıştır (yedek bölümleri hariç).
++ */
++import { describe, test } from 'node:test';
++import assert from 'node:assert/strict';
++import { readFileSync } from 'node:fs';
++
++const root = new URL('../../', import.meta.url).pathname;
++const read = (p) => readFileSync(root + p, 'utf8');
++const json = (p) => JSON.parse(read(p));
++const atLeast = (version, min) => {
++  const a = version.replace(/^[^\d]*/, '').split('.').map((n) => parseInt(n, 10));
++  const b = min.split('.').map(Number);
++  for (let i = 0; i < 3; i++) if ((a[i] ?? 0) !== b[i]) return (a[i] ?? 0) > b[i];
++  return true;
++};
++
++const { inspectImage, sniffImageContainer, MediaValidationError } = await import('@/modules/media/processing');
++const sharp = (await import('sharp')).default;
++// Mevcut ret mesajı metinleri (değişmemeli)
++const UNSUPPORTED = 'Bu dosya desteklenmeyen bir formatta. JPG, PNG, WEBP veya AVIF yükleyin.';
++const CORRUPT = 'Dosya okunamadı. Bozuk veya desteklenmeyen bir görsel olabilir.';
++
++describe('SP-01 bağımlılıklar yamalı', () => {
++  const pkg = json('package.json');
++  const lock = json('package-lock.json');
++  test('next ≥ 16.4.1 (GHSA-2464-fhr4-w9xw, GHSA-673q-mjm6-r5xr, GHSA-p3m5-59mp-jv5r)', () => {
++    assert.ok(atLeast(pkg.dependencies.next, '16.4.1'), `package.json: ${pkg.dependencies.next}`);
++    assert.ok(atLeast(lock.packages['node_modules/next'].version, '16.4.1'), 'kilit dosyası');
++    assert.ok(atLeast(json('node_modules/next/package.json').version, '16.4.1'), 'kurulu sürüm');
++  });
++  test('sharp ≥ 0.35.5 ve librsvg ≥ 2.63.2 (GHSA-wq5f-xc86-pv6w)', () => {
++    assert.ok(atLeast(pkg.dependencies.sharp, '0.35.5'), `package.json: ${pkg.dependencies.sharp}`);
++    assert.ok(atLeast(lock.packages['node_modules/sharp'].version, '0.35.5'), 'kilit dosyası');
++    assert.ok(atLeast(sharp.versions.sharp, '0.35.5'), `kurulu sharp ${sharp.versions.sharp}`);
++    assert.ok(atLeast(sharp.versions.rsvg, '2.63.2'), `kurulu librsvg ${sharp.versions.rsvg}`);
++  });
++  test('kilit dosyasındaki her source-map-js ≥ 1.2.2 (GHSA-68fv-2mgg-jv7q)', () => {
++    const entries = Object.entries(lock.packages).filter(([k]) => k.endsWith('node_modules/source-map-js'));
++    assert.ok(entries.length > 0);
++    for (const [k, v] of entries) assert.ok(atLeast(v.version, '1.2.2'), `${k}: ${v.version}`);
++  });
++});
++
++describe('SP-02 kabul edilen biçimler', async () => {
++  const base = sharp({ create: { width: 800, height: 600, channels: 3, background: { r: 120, g: 80, b: 40 } } });
++  const samples = {
++    jpeg: [await base.clone().jpeg().toBuffer(), 'image/jpeg'],
++    png: [await base.clone().png().toBuffer(), 'image/png'],
++    webp: [await base.clone().webp().toBuffer(), 'image/webp'],
++    isobmff: [await base.clone().avif().toBuffer(), 'image/avif'],
++  };
++  for (const [container, [buf, mime]] of Object.entries(samples)) {
++    test(`${container}: imza tanınır, görsel kabul edilir (${mime})`, async () => {
++      assert.equal(sniffImageContainer(buf), container);
++      assert.deepEqual(await inspectImage(buf), { mime, width: 800, height: 600 });
++    });
++  }
++});
++
++describe('SP-03 SVG ve desteklenmeyen biçimler çözücüye gitmez', async () => {
++  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><rect width="800" height="600"/></svg>';
++  const variants = {
++    'düz SVG': Buffer.from(svg),
++    'BOM + boşluk + XML bildirimi': Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(`\n  <?xml version="1.0"?>\n${svg}`)]),
++    'HTML': Buffer.from('<!doctype html><html><body>x</body></html>'),
++  };
++  for (const [name, buf] of Object.entries(variants)) {
++    test(`${name} → unsupported (mevcut mesaj metni)`, async () => {
++      assert.equal(sniffImageContainer(buf), 'svg');
++      await assert.rejects(inspectImage(buf), (e) => e instanceof MediaValidationError && e.code === 'unsupported' && e.message === UNSUPPORTED);
++    });
++  }
++  test('bozuk SVG çözücüye hiç ulaşmaz (ulaşsaydı librsvg ayrıştırma hatası → "corrupt" olurdu)', async () => {
++    const broken = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><rect');
++    await assert.rejects(sharp(broken, { failOn: 'error' }).metadata(), /XML parse error/, 'kontrol: sharp bu dosyayı librsvg ile ayrıştırmayı dener');
++    await assert.rejects(inspectImage(broken), (e) => e.code === 'unsupported' && e.message === UNSUPPORTED);
++  });
++  const base = sharp({ create: { width: 800, height: 600, channels: 3, background: { r: 1, g: 2, b: 3 } } });
++  for (const [kind, buf] of [['gif', await base.clone().gif().toBuffer()], ['tiff', await base.clone().tiff().toBuffer()]]) {
++    test(`${kind} → unsupported (önceki mesaj)`, async () => {
++      assert.equal(sniffImageContainer(buf), kind);
++      await assert.rejects(inspectImage(buf), (e) => e.code === 'unsupported' && e.message === UNSUPPORTED);
++    });
++  }
++});
++
++describe('SP-04 tanınmayan içerik', () => {
++  for (const [name, buf] of [['metin', Buffer.from('merhaba dünya')], ['PDF başlığı', Buffer.from('%PDF-1.7\n')], ['boş', Buffer.alloc(0)], ['kesik JPEG', Buffer.from([0xff, 0xd8])]]) {
++    test(`${name} → corrupt (önceki mesaj)`, async () => {
++      assert.equal(sniffImageContainer(buf), null);
++      await assert.rejects(inspectImage(buf), (e) => e.code === 'corrupt' && e.message === CORRUPT);
++    });
++  }
++  test('imzası doğru ama bozuk JPEG yine sharp hatasıyla "corrupt"', async () => {
++    const buf = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(64, 7)]);
++    assert.equal(sniffImageContainer(buf), 'jpeg');
++    await assert.rejects(inspectImage(buf), (e) => e.code === 'corrupt' && e.message === CORRUPT);
++  });
++});
++
++describe('SP-06 zod ≥ 4.6.6 (GHSA-mrhx-c7xc-m3w5)', () => {
++  test('package.json ve kilit dosyası', () => {
++    assert.ok(atLeast(json('package.json').dependencies.zod, '4.6.6'));
++    assert.ok(atLeast(json('package-lock.json').packages['node_modules/zod'].version, '4.6.6'));
++  });
++});
++
++describe('SP-05 sıra ve kapsam', () => {
++  const src = read('src/modules/media/processing.ts');
++  const body = src.slice(src.indexOf('export async function inspectImage'), src.indexOf('export async function processImage'));
++  test('inspectImage: imza denetimi sharp çağrısından önce', () => {
++    const sniff = body.indexOf('sniffImageContainer(input)');
++    const decode = body.indexOf('sharp(input');
++    assert.ok(sniff > 0 && decode > 0, 'iki çağrı da var');
++    assert.ok(sniff < decode, 'imza denetimi önce');
++    assert.match(body, /if \(!DECODABLE\.has\(container\)\) throw/);
++  });
++  test('çözücüye izin verilen kapsayıcılar yalnızca JPEG, PNG, WebP, HEIF/AVIF', () => {
++    assert.match(src, /const DECODABLE: ReadonlySet<ImageContainer> = new Set\(\['jpeg', 'png', 'webp', 'isobmff'\]\);/);
++  });
++  test('marka (logo) yolu değişmedi: SVG bilerek kabul edilir (karar D-15 bekliyor)', () => {
++    const branding = read('src/modules/media/branding.ts');
++    assert.match(branding, /looksLikeSvg/);
++    assert.match(branding, /\.\.\.\(svg \? \['svg'\] : \[\]\)/);
++  });
++});
+-- 
+2.43.0
+

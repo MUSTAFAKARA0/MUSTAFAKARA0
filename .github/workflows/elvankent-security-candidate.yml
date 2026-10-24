@@ -1,0 +1,141 @@
+# Elvankent Gayrimenkul — yalnız güvenlik yaması adayının doğrulaması (A seçeneği)
+#
+# Production kodu (ff2f7da) ile aynı koda güvenlik yamasını uygular ve tam test kümesini çalıştırır.
+# Aday ayrı bir dal olarak itilmez (production tabanlı yeni dal Vercel Preview açardı); patch
+# elvankent-gayrimenkul/release/security-only/ altında, Vercel dağıtımı kapalı doğrulama dalında durur.
+#
+# İki kol: baseline = değiştirilmemiş ff2f7da, candidate = ff2f7da + patch. Adayın baseline'da olmayan
+# bir başarısızlığı yamanın getirdiği bir gerilemedir. npm audit yalnızca adayda çalışır (taban bu adımda
+# kalıyor: CI #78). Testler yalnızca CI içinde kurulan yerel Supabase'e bağlanır; gizli değer kullanılmaz.
+name: elvankent-security-candidate
+
+on:
+  push:
+    branches: [claude/karay-ci-dogrulama]
+    paths: ['elvankent-gayrimenkul/release/security-only/**', '.github/workflows/elvankent-security-candidate.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elvankent-security-candidate
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: elvankent-gayrimenkul
+
+env:
+  BASE_SHA: ff2f7da5444b39b837cf36af7d04526ba44e92e7
+  CANDIDATE_TREE: 29f81af937b1f211c04b1d25db6e396c8b59a146
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [baseline, candidate]
+    name: ${{ matrix.variant }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Kod ağacı (ff2f7da, adayda + güvenlik yaması)
+        working-directory: .
+        run: |
+          set -euo pipefail
+          # Patch tabana geçmeden önce kopyalanır ve özeti doğrulanır
+          (cd elvankent-gayrimenkul/release/security-only && sha256sum -c security-only-ff2f7da.patch.sha256)
+          cp elvankent-gayrimenkul/release/security-only/security-only-ff2f7da.patch /tmp/security-only.patch
+          git checkout --quiet --detach "$BASE_SHA"
+          if [ "${{ matrix.variant }}" = candidate ]; then
+            git apply --index /tmp/security-only.patch
+            test "$(git write-tree)" = "$CANDIDATE_TREE"
+          fi
+          echo "Ağaç: $(git write-tree)"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: elvankent-gayrimenkul/package-lock.json
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.121.0
+      - run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: ESLint
+        run: npm run lint
+      - name: Birim testleri
+        run: npm run test:unit
+      - name: Production build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+          NEXT_PUBLIC_SITE_URL: https://ci.example.com
+          SITE_ENV: development
+        run: npm run build
+      - name: Bağımlılık güvenlik taraması (yalnızca aday)
+        if: ${{ matrix.variant == 'candidate' }}
+        run: npm audit --omit=dev --audit-level=high
+      - name: Yerel Supabase (migration'lar sıfırdan uygulanır)
+        run: |
+          set -euo pipefail
+          mv supabase/seed.sql /tmp/seed.sql
+          [ -f supabase/config.toml ] || supabase init --force
+          sed -i '/^\[auth.mfa.totp\]/,/^\[/ { s/enroll_enabled = false/enroll_enabled = true/; s/verify_enabled = false/verify_enabled = true/ }' supabase/config.toml
+          supabase start -x studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor
+          supabase status -o env > /tmp/supa.env
+          set -a; . /tmp/supa.env; set +a
+          PGOPTIONS='-c app.allow_demo_seed=on' psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/seed.sql
+          # Değerler ff2f7da'nın kendi CI ayarıyla aynı; yalnızca tek tırnakla yazılır (K-11: tırnaksız
+          # EMAIL_FROM satırı bash'te yönlendirme sanılıyordu)
+          env_line() {
+            case "$2" in *"'"* | *$'\n'* | *$'\r'*) echo "::error::.env.local: $1 değeri tek tırnakla yazılamaz" >&2; return 1 ;; esac
+            printf "%s='%s'\n" "$1" "$2"
+          }
+          {
+            env_line NEXT_PUBLIC_SUPABASE_URL "$API_URL"
+            env_line NEXT_PUBLIC_SUPABASE_ANON_KEY "$ANON_KEY"
+            env_line SUPABASE_SERVICE_ROLE_KEY "$SERVICE_ROLE_KEY"
+            env_line NEXT_PUBLIC_SITE_URL http://localhost:3000
+            env_line IP_HASH_SALT "ci-$(openssl rand -hex 16)"
+            env_line CRON_SECRET "ci-$(openssl rand -hex 32)"
+            env_line NEXT_IMAGE_ALLOW_LOCAL_IP 1
+            env_line SITE_ENV development
+            env_line EMAIL_PROVIDER resend
+            env_line RESEND_API_KEY ci-test-key
+            env_line RESEND_API_BASE http://127.0.0.1:4010
+            env_line EMAIL_FROM 'KARAY CI <davet@example.test>'
+            env_line DOMAIN_DNS_RESOLVER_URL http://127.0.0.1:4011/dns-query
+            env_line DOMAIN_TARGET_CNAME sites.karay.test
+            env_line DOMAIN_TARGET_A 203.0.113.10
+          } > .env.local
+      - name: Birim + güvenlik testleri (RLS, MFA, kiracı izolasyonu)
+        run: npm test
+      - name: E2E hazırlık (yönetici hesabı, build, sunucu)
+        run: |
+          set -euo pipefail
+          npm run create-admin -- e2e-admin@example.test 'E2e-Password-12345' --role=owner
+          npx playwright install --with-deps chromium
+          set -a; . ./.env.local; set +a
+          npm run build
+          (npm start > /tmp/next.log 2>&1 &)
+          timeout 60 bash -c 'until curl -fs -o /dev/null http://localhost:3000/api/health; do sleep 1; done'
+      - name: Playwright E2E
+        env:
+          E2E_ADMIN_EMAIL: e2e-admin@example.test
+          E2E_ADMIN_PASSWORD: E2e-Password-12345
+        run: npx playwright test
+      - name: Hata ayıklama çıktıları
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-results-${{ matrix.variant }}
+          path: |
+            elvankent-gayrimenkul/test-results
+            /tmp/next.log
+          retention-days: 7

@@ -18,10 +18,13 @@
  *         ya da kendi şema sürümünde uygular; 02'nin ürettiği yorumlar tek satırdır (K-17)
  *  LR-11  CI tedarik zinciri: her action tam commit SHA'sıyla sabit; Supabase CLI sürümü sabit; gitleaks
  *         arşivi SHA-256 ile doğrulanır; çalışma anında npx ile paket indirilmez (K-18)
+ *  LR-12  Yalnız güvenlik yaması adayı: patch özeti kayıtlı; iş akışı, README ve patch aynı tabanı ve ağacı
+ *         söyler; aday iş akışı yalnızca doğrulama dalında çalışır, gizli değer kullanmaz (K-19)
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -375,12 +378,12 @@ describe('LR-08 CI E2E ortamı', () => {
 describe('LR-09 sabit çalıştırıcı imajı (K-16)', () => {
   // ubuntu-latest 19.10.2026'dan itibaren Ubuntu 26'ya taşınıyor. CI'nin doğruladığı ortam ubuntu-24.04'tür;
   // yeni imaj, CI'da doğrulanıp ayrı bir commit'le seçilir (etiket kendiliğinden kaymaz).
-  for (const file of ['elvankent-ci.yml', 'elvankent-backup.yml']) {
+  for (const [file, minJobs] of [['elvankent-ci.yml', 2], ['elvankent-backup.yml', 2], ['elvankent-security-candidate.yml', 1]]) {
     test(`${file}: her iş ubuntu-24.04 üzerinde çalışır`, () => {
       const jobs = read(`../.github/workflows/${file}`).split(/\njobs:\n/)[1] ?? '';
       const names = [...jobs.matchAll(/^ {2}([a-z][\w-]*):$/gm)].map((m) => m[1]);
       const runners = [...jobs.matchAll(/^ {4}runs-on:(.*)$/gm)].map((m) => m[1].trim());
-      assert.ok(names.length >= 2, `${file}: işler bulundu`);
+      assert.ok(names.length >= minJobs, `${file}: işler bulundu`);
       assert.equal(runners.length, names.length, `${file}: her işte runs-on var (${names.join(', ')})`);
       assert.deepEqual([...new Set(runners)], ['ubuntu-24.04']);
     });
@@ -457,7 +460,7 @@ describe('LR-10 KARAYS migration runbook (K-17)', () => {
 describe('LR-11 CI tedarik zinciri (K-18)', () => {
   // Etiket (@v4) ve dal (@v1) taşınabilir: ele geçirilen bir etiket depodaki her iş akışında kod çalıştırır.
   // Tam commit SHA'sı çalışan kodu sabitler; yorumdaki sürüm güncelleme için okunur.
-  const workflows = ['elvankent-ci.yml', 'elvankent-backup.yml'].map((f) => [f, read(`../.github/workflows/${f}`)]);
+  const workflows = ['elvankent-ci.yml', 'elvankent-backup.yml', 'elvankent-security-candidate.yml'].map((f) => [f, read(`../.github/workflows/${f}`)]);
   test('her action tam commit SHA ile sabit ve sürüm yorumu taşır', () => {
     for (const [f, wf] of workflows) {
       const uses = [...wf.matchAll(/^\s*(?:-\s+)?uses:\s*(\S+)(.*)$/gm)].map((m) => [m[1], m[2].trim()]);
@@ -469,10 +472,11 @@ describe('LR-11 CI tedarik zinciri (K-18)', () => {
     }
   });
   test('Supabase CLI sürümü sabit (latest/beta değil)', () => {
-    const ci = workflows[0][1];
-    // Adım, bir sonraki "- " ile başlayan (girintili) adımda biter; sonraki adımların version: alanı sayılmaz
-    const step = ci.slice(ci.indexOf('supabase/setup-cli@')).split(/\n\s*- /)[0];
-    assert.match(step, /^\s+version: \d+\.\d+\.\d+$/m);
+    for (const [f, wf] of workflows.filter(([, wf]) => wf.includes('supabase/setup-cli@'))) {
+      // Adım, bir sonraki "- " ile başlayan (girintili) adımda biter; sonraki adımların version: alanı sayılmaz
+      const step = wf.slice(wf.indexOf('supabase/setup-cli@')).split(/\n\s*- /)[0];
+      assert.match(step, /^\s+version: \d+\.\d+\.\d+$/m, f);
+    }
   });
   test('gitleaks arşivi SHA-256 ile doğrulanıp öyle açılır', () => {
     const ci = workflows[0][1];
@@ -486,5 +490,30 @@ describe('LR-11 CI tedarik zinciri (K-18)', () => {
   });
   test('çalışma anında npx ile paket indirilmez', () => {
     for (const [f, wf] of workflows) assert.doesNotMatch(wf, /npx\s+(--yes|-y)\b/, f);
+  });
+});
+
+describe('LR-12 yalnız güvenlik yaması adayı (K-19)', () => {
+  // Aday ayrı dal olarak itilmez (Preview açardı); patch doğrulama dalında saklanır ve ayrı iş akışında sınanır.
+  const dir = 'release/security-only/';
+  const wf = read('../.github/workflows/elvankent-security-candidate.yml');
+  test('patch özeti kayıtlı SHA-256 ile aynı', () => {
+    const [hash, name] = read(`${dir}security-only-ff2f7da.patch.sha256`).trim().split(/\s+/);
+    assert.equal(name, 'security-only-ff2f7da.patch');
+    assert.equal(createHash('sha256').update(readFileSync(new URL(`../../${dir}${name}`, import.meta.url))).digest('hex'), hash);
+  });
+  test('iş akışı, README ve patch aynı taban ve ağacı söyler', () => {
+    const base = wf.match(/BASE_SHA: ([0-9a-f]{40})/)?.[1];
+    const tree = wf.match(/CANDIDATE_TREE: ([0-9a-f]{40})/)?.[1];
+    const readme = read(`${dir}README.md`);
+    assert.ok(base && tree);
+    assert.ok(readme.includes(base) && readme.includes(tree));
+    assert.match(read(`${dir}security-only-ff2f7da.patch`), /^From 57fdbb7/);
+  });
+  test('yalnızca doğrulama dalında ve aday klasörü değişince çalışır; production\'a yazmaz', () => {
+    assert.match(wf, /branches: \[claude\/karay-ci-dogrulama\]/);
+    assert.match(wf, /paths: \['elvankent-gayrimenkul\/release\/security-only\/\*\*'/);
+    assert.match(wf, /permissions:\n {2}contents: read/);
+    assert.doesNotMatch(wf, /secrets\.|git push|vercel (deploy|--prod)|npx vercel/i);
   });
 });
