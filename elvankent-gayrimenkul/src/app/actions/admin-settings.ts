@@ -4,8 +4,9 @@ import { revalidatePath, updateTag } from 'next/cache';
 import { z } from 'zod';
 import { bulkPropertyAction } from '@/app/actions/admin-properties';
 import { cacheTags } from '@/lib/cache-tags';
+import { singleLine } from '@/lib/single-line';
 import { createServiceClient } from '@/lib/supabase/server';
-import { WEEKDAYS } from '@/modules/content/hours';
+import { openingHoursSchema } from '@/modules/content/hours-schema';
 import { emailField, phoneField } from '@/modules/crm/validation';
 import { BRANDING_KINDS, BRANDING_LABEL, BRANDING_PERMISSION, type BrandingKind } from '@/modules/media/branding';
 import { isEmailConfigured, sendEmail } from '@/modules/notifications/email';
@@ -33,7 +34,7 @@ export async function removeBrandingImage(kind: BrandingKind): Promise<ActionRes
 // -----------------------------------------------------------------------------
 // Şirket ayarları (white-label): marka, iletişim, adres, saatler, sosyal medya
 // -----------------------------------------------------------------------------
-const clean = (v: string) => v.replace(/[<>]/g, '').replace(/\s+/g, ' ').trim();
+const clean = (v: string) => singleLine(v.replace(/[<>]/g, ''));
 
 const text = (max: number, label: string, min = 0) =>
   z
@@ -78,19 +79,7 @@ const coordinate = (min: number, max: number) =>
     .refine((v) => v === null || (Number.isFinite(v) && v >= min && v <= max), { error: 'Geçersiz koordinat.' })
     .transform((v) => (v === null ? null : Math.round(v * 1e6) / 1e6));
 
-const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-const hoursSchema = z
-  .array(
-    z
-      .object({
-        days: z.array(z.enum(WEEKDAYS)).min(1, { error: 'En az bir gün seçin.' }),
-        opens: z.string().regex(TIME, { error: 'Açılış saatini SS:DD biçiminde girin.' }),
-        closes: z.string().regex(TIME, { error: 'Kapanış saatini SS:DD biçiminde girin.' }),
-      })
-      .refine((h) => h.closes > h.opens, { error: 'Kapanış saati açılıştan sonra olmalıdır.', path: ['closes'] }),
-  )
-  .max(7, { error: 'En fazla 7 satır eklenebilir.' });
+const hoursSchema = openingHoursSchema;
 
 const companySchema = z
   .object({

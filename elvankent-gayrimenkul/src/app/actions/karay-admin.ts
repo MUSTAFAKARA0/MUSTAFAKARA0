@@ -3,6 +3,7 @@
 import { revalidatePath, updateTag } from 'next/cache';
 import { z } from 'zod';
 import { cacheTags } from '@/lib/cache-tags';
+import { singleLine } from '@/lib/single-line';
 import { isUuid } from '@/lib/utils';
 import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/platform/actions';
 import { logSecurityEvent } from '@/platform/audit';
@@ -41,7 +42,12 @@ const text = (max: number) =>
     .transform((v) => (v === '' ? null : v.replace(/[<>]/g, '')));
 
 const profileSchema = z.object({
-  company_name: z.string().trim().min(2, { message: 'Şirket adı en az 2 karakter olmalıdır.' }).max(80),
+  // Tek satır: kontrol karakteri ve satır sonu boşluğa çevrilir (site, JSON-LD ve operasyon betikleri)
+  company_name: z
+    .string()
+    .max(160)
+    .transform(singleLine)
+    .pipe(z.string().min(2, { message: 'Şirket adı en az 2 karakter olmalıdır.' }).max(80, { message: 'Şirket adı en fazla 80 karakter olabilir.' })),
   tagline: text(160),
   contact_email: z
     .string()
