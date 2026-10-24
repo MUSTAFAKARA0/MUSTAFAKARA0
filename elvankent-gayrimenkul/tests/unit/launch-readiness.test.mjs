@@ -13,6 +13,8 @@
  *         CI'nin yazdığı .env.local bash ve Node tarafından aynı değerlerle okunur (K-11)
  *  LR-09  CI ve yedek iş akışlarındaki her iş sabit çalıştırıcı imajında (ubuntu-24.04) çalışır; imaj
  *         ubuntu-latest etiketiyle kendiliğinden değişmez (K-16)
+ *  LR-10  KARAYS migration runbook'u (supabase/ops/karays_brand/): uygulama betiğindeki gövde migration
+ *         dosyasıyla birebir aynı; okuyan betikler tek SELECT; yazan betikler tek işlem (K-17)
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -380,4 +382,52 @@ describe('LR-09 sabit çalıştırıcı imajı (K-16)', () => {
       assert.deepEqual([...new Set(runners)], ['ubuntu-24.04']);
     });
   }
+});
+
+describe('LR-10 KARAYS migration runbook (K-17)', () => {
+  // supabase/ops/karays_brand/: 20261018000001'i canlıda tek başına uygulayan betikler. Migration dosyası
+  // değişip 03 değişmezse canlıya provası yapılmamış bir gövde gider; okuyan betikler canlıya yazamaz.
+  const dir = 'supabase/ops/karays_brand/';
+  const file = '20261018000001_karays_brand.sql';
+  // Tırnak içindeki metin (ör. üretilen 'begin;' satırları) ifade sayılmaz
+  const statements = (sql) =>
+    sql
+      .split('\n')
+      .filter((l) => !/^\s*--/.test(l))
+      .join('\n')
+      .replace(/'(?:[^']|'')*'/g, "''")
+      .trim();
+  test('03 uygulama betiğindeki migration gövdesi dosyayla birebir aynı', () => {
+    const apply = read(`${dir}03_apply.sql`);
+    const start = apply.indexOf(`-- ---- ${file}`);
+    const end = apply.indexOf('-- ---- gövde sonu');
+    assert.ok(start > 0 && end > start, 'gövde işaretleri var');
+    const migration = read(`supabase/migrations/${file}`);
+    // Gövde ilk ifadeyle başlar (başlıktaki yorumlu geri dönüş satırları gövde değildir)
+    const bodyStart = migration.search(/^alter table /m);
+    assert.ok(bodyStart > 0, 'migration gövdesi bulundu');
+    assert.equal(apply.slice(apply.indexOf('\n', start) + 1, end).trim(), migration.slice(bodyStart).trim());
+  });
+  test('okuyan betikler (01, 02, 04) tek bir SELECT', () => {
+    for (const f of ['01_preflight.sql', '02_rollback_script.sql', '04_postflight.sql']) {
+      const code = statements(read(dir + f));
+      assert.match(code, /^with\n/, `${f}: with … select`);
+      assert.equal(code.match(/;/g)?.length, 1, `${f}: tek ifade`);
+      assert.ok(code.endsWith(';'), `${f}: ifade sonda biter`);
+      assert.doesNotMatch(code, /^\s*(begin|commit|insert|update|delete|alter|create|drop|grant|revoke|do)\b/im, `${f}: yazma ifadesi yok`);
+    }
+  });
+  test('yazan betikler (03, 05) tek işlem ve kilit zaman aşımıyla', () => {
+    for (const f of ['03_apply.sql', '05_rollback.sql']) {
+      const sql = read(dir + f);
+      assert.match(sql, /^begin;\nset local lock_timeout = '5s';\nset local statement_timeout = '60s';$/m, f);
+      assert.equal(sql.match(/^begin;$/gm)?.length, 1, `${f}: tek begin`);
+      assert.equal(sql.match(/^commit;$/gm)?.length, 1, `${f}: tek commit`);
+    }
+  });
+  test('05 genel geri dönüş bir önceki migration dosyasının şema sürümüne döner', () => {
+    const prev = migrations[migrations.indexOf(file) - 1];
+    assert.ok(prev, 'önceki migration bulundu');
+    assert.match(read(`${dir}05_rollback.sql`), new RegExp(`eski_surum +constant text := '${prev.slice(0, 14)}'`));
+  });
 });
