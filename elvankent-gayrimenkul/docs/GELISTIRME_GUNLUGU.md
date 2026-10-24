@@ -10,7 +10,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 | --- | --- |
 | Production dalı | `ff2f7da`, değişmedi. KARAYS yayını kapıları bekliyor (aşağıda) |
 | Çalışma dalı | `claude/karay-ci-dogrulama`. Vercel dağıtımı bu dalda kapalı (`a24fef8`); yayın zinciri bu commit hariç kurulur |
-| Son kod commit'i | `92ad985` (geri dönüş betiğinde yorum satırı sertleştirmesi) |
+| Son kod commit'i | `8d0f282` (tek satır doğrulaması, çalışma saatleri sınırı) |
 | GitHub | K-13…K-16 GitHub'da (`a24fef8..968e3ad`). Production dalının yerel kopyasındaki 15 commit kaybolmadı: zincir uzak dallardan birebir yeniden kurulabiliyor (aşağıda) |
 | CI | [#84](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40100992371) yeşil (`5034a41`, 24.10.2026): quality ve database işleri başarılı |
 | Güvenlik | Production'da next 16.3.6 ve sharp 0.35.4 var; yeni Next.js duyurularının etki alanında ([K17 §3](K17_KARAYS_RELEASE.md)). Düzeltme bu dalda; canlıya çıkması yayın onayına bağlı (O-4) |
@@ -20,6 +20,48 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 **Sıradaki adım:** Sahibin K-17 kapılarını açması: A1–A4 (panel teyidi, salt okunur ön kontrol, geri dönüş betiği, yedek). Ardından O-4 ile kod yayını, O-5 ile migration. Canlıdaki güvenlik açığı nedeniyle bu sıranın öne alınması önerilir. Güvenlik düzeltmesini migration'dan önce, yalnızca kod olarak yayınlamak teknik olarak mümkün (yeni kod eski veritabanıyla çalışır, [K17 §5](K17_KARAYS_RELEASE.md)). Yedek kapısının (P0-1) bu kod yayınını da bekletip bekletmeyeceği sahibin kararıdır.
 
 ## Girişler
+
+### 24.10.2026 (2) · K-18: SEC-06, P2 doğrulamaları, yalnız güvenlik yaması, OPS-02 tasarımı
+
+**Başlangıç:** `5034a41` (CI #84 yeşil). Çalışma ağacı temizdi.
+
+**Commit'ler** (`claude/karay-ci-dogrulama`):
+- `ab8d15f`: CI #84 sonucu günlüğe işlendi.
+- `08257da`: SEC-06. `next/image` uzak kaynakları yalnızca kendi Supabase adreslerimiz; joker `*.supabase.co` kaldırıldı. Next.js'in kendi eşleyicisiyle test edildi.
+- `8d0f282`: `singleLine()`. Platform `company_name` ve ofis metin alanlarında kontrol karakteri ve satır sonu kalmıyor. Çalışma saatlerinde gün listesi en fazla 7 öğe ve tekil.
+- Bu commit: [OPS02_ABONELIK_DURUMLARI.md](OPS02_ABONELIK_DURUMLARI.md) (durum makinesi ve karar tablosu); yayın kiti §8 (A seçeneği) ve §9 (kapı durumu).
+
+**Yalnız güvenlik yaması (A seçeneği):**
+- Yerel dal `claude/karays-guvenlik-yamasi`: `ff2f7da` üzerine `57fdbb7`. **Push edilmedi**; yeni dal Vercel Preview üretebilir, onay gerekiyor.
+- Yerel sonuçlar:
+  - audit 0
+  - typecheck temiz
+  - ESLint 0 hata
+  - birim 388/388
+  - build 73/73
+- RLS ve E2E için CI gerekir.
+- Konteyner yenilenirse yerel dal kaybolur. Yama, yayın kiti §8'deki adımlarla birebir yeniden üretilebilir.
+
+**Testler (yerel):**
+- birim 460/460
+- typecheck temiz
+- ESLint 0 hata (3 eski uyarı)
+- build 73/73
+- Yeni korumaların 3 mutasyonu da yakalandı.
+
+**Atlanan 4 E2E testi:**
+- 3'ü `mobile` projesinde tasarım gereği atlanıyor: responsive genişlik testi, filtre paneli ve paylaşım menüsü. Aynı testler masaüstünde koşuyor; telefon davranışı acceptance 10–14 ve 15–22 adımlarında.
+- 1'i FAM-05, yalnızca `SHOT_DIR` tanımlıyken çalışan bir ölçüm testi.
+- Kapsam boşluğu yok.
+
+**OPS-02:** Boşluk güncel kodda sürüyor (plan satırı yokken üç limit kontrolü de sınırsız sayıyor). Kalıcı çözüm D-05 ve D-04 kararlarını bekliyor; tasarım bayraklı ve varsayılanı kapalı bir migration öneriyor.
+
+**Açık:**
+- Canlı güvenlik yayını: A ya da B, O-4 onayı
+- P0-1 ve P0-2
+- O-5
+- D-04, D-05, D-15 (PF-10 HSTS, SEC-02 CSP)
+- PR #2 (head production dalı, base `claude/photo-to-stl-app-rxbvev`): kapatma kararı sahipte
 
 ### 24.10.2026 · K-18: yayın kiti depoda, CI tedarik zinciri, güvenlik yükseltmesi
 

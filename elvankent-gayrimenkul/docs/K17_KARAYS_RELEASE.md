@@ -237,3 +237,43 @@ Gerçek build'ler yerel yığında çalıştırıldı. `/karay` ISR'ı yerel ön
 | S12 | Eski yollar | `/karay/og-karay.png` 404; `/platform/favicon.svg` sunulmaz | ✓ | ✓ |
 | S13 | `/admin/giris` | 200; ofis markası; KARAYS maskotları yok | ✓ | ✓ |
 | S14 | Vercel Logs (30 dk) | Yeni `error` kaydı yok | ✓ | ✓ |
+
+## 8. Seçenek A: yalnız güvenlik yaması (K-18)
+
+Canlıdaki Next.js açıkları için tam K-17 yayınını beklemeyen dar bir yol. Durum (24.10.2026): **hazır ve yerelde test edildi, push edilmedi, canlıya gönderilmedi.**
+
+- **İçerik:** `ff2f7da` üzerine tek commit (yerel dal `claude/karays-guvenlik-yamasi`).
+  - next 16.4.3, sharp 0.35.5, zod 4.6.7, source-map-js 1.2.2
+  - `media/processing.ts` imza denetimi (doğrulama dalındaki `4aa0ae3` ile aynı)
+  - SP-01…SP-06 testleri
+  - Kilit dosyasında yalnızca bu paketler ve platform ikilileri değişir.
+- **Veritabanı:** Yeni veritabanı çağrısı ya da şema beklentisi yok; diff'te `.rpc`/`.from` eklemesi yok. Kod canlı şemayla aynı veritabanı yolunu kullanır.
+- **Yerel kanıt:**
+  - `npm audit --omit=dev` 0
+  - typecheck temiz
+  - ESLint 0 hata
+  - birim 388/388
+  - build 73/73 (Next.js 16.4.3)
+- **Eksik kanıt:** RLS ve E2E. CI database işi için dalın push edilmesi gerekir. Yeni dal Vercel'de Preview üretebileceğinden push onaya bağlı. Push edilecekse, doğrulama dalındaki gibi `git.deploymentEnabled` koruma commit'i eklenir ve yayın zincirinde dışarıda bırakılır.
+
+| | A · yalnız güvenlik | B · tam K-17 |
+| --- | --- | --- |
+| Kapsam | Bağımlılıklar + görüntü imza denetimi | FAZ 3, FAZ 4, K-8…K-18 + migration `20261018000001` |
+| Veritabanı | Dokunulmaz | Migration (O-5) |
+| P0-1 yedek / P0-2 DB kimliği | Kod yayını için teknik olarak gerekmez; kapının bu yayına da uygulanması sahibin kararı | Zorunlu |
+| Onay | O-4 | O-1…O-6 |
+| Geri dönüş | Vercel'de önceki dağıtıma Instant Rollback | R-A (kod) + R-B (migration) |
+| Sonra | A yayınlandıysa B zinciri (B1) `82dcd06` yerine A commit'inin üstüne kurulur. `package.json`/kilit dosyası ve `processing.ts` çakışırsa B'deki hâl alınır (aynı ya da daha yeni sürümler). Fast-forward kontrolü B1'de yapılır | — |
+
+## 9. Kapı durumu (24.10.2026)
+
+| Kapı | Durum | Kanıt / eksik |
+| --- | --- | --- |
+| Kod kalitesi (doğrulama dalı) | **Geçti** | CI #84 yeşil; sonraki commit'ler CI'da doğrulanacak |
+| Güvenlik bağımlılıkları | **Geçti (dalda)**, canlıda açık | Canlı next 16.3.6 / sharp 0.35.4 |
+| P0-1 doğrulanmış canlı yedek | **Kanıt eksik** | Yedek iş akışı hiç çalışmadı; panel yedeği görülmedi |
+| P0-2 canlı DB kimliği | **Kanıt eksik** | Supabase projesi bu oturumdan görünmüyor (MCP: 0 proje) |
+| Migration provası | **Geçti (yerel)** | 18/18 senaryo; canlı kopyada prova yok |
+| Geri dönüş betikleri | **Geçti (yerel)** | 02 ve 05 provada; 02 yorum sertleştirmesi `92ad985` |
+| O-1…O-6 | **Kullanıcı onayı bekliyor** | — |
+| Vercel koruması | **Geçti** | Doğrulama dalı push'larında dağıtım yok |
