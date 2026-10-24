@@ -1,17 +1,29 @@
 import { z } from 'zod';
-import { singleLine } from '@/lib/single-line';
+import { BIDI_CONTROL_MESSAGE, hasBidiControl, singleLine } from '@/lib/single-line';
 
 /**
  * KARAYS kurumsal ayarları (platform_settings) doğrulaması. Sunucu eylemi (`updateKarayProfile`)
  * bu şemayı kullanır; ayrı modülde durması davranışın birim testiyle doğrulanmasını sağlar.
  */
 
-/** Tek satır: kontrol karakteri ve satır sonu boşluğa çevrilir (site, JSON-LD ve operasyon betikleri) */
+/**
+ * Şirket adı tek satırdır (site alt bilgisi, JSON-LD, operasyon betikleri). Kontrol karakteri ve
+ * satır sonu boşluğa çevrilir. Yön denetim karakteri ve `<` `>` sessizce silinmez, açık hata
+ * verilir: bugünkü kullanım noktaları kaçışlıdır (React metni, JSON-LD `\u003c`, SQL
+ * quote_literal), bu kontrol ileride ham HTML'de (ör. e-posta) kullanılırsa diye ek katmandır.
+ */
 export const companyNameSchema = z
   .string()
-  .max(160)
+  .max(160, { message: 'Şirket adı en fazla 80 karakter olabilir.' })
   .transform(singleLine)
-  .pipe(z.string().min(2, { message: 'Şirket adı en az 2 karakter olmalıdır.' }).max(80, { message: 'Şirket adı en fazla 80 karakter olabilir.' }));
+  .pipe(
+    z
+      .string()
+      .min(2, { message: 'Şirket adı en az 2 karakter olmalıdır.' })
+      .max(80, { message: 'Şirket adı en fazla 80 karakter olabilir.' })
+      .refine((v) => !/[<>]/.test(v), { message: 'Şirket adında < ve > karakterleri kullanılamaz.' })
+      .refine((v) => !hasBidiControl(v), { message: `Şirket adı ${BIDI_CONTROL_MESSAGE}` }),
+  );
 
 const url = z
   .string()

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { singleLine } from '@/lib/single-line';
+import { BIDI_CONTROL_MESSAGE, hasBidiControl, singleLine } from '@/lib/single-line';
 import { openingHoursSchema } from '@/modules/content/hours-schema';
 import { emailField, phoneField } from '@/modules/crm/validation';
 
@@ -19,7 +19,8 @@ const text = (max: number, label: string, min = 0) =>
       z
         .string()
         .min(min, { error: `${label} en az ${min} karakter olmalıdır.` })
-        .max(max, { error: `${label} en fazla ${max} karakter olabilir.` }),
+        .max(max, { error: `${label} en fazla ${max} karakter olabilir.` })
+        .refine((v) => !hasBidiControl(v), { error: `${label} ${BIDI_CONTROL_MESSAGE}` }),
     );
 
 const optional = (max: number, label: string) =>
