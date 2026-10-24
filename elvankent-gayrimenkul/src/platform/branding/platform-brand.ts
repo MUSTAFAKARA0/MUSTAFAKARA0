@@ -47,7 +47,11 @@ export const PLATFORM_BRAND = {
    * /karay altındadır: yalnızca KARAYS sayfasının sunulduğu adreslerde açılır (kiracı adresinde 404).
    */
   ogImage: { url: '/karay/og-karays.png', width: 1200, height: 630 },
-  /** Platform renkleri: lacivert, sinyal mavisi, turkuaz, arduvaz, bulut */
+  /**
+   * Platform renkleri: lacivert, sinyal mavisi, turkuaz, arduvaz, bulut. Sinyal mavisi küçük metinde AA
+   * kontrastını (4,5:1) karşılamaz (beyazda 4,49, bulutta 4,19); küçük metin aynı tonun koyusuyla
+   * (#265fe8: beyazda 5,4, bulutta 5,0) yazılır (KARAYS sayfası bölüm başlıkları, K-19).
+   */
   colors: { navy: '#0b1b3a', signal: '#2f6bff', turquoise: '#1cc8b6', slate: '#5b6b85', cloud: '#f4f7fb' },
   /** Tema: butonlar lacivert, vurgu sinyal mavisi */
   primaryColor: '#0b1b3a',

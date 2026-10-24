@@ -103,6 +103,18 @@ test.describe('Ziyaretçi', () => {
     await expect(page.getByRole('heading', { name: 'Henüz favori ilanınız yok' })).toBeVisible();
   });
 
+  test('İlan detayındaki metinli favori düğmesinin erişilebilir adı görünen metnidir (WCAG 2.5.3)', async ({ page }) => {
+    await page.goto('/ilan/elvankent-site-icinde-satilik-3-1-daire');
+    const fav = page.getByRole('button', { name: 'Favorile', exact: true });
+    await expect(fav).toBeVisible();
+    await expect(fav).toHaveAttribute('aria-pressed', 'false');
+    await fav.click();
+    const added = page.getByRole('button', { name: 'Favorilerde', exact: true });
+    await expect(added).toHaveAttribute('aria-pressed', 'true');
+    await added.click();
+    await expect(fav).toHaveAttribute('aria-pressed', 'false');
+  });
+
   test('Karşılaştırma: iki ilan eklenir ve karşılaştırma sayfasında görünür', async ({ page }) => {
     await page.goto('/satilik');
     const list = page.getByRole('region', { name: 'Arama sonuçları' }).locator('article');

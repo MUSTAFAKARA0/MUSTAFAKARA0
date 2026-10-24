@@ -170,7 +170,7 @@ export default async function KarayPage() {
       <section id="hakkimizda" aria-labelledby="karay-nedir" className="scroll-mt-20 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
           <div className="max-w-3xl">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#2f6bff] uppercase">{PLATFORM_BRAND.name} nedir?</p>
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">{PLATFORM_BRAND.name} nedir?</p>
             <h2 id="karay-nedir" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
               Emlak ofisleri için geliştirilen bir gayrimenkul teknolojileri platformu
             </h2>
@@ -209,7 +209,7 @@ export default async function KarayPage() {
       <section id="ozellikler" aria-labelledby="karay-ozellikler" className="scroll-mt-20 bg-[#f4f7fb]">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
           <div className="max-w-2xl">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#2f6bff] uppercase">Platform özellikleri</p>
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Platform özellikleri</p>
             <h2 id="karay-ozellikler" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
               Bir emlak ofisinin dijitalde ihtiyaç duyduğu her şey
             </h2>
@@ -232,7 +232,7 @@ export default async function KarayPage() {
       <section id="platform" aria-labelledby="karay-platform" className="scroll-mt-20 bg-white">
         <div className="mx-auto grid max-w-7xl gap-14 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:py-28">
           <div>
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#2f6bff] uppercase">Site Kontrol Merkezi</p>
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Site Kontrol Merkezi</p>
             <h2 id="karay-platform" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
               Web sitenizi tek panelden yönetin
             </h2>
@@ -274,7 +274,7 @@ export default async function KarayPage() {
       <section id="temalar" aria-labelledby="karay-temalar" className="scroll-mt-20 border-y border-[#e3e8f0] bg-[#f4f7fb]">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
           <div className="max-w-2xl">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#2f6bff] uppercase">Temalar</p>
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Temalar</p>
             <h2 id="karay-temalar" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
               {THEME_LIST.length} tema, her biri farklı bir karakter
             </h2>
@@ -347,7 +347,7 @@ export default async function KarayPage() {
         <span id="demo" className="block scroll-mt-20" aria-hidden />
         <div className="mx-auto grid max-w-7xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:py-28">
           <div>
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#2f6bff] uppercase">İletişim</p>
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">İletişim</p>
             <h2 id="karay-iletisim" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
               Ofisiniz için konuşalım
             </h2>
