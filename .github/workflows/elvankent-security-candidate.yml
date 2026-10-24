@@ -91,8 +91,9 @@ jobs:
           supabase status -o env > /tmp/supa.env
           set -a; . /tmp/supa.env; set +a
           PGOPTIONS='-c app.allow_demo_seed=on' psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/seed.sql
-          # Değerler ff2f7da'nın kendi CI ayarıyla aynı; yalnızca tek tırnakla yazılır (K-11: tırnaksız
-          # EMAIL_FROM satırı bash'te yönlendirme sanılıyordu)
+          # Test ortamı, sonradan düzeltilen CI ayarıyla aynı (K-10: E2E demo ortamını ve süper admin
+          # yöneticiyi bekler; K-11: değerler tek tırnakla). ff2f7da'nın kendi CI ayarı (SITE_ENV=development,
+          # süper adminsiz yönetici) E2E'nin süper admin ve demo testlerini ortam yüzünden düşürüyordu.
           env_line() {
             case "$2" in *"'"* | *$'\n'* | *$'\r'*) echo "::error::.env.local: $1 değeri tek tırnakla yazılamaz" >&2; return 1 ;; esac
             printf "%s='%s'\n" "$1" "$2"
@@ -105,7 +106,7 @@ jobs:
             env_line IP_HASH_SALT "ci-$(openssl rand -hex 16)"
             env_line CRON_SECRET "ci-$(openssl rand -hex 32)"
             env_line NEXT_IMAGE_ALLOW_LOCAL_IP 1
-            env_line SITE_ENV development
+            env_line SITE_ENV demo
             env_line EMAIL_PROVIDER resend
             env_line RESEND_API_KEY ci-test-key
             env_line RESEND_API_BASE http://127.0.0.1:4010
@@ -119,7 +120,7 @@ jobs:
       - name: E2E hazırlık (yönetici hesabı, build, sunucu)
         run: |
           set -euo pipefail
-          npm run create-admin -- e2e-admin@example.test 'E2e-Password-12345' --role=owner
+          npm run create-admin -- e2e-admin@example.test 'E2e-Password-12345' --role=owner --super-admin
           npx playwright install --with-deps chromium
           set -a; . ./.env.local; set +a
           npm run build
