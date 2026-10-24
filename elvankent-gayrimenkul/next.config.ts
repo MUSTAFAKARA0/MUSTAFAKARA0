@@ -1,6 +1,8 @@
 import type { NextConfig } from 'next';
 import { isIndexable } from './src/lib/site-env';
+import { contentSecurityPolicy } from './src/lib/csp';
 import { storageImagePatterns } from './src/lib/image-remote-patterns';
+import { storageUrlFor } from './src/lib/supabase-origins';
 
 /** Değişken değeri (baştaki/sondaki boşluk ve satır sonları atılır) */
 function envValue(name: string): string {
@@ -57,27 +59,13 @@ const storageUrl = envUrl('NEXT_PUBLIC_SUPABASE_STORAGE_URL');
 // Yalnızca kendi Supabase adreslerimizin public Storage yolu (SEC-06; başka projeler reddedilir)
 const remotePatterns = storageImagePatterns([supabaseUrl, storageUrl]);
 
-const supabaseOrigins = [supabaseUrl?.origin, storageUrl?.origin].filter(Boolean).join(' ');
+// Tarayıcının bağlandığı adresler: ana adres ve depolama adresi (açık değişken yoksa env.ts'deki kuralla
+// türetilir; büyük yüklemeler PROJE.storage.supabase.co'ya gider)
+const storageOrigin = storageUrl?.origin ?? (supabaseUrl ? new URL(storageUrlFor(supabaseUrl.origin)).origin : undefined);
+const supabaseOrigins = [supabaseUrl?.origin, storageOrigin].filter((o): o is string => Boolean(o));
 
-/**
- * Content Security Policy. Next.js hidrasyonu için satır içi script'lere
- * izin verilir; dış kaynaklar yalnızca Supabase (veri, görseller ve büyük
- * dosya yüklemeleri için doğrudan depolama adresi) ile sınırlıdır. Harita
- * döşemeleri /api/tiles üzerinden aynı kaynaktan (self) sunulur; harita
- * sağlayıcısı anahtarı tarayıcıya hiç gönderilmez.
- */
-const csp = [
-  "default-src 'self'",
-  `img-src 'self' data: blob: https://*.supabase.co ${supabaseOrigins}`,
-  "script-src 'self' 'unsafe-inline'" + (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''),
-  "style-src 'self' 'unsafe-inline'",
-  "font-src 'self'",
-  `connect-src 'self' https://*.supabase.co ${supabaseOrigins}`,
-  "frame-ancestors 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "object-src 'none'",
-].join('; ');
+// src/lib/csp.ts. Joker (*.supabase.co) D-15 kararı ve gerçek ortam doğrulamasına kadar kalır.
+const csp = contentSecurityPolicy({ supabaseOrigins, supabaseWildcard: true, development: process.env.NODE_ENV === 'development' });
 
 const securityHeaders = [
   { key: 'Content-Security-Policy', value: csp },
