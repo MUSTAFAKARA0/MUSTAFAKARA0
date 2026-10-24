@@ -44,6 +44,8 @@ if (!skip) {
 }
 
 const RUN = randomBytes(3).toString('hex');
+/** Kurum ilan öneki (A–Z, 2–5 harf, benzersiz): 4 rastgele harf, 456 976 olasılık */
+const prefix = (first) => first + Array.from(randomBytes(4), (b) => String.fromCharCode(65 + (b % 26))).join('');
 const PASSWORD = `Sub-${randomBytes(8).toString('hex')}-7a`;
 const PLAN = `subtest_${RUN}`;
 const createdUsers = [];
@@ -65,7 +67,7 @@ async function makeUser(label) {
 async function makeOrg(label, subscription) {
   const { data: org, error } = await service
     .from('organizations')
-    .insert({ slug: `subtest-${RUN}-${label}`, name: `Abonelik ${label}`, reference_prefix: `S${randomBytes(2).toString('hex').toUpperCase().replace(/[0-9]/g, 'Q')}`, status: 'active' })
+    .insert({ slug: `subtest-${RUN}-${label}`, name: `Abonelik ${label}`, reference_prefix: prefix('S'), status: 'active' })
     .select('id')
     .single();
   assert.ifError(error);

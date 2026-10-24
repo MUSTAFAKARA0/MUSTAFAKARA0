@@ -27,6 +27,8 @@ const service = skip ? null : createClient(url, serviceKey, opts);
 const anon = skip ? null : createClient(url, anonKey, opts);
 
 const RUN = randomBytes(3).toString('hex');
+/** Kurum ilan öneki (A–Z, 2–5 harf, benzersiz): 4 rastgele harf, 456 976 olasılık */
+const prefix = (first) => first + Array.from(randomBytes(4), (b) => String.fromCharCode(65 + (b % 26))).join('');
 const PASSWORD = `Mc-${randomBytes(8).toString('hex')}-7a`;
 const users = [];
 let orgId;
@@ -62,7 +64,7 @@ before(async () => {
   const district = await anon.from('districts').select('id, city_id').limit(1).single();
   assert.ifError(district.error);
   taxonomy = { typeId: type.data.id, districtId: district.data.id, cityId: district.data.city_id };
-  const org = await service.from('organizations').insert({ slug: `mctest-${RUN}`, name: 'Üyelik testi', reference_prefix: `M${randomBytes(2).toString('hex').toUpperCase().replace(/[0-9]/g, 'Q')}`, status: 'active' }).select('id').single();
+  const org = await service.from('organizations').insert({ slug: `mctest-${RUN}`, name: 'Üyelik testi', reference_prefix: prefix('M'), status: 'active' }).select('id').single();
   assert.ifError(org.error);
   orgId = org.data.id;
   assert.ifError((await service.from('organization_settings').insert({ organization_id: orgId, display_name: 'Üyelik testi' })).error);
