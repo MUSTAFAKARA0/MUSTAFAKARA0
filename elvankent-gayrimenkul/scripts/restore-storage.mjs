@@ -3,7 +3,8 @@
  * Storage geri yükleme. backup-storage.mjs ile alınmış klasörü kovalara yükler.
  *
  * GÜVENLİK: Varsayılan olarak yalnızca NE YAPILACAĞINI gösterir (kuru çalıştırma).
- * Gerçekten yüklemek için --apply verilmelidir. Var olan dosyaların üzerine
+ * Gerçekten yüklemek için --apply ve hedef ana makineyi teyit eden --target=<ana makine> verilmelidir
+ * (NEXT_PUBLIC_SUPABASE_URL ile aynı olmalı; yanlış projeye yüklemeyi önler). Var olan dosyaların üzerine
  * yazılmaz; gerekiyorsa --overwrite eklenir. Önce bir demo/test projesinde deneyin.
  *
  * BÜTÜNLÜK (Faz 3): klasördeki manifest.json'da SHA-256 özeti olan her dosya, yüklenmeden önce
@@ -13,8 +14,8 @@
  * Kullanım:
  *   npm run restore:storage -- --from=./yedek/storage-2026-09-27 --verify        (yalnızca SHA-256 denetimi)
  *   npm run restore:storage -- --from=./yedek/storage-2026-09-27                 (kuru çalıştırma)
- *   npm run restore:storage -- --from=./yedek/storage-2026-09-27 --apply         (eksik dosyaları yükler)
- *   npm run restore:storage -- --from=... --buckets=media-originals --apply
+ *   npm run restore:storage -- --from=./yedek/storage-2026-09-27 --apply --target=<proje>.supabase.co   (eksik dosyaları yükler)
+ *   npm run restore:storage -- --from=... --buckets=media-originals --apply --target=<proje>.supabase.co
  *
  * Çıkış kodu: 0 sorunsuz · 1 eksik ayar / manifest yok (--verify) · 2 bozuk, eksik veya yüklenemeyen dosya
  */
@@ -34,6 +35,11 @@ const wanted = typeof flags.buckets === 'string' ? new Set(flags.buckets.split('
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!verifyOnly && (!url || !key)) { console.error('✗ NEXT_PUBLIC_SUPABASE_URL ve SUPABASE_SERVICE_ROLE_KEY gerekli.'); process.exit(1); }
+// Yanlış proje koruması: gerçek yükleme yalnızca hedef ana makine --target ile açıkça yazılınca yapılır
+if (apply && flags.target !== new URL(url).host) {
+  console.error(`✗ --apply için hedef projeyi açıkça yazın: --target=${new URL(url).host} (bu adresin geri yükleme yapılacak proje olduğunu panelde doğrulayın).`);
+  process.exit(1);
+}
 const db = verifyOnly ? null : createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
 // manifest.json: { buckets: { <kova>: { files: [{ path, size, sha256 }] } } }

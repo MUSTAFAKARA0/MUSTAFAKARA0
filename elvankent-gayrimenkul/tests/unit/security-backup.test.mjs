@@ -13,7 +13,8 @@
  *         yalnızca adları; log'a kayıt sayısı / boyut yazılmaz
  *  BK-03  restore-drill.sh: yalnızca YENİ geçici veritabanına (template0) yükler, her durumda siler; SHA-256 → tek
  *         işlem geri yükleme → parmak izi → tablo sayıları → postflight; postflight'ta "HATA" ve "HATA: …" ikisi de sayılır
- *  BK-04  restore-storage.mjs: manifest SHA-256 ile doğrular; bozuk dosya yüklenmez; --verify Supabase'e bağlanmaz
+ *  BK-04  restore-storage.mjs: manifest SHA-256 ile doğrular; bozuk dosya yüklenmez; --verify Supabase'e bağlanmaz;
+ *         --apply yalnızca --target ile açıkça yazılan hedef ana makineye yükler
  *  BK-05  backup-storage.mjs: artımlı çalışmada atlanan dosyanın da SHA-256 özeti yazılır
  *  BK-06  Parmak izi ve tablo sayıları sunucu dilinden / saat diliminden bağımsız (collate "C", epoch)
  */
@@ -306,6 +307,19 @@ describe('BK-04 restore-storage.mjs SHA-256 doğrulaması', () => {
     assert.equal(missing.status, 2);
     assert.match(missing.stderr, /yedek klasöründe yok/);
     assert.equal(noManifest.status, 1);
+  });
+  test('--apply hedef ana makine --target ile açıkça yazılmadan hiçbir şey yüklemez (yanlış proje koruması)', () => {
+    const dir = make();
+    const none = run(dir, '--apply');
+    const wrong = run(dir, '--apply', '--target=baska-proje.supabase.co');
+    const right = run(dir, '--apply', '--target=127.0.0.1:9');
+    rmSync(dir, { recursive: true });
+    assert.match(right.stdout, /GERİ YÜKLEME → 127\.0\.0\.1:9/, 'doğru hedefle yüklemeye geçer');
+    for (const r of [none, wrong]) {
+      assert.equal(r.status, 1, r.stderr);
+      assert.match(r.stderr, /--target=127\.0\.0\.1:9/);
+      assert.doesNotMatch(r.stdout, /GERİ YÜKLEME/);
+    }
   });
 });
 

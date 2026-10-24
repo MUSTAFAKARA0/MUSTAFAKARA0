@@ -76,8 +76,8 @@ FAZ 0 provasında `--no-privileges` ile alınan bir yedek boş veritabanına ger
 ```bash
 npm run restore:storage -- --from=./yedek/storage --verify            # yalnızca SHA-256 denetimi (Supabase'e bağlanmaz)
 npm run restore:storage -- --from=./yedek/storage                     # KURU ÇALIŞTIRMA: yüklenecek adayları gösterir
-npm run restore:storage -- --from=./yedek/storage --apply             # eksik dosyaları yükler (var olanlara dokunmaz)
-npm run restore:storage -- --from=... --buckets=media-originals --apply --overwrite   # yalnızca gerekiyorsa üzerine yazar
+npm run restore:storage -- --from=./yedek/storage --apply --target=<proje>.supabase.co   # eksik dosyaları yükler (var olanlara dokunmaz); --target hedefi teyit eder
+npm run restore:storage -- --from=... --buckets=media-originals --apply --overwrite --target=<proje>.supabase.co   # yalnızca gerekiyorsa üzerine yazar
 ```
 Her dosya yüklenmeden önce `manifest.json`'daki SHA-256 ile karşılaştırılır; uyuşmayan (bozuk) dosya **yüklenmez** ve hatalı sayılır (çıkış kodu 2). Manifest yoksa uyarı verilir ve doğrulamasız yüklenir.
 GitHub iş akışının yedeği S3 deposundadır: önce `rclone copy dest:BACKUP_BUCKET/storage/current ./yedek/storage` ile indirin. **Bu yedekte `manifest.json` yoktur** (gece işi rclone ile kovadan kovaya kopyalar): `--verify` "manifest yok" diyerek 1 ile çıkar, `--apply` doğrulamasız yükler. Bütünlük burada rclone'un aktarım denetimine dayanır; SHA-256 manifest'i yalnızca `npm run backup:storage` ile alınan yedekte vardır.
