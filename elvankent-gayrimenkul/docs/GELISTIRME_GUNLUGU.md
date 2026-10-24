@@ -10,11 +10,12 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 | --- | --- |
 | Production dalı | `ff2f7da`, değişmedi. KARAYS yayını kapıları bekliyor (aşağıda) |
 | Çalışma dalı | `claude/karay-ci-dogrulama`. Vercel dağıtımı bu dalda kapalı (`a24fef8`); yayın zinciri bu commit hariç kurulur |
-| Son kod commit'i | `1c0dbfd` (next 16.4.3, zod 4.6.7) |
+| Son kod commit'i | `92ad985` (geri dönüş betiğinde yorum satırı sertleştirmesi) |
+| GitHub | K-13…K-16 GitHub'da (`a24fef8..968e3ad`). Production dalının yerel kopyasındaki 15 commit kaybolmadı: zincir uzak dallardan birebir yeniden kurulabiliyor (aşağıda) |
 | CI | Bekleniyor: bu girişin commit'leri için `elvankent-ci` (quality + database) |
 | Güvenlik | Production'da next 16.3.6 ve sharp 0.35.4 var; yeni Next.js duyurularının etki alanında ([K17 §3](K17_KARAYS_RELEASE.md)). Düzeltme bu dalda; canlıya çıkması yayın onayına bağlı (O-4) |
 | Açık kapılar | P0-1 doğrulanmış canlı yedek yok · P0-2 canlı veritabanının kimliği ve şema durumu doğrulanmadı · onaylar O-1…O-6 ([K17 §1–§2](K17_KARAYS_RELEASE.md)) |
-| Bekleyen kararlar | D-01…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)); özellikle D-14 (dal ve yayın stratejisi) ve D-15 (güvenlik başlıkları, SVG) · PHASE4 §8 K-4…K-7 |
+| Bekleyen kararlar | D-01…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)). Özellikle D-05 (iptal ve veri saklama; OPS-02'nin kalıcı düzeltmesi buna bağlı), D-14 (dal ve yayın stratejisi), D-15 (güvenlik başlıkları, SVG) · PHASE4 §8 K-4…K-7 |
 
 **Sıradaki adım:** Sahibin K-17 kapılarını açması: A1–A4 (panel teyidi, salt okunur ön kontrol, geri dönüş betiği, yedek). Ardından O-4 ile kod yayını, O-5 ile migration. Canlıdaki güvenlik açığı nedeniyle bu sıranın öne alınması önerilir. Güvenlik düzeltmesini migration'dan önce, yalnızca kod olarak yayınlamak teknik olarak mümkün (yeni kod eski veritabanıyla çalışır, [K17 §5](K17_KARAYS_RELEASE.md)). Yedek kapısının (P0-1) bu kod yayınını da bekletip bekletmeyeceği sahibin kararıdır.
 
@@ -40,10 +41,12 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
   - 05 başlığı betiğin davranışıyla uyumlu
   - LR-11 adım ayırma hatası düzeltildi
 - `1c0dbfd`: next 16.3.8 → 16.4.3, zod 4.6.5 → 4.6.7 (GHSA-2464-fhr4-w9xw, GHSA-673q-mjm6-r5xr, GHSA-p3m5-59mp-jv5r, GHSA-mrhx-c7xc-m3w5). CI'daki `npm audit` adımı bu duyurular yüzünden kırmızıya dönmüştü.
-- Bu günlük ve yayın kiti güncellemesi: K-17/K-18 commit'leri, CI kanıtı kuralı, güvenlik notu.
+- `11410e9`: Bu günlük ve yayın kiti güncellemesi: K-17/K-18 commit'leri, CI kanıtı kuralı, güvenlik notu.
+- `92ad985`: 02'nin ürettiği yorum satırları artık tek satır. Güvenlik incelemesinin bulgusu: satır sonu içeren bir `company_name`, üretilen geri dönüş betiğinde yorumdan taşıp veritabanı sahibi yetkisiyle komut olarak çalışabiliyordu. Yerel veritabanında kanıtlandı ve kapatıldı.
+- Bu commit: OPS-02 geçici kuralı ([operations/README.md](operations/README.md)) ve günlük güncellemesi.
 
 **Testler (yerel):**
-- birim 446/446
+- birim 447/447
 - typecheck temiz
 - ESLint 0 hata. 3 uyarı önceden vardı: `tests/e2e/karay-site.spec.ts:104`
 - demo SQL güncel
@@ -52,20 +55,35 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 - gitleaks temiz
 
 **Kanıt:**
-- **Mutasyon:** LR-11'in 6 mutasyonu ve inceleme testlerinin 4 mutasyonu yakalandı. Dosyalar sha256 ile aynen geri yüklendi.
-- **Runbook provası (yerel PostgreSQL 16): 17/17 senaryo geçti.**
+- **Mutasyon:** LR-11'in 6 mutasyonu ve inceleme testlerinin 5 mutasyonu yakalandı. Dosyalar sha256 ile aynen geri yüklendi.
+- **Runbook provası (yerel PostgreSQL 16): 18/18 senaryo geçti.**
   - uygulama, tekrar uygulama ve iki geri dönüş yolu
   - kilit zaman aşımı (5 sn)
   - eski ve yeni şema korumaları
   - elle girilmiş ad ve özel karakterler
   - boş tablo ve boş veritabanı
   - NULL ve eksik yetkiler
+  - satır sonu içeren ad: yorumdan taşmıyor, komut çalışmıyor
 - **Yerelde çalıştırılamayanlar:** RLS ve Playwright E2E (Docker yok). Bunlar CI database işinde koşar.
 
 **İnceleme:**
 - Yerleşik `code-review` 7 bulgu verdi; 7'si de doğrulandı ve düzeltildi.
 - Provada bir sorun daha bulundu: boş veritabanında 01, `'…'::regprocedure` yüzünden hata veriyordu. Bu da düzeltildi.
-- ECC bu ortamda kurulu değil; eşdeğer olarak yerleşik inceleme becerileri kullanıldı.
+- Yerleşik `security-review` bir aday bulgu verdi: 02'de ikinci derece SQL enjeksiyonu. Yanlış pozitif süzgeci onu raporlama eşiğinin altında buldu (3/10): süper admin hesabı, A3 anında yerleştirilmiş bir değer ve elle çalıştırılan bir geri dönüş gerekiyor. Mekanizma yerelde kanıtlandığı ve düzeltmesi tek satır olduğu için yine de kapatıldı (`92ad985`).
+- **ECC (v2.2.3) bu oturumda yok.** Doğrulanan durum:
+  - eklenti eşitleme klasörü boş
+  - depoda ve kullanıcı ayarlarında eklenti tanımı yok
+  - hesapta etkin eklenti listesi boş
+  - Belgelere göre bulut oturumu, yerelde `/plugin` ile kurulan, kullanıcı ayarlarında ya da deponun `.claude/settings.json` dosyasında açılan eklentileri yüklemez; `/plugin` komutu bulutta yoktur. Yalnızca depoya commit'lenmiş `.claude/agents|skills|commands`, kuruluşun yönetilen ayarları ve claude.ai'da açılmış skill'ler taşınır.
+  - Eşdeğer olarak yerleşik Plan/Explore ajanları ile `code-review` ve `security-review` kullanıldı. ECC'nin güvenlik kancalarının yerine her commit'ten önce gitleaks çalıştı ve push öncesi inceleme kapısı uygulandı.
+
+**GitHub doğrulaması (24.10):**
+- `968e3ad` yalnızca `claude/karay-ci-dogrulama` dalında; CI #83 bu commit'te yeşil.
+- Production dalının yerel kopyasındaki 15 commit hiç push edilmemişti; konteyner yenilenince yerel kopya gitti. İçerikleri kaybolmadı: `82dcd06`'ya `a24fef8..968e3ad` cherry-pick edilerek ayrı bir klonda yeniden kuruldu.
+  - 15 commit temiz uygulandı ve konuları birebir aynı.
+  - `968e3ad` ile tek fark iki Vercel koruma dosyası.
+  - `ff2f7da` zincirin atası (fast-forward).
+- Açık PR'lar: #2 (head production dalı, base `claude/photo-to-stl-app-rxbvev`) ve #1 (BREAKLINE). İkisine de dokunulmadı.
 
 **CI:** Bekleniyor (bkz. Güncel durum).
 
@@ -73,4 +91,6 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 - K-17 yayın kapıları (P0-1, P0-2, O-1…O-6).
 - Canlıdaki güvenlik açığı. Yayın kararı sahipte.
 - Yedek işinin action sürümü (checkout v7.0.1) hiç çalışmadı. CI bu işi koşmaz; ilk elle çalıştırma (A4) doğrular.
+- **OPS-02:** Geçici kural artık [operations/README.md](operations/README.md)'de: abonelik iptal edilmez, organizasyon askıya alınır. Kalıcı düzeltme (aboneliği olmayan ofiste yeni ilan, üye ve yükleme reddi, RLS testiyle) D-05 ve D-04 kararlarını bekliyor; karar verilmeden uygulanmayacak.
 - Öneri (P2): `admin-settings` içindeki `days` dizisine `.max(7)` eklenmesi. zod düzeltmesine ek bir savunma olur.
+- Öneri (P2): `platform_settings.company_name` için kontrol karakterlerini reddeden bir CHECK ve zod kuralı. 02'deki sertleştirmeye ek bir savunma olur, ancak migration gerektirir.
