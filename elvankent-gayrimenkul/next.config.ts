@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import { isIndexable } from './src/lib/site-env';
+import { storageImagePatterns } from './src/lib/image-remote-patterns';
 
 /** Değişken değeri (baştaki/sondaki boşluk ve satır sonları atılır) */
 function envValue(name: string): string {
@@ -53,19 +54,8 @@ checkDeploymentEnv();
 const supabaseUrl = envUrl('NEXT_PUBLIC_SUPABASE_URL');
 const storageUrl = envUrl('NEXT_PUBLIC_SUPABASE_STORAGE_URL');
 
-const remotePatterns: NonNullable<NonNullable<NextConfig['images']>['remotePatterns']> = [
-  { protocol: 'https', hostname: '*.supabase.co', pathname: '/storage/v1/object/public/**' },
-];
-for (const origin of [supabaseUrl, storageUrl]) {
-  if (origin && !origin.hostname.endsWith('.supabase.co')) {
-    remotePatterns.push({
-      protocol: origin.protocol.replace(':', '') as 'http' | 'https',
-      hostname: origin.hostname,
-      port: origin.port,
-      pathname: '/storage/v1/object/public/**',
-    });
-  }
-}
+// Yalnızca kendi Supabase adreslerimizin public Storage yolu (SEC-06; başka projeler reddedilir)
+const remotePatterns = storageImagePatterns([supabaseUrl, storageUrl]);
 
 const supabaseOrigins = [supabaseUrl?.origin, storageUrl?.origin].filter(Boolean).join(' ');
 
