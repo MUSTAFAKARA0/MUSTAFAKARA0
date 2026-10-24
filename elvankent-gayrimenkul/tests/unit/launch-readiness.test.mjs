@@ -20,6 +20,8 @@
  *         arşivi SHA-256 ile doğrulanır; çalışma anında npx ile paket indirilmez (K-18)
  *  LR-12  Yalnız güvenlik yaması adayı: patch özeti kayıtlı; iş akışı, README ve patch aynı tabanı ve ağacı
  *         söyler; aday iş akışı yalnızca doğrulama dalında çalışır, gizli değer kullanmaz (K-19)
+ *  LR-13  Bekleyen migration'lar (supabase/pending): son migration'dan sonra sıralanır, şema sürümünü
+ *         değiştirmez; CI demo verisinden sonra uygular; OPS-02 bayrağı varsayılan kapalı (K-19)
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -324,7 +326,7 @@ describe('LR-08 CI E2E ortamı', () => {
     const run = (args, env) => spawnSync(process.execPath, args, { cwd: fileURLToPath(root), env: { ...process.env, CI: 'true', ...env }, encoding: 'utf8', timeout: 60_000 });
     const remote = { NEXT_PUBLIC_SUPABASE_URL: 'https://ornek-proje.supabase.co', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'x', SUPABASE_SERVICE_ROLE_KEY: 'x' };
     const config = ['--input-type=module', '-e', "await import('./playwright.config.ts')"];
-    for (const args of [['tests/security/rls.test.mjs'], config]) {
+    for (const args of [['tests/security/rls.test.mjs'], ['tests/security/subscription-limits.test.mjs'], config]) {
       const r = run(args, remote);
       assert.notEqual(r.status, 0, args.join(' '));
       assert.match(r.stderr, /CI: NEXT_PUBLIC_SUPABASE_URL yerel değil/, args.join(' '));
@@ -515,5 +517,33 @@ describe('LR-12 yalnız güvenlik yaması adayı (K-19)', () => {
     assert.match(wf, /paths: \['elvankent-gayrimenkul\/release\/security-only\/\*\*'/);
     assert.match(wf, /permissions:\n {2}contents: read/);
     assert.doesNotMatch(wf, /secrets\.|git push|vercel (deploy|--prod)|npx vercel/i);
+  });
+});
+
+describe('LR-13 bekleyen migration\'lar (K-19)', () => {
+  // supabase/pending/: canlıya uygulanmayan, karar ya da onay bekleyen migration'lar. CI hepsini uygular;
+  // şema sürümü ve yayın runbook'u (migrations/) değişmez.
+  const pending = readdirSync(new URL('supabase/pending/', root)).filter((f) => f.endsWith('.sql')).sort();
+  const latestMigration = migrations.at(-1).slice(0, 14);
+  test('bekleyen dosyalar son migration\'dan sonra sıralanır ve şema sürümünü değiştirmez', () => {
+    assert.ok(pending.length > 0);
+    for (const f of pending) {
+      assert.match(f, /^\d{14}_[a-z0-9_]+\.sql$/);
+      assert.ok(f.slice(0, 14) > latestMigration, `${f} son migration'dan önce`);
+      assert.doesNotMatch(read(`supabase/pending/${f}`), /function public\.karay_schema_version\(\)/, f);
+      assert.ok(!migrations.includes(f), `${f} hem pending hem migrations'da`);
+    }
+  });
+  test('CI database işi demo verisinden sonra bekleyen migration\'ları uygular', () => {
+    const ci = read('../.github/workflows/elvankent-ci.yml');
+    const seed = ci.indexOf('-f /tmp/seed.sql');
+    const apply = ci.indexOf('for f in supabase/pending/*.sql; do psql "$DB_URL" -X -v ON_ERROR_STOP=1');
+    assert.ok(seed > 0 && apply > seed);
+    assert.ok(apply < ci.indexOf('- name: Birim + güvenlik testleri'));
+  });
+  test('OPS-02 bayrağı varsayılan kapalı; güvenlik testleri sırayla çalışır', () => {
+    const flag = read('supabase/pending/20261025000002_ops02_subscription_limits.sql');
+    assert.match(flag, /add column if not exists enforce_subscription_limits boolean not null default false/);
+    assert.match(JSON.parse(read('package.json')).scripts['test:rls'], /--test-concurrency=1 tests\/security\/\*\.test\.mjs/);
   });
 });

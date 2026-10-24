@@ -112,6 +112,9 @@ jobs:
           supabase status -o env > /tmp/supa.env
           set -a; . /tmp/supa.env; set +a
           PGOPTIONS='-c app.allow_demo_seed=on' psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/seed.sql
+          # Bekleyen migration'lar (supabase/pending, canlıya uygulanmaz): bayraklar varsayılan kapalı; RLS ve E2E
+          # testleri bunlar uygulanmış veritabanında koşar (geriye uyumluluk) ve yeni davranışı sınar
+          for f in supabase/pending/*.sql; do psql "$DB_URL" -X -v ON_ERROR_STOP=1 -q -f "$f"; done
           # .env.local'ı hem Node (create-admin, RLS testleri, Playwright) hem bash ("E2E hazırlık": . ./.env.local)
           # okur. Her değer tek tırnakla yazılır; tek tırnak veya satır sonu içeren değer yazılmaz. Yazımdan sonra
           # iki tarafın aynı değerleri okuduğu denetlenir (K-11: tırnaksız EMAIL_FROM=Ad <e-posta> satırını Node
