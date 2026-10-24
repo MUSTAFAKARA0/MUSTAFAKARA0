@@ -7,33 +7,34 @@
 --
 -- Çıktının TAMAMINI saklayın (metin olarak): geri dönüşte "eski değerler" (KAYDET satırları)
 -- buradan alınır. "durum" sütununda DUR varsa migration UYGULANMAZ.
--- Tablo/fonksiyon yoksa sorgu hata vermez, satır "yok" der (query_to_xml ile dolaylı okuma).
+-- Tablo/fonksiyon yoksa ya da tablo boşsa sorgu hata vermez, satır "yok" der (query_to_xml + xmltable
+-- ile dolaylı okuma; değerler XML kaçışı olmadan, veritabanındaki hâliyle gösterilir).
 -- Adımlar ve gerekçe: docs/K17_KARAYS_RELEASE.md
 -- =============================================================================
 with
 v as (
   select case when to_regprocedure('public.karay_schema_version()') is null then null
-              else (xpath('/row/n/text()', query_to_xml('select public.karay_schema_version() as n', false, true, '')))[1]::text
+              else (select x.n from xmltable('/table/row' passing query_to_xml('select public.karay_schema_version() as n', false, false, '') columns n text path 'n') x limit 1)
          end as surum,
          to_regclass('public.platform_settings') is not null as ps_var,
          to_regclass('supabase_migrations.schema_migrations') is not null as gecmis_var
 ),
 ps as (
   select case when not ps_var then null
-              else (xpath('/row/n/text()', query_to_xml('select count(*) as n from public.platform_settings', false, true, '')))[1]::text::int end as satir,
+              else (select x.n from xmltable('/table/row' passing query_to_xml('select count(*) as n from public.platform_settings', false, false, '') columns n int path 'n') x limit 1) end as satir,
          case when not ps_var then null
-              else (xpath('/row/n/text()', query_to_xml('select company_name as n from public.platform_settings', false, true, '')))[1]::text end as ad,
+              else (select x.n from xmltable('/table/row' passing query_to_xml('select company_name as n from public.platform_settings', false, false, '') columns n text path 'n') x limit 1) end as ad,
          case when not ps_var then null
-              else (xpath('/row/n/text()', query_to_xml('select count(*) as n from public.platform_settings where company_name = ''KARAY''', false, true, '')))[1]::text::int end as etkilenecek,
+              else (select x.n from xmltable('/table/row' passing query_to_xml('select count(*) as n from public.platform_settings where company_name = ''KARAY''', false, false, '') columns n int path 'n') x limit 1) end as etkilenecek,
          (select column_default from information_schema.columns
            where table_schema = 'public' and table_name = 'platform_settings' and column_name = 'company_name') as varsayilan
   from v
 ),
 g as (
   select case when not gecmis_var then null
-              else (xpath('/row/n/text()', query_to_xml('select coalesce(max(version), ''boş'') as n from supabase_migrations.schema_migrations', false, true, '')))[1]::text end as son,
+              else (select x.n from xmltable('/table/row' passing query_to_xml('select coalesce(max(version), ''boş'') as n from supabase_migrations.schema_migrations', false, false, '') columns n text path 'n') x limit 1) end as son,
          case when not gecmis_var then null
-              else (xpath('/row/n/text()', query_to_xml('select count(*) as n from supabase_migrations.schema_migrations where version = ''20261018000001''', false, true, '')))[1]::text::int end as kayitli
+              else (select x.n from xmltable('/table/row' passing query_to_xml('select count(*) as n from supabase_migrations.schema_migrations where version = ''20261018000001''', false, false, '') columns n int path 'n') x limit 1) end as kayitli
   from v
 )
 select sira, kontrol, deger, durum from (
@@ -69,10 +70,18 @@ select sira, kontrol, deger, durum from (
   union all
   select 8, 'karay_schema_version() tanımı  [KAYDET]',
          case when to_regprocedure('public.karay_schema_version()') is null then 'yok'
-              else pg_get_functiondef('public.karay_schema_version()'::regprocedure) end, 'BİLGİ'
+              else pg_get_functiondef(to_regprocedure('public.karay_schema_version()')) end, 'BİLGİ'
   union all
-  select 9, 'karay_schema_version() yetkileri  [KAYDET]',
-         coalesce((select proacl::text from pg_proc where oid = to_regprocedure('public.karay_schema_version()')), 'yok'), 'BİLGİ'
+  select 9, 'karay_schema_version() yürütme yetkisi olan roller  [KAYDET]',
+         case when to_regprocedure('public.karay_schema_version()') is null then 'yok'
+              else coalesce((select string_agg(case when a.grantee = 0 then 'PUBLIC' else r.rolname end
+                                               || case when a.is_grantable then ' (devredebilir)' else '' end,
+                                               ', ' order by case when a.grantee = 0 then 'PUBLIC' else r.rolname end)
+                               from pg_proc p
+                               cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                               left join pg_roles r on r.oid = a.grantee
+                              where p.oid = to_regprocedure('public.karay_schema_version()') and a.privilege_type = 'EXECUTE'), 'hiçbir rol') end,
+         'BİLGİ: sıralı liste (varsayılan ACL dahil); geri dönüşten sonra aynı olmalı'
   union all
   select 10, 'Supabase CLI migration geçmişi tablosu',
          case when (select gecmis_var from v) then 'var · en son kayıt ' || coalesce((select son from g), '-') || ' · 20261018000001 kayıtlı: ' || coalesce((select kayitli from g)::text, '-')

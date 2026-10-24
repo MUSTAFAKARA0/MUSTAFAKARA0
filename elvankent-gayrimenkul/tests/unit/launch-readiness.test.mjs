@@ -14,7 +14,8 @@
  *  LR-09  CI ve yedek iş akışlarındaki her iş sabit çalıştırıcı imajında (ubuntu-24.04) çalışır; imaj
  *         ubuntu-latest etiketiyle kendiliğinden değişmez (K-16)
  *  LR-10  KARAYS migration runbook'u (supabase/ops/karays_brand/): uygulama betiğindeki gövde migration
- *         dosyasıyla birebir aynı; okuyan betikler tek SELECT; yazan betikler tek işlem (K-17)
+ *         dosyasıyla birebir aynı; okuyan betikler tek SELECT; yazan betikler tek işlem; 03 yalnızca önceki
+ *         ya da kendi şema sürümünde uygular (K-17)
  *  LR-11  CI tedarik zinciri: her action tam commit SHA'sıyla sabit; Supabase CLI sürümü sabit; gitleaks
  *         arşivi SHA-256 ile doğrulanır; çalışma anında npx ile paket indirilmez (K-18)
  */
@@ -391,6 +392,7 @@ describe('LR-10 KARAYS migration runbook (K-17)', () => {
   // değişip 03 değişmezse canlıya provası yapılmamış bir gövde gider; okuyan betikler canlıya yazamaz.
   const dir = 'supabase/ops/karays_brand/';
   const file = '20261018000001_karays_brand.sql';
+  const prev = migrations[migrations.indexOf(file) - 1];
   // Tırnak içindeki metin (ör. üretilen 'begin;' satırları) ifade sayılmaz
   const statements = (sql) =>
     sql
@@ -417,6 +419,10 @@ describe('LR-10 KARAYS migration runbook (K-17)', () => {
       assert.equal(code.match(/;/g)?.length, 1, `${f}: tek ifade`);
       assert.ok(code.endsWith(';'), `${f}: ifade sonda biter`);
       assert.doesNotMatch(code, /^\s*(begin|commit|insert|update|delete|alter|create|drop|grant|revoke|do)\b/im, `${f}: yazma ifadesi yok`);
+      // xpath(query_to_xml(…, tableforest)) boş sonuçta hata verir ve değeri XML kaçışlı (&amp;) döndürür
+      assert.doesNotMatch(code, /\bxpath\(/, `${f}: değerler xmltable ile okunur`);
+      // '…'::regprocedure sorgu derlenirken çözülür: nesne yoksa CASE koruması işe yaramaz (to_regprocedure kullanılır)
+      assert.doesNotMatch(code, /''::reg(procedure|class)\b/, `${f}: nesne adı sabit dönüşümle çözülmez`);
     }
   });
   test('yazan betikler (03, 05) tek işlem ve kilit zaman aşımıyla', () => {
@@ -427,8 +433,14 @@ describe('LR-10 KARAYS migration runbook (K-17)', () => {
       assert.equal(sql.match(/^commit;$/gm)?.length, 1, `${f}: tek commit`);
     }
   });
+  test('03 yalnızca önceki ya da kendi şema sürümünde uygular (daha yenisinde sürüm geriye gitmez)', () => {
+    assert.ok(prev, 'önceki migration bulundu');
+    assert.match(
+      read(`${dir}03_apply.sql`),
+      new RegExp(`if surum is null or surum not in \\('${prev.slice(0, 14)}', '${file.slice(0, 14)}'\\) then\n\\s+raise exception 'DUR:`),
+    );
+  });
   test('05 genel geri dönüş bir önceki migration dosyasının şema sürümüne döner', () => {
-    const prev = migrations[migrations.indexOf(file) - 1];
     assert.ok(prev, 'önceki migration bulundu');
     assert.match(read(`${dir}05_rollback.sql`), new RegExp(`eski_surum +constant text := '${prev.slice(0, 14)}'`));
   });
@@ -450,8 +462,9 @@ describe('LR-11 CI tedarik zinciri (K-18)', () => {
   });
   test('Supabase CLI sürümü sabit (latest/beta değil)', () => {
     const ci = workflows[0][1];
-    const step = ci.slice(ci.indexOf('supabase/setup-cli@'));
-    assert.match(step.split('\n- ')[0], /^\s+version: \d+\.\d+\.\d+$/m);
+    // Adım, bir sonraki "- " ile başlayan (girintili) adımda biter; sonraki adımların version: alanı sayılmaz
+    const step = ci.slice(ci.indexOf('supabase/setup-cli@')).split(/\n\s*- /)[0];
+    assert.match(step, /^\s+version: \d+\.\d+\.\d+$/m);
   });
   test('gitleaks arşivi SHA-256 ile doğrulanıp öyle açılır', () => {
     const ci = workflows[0][1];

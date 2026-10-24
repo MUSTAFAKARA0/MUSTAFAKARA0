@@ -9,7 +9,8 @@
 -- Davranış:
 --   • Tek işlem (begin … commit). Herhangi bir adım hata verirse HİÇBİR değişiklik kalmaz.
 --   • lock_timeout 5 sn: platform_settings kilidi alınamazsa beklemeden vazgeçer (site etkilenmez).
---   • Koruma: şema sürümü 20261011000001'den eskiyse durur (önce eksik migration'lar).
+--   • Koruma: şema sürümü 20261011000001 (önceki) ya da 20261018000001 (zaten uygulanmış) değilse durur.
+--     Eskiyse önce eksik migration'lar; daha yeniyse gövde sürüm işaretini geriye alırdı.
 --   • Migration gövdesi supabase/migrations/20261018000001_karays_brand.sql ile birebir aynıdır
 --     (birim testi LR-10 denetler).
 --   • Supabase CLI geçmiş tablosu varsa kayıt eklenir (yoksa adım atlanır); tekrar çalıştırılabilir.
@@ -31,6 +32,9 @@ begin
   execute 'select public.karay_schema_version()' into surum;
   if surum < '20261011000001' then
     raise exception 'DUR: şema sürümü % — önce PRODUCTION_MIGRATION.md sırasıyla eksik migration''lar', surum;
+  end if;
+  if surum is null or surum not in ('20261011000001', '20261018000001') then
+    raise exception 'DUR: beklenmeyen şema sürümü % (beklenen 20261011000001 ya da 20261018000001); daha yeni bir sürümde bu betik sürüm işaretini geriye alırdı', surum;
   end if;
 end
 $koruma$;

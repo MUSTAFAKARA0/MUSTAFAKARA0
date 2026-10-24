@@ -4,7 +4,10 @@
 -- Tercih edilen yol: 02_rollback_script.sql ile uygulamadan ÖNCE üretilen, o veritabanına özgü betik.
 -- Bu dosya onun yedeğidir ve ön kontrolün BEKLENEN değerlerini varsayar:
 --   şema sürümü 20261011000001 · varsayılan 'KARAY' · company_name 'KARAY'
--- Ön kontrol çıktınız farklıysa aşağıdaki üç sabiti o değerlerle değiştirin (yoksa betik durur).
+-- Betik bu sabitleri canlı veriyle KARŞILAŞTIRAMAZ: migration'dan sonra önceki değerler veritabanında
+-- görünmez. 01 çıktısının 3., 5. ve 6. satırları bu değerler değilse (ör. 5. satır "zaten KARAYS")
+-- aşağıdaki üç sabiti o çıktıya göre değiştirin ya da 05 yerine 02'nin ürettiği betiği kullanın.
+-- Yanlış sabitle geri dönüş de yanlış olur ve betik bunu fark etmez.
 --
 -- Yalnızca onayla. Tek işlem: koruma veya kontrol hata verirse hiçbir şey değişmez.
 --   Supabase SQL Editor: dosyanın tamamı tek sorgu · psql: psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f 05_rollback.sql
