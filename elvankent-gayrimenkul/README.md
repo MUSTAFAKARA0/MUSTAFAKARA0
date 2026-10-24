@@ -10,6 +10,7 @@
 
 | Belge | İçerik |
 | --- | --- |
+| [docs/GELISTIRME_GUNLUGU.md](./docs/GELISTIRME_GUNLUGU.md) | Güncel durum ve geliştirme günlüğü: son commit, testler, açık kapılar, sıradaki adım (her oturum günceller) |
 | [SETUP.md](./SETUP.md) | Kurulum, V1 → V2 yükseltme, ortam değişkenleri, canlıya alma kontrol listesi |
 | [ADMIN_GUIDE.md](./ADMIN_GUIDE.md) | Yönetim paneli kullanım kılavuzu |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Mimari, çok kiracılı yapı, güvenlik katmanları, medya hattı, SEO |

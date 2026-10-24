@@ -1,15 +1,16 @@
 # K-17 · KARAYS sürümünün Production'a çıkışı (yayın kiti)
 
 > **Durum (24.10.2026):** Hazır, ama **yayın yapılmadı**. Yayın iki ön koşula ve açık onaya bağlı (§1).
-> Production dalı `ff2f7da`. Yayınlanacak içerik `claude/karay-ci-dogrulama` dalında; GitHub CI [#83](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/39215555083) yeşil.
+> Production dalı `ff2f7da`. Yayınlanacak içerik `claude/karay-ci-dogrulama` dalında. Yayından önce bu dalın **son commit'inde** `elvankent-ci` (quality + database) yeşil olmalı (§4 B1). Ürün kodu (K-8 … K-16) GitHub CI [#83](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/39215555083) ile doğrulandı; sonraki commit'lerin doğrulaması: [GELISTIRME_GUNLUGU.md](GELISTIRME_GUNLUGU.md).
 > Bu belge depoda herkese açıktır. Ortama özgü kimlikler (Vercel/Supabase proje ve dağıtım kimlikleri, ortam değişkeni değerleri) burada yer almaz. Operatör bunları panelden okur.
 
 ## 0. Ne yayınlanıyor
 
-Production dalının (`ff2f7da`) üstüne 15 commit gelir: FAZ 3, FAZ 4 ve K-8 … K-16.
-- **Güvenlik yamaları:** next 16.3.8, sharp 0.35.5.
+Production dalının (`ff2f7da`) üstüne gelenler: FAZ 3, FAZ 4 ve K-8 … K-16 (ürün; CI #83'te bu 15 commit doğrulandı), K-17 (bu yayın kiti ve migration runbook'u) ve K-18 (CI tedarik zinciri). Kesin liste B1'de kurulan zincirden okunur: `git log --oneline ff2f7da..karays-yayin`.
+- **Güvenlik yamaları:** next 16.4.3 (GHSA-2464-fhr4-w9xw, GHSA-673q-mjm6-r5xr, GHSA-p3m5-59mp-jv5r), zod 4.6.7 (GHSA-mrhx-c7xc-m3w5), sharp 0.35.5.
 - **Doğrulanabilir yedek betikleri.**
 - **CI düzeltmeleri:** E2E ortamı, Playwright tarayıcısı, sabit çalıştırıcı imajı.
+- **CI tedarik zinciri (K-18):** action'lar node24 sürümlerinde ve tam commit SHA'sıyla sabit; Supabase CLI sürümü sabit; gitleaks arşivi SHA-256 ile doğrulanıyor.
 - **Yazı tipleri:** depodan yükleniyor.
 - **KARAYS markası:** ad, logo ailesi, KARO ve yardımcı maskot.
 - **Tek migration:** `20261018000001_karays_brand.sql`.
@@ -39,6 +40,7 @@ Bu commit'lerin hiçbiri yeni bir ortam değişkeni veya yeni bir veritabanı ç
 ## 3. Riskler
 
 **P1 · yayından önce bilinmeli**
+- **Canlıdaki güvenlik açığı (K-18):** Production (`ff2f7da`) next 16.3.6 ve sharp 0.35.4 ile çalışıyor. GHSA-p3m5-59mp-jv5r (Server Actions üzerinden DoS, yüksek) uygulamada geçerli: 28 dosyada Server Action var. GHSA-2464-fhr4-w9xw (SVG ile Image Optimization RCE, kritik) için duyurunun geçici çözümü sharp ≥ 0.35.5; canlıda bu sürüm yok. Vercel'in görüntü işleme yolunun bunu etkileyip etkilemediği doğrulanmadı. Bu yayın ikisini de kapatır. Yayın geciktikçe açık canlıda kalır.
 - Rollback seçeneği panelde gözle teyit edilmeli (A1). Hobby planda yalnızca **hemen önceki** Production dağıtımına dönülebilir; hedefimiz zaten o.
 - Yedek değişkeni push'tan **önce** açılırsa Production dalındaki **eski** yedek iş akışı çalışır. Eski sürüm tablo satır sayılarını ve dump boyutunu herkese açık Actions loguna yazar. Yeni sürüm yazmaz. Push'tan önce otomatik yedek gerekiyorsa iş akışı doğrulama dalından çalıştırılır.
 - Production dalı korumasız ve varsayılan dal; her push doğrudan Production'a gider (PF-04, D-14).
@@ -49,6 +51,7 @@ Bu commit'lerin hiçbiri yeni bir ortam değişkeni veya yeni bir veritabanı ç
 - Tarayıcılar eski favicon'u bir süre önbellekte tutabilir.
 - KARO animasyonu 4,2 MB'tır. Yalnızca geniş ekranda ve hareket serbestken, bir kez indirilir.
 - Push'tan sonra gece yedeği, yedek açılana kadar her gün görünür bir "Yedek alınmadı" uyarısı verir. Bu yeni iş akışının beklenen davranışıdır.
+- Yedek işinin action sürümü (checkout v7.0.1, K-18) hiç çalışmadı: CI bu işi çalıştırmaz, yedek kapalıyken yalnızca uyarı işi koşar. İlk çalıştırma (A4, iş akışı yolu) bunu da doğrular; hata verirse yedek alınmaz, başka bir şey değişmez.
 
 ## 4. İşlem sırası
 
@@ -92,12 +95,13 @@ Zincir, Production dalının üstüne doğrulama dalındaki commit'ler alınarak
 ```bash
 git fetch origin claude/karay-ci-dogrulama claude/elvankent-real-estate-platform-vxq9dj
 git checkout -B karays-yayin 82dcd06                               # ff2f7da + 6 ortak commit (FAZ 3 … K-12)
-git cherry-pick a24fef8..origin/claude/karay-ci-dogrulama          # K-13 sonrası; a24fef8 HARİÇ
+git cherry-pick a24fef8..origin/claude/karay-ci-dogrulama          # K-13 … K-18; a24fef8 HARİÇ
 git diff --stat origin/claude/karay-ci-dogrulama HEAD              # yalnızca vercel.json ve elvankent-gayrimenkul/vercel.json
 git merge-base --is-ancestor origin/claude/elvankent-real-estate-platform-vxq9dj HEAD && echo fast-forward
 ```
 
 Push'tan önce şunlar kontrol edilir:
+- Doğrulama dalının son commit'inde (`git rev-parse origin/claude/karay-ci-dogrulama`) `elvankent-ci` quality ve database işleri yeşil (Actions › elvankent-ci › o commit).
 - `git ls-remote`: Production dalı hâlâ `ff2f7da`.
 - Çalışma ağacı temiz.
 - gitleaks temiz.
@@ -199,7 +203,7 @@ Gerçek build'ler yerel yığında çalıştırıldı. `/karay` ISR'ı yerel ön
 - Production dalı yeni commit'i göstermeye devam eder. Kalıcı geri dönüş force-push ile değil, `git revert` commit'iyle yapılır (ayrı onay).
 
 **R-B · Migration**
-- A3'te üretilen betik çalıştırılır (yoksa `05_rollback.sql`).
+- A3'te üretilen betik çalıştırılır. Yoksa `05_rollback.sql`: yalnızca A2'de 3., 5. ve 6. satırlar beklenen değerlerdeyse (`20261011000001`, `KARAY`, `'KARAY'::text`); değilse dosyadaki üç sabit A2'ye göre düzenlenir.
 - Ardından 01 tekrar çalıştırılır. 3, 5, 6, 8 ve 9. satırlar A2 çıktısıyla aynı olmalı.
 
 **R-D · Felaket**
