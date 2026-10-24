@@ -326,7 +326,7 @@ describe('LR-08 CI E2E ortamı', () => {
     const run = (args, env) => spawnSync(process.execPath, args, { cwd: fileURLToPath(root), env: { ...process.env, CI: 'true', ...env }, encoding: 'utf8', timeout: 60_000 });
     const remote = { NEXT_PUBLIC_SUPABASE_URL: 'https://ornek-proje.supabase.co', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'x', SUPABASE_SERVICE_ROLE_KEY: 'x' };
     const config = ['--input-type=module', '-e', "await import('./playwright.config.ts')"];
-    for (const args of [['tests/security/rls.test.mjs'], ['tests/security/subscription-limits.test.mjs'], config]) {
+    for (const args of [['tests/security/rls.test.mjs'], ['tests/security/subscription-limits.test.mjs'], ['tests/security/membership-changes.test.mjs'], config]) {
       const r = run(args, remote);
       assert.notEqual(r.status, 0, args.join(' '));
       assert.match(r.stderr, /CI: NEXT_PUBLIC_SUPABASE_URL yerel değil/, args.join(' '));
