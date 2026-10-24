@@ -15,7 +15,7 @@
  *         ubuntu-latest etiketiyle kendiliğinden değişmez (K-16)
  *  LR-10  KARAYS migration runbook'u (supabase/ops/karays_brand/): uygulama betiğindeki gövde migration
  *         dosyasıyla birebir aynı; okuyan betikler tek SELECT; yazan betikler tek işlem; 03 yalnızca önceki
- *         ya da kendi şema sürümünde uygular (K-17)
+ *         ya da kendi şema sürümünde uygular; 02'nin ürettiği yorumlar tek satırdır (K-17)
  *  LR-11  CI tedarik zinciri: her action tam commit SHA'sıyla sabit; Supabase CLI sürümü sabit; gitleaks
  *         arşivi SHA-256 ile doğrulanır; çalışma anında npx ile paket indirilmez (K-18)
  */
@@ -432,6 +432,14 @@ describe('LR-10 KARAYS migration runbook (K-17)', () => {
       assert.equal(sql.match(/^begin;$/gm)?.length, 1, `${f}: tek begin`);
       assert.equal(sql.match(/^commit;$/gm)?.length, 1, `${f}: tek commit`);
     }
+  });
+  test('02 ürettiği yorum satırlarını tek satıra indirir (veritabanı metni komuta dönüşmez)', () => {
+    // company_name gibi elle girilen bir değer satır sonu içerirse "--" yorumu orada biter ve kalan
+    // metin, geri dönüş betiğinde veritabanı sahibi yetkisiyle çalışan bir komut olur
+    assert.match(
+      read(`${dir}02_rollback_script.sql`),
+      /^select case when betik like '--%' then regexp_replace\(betik, '\[\\r\\n\]\+', ' ', 'g'\) else betik end as betik from \($/m,
+    );
   });
   test('03 yalnızca önceki ya da kendi şema sürümünde uygular (daha yenisinde sürüm geriye gitmez)', () => {
     assert.ok(prev, 'önceki migration bulundu');

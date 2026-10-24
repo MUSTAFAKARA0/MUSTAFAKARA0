@@ -10,6 +10,8 @@
 -- Yetkiler: migration'ın dokunduğu dört rolün (public, anon, authenticated, service_role) yürütme yetkisi
 -- önce kaldırılır, sonra bugünkü ACL'deki sırayla yeniden verilir. Varsayılan (NULL) ACL, sahibin ve
 -- PUBLIC'in yürütebildiği ACL olarak okunur; geri dönüşten sonra 01'in 9. satırı bugünküyle aynı olmalı.
+-- Yorum satırları tek satıra indirilir: veritabanından gelen metin (ör. elle girilmiş company_name)
+-- satır sonu içerse bile yorumdan taşıp geri dönüş betiğinde komut olarak çalışamaz.
 -- =============================================================================
 with
 o as (
@@ -37,7 +39,7 @@ yetki as (
   where p.oid = (select fn from o) and a.privilege_type = 'EXECUTE'
     and (a.grantee = 0 or r.rolname in ('anon', 'authenticated', 'service_role'))
 )
-select betik from (
+select case when betik like '--%' then regexp_replace(betik, '[\r\n]+', ' ', 'g') else betik end as betik from (
   select 1 as sira, '-- KARAYS geri dönüş betiği · üretildi ' || to_char(now() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') || ' · veritabanı ' || current_database() as betik
   union all select 2, '-- Yalnızca 03_apply.sql uygulandıktan sonra ve onayla çalıştırın. Tek işlem: hata olursa hiçbir şey değişmez.'
   union all select 3, 'begin;'
