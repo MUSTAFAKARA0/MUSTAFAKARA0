@@ -197,6 +197,22 @@ test('KARAY-01: KARAY şirket sayfası açılır (kendi header, menü, bölümle
   await expect(page.locator('a[href^="mailto:"]')).toHaveCount(S.settings!.contact_email ? 2 : 0);
 });
 
+test('KARAY-23: platform yüzeylerinde eski marka adı (KARAY) görünmez; metin, başlık, meta, JSON-LD ve erişilebilir adlar', async ({ page }) => {
+  // KARAYS (ve ekleri: KARAYS'in) kabul; KARAY'ın / "KARAY " gibi eski ad reddedilir. Teknik adlar (/karay yolu) görünür metin değildir.
+  for (const path of ['/karay', '/platform/giris']) {
+    await page.goto(path);
+    const texts = await page.evaluate(() => [
+      document.title,
+      document.body.innerText,
+      ...[...document.querySelectorAll('meta[content]')].map((m) => m.getAttribute('content') ?? ''),
+      ...[...document.querySelectorAll('script[type="application/ld+json"]')].map((s) => s.textContent ?? ''),
+      ...[...document.querySelectorAll('[alt], [aria-label], [title]')].flatMap((e) => [e.getAttribute('alt'), e.getAttribute('aria-label'), e.getAttribute('title')]).filter((v): v is string => Boolean(v)),
+    ]);
+    const old = texts.flatMap((t) => t.match(/\bKARAY(?![A-Za-zÇĞİÖŞÜçğıöşü])[^\n]{0,30}/g) ?? []);
+    expect(old, `${path}: eski marka adı`).toEqual([]);
+  }
+});
+
 test('KARAY-02: KARAY sayfası indekslenebilir; demo kiracının noindex kuralı korunur', async ({ page, request }) => {
   const res = await request.get('/karay');
   expect(res.headers()['x-robots-tag'] ?? '').not.toContain('noindex');
