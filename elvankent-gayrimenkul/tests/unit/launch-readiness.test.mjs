@@ -15,6 +15,8 @@
  *         ubuntu-latest etiketiyle kendiliğinden değişmez (K-16)
  *  LR-10  KARAYS migration runbook'u (supabase/ops/karays_brand/): uygulama betiğindeki gövde migration
  *         dosyasıyla birebir aynı; okuyan betikler tek SELECT; yazan betikler tek işlem (K-17)
+ *  LR-11  CI tedarik zinciri: her action tam commit SHA'sıyla sabit; Supabase CLI sürümü sabit; gitleaks
+ *         arşivi SHA-256 ile doğrulanır; çalışma anında npx ile paket indirilmez (K-18)
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -429,5 +431,39 @@ describe('LR-10 KARAYS migration runbook (K-17)', () => {
     const prev = migrations[migrations.indexOf(file) - 1];
     assert.ok(prev, 'önceki migration bulundu');
     assert.match(read(`${dir}05_rollback.sql`), new RegExp(`eski_surum +constant text := '${prev.slice(0, 14)}'`));
+  });
+});
+
+describe('LR-11 CI tedarik zinciri (K-18)', () => {
+  // Etiket (@v4) ve dal (@v1) taşınabilir: ele geçirilen bir etiket depodaki her iş akışında kod çalıştırır.
+  // Tam commit SHA'sı çalışan kodu sabitler; yorumdaki sürüm güncelleme için okunur.
+  const workflows = ['elvankent-ci.yml', 'elvankent-backup.yml'].map((f) => [f, read(`../.github/workflows/${f}`)]);
+  test('her action tam commit SHA ile sabit ve sürüm yorumu taşır', () => {
+    for (const [f, wf] of workflows) {
+      const uses = [...wf.matchAll(/^\s*(?:-\s+)?uses:\s*(\S+)(.*)$/gm)].map((m) => [m[1], m[2].trim()]);
+      assert.ok(uses.length > 0, `${f}: action bulundu`);
+      for (const [ref, comment] of uses) {
+        assert.match(ref, /^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/, `${f}: ${ref} SHA ile sabit değil`);
+        assert.match(comment, /^# v\d+\.\d+\.\d+$/, `${f}: ${ref} sürüm yorumu yok`);
+      }
+    }
+  });
+  test('Supabase CLI sürümü sabit (latest/beta değil)', () => {
+    const ci = workflows[0][1];
+    const step = ci.slice(ci.indexOf('supabase/setup-cli@'));
+    assert.match(step.split('\n- ')[0], /^\s+version: \d+\.\d+\.\d+$/m);
+  });
+  test('gitleaks arşivi SHA-256 ile doğrulanıp öyle açılır', () => {
+    const ci = workflows[0][1];
+    const archive = ci.match(/gitleaks_(\d+\.\d+\.\d+)_linux_x64\.tar\.gz/)?.[0];
+    assert.ok(archive, 'gitleaks arşivi bulundu');
+    const check = ci.indexOf(`  ${archive}' | sha256sum -c -`);
+    assert.ok(check > 0, 'arşiv özeti denetleniyor');
+    assert.match(ci.slice(check - 80, check), /'[0-9a-f]{64}$/, 'özet 64 haneli SHA-256');
+    assert.ok(ci.indexOf(`tar -xzf ${archive}`) > check, 'arşiv özet denetiminden sonra açılır');
+    assert.doesNotMatch(ci, /curl[^\n]*\|\s*tar/, 'indirilen arşiv denetlenmeden açılmaz');
+  });
+  test('çalışma anında npx ile paket indirilmez', () => {
+    for (const [f, wf] of workflows) assert.doesNotMatch(wf, /npx\s+(--yes|-y)\b/, f);
   });
 });

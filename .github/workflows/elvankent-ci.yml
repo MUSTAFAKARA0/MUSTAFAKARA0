@@ -14,6 +14,11 @@
 # Çalıştırıcı imajı sabittir: ubuntu-24.04. ubuntu-latest etiketi 19.10.2026'dan itibaren Ubuntu 26'ya
 # taşınıyor; iki iş de en son ubuntu-24.04 imajında doğrulandı. İmaj, CI'da doğrulanarak ayrı bir
 # commit'le değiştirilir (tests/unit/launch-readiness.test.mjs, LR-09).
+#
+# Tedarik zinciri (LR-11): action'lar tam commit SHA'sıyla sabitlenir (sürüm yanındaki yorumda; etiket
+# taşınsa da çalışan kod değişmez) ve hepsi node24 çalışma zamanındadır. Supabase CLI sürümü sabittir;
+# gitleaks arşivi resmî SHA-256 özetiyle doğrulanır; sunucu beklemesi çalışma anında paket indirmez.
+# Güncelleme: yeni sürümün SHA'sı `git ls-remote` ile alınır, CI'da yeşil görülür, ayrı commit'le değişir.
 name: elvankent-ci
 
 on:
@@ -46,10 +51,10 @@ jobs:
       SITE_ENV: development
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -70,7 +75,10 @@ jobs:
       - name: Gizli anahtar taraması (gitleaks)
         working-directory: .
         run: |
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/gitleaks_8.24.2_linux_x64.tar.gz | tar -xz gitleaks
+          # Sürüm ve arşiv özeti sabit (resmî gitleaks_8.24.2_checksums.txt); özet tutmazsa iş durur
+          curl -sSfLO https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/gitleaks_8.24.2_linux_x64.tar.gz
+          echo 'fa0500f6b7e41d28791ebc680f5dd9899cd42b58629218a5f041efa899151a8e  gitleaks_8.24.2_linux_x64.tar.gz' | sha256sum -c -
+          tar -xzf gitleaks_8.24.2_linux_x64.tar.gz gitleaks
           # Proje klasörüne dokunan tüm commit'ler taranır (node_modules/.next değil)
           ./gitleaks git . --log-opts="-- elvankent-gayrimenkul" --no-banner --redact --exit-code 1
 
@@ -80,15 +88,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: elvankent-gayrimenkul/package-lock.json
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:
-          version: latest
+          # 19.10.2026'daki son kararlı sürüm (CI #83 o gün "latest" ile yeşildi). `supabase init`
+          # şablonu sürüme göre değişebildiği için sabit; yeni sürüm CI'da doğrulanıp ayrı commit'le seçilir.
+          version: 2.121.0
       - run: npm ci
       - name: Yerel Supabase (migration'lar sıfırdan uygulanır)
         run: |
@@ -144,7 +154,8 @@ jobs:
           set -a; . ./.env.local; set +a
           npm run build
           (npm start > /tmp/next.log 2>&1 &)
-          npx --yes wait-on -t 60000 http://localhost:3000/api/health
+          # Sunucu hazır olana kadar en fazla 60 sn beklenir; çalışma anında paket indirilmez
+          timeout 60 bash -c 'until curl -fs -o /dev/null http://localhost:3000/api/health; do sleep 1; done'
       - name: Playwright E2E
         env:
           E2E_ADMIN_EMAIL: e2e-admin@example.test
@@ -152,7 +163,7 @@ jobs:
         run: npx playwright test
       - name: Hata ayıklama çıktıları
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-results
           path: |

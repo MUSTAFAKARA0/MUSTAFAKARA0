@@ -21,6 +21,7 @@
 # hiç etkinlik olmazsa zamanlanmış iş akışları GitHub tarafından kapatılır.
 # Çalıştırıcı imajı sabittir: ubuntu-24.04 (gerekçe elvankent-ci.yml'de; LR-09). Araçlar (rclone,
 # PGDG deposundan postgresql-client-17) bu imajın paket kaynaklarına (noble) göre kurulur.
+# Action'lar tam commit SHA'sıyla sabittir (gerekçe elvankent-ci.yml'de; LR-11).
 name: elvankent-backup
 
 on:
@@ -91,7 +92,7 @@ jobs:
           fi
           echo "Gerekli ayarların hepsi tanımlı."
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           sparse-checkout: |
             elvankent-gayrimenkul/supabase/ops
