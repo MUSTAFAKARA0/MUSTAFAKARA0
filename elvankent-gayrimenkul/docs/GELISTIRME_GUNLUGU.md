@@ -12,7 +12,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 | Çalışma dalı | `claude/karay-ci-dogrulama`. Vercel dağıtımı bu dalda kapalı (`a24fef8`); yayın zinciri bu commit hariç kurulur |
 | Son kod commit'i | `92ad985` (geri dönüş betiğinde yorum satırı sertleştirmesi) |
 | GitHub | K-13…K-16 GitHub'da (`a24fef8..968e3ad`). Production dalının yerel kopyasındaki 15 commit kaybolmadı: zincir uzak dallardan birebir yeniden kurulabiliyor (aşağıda) |
-| CI | Bekleniyor: bu girişin commit'leri için `elvankent-ci` (quality + database) |
+| CI | [#84](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40100992371) yeşil (`5034a41`, 24.10.2026): quality ve database işleri başarılı |
 | Güvenlik | Production'da next 16.3.6 ve sharp 0.35.4 var; yeni Next.js duyurularının etki alanında ([K17 §3](K17_KARAYS_RELEASE.md)). Düzeltme bu dalda; canlıya çıkması yayın onayına bağlı (O-4) |
 | Açık kapılar | P0-1 doğrulanmış canlı yedek yok · P0-2 canlı veritabanının kimliği ve şema durumu doğrulanmadı · onaylar O-1…O-6 ([K17 §1–§2](K17_KARAYS_RELEASE.md)) |
 | Bekleyen kararlar | D-01…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)). Özellikle D-05 (iptal ve veri saklama; OPS-02'nin kalıcı düzeltmesi buna bağlı), D-14 (dal ve yayın stratejisi), D-15 (güvenlik başlıkları, SVG) · PHASE4 §8 K-4…K-7 |
@@ -85,7 +85,10 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
   - `ff2f7da` zincirin atası (fast-forward).
 - Açık PR'lar: #2 (head production dalı, base `claude/photo-to-stl-app-rxbvev`) ve #1 (BREAKLINE). İkisine de dokunulmadı.
 
-**CI:** Bekleniyor (bkz. Güncel durum).
+**CI:** [#84](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40100992371) · `5034a41` · 24.10.2026 · yeşil.
+- quality: typecheck, ESLint, birim testleri, demo SQL, build, `npm audit --omit=dev` (yüksek/kritik yok), gitleaks
+- database: yerel Supabase (CLI 2.121.0, sabit SHA'lı setup-cli v3), birim + RLS/MFA/kiracı izolasyonu adımı başarılı (sayı bu kayıtta okunmadı), Playwright E2E **205 geçti, 4 koşullu atlandı** (CI #83 ile aynı)
+- Vercel'de bu commit için dağıtım yok; Production `ff2f7da`.
 
 **Açık kalanlar:**
 - K-17 yayın kapıları (P0-1, P0-2, O-1…O-6).
