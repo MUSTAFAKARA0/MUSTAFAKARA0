@@ -10,9 +10,9 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 | --- | --- |
 | Production dalı | `ff2f7da`, değişmedi. KARAYS yayını kapıları bekliyor (aşağıda) |
 | Çalışma dalı | `claude/karay-ci-dogrulama`. Vercel dağıtımı bu dalda kapalı (`a24fef8`); yayın zinciri bu commit hariç kurulur |
-| Son kod commit'i | `8d0f282` (tek satır doğrulaması, çalışma saatleri sınırı) |
+| Son kod commit'i | `4afd83f` (görünmez ve yön denetim karakterleri, şirket adı savunması) |
 | GitHub | K-13…K-16 GitHub'da (`a24fef8..968e3ad`). Production dalının yerel kopyasındaki 15 commit kaybolmadı: zincir uzak dallardan birebir yeniden kurulabiliyor (aşağıda) |
-| CI | [#84](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40100992371) yeşil (`5034a41`, 24.10.2026): quality ve database işleri başarılı |
+| CI | [#85](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40121218238) yeşil (`6c93d67`, 24.10.2026): quality ve database işleri başarılı. ECC-2 commit'leri için yeni koşu push ile başlar |
 | Güvenlik | Production'da next 16.3.6 ve sharp 0.35.4 var; yeni Next.js duyurularının etki alanında ([K17 §3](K17_KARAYS_RELEASE.md)). Düzeltme bu dalda; canlıya çıkması yayın onayına bağlı (O-4) |
 | Açık kapılar | P0-1 doğrulanmış canlı yedek yok · P0-2 canlı veritabanının kimliği ve şema durumu doğrulanmadı · onaylar O-1…O-6 ([K17 §1–§2](K17_KARAYS_RELEASE.md)) |
 | Bekleyen kararlar | D-01…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)). Özellikle D-05 (iptal ve veri saklama; OPS-02'nin kalıcı düzeltmesi buna bağlı), D-14 (dal ve yayın stratejisi), D-15 (güvenlik başlıkları, SVG) · PHASE4 §8 K-4…K-7 |
@@ -20,6 +20,49 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 **Sıradaki adım:** Sahibin K-17 kapılarını açması: A1–A4 (panel teyidi, salt okunur ön kontrol, geri dönüş betiği, yedek). Ardından O-4 ile kod yayını, O-5 ile migration. Canlıdaki güvenlik açığı nedeniyle bu sıranın öne alınması önerilir. Güvenlik düzeltmesini migration'dan önce, yalnızca kod olarak yayınlamak teknik olarak mümkün (yeni kod eski veritabanıyla çalışır, [K17 §5](K17_KARAYS_RELEASE.md)). Yedek kapısının (P0-1) bu kod yayınını da bekletip bekletmeyeceği sahibin kararıdır.
 
 ## Girişler
+
+### 24.10.2026 (3) · ECC v2.2.3 incelemesi ve düşük bulguların giderilmesi
+
+**Başlangıç:** `6c93d67`. Çalışma ağacı temizdi.
+
+**CI:** [#85](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40121218238) · `6c93d67` · yeşil.
+- quality başarılı.
+- database: yerel Supabase, birim + RLS/MFA/kiracı izolasyonu, Playwright E2E **205 geçti, 4 koşullu atlandı** (#84 ile aynı).
+
+**ECC incelemesi (`5034a41..6c93d67`):**
+- `ecc:code-reviewer` ve `ecc:security-reviewer` gerçek alt ajan olarak çalıştı, `ecc:security-review` skill'i doğrudan çağrıldı.
+- Kritik, yüksek veya orta bulgu yok; altı düşük bulgu var.
+
+**Commit'ler:**
+- `b303df6` (davranış değişmez):
+  - Şirket/site ayarları ve KARAYS profil şemaları `'use server'` dosyalarından `src/modules/content/settings-schema.ts` ve `src/modules/karay/profile-schema.ts` modüllerine taşındı. Böylece birim testleri kaynak metni değil, şemanın davranışını sınıyor.
+  - `hoursSchema` takma adı kaldırıldı.
+- `4afd83f` (düzeltme):
+  - `singleLine` görünmez biçim karakterlerini siliyor: U+200B, U+2060–U+2064, U+FEFF.
+  - Yön geçersiz kılma, gömme ve yalıtma karakterleri (U+202A–U+202E, U+2066–U+2069) sessizce silinmiyor; alan adıyla açık hata veriliyor.
+  - ZWJ/ZWNJ ile LRM/RLM/ALM korunuyor. Türkçe, uluslararası, sağdan sola ve emoji içeren adlar bozulmuyor; testi var.
+  - KARAYS `company_name` alanında `<` ve `>` açık hatayla reddediliyor. Kullanım noktaları doğrulandı ve hepsi kaçışlı: React metni, JSON-LD `\u003c`, geri dönüş betiğinde `quote_literal`. Ret, ileride ham HTML'de (ör. e-posta) kullanılırsa diye ek katman.
+  - Ham `.max(160)` sınırı Türkçe mesaj veriyor.
+- Regresyon testleri önce yazıldı ve eski kodda başarısız oldu. Her savunma tek tek kaldırılarak 6 mutasyon denendi; 6'sı da yakalandı.
+
+**Ertelenen bulgu: CSP `img-src` / `connect-src` içindeki `https://*.supabase.co`.**
+- Tarayıcıdaki büyük dosya yüklemeleri `PROJE.storage.supabase.co` adresine gidiyor. Bu adres `src/lib/env.ts` içinde türetiliyor; `next.config.ts` ise yalnızca açıkça tanımlanan Storage değişkenini görüyor.
+- Joker kaldırılırsa production'da yüklemeler kırılır. CI yerel Supabase ile koştuğu için bu yolu sınayamaz.
+- Önerilen yol:
+  1. Türetme kuralı `next.config.ts` ile paylaşılır.
+  2. Gerçek Supabase'e bağlı bir önizlemede Auth, Storage yükleme ve görseller denenir.
+  3. Ardından joker kaldırılır.
+- D-15 (güvenlik başlıkları) ile birlikte ele alınmalı.
+
+**Testler (yerel):**
+- birim 468/468
+- typecheck temiz
+- ESLint 0 hata (3 eski uyarı)
+- build 73/73
+- gitleaks temiz
+- RLS ve E2E CI'da koşar. Migration yok, RLS değişmedi.
+
+**Açık:** Önceki girişteki kapılar aynı: P0-1, P0-2, O-4, O-5, D-04, D-05, D-15, PR #2. Ek olarak `company_name` için veritabanı CHECK'i hâlâ öneri; migration ve O-5 gerektirir.
 
 ### 24.10.2026 (2) · K-18: SEC-06, P2 doğrulamaları, yalnız güvenlik yaması, OPS-02 tasarımı
 
