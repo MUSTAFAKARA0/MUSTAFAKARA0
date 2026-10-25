@@ -62,7 +62,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
   - `singleLine` görünmez biçim karakterlerini siliyor: U+200B, U+2060–U+2064, U+FEFF.
   - Yön geçersiz kılma, gömme ve yalıtma karakterleri (U+202A–U+202E, U+2066–U+2069) sessizce silinmiyor; alan adıyla açık hata veriliyor.
   - ZWJ/ZWNJ ile LRM/RLM/ALM korunuyor. Türkçe, uluslararası, sağdan sola ve emoji içeren adlar bozulmuyor; testi var.
-  - KARAYS `company_name` alanında `<` ve `>` açık hatayla reddediliyor. Kullanım noktaları doğrulandı ve hepsi kaçışlı: React metni, JSON-LD `<`, geri dönüş betiğinde `quote_literal`. Ret, ileride ham HTML'de (ör. e-posta) kullanılırsa diye ek katman.
+  - KARAYS `company_name` alanında `<` ve `>` açık hatayla reddediliyor. Kullanım noktaları doğrulandı ve hepsi kaçışlı: React metni, JSON-LD (`<` unicode kaçışıyla yazılır), geri dönüş betiğinde `quote_literal`. Ret, ileride ham HTML'de (ör. e-posta) kullanılırsa diye ek katman.
   - Ham `.max(160)` sınırı Türkçe mesaj veriyor.
 - Regresyon testleri önce yazıldı ve eski kodda başarısız oldu. Her savunma tek tek kaldırılarak 6 mutasyon denendi; 6'sı da yakalandı.
 
