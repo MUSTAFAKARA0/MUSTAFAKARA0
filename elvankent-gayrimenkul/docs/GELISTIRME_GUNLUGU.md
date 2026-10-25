@@ -10,16 +10,37 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 | --- | --- |
 | Production dalı | `ff2f7da`, değişmedi. KARAYS yayını kapıları bekliyor (aşağıda) |
 | Çalışma dalı | `claude/karay-ci-dogrulama`. Vercel dağıtımı bu dalda kapalı (`a24fef8`); yayın zinciri bu commit hariç kurulur |
-| Son kod commit'i | `4afd83f` (görünmez ve yön denetim karakterleri, şirket adı savunması) |
+| Son kod commit'i | `7997852` (K-19: OPS-02 bekleyen migration'lar, CSP modülü, erişilebilirlik, yeni güvenlik testleri) |
 | GitHub | K-13…K-16 GitHub'da (`a24fef8..968e3ad`). Production dalının yerel kopyasındaki 15 commit kaybolmadı: zincir uzak dallardan birebir yeniden kurulabiliyor (aşağıda) |
-| CI | [#85](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40121218238) yeşil (`6c93d67`, 24.10.2026): quality ve database işleri başarılı. ECC-2 commit'leri için yeni koşu push ile başlar |
+| CI | [#89](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40130502489) yeşil (`7997852`, 24.10.2026): quality ve database başarılı; E2E 208 geçti, 4 koşullu atlandı. Son belge commit'i için yeni koşu push ile başlar |
 | Güvenlik | Production'da next 16.3.6 ve sharp 0.35.4 var; yeni Next.js duyurularının etki alanında ([K17 §3](K17_KARAYS_RELEASE.md)). Düzeltme bu dalda; canlıya çıkması yayın onayına bağlı (O-4) |
 | Açık kapılar | P0-1 doğrulanmış canlı yedek yok · P0-2 canlı veritabanının kimliği ve şema durumu doğrulanmadı · onaylar O-1…O-6 ([K17 §1–§2](K17_KARAYS_RELEASE.md)) |
 | Bekleyen kararlar | D-01…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)). Özellikle D-05 (iptal ve veri saklama; OPS-02'nin kalıcı düzeltmesi buna bağlı), D-14 (dal ve yayın stratejisi), D-15 (güvenlik başlıkları, SVG) · PHASE4 §8 K-4…K-7 |
 
+**Yayın hazırlığı:** [K19_YAYIN_HAZIRLIK.md](K19_YAYIN_HAZIRLIK.md) (Go/No-Go, kalite kapısı, toplu karar paketi).
+
 **Sıradaki adım:** Sahibin K-17 kapılarını açması: A1–A4 (panel teyidi, salt okunur ön kontrol, geri dönüş betiği, yedek). Ardından O-4 ile kod yayını, O-5 ile migration. Canlıdaki güvenlik açığı nedeniyle bu sıranın öne alınması önerilir. Güvenlik düzeltmesini migration'dan önce, yalnızca kod olarak yayınlamak teknik olarak mümkün (yeni kod eski veritabanıyla çalışır, [K17 §5](K17_KARAYS_RELEASE.md)). Yedek kapısının (P0-1) bu kod yayınını da bekletip bekletmeyeceği sahibin kararıdır.
 
 ## Girişler
+
+### 24.10.2026 (4) · K-19: yayın hazırlığı, OPS-02 uygulaması, güvenlik adayı CI'ı, erişilebilirlik
+
+**Başlangıç:** `cf7c99d` (CI #86 yeşil). Ayrıntılı kanıt ve karar paketi: [K19_YAYIN_HAZIRLIK.md](K19_YAYIN_HAZIRLIK.md).
+
+**Commit'ler** (`cf7c99d..7997852`): `9b07f3e`, `1d16cc6`, `be80a97`, `9431889`, `993e79c`, `e5067fc`, `aa5d72e`, `823bb9e`, `3a044f7`, `7997852`.
+
+- **Veri güvenliği:** Storage geri yüklemede `--apply` yalnızca `--target=<ana makine>` ile çalışıyor (yanlış proje koruması). P0-1 ve P0-2 hâlâ sahipte: Supabase projesi bu oturumdan görünmüyor.
+- **Yalnız güvenlik yaması:** `57fdbb7` yalnızca bu VM'deydi; patch olarak `release/security-only/` altına alındı (özet ve ağaç sabit). `elvankent-security-candidate` iş akışı `ff2f7da`'yı yamasız ve yamalı sınıyor. İki koşuda iki kol birebir aynı sonuç verdi (ilk koşu eski CI ayarıyla 25, düzeltilmiş ortamla 8 aynı başarısızlık). Yama gerileme getirmiyor. Kalan 8 başarısızlık canlıdaki kodun bugünkü hataları; doğrulama dalında düzeltilmiş durumda.
+- **OPS-02:** Eşzamanlı limit aşımı DOĞRULANDI (limit 3, 8 istek → 4–7 ilan). Düzeltme ve bayraklı abonelik limiti `supabase/pending/` altında; CI bu dosyaları uyguluyor. ECC security-reviewer: kritik/yüksek yok, iki orta bulgu var. Bunlardan durum sızıntısı düzeltildi; destek akışının engellenmesi D-04/D-05'e bırakıldı.
+- **Kiracı izolasyonu:** Rol düşürme, üyelik kapatma ve silme açık oturuma hemen yansıyor (3 yeni test); açık bulunmadı.
+- **CSP:** Üretim test edilebilir modülde. Kendi depolama adresimiz açıkça listeleniyor. Joker D-15'e kadar duruyor.
+- **Marka:** Kodda kullanıcıya görünen eski ad yok. KARAY-23 bunu davranışsal olarak doğruluyor. Canlıdaki `company_name` güncellemesi KARAYS migration'ıyla (O-5).
+- **Erişilebilirlik ve performans (Lighthouse, yerel):** KARAYS sayfası küçük metin kontrastı ve favori düğmesinin adı düzeltildi, a11y 100. Performans mobilde 86–97, masaüstünde 99; CLS 0.
+- **Yerel ortam:** Docker bu VM'de çalıştı. Supabase görüntüleri Docker Hub'dan alındı; ECR'nin CDN'i proxy'de kapalı. Yerelde RLS 118/118 (3 kez) ve tam E2E 205/4 atlandı (bekleyen migration'lar uygulanmış).
+- **CI:** #87 (`1d16cc6`) yeşil. #88 (`823bb9e`) kırmızı: yeni testte kurum öneki çakışması (test hatası); `7997852` ile düzeltildi. [#89](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40130502489) (`7997852`) yeşil: RLS/MFA/kiracı izolasyonu + OPS-02 + üyelik testleri geçti; E2E 208 geçti, 4 koşullu atlandı (yeni testlerle toplam 212).
+- **ECC:** `ecc:security-reviewer` (OPS-02 SQL) ve `ecc:code-reviewer` (K-19 aralığı) gerçek alt ajan olarak çalıştı. İkincisinin kararı APPROVE, 4 düşük not var. `persist-credentials: false` notu son belge commit'iyle uygulandı.
+
+**Açık (sahip):** P0-1, P0-2, O-1…O-6, D-04, D-05, D-15, PR #2. Öneri: C (önce yalnız güvenlik yaması, sonra B, migration'lar sırayla).
 
 ### 24.10.2026 (3) · ECC v2.2.3 incelemesi ve düşük bulguların giderilmesi
 
@@ -41,7 +62,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
   - `singleLine` görünmez biçim karakterlerini siliyor: U+200B, U+2060–U+2064, U+FEFF.
   - Yön geçersiz kılma, gömme ve yalıtma karakterleri (U+202A–U+202E, U+2066–U+2069) sessizce silinmiyor; alan adıyla açık hata veriliyor.
   - ZWJ/ZWNJ ile LRM/RLM/ALM korunuyor. Türkçe, uluslararası, sağdan sola ve emoji içeren adlar bozulmuyor; testi var.
-  - KARAYS `company_name` alanında `<` ve `>` açık hatayla reddediliyor. Kullanım noktaları doğrulandı ve hepsi kaçışlı: React metni, JSON-LD `\u003c`, geri dönüş betiğinde `quote_literal`. Ret, ileride ham HTML'de (ör. e-posta) kullanılırsa diye ek katman.
+  - KARAYS `company_name` alanında `<` ve `>` açık hatayla reddediliyor. Kullanım noktaları doğrulandı ve hepsi kaçışlı: React metni, JSON-LD `<`, geri dönüş betiğinde `quote_literal`. Ret, ileride ham HTML'de (ör. e-posta) kullanılırsa diye ek katman.
   - Ham `.max(160)` sınırı Türkçe mesaj veriyor.
 - Regresyon testleri önce yazıldı ve eski kodda başarısız oldu. Her savunma tek tek kaldırılarak 6 mutasyon denendi; 6'sı da yakalandı.
 

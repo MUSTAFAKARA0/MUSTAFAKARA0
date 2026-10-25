@@ -43,6 +43,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          # Bu iş hiçbir şey push etmez; belirteç çalışma kopyasında bırakılmaz
+          persist-credentials: false
       - name: Kod ağacı (ff2f7da, adayda + güvenlik yaması)
         working-directory: .
         run: |
