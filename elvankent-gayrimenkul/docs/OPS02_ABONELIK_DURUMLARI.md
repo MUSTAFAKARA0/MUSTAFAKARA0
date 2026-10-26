@@ -64,7 +64,7 @@ Limitler yalnızca **yeni kayıtta** denetlenir. Plan düşürüldüğünde limi
 Yerelde (K-19) 105 mevcut güvenlik testiyle birlikte 114/114 geçti. Mutasyon: kilit kaldırılınca SL-05, eski `org_plan` ile SL-02/03'ün 3 testi kaldı.
 
 **Kapsam dışı ve kalan:**
-- `media_upload_allowed()` yüklemeden önce çağrılır; eşzamanlı yüklemeler depolama sınırını en fazla eşzamanlı dosya sayısı kadar aşabilir.
+- Depolama kotası: `media_upload_allowed()` medya kaydı (`media_assets`) eklenmeden önce ayrı bir RPC olarak çağrılır; eşzamanlı ya da doğrudan (RLS üzerinden, RPC'siz) eklenen kayıtlar kotayı aşabiliyordu. Düzeltme bekleyen `supabase/pending/20261026000001_media_quota_lock.sql` (SL-06). Kalan: `byte_size` istemcinin bildirdiği boyuttur ve kayıtsız yüklenen dosyalar sayılmaz.
 - Panelde durum şeridi ve "verilerinizi indirin" bağlantısı yok (dışa aktarma var). Metin D-05'e bağlı.
 - `past_due` ek süresi (D-04) ve iptal sonrası site yayını (D-05b) kod değil süreç kararı. Bugün `past_due` tam yetkili; `cancelled`/`expired` site yayınını kapatmaz (organizasyon durumu kapatır).
 

@@ -126,7 +126,7 @@ Yalnızca sahibin yapabileceği işler (panel, sır, onay) bu tabloda. Kalan tek
 
 ## 7. Kalan riskler ve bilinçli ertelemeler
 
-- `media_upload_allowed()` eşzamanlı yüklemelerde depolama sınırını eşzamanlı dosya sayısı kadar aşabilir (kontrol yüklemeden önce yapılıyor).
+- Depolama kotası: denetim (`media_upload_allowed()`) medya kaydı eklenmeden önce ayrı bir istekte yapılıyordu; eşzamanlı ya da RPC'siz doğrudan eklenen kayıtlar kotayı aşabiliyordu. Düzeltme bekleyen `supabase/pending/20261026000001_media_quota_lock.sql` (K-20, SL-06; canlıya çıkması ayrı onay). Kalan: `byte_size` istemcinin bildirdiği boyuttur, kayıtsız yüklenen dosya sayılmaz.
 - Bayrak açıkken sıfır limit destek akışlarını da engeller. Önce abonelik etkinleştirilir; muafiyet D-04/D-05 kararı.
 - Aday iş akışında `persist-credentials: false` (ECC code-reviewer, LOW) bu belgeyle aynı commit'te eklendi.
 - Yeni güvenlik test dosyaları CI dışında da yalnızca yerel Supabase'e bağlanır (global bayrak). `rls.test.mjs` uzak projeye izin veriyor; fark bilinçli.
@@ -142,6 +142,7 @@ Her satır kendi başına onaylanır. Bir satırın onayı diğerini kapsamaz.
 | **2. Tam KARAYS kodu** | K-8…K-19 uygulama kodu (canlıdaki 8 işlev hatasının düzeltmesi dahil) | Şema bekler mi: hayır, migration'lı ve migration'sız çalışır | P0-1, P0-2, A1–A3 | Instant Rollback | O-4 (B) |
 | **3. KARAYS marka migration'ı** | `20261018000001`: varsayılan ad ve `company_name` KARAY → KARAYS (elle girilmiş ad korunur) | Tek işlem, 1 satır | P0-1, P0-2; K17 runbook 01–05 | Üretilen geri dönüş betiği (A3) veya `05_rollback.sql` | O-5a |
 | **4. Eşzamanlı limit kilidi** | `pending/20261025000001_quota_lock.sql`: ilan/üyelik eklemesinde kurum başına işlem kilidi | Fonksiyon + 2 tetikleyici; veri değişmez | Birim 3 sonrası; `migrations/`'a taşınması ve kendi ön/son kontrolü | Dosyadaki 3 satırlık geri dönüş | O-5b |
+| **4b. Depolama kotası kilidi** | `pending/20261026000001_media_quota_lock.sql`: medya kaydında kurum başına işlem kilidi + kota denetimi veritabanında (K-20) | Fonksiyon + 1 tetikleyici; veri değişmez; mevcut kayıtlar denetlenmez | Birim 4 ile ya da sonrasında; `migrations/`'a taşınması ve kendi ön/son kontrolü | Dosyadaki 2 satırlık geri dönüş | O-5b' (ayrı) |
 | **5. OPS-02 abonelik limiti** | `pending/20261025000002_ops02_subscription_limits.sql`: bayrak sütunu (varsayılan **kapalı**) + `org_plan()` | Sütun + fonksiyon; veri değişmez; bayrak kapalıyken davranış aynı | Birim 4 sonrası | Dosyadaki geri dönüş | O-5c (dosya) |
 | **5b. OPS-02 bayrağını açmak** | Aboneliği olmayan ofislerde yeni ilan/üye/yükleme reddi | Tek alan güncellemesi | D-04, D-05 kararları; aboneliksiz aktif ofis listesinin incelenmesi | Bayrağı kapatmak | Ayrı karar |
 | **6. CSP joker kaldırma (D-15)** | `next.config.ts` › `supabaseWildcard: false` | Dokunulmaz | Gerçek Supabase'e bağlı önizlemede giriş, büyük dosya yükleme ve görsel doğrulaması | Değeri geri almak + yeniden dağıtım | D-15 |

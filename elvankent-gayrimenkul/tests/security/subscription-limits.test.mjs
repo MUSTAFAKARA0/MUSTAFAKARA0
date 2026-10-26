@@ -14,6 +14,8 @@
  *   SL-04  Bayrağı yalnızca süper admin değiştirir; ofis sahibi ve anonim ziyaretçi okuyamaz/değiştiremez.
  *          Abonelik durumu (iptal/süresi doldu) yalnızca kurumun üyesine görünür; anonim ve başka kiracı görmez.
  *   SL-05  Eşzamanlı ilan eklemeleri plan limitini aşamaz.
+ *   SL-06  Depolama kotası veritabanında denetlenir (20261026000001_media_quota_lock.sql): eşzamanlı ya da
+ *          media_upload_allowed() çağrılmadan doğrudan eklenen medya kayıtları kotayı aşamaz.
  *
  * Bekleyen migration uygulanmamış bir veritabanında testler atlanır; CI'da (CI=true) atlanmaz, hata verir.
  */
@@ -250,5 +252,56 @@ describe('SL-05 eşzamanlı eklemeler', { skip }, () => {
     assert.equal(count, 3, `limit 3, veritabanında ${count} ilan`);
     assert.equal(created, 3);
     assert.equal(rejected, 5);
+  });
+});
+
+describe('SL-06 depolama kotası veritabanında', { skip }, () => {
+  const MB = 1024 * 1024;
+  // Bildirilen boyutun 1,35 katı sayılır (varyant payı, media_upload_allowed ile aynı formül)
+  const addMedia = (client, orgId, propertyId, mb) =>
+    client.from('media_assets').insert({
+      organization_id: orgId,
+      property_id: propertyId,
+      kind: 'property_photo',
+      status: 'pending',
+      original_path: `organizations/${orgId}/properties/${propertyId}/${randomBytes(8).toString('hex')}`,
+      mime_type: 'image/jpeg',
+      byte_size: mb * MB,
+    });
+  const orgWithListing = async (label, subscription) => {
+    const org = await makeOrg(label, subscription);
+    const created = await addListing(org.owner.client, org.id, `Abonelik testi medya ${label}`);
+    assert.ifError(created.error);
+    return { ...org, propertyId: created.data.id };
+  };
+  const usedBytes = async (orgId) => {
+    const { data, error } = await service.from('media_assets').select('byte_size').eq('organization_id', orgId);
+    assert.ifError(error);
+    return data.reduce((sum, r) => sum + Number(r.byte_size ?? 0), 0);
+  };
+
+  test('aynı anda gönderilen medya kayıtları 50 MB kotayı aşamaz', async () => {
+    const org = await orgWithListing('mrace', { plan: PLAN, status: 'active' });
+    // Mevcut kayıtlar bildirilen boyutla, yeni kayıt 1,35 katıyla sayılır: 30 + 13,5 ≤ 50, 40 + 13,5 > 50 → 4 kayıt
+    const results = await Promise.all(Array.from({ length: 8 }, () => addMedia(org.owner.client, org.id, org.propertyId, 10)));
+    const created = results.filter((r) => !r.error).length;
+    const rejected = results.filter((r) => /plan_limit_storage/.test(r.error?.message ?? '')).length;
+    assert.equal(created, 4);
+    assert.equal(rejected, 4);
+    assert.equal(await usedBytes(org.id), 40 * MB);
+  });
+
+  test('media_upload_allowed() çağrılmadan doğrudan ekleme de sınırda reddedilir', async () => {
+    const org = await orgWithListing('mdirect', { plan: PLAN, status: 'active' });
+    const over = await addMedia(org.owner.client, org.id, org.propertyId, 38); // 51,3 MB
+    assert.match(over.error?.message ?? '', /plan_limit_storage/);
+    assert.ifError((await addMedia(org.owner.client, org.id, org.propertyId, 37)).error); // 49,95 MB
+    assert.match((await addMedia(service, org.id, org.propertyId, 10)).error?.message ?? '', /plan_limit_storage/, 'service role kotayı aştı'); // 37 + 13,5
+  });
+
+  test('planı sınırsız (etkin aboneliği yok, bayrak kapalı) organizasyon etkilenmez', async () => {
+    await setFlag(false);
+    const org = await orgWithListing('munl', null);
+    assert.ifError((await addMedia(org.owner.client, org.id, org.propertyId, 500)).error);
   });
 });

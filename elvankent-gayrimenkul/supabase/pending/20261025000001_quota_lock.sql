@@ -16,8 +16,8 @@
 -- kimlik sırasıyla işlemelidir (kilit sırası farklı iki işlem kilitlenebilir, biri 40P01 ile iptal olur).
 -- Kilit RLS denetiminden önce alınır: başka kurum adına reddedilecek bir ekleme, o kurumun eklemelerini
 -- yalnızca bu deyim süresince bekletebilir (aynı etki bugün next_org_counter satır kilidiyle de var).
--- Kapsam dışı: media_upload_allowed() yüklemeden ÖNCE çağrılan bir denetimdir (satır yüklemeden sonra
--- yazılır); eşzamanlı yüklemeler depolama sınırını en fazla eşzamanlı dosya kadar aşabilir.
+-- Kapsam dışı: depolama kotası (media_upload_allowed() medya kaydı eklenmeden ÖNCE ayrı bir RPC'dir);
+-- eşzamanlı kayıt yarışı ayrı dosyada kapatılır: 20261026000001_media_quota_lock.sql.
 --
 -- Tekrar çalıştırılabilir. Veri değiştirmez.
 --

@@ -57,6 +57,7 @@ const CHECKLIST_LABELS: Record<string, string> = {
 const DB_MESSAGES: Record<string, string> = {
   plan_limit_properties: 'Planınızın ilan limitine ulaşıldı. Yeni ilan için planınızı yükseltin veya eski ilanları silin.',
   plan_limit_users: 'Planınızın kullanıcı limitine ulaşıldı.',
+  plan_limit_storage: 'Depolama alanı kotanız doldu. Kullanılmayan görselleri silin veya planınızı yükseltin.',
   publish_forbidden: 'Bu ilanın yayın durumunu değiştirme yetkiniz yok. "Onaya gönder" seçeneğini kullanabilirsiniz.',
   delete_forbidden: 'Silme / geri yükleme yetkiniz yok.',
   settings_forbidden: 'Şirket ayarlarını değiştirme yetkiniz yok.',
