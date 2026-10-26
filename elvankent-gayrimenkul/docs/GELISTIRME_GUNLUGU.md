@@ -4,7 +4,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 > Depo herkese açıktır. Buraya proje veya dağıtım kimliği, ortam değişkeni değeri ya da varlığı, alan adı ayarı, kayıt sayısı veya sır yazılmaz.
 
-## Güncel durum (24.10.2026)
+## Güncel durum (26.10.2026)
 
 | Konu | Durum |
 | --- | --- |
@@ -12,7 +12,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 | Çalışma dalı | `claude/karay-ci-dogrulama`. Vercel dağıtımı bu dalda kapalı (`a24fef8`); yayın zinciri bu commit hariç kurulur |
 | Son kod commit'i | `7997852` (K-19: OPS-02 bekleyen migration'lar, CSP modülü, erişilebilirlik, yeni güvenlik testleri) |
 | GitHub | K-13…K-16 GitHub'da (`a24fef8..968e3ad`). Production dalının yerel kopyasındaki 15 commit kaybolmadı: zincir uzak dallardan birebir yeniden kurulabiliyor (aşağıda) |
-| CI | [#89](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40130502489) yeşil (`7997852`, 24.10.2026): quality ve database başarılı; E2E 208 geçti, 4 koşullu atlandı. Son belge commit'i için yeni koşu push ile başlar |
+| CI | [#91](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40169352877) yeşil (`a6169bc`, 25.10.2026): quality ve database başarılı; E2E 208 geçti, 4 koşullu atlandı. Güvenlik adayı koşusu #3: taban = aday, gerileme yok |
 | Güvenlik | Production'da next 16.3.6 ve sharp 0.35.4 var; yeni Next.js duyurularının etki alanında ([K17 §3](K17_KARAYS_RELEASE.md)). Düzeltme bu dalda; canlıya çıkması yayın onayına bağlı (O-4) |
 | Açık kapılar | P0-1 doğrulanmış canlı yedek yok · P0-2 canlı veritabanının kimliği ve şema durumu doğrulanmadı · onaylar O-1…O-6 ([K17 §1–§2](K17_KARAYS_RELEASE.md)) |
 | Bekleyen kararlar | D-01…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)). Özellikle D-05 (iptal ve veri saklama; OPS-02'nin kalıcı düzeltmesi buna bağlı), D-14 (dal ve yayın stratejisi), D-15 (güvenlik başlıkları, SVG) · PHASE4 §8 K-4…K-7 |
@@ -22,6 +22,16 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 **Sıradaki adım:** Sahibin K-17 kapılarını açması: A1–A4 (panel teyidi, salt okunur ön kontrol, geri dönüş betiği, yedek). Ardından O-4 ile kod yayını, O-5 ile migration. Canlıdaki güvenlik açığı nedeniyle bu sıranın öne alınması önerilir. Güvenlik düzeltmesini migration'dan önce, yalnızca kod olarak yayınlamak teknik olarak mümkün (yeni kod eski veritabanıyla çalışır, [K17 §5](K17_KARAYS_RELEASE.md)). Yedek kapısının (P0-1) bu kod yayınını da bekletip bekletmeyeceği sahibin kararıdır.
 
 ## Girişler
+
+### 26.10.2026 · CI #91 ve güvenlik adayı #3 sonuçları; ajan izleme
+
+**Başlangıç:** `a6169bc` (rapor anındaki son commit; dalda yeni commit yoktu). Production `ff2f7da`, değişmedi.
+
+- **CI [#91](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40169352877)** (`a6169bc`): yeşil. quality ve database başarılı; E2E 208 geçti, 4 koşullu atlandı (#89 ile aynı).
+- **Güvenlik adayı [#3](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40169223417)** (`fc0434f`): taban (`ff2f7da`, next 16.3.6) ve aday (ağaç `29f81af`, next 16.4.3) birebir aynı: 142 geçti, aynı 8 başarısızlık, 4 atlandı, 51 çalışmadı. İş akışının "failure" sonucu bu 8 bilinen canlı hatadan; yama gerileme getirmiyor (üçüncü bağımsız koşu). A seçeneğinin kanıtı tamam, yayın yine O-4 onayına bağlı.
+- **Ajan izleme:** Depo kökünde `.claude/settings.json` ve `.claude/mission-control/relay.mjs` eklendi (`3300de6`). Bulut oturumlarındaki ajan, görev ve araç olaylarını maskeleyip ayrı bir izleme projesine gönderen salt okunur hook'lar; karar vermez, çıktı yazmaz, ortam değişkenleri yoksa hiçbir şey yapmaz. Proje klasörünün dışında olduğu için CI'ı ve Vercel dağıtımını tetiklemez (doğrulandı: koşu ve dağıtım yok). Uygulamaya, veritabanına ve kiracı verisine dokunmaz.
+
+**Açık (sahip):** Değişmedi: P0-1, P0-2, O-1…O-6, D-04, D-05, D-15, PR #2. OPS-02 bayrağı kapalı.
 
 ### 24.10.2026 (4) · K-19: yayın hazırlığı, OPS-02 uygulaması, güvenlik adayı CI'ı, erişilebilirlik
 

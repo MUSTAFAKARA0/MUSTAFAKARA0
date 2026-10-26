@@ -120,8 +120,9 @@ Yalnızca sahibin yapabileceği işler (panel, sır, onay) bu tabloda. Kalan tek
 | [#89](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40130502489) | `7997852` | **Yeşil**: quality; database (birim, RLS/MFA/izolasyon, OPS-02, üyelik); E2E 208 geçti / 4 atlandı |
 | [Aday #1](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40127270801) | `1d16cc6` | Taban = aday (25 aynı başarısızlık, eski CI ayarı) |
 | [Aday #2](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40129140853) | `823bb9e` | Taban = aday (8 aynı başarısızlık, canlıdaki bilinen hatalar); gerileme yok |
-
-Bu belge ve `persist-credentials: false` ile gelen son commit için yeni koşular push ile başlar.
+| [#90](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40169223430) | `fc0434f` | İptal (yerine #91) |
+| [#91](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40169352877) | `a6169bc` | **Yeşil** (26.10.2026'da doğrulandı): quality; database; E2E 208 geçti / 4 atlandı |
+| [Aday #3](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40169223417) | `fc0434f` | Taban (next 16.3.6) = aday (next 16.4.3): ikisinde de 142 geçti, 8 aynı başarısızlık, 4 atlandı, 51 çalışmadı; gerileme yok (üçüncü kez) |
 
 ## 7. Kalan riskler ve bilinçli ertelemeler
 
