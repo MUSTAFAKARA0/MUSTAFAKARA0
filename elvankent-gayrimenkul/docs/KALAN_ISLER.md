@@ -25,7 +25,7 @@
 | KI-14 | Davranış testi: yetkisiz istek başka kurumun kilidini beklemez | K-21 §3 | kapandı | Kurum kilidi başka oturumda tutulurken yetkisiz ekleme süre eşiği içinde reddediliyor; kontrol isteği bekliyor | — | ecc:tdd-guide, ecc:security-reviewer | — | `e93d6a7` · yerel prova 4/4 (şimdi 6/6), güvenlik 129/129, SL-07 kırmızı/yeşil |
 | KI-15 | `quota_lock` ve `ops02_limits` runbook'ları | PDF s.11 adım 5 | kapandı | 01–05, LR-14, yerel prova | — | — | — | `dc6594a` |
 | KI-16 | Bekleyen 4 migration (`20261025000001/2`, `20261026000001/2`) | K-19 §8 4/4b/4c/5 | hazır-canlıda değil | CI'da RLS ve E2E yeşil; canlıya çıkış KI-27 ile | KI-11, KI-12 | ecc:database-reviewer | — | `dd32fa7`, `dc6594a`, CI #94 |
-| KI-17 | CI sonucunu doğru commit ile eşleştir | K-21 §6 | doğrulanıyor | Her gönderimin koşu numarası ve sonucu günlükte (#93 = `8b2de09`, #94 = `952043c`) | — | koordinatör | ✓ | #93, #94 |
+| KI-17 | CI sonucunu doğru commit ile eşleştir | K-21 §6 | kapandı | Her gönderimin koşu numarası ve sonucu günlükte (#93 = `8b2de09`, #94 = `952043c`) | — | koordinatör | — | #99 = `e93d6a7`, #100 = `dc361b9`, #102 = `ebf7607` (WP-A2 `b9d1eab` dahil) yeşil; #101 iptal (yerine #102) |
 | KI-18 | ESLint'teki 3 eski uyarı | Günlük K-18 | sırada | `tests/e2e/karay-site.spec.ts:104` kullanılmayan değişkenler giderilmiş; ESLint 0 uyarı | — | ecc:code-reviewer | ✓ | yok |
 | KI-19 | P2: `days` dizisine `.max(7)` | Günlük K-18 | kapandı | Gün listesi en fazla 7 öğe ve tekil | — | — | — | `8d0f282` |
 | KI-20 | P2: `company_name` için CHECK + zod | Günlük K-18 | kapandı (kod) | zod `4afd83f`; CHECK bekleyen migration, canlıya çıkışı KI-27 | — | — | — | `4afd83f`, `dc6594a` |

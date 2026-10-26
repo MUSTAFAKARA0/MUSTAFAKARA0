@@ -44,7 +44,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 **Ajanlar ve skill'ler (gerçek çağrılar):** ecc:planner (kalan iş listesi), ecc:architect (WP-A2 tasarımı), ecc:database-reviewer ×4, ecc:tdd-guide ×4 (WP-D, WP-E, WP-A2 uygulama, WP-A2 DB), ecc:code-reviewer, ecc:security-reviewer ×2, ecc:e2e-runner ×2. Skill: `ecc:context-budget` bir kez; çıktısı: canlı bağlam/token ölçümü skill ile yapılamaz, Claude Code'da `/context` ve `/usage` kullanılır. Token sayısı ölçülmediği için raporlanmadı.
 
-**CI:** #94 = `952043c` yeşil. #96–#98 yeni gönderimlerle iptal. #99 = `e93d6a7`: quality yeşil, "Yerel Supabase" (runbook provası dahil) yeşil; sonraki gönderimle iptal edildiyse tam sonucu yok. `b9d1eab` ve bu girişin koşusu ayrıca kontrol edilecek.
+**CI:** #94 = `952043c` yeşil. #96–#98 yeni gönderimlerle iptal. #99 = `e93d6a7` **yeşil** (runbook provası, güvenlik, E2E). #100 = `dc361b9` yeşil. #101 = `b9d1eab` yeni gönderimle iptal; aynı kodu içeren **#102 = `ebf7607` yeşil** (quality + database: runbook provası 6/6, güvenlik testleri, E2E).
 
 **Açık (sahip):** Değişmedi: P0-1, P0-2, O-1…O-6, D-04, D-05, D-15, PR #2. Yeni onay birimleri 4d (A) ve 4e (B; önce kod) K-19 §8'de. OPS-02 bayrağı kapalı.
 
