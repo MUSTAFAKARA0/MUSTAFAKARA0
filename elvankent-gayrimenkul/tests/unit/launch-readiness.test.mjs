@@ -548,13 +548,16 @@ describe('LR-13 bekleyen migration\'lar (K-19)', () => {
   });
 });
 
-describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock ve company_name (supabase/ops)', () => {
+describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, company_name, media_finalize_rpc ve media_privileges (supabase/ops)', () => {
   // Bekleyen migration'ları canlıda tek başına uygulayan betikler (karays_brand ile aynı düzen, LR-10).
   // Pending dosya değişip 03/04/05 değişmezse canlıya provası yapılmamış bir gövde gider.
   const runbooks = [
     { dir: 'supabase/ops/quota_lock/', pending: '20261025000001_quota_lock.sql', first: 'create or replace function public.quota_lock', fn: 'public.quota_lock', hashFrom: 'create or replace function public.quota_lock' },
     { dir: 'supabase/ops/ops02_limits/', pending: '20261025000002_ops02_subscription_limits.sql', first: 'alter table public.platform_settings', fn: 'public.org_plan', hashFrom: 'create or replace function public.org_plan' },
     { dir: 'supabase/ops/media_quota_lock/', pending: '20261026000001_media_quota_lock.sql', first: 'create or replace function public.media_quota_check', fn: 'public.media_quota_check', hashFrom: 'create or replace function public.media_quota_check' },
+    // WP-A2: A (RPC + kuyruk) ve B (sütun yetkileri). B'nin gövdesi 'do $guard$' ile başlar ('apply A first'); A, B'den önce sıralanır
+    { dir: 'supabase/ops/media_finalize_rpc/', pending: '20261027000001_media_finalize_rpc.sql', first: 'create or replace function public.media_finalize', fn: 'public.media_finalize', hashFrom: 'create or replace function public.media_finalize' },
+    { dir: 'supabase/ops/media_privileges/', pending: '20261027000002_media_column_privileges.sql', first: 'do $guard$', fn: 'public.media_assets_pending_shape', hashFrom: 'create or replace function public.media_assets_pending_shape' },
     // 03b_validate.sql isteğe bağlı ayrı adım (VALIDATE tabloyu tarar); varsa aşağıda ayrıca denetlenir
     { dir: 'supabase/ops/company_name/', pending: '20261026000002_company_name_check.sql', first: 'alter table public.platform_settings drop constraint', fn: null, hashFrom: null, optional: ['03b_validate.sql'] },
   ];

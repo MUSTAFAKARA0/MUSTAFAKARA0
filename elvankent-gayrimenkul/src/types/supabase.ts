@@ -2404,6 +2404,48 @@ export type Database = {
         }
         Returns: undefined
       }
+      media_finalize: {
+        Args: {
+          p_media: string
+          p_expected_base: string
+          p_public_base: string
+          p_variant_widths: number[]
+          p_width: number
+          p_height: number
+          p_blur: string
+        }
+        Returns: Json
+      }
+      media_mark_failed: {
+        Args: {
+          p_media: string
+          p_error: string
+        }
+        Returns: boolean
+      }
+      media_queue_claim: {
+        Args: {
+          p_limit: number
+        }
+        Returns: {
+          id: number
+          org_id: string
+          bucket: string
+          path: string
+        }[]
+      }
+      media_queue_done: {
+        Args: {
+          p_ids: number[]
+        }
+        Returns: number
+      }
+      media_storage_report: {
+        Args: {
+          p_org: string
+        }
+        Returns: Json
+      }
       media_upload_allowed: {
         Args: {
           p_org: string

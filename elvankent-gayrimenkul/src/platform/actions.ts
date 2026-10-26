@@ -80,6 +80,13 @@ const DB_MESSAGES: Record<string, string> = {
   invitation_accepted: 'Davet zaten kabul edildi; sahip hesabı etkin.',
   owner_not_found: 'Bu organizasyonun aktif bir sahibi yok.',
   invalid_invitation: 'Davet bilgileri geçersiz.',
+  media_conflict: 'Fotoğraf başka bir işlemde güncellendi; sayfayı yenileyin.',
+  media_not_uploaded: 'Dosya yüklemesi tamamlanmamış görünüyor. "Tekrar dene" ile yeniden yükleyin.',
+  media_variants_missing: 'Fotoğraf varyantları depolamada bulunamadı. Lütfen tekrar deneyin.',
+  media_invalid_path: 'Fotoğraf yolu geçersiz.',
+  media_invalid_input: 'Fotoğraf bilgileri geçersiz.',
+  media_busy: 'Fotoğraf şu anda başka bir işlemde; birkaç saniye sonra tekrar deneyin.',
+  media_pending_limit: 'Çok fazla yarım kalmış yükleme var. Bekleyen yüklemeler tamamlandıktan sonra tekrar deneyin.',
   brand_requires_publish: 'Marka ve site bilgileri doğrudan değiştirilemez; taslağa kaydedip yayınlayın.',
 };
 

@@ -25,7 +25,7 @@
  */
 import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
 
@@ -263,16 +263,20 @@ describe('SL-05 eşzamanlı eklemeler', { skip }, () => {
 describe('SL-06 depolama kotası veritabanında', { skip }, () => {
   const MB = 1024 * 1024;
   // Bildirilen boyutun 1,35 katı sayılır (varyant payı, media_upload_allowed ile aynı formül)
-  const addMedia = (client, orgId, propertyId, mb) =>
-    client.from('media_assets').insert({
+  // Yol kanoniktir (sütun yetkileri B için): organizations/<org>/properties/<prop>/images/<id>/original
+  const addMedia = (client, orgId, propertyId, mb) => {
+    const id = randomUUID();
+    return client.from('media_assets').insert({
+      id,
       organization_id: orgId,
       property_id: propertyId,
       kind: 'property_photo',
       status: 'pending',
-      original_path: `organizations/${orgId}/properties/${propertyId}/${randomBytes(8).toString('hex')}`,
+      original_path: `organizations/${orgId}/properties/${propertyId}/images/${id}/original`,
       mime_type: 'image/jpeg',
       byte_size: mb * MB,
     });
+  };
   const orgWithListing = async (label, subscription) => {
     const org = await makeOrg(label, subscription);
     const created = await addListing(org.owner.client, org.id, `Abonelik testi medya ${label}`);
@@ -307,16 +311,19 @@ describe('SL-06 depolama kotası veritabanında', { skip }, () => {
   test('üyesi olmadığı kuruma site görseli ekleyen kullanıcı RLS hatası alır, kota durumu sızmaz', async () => {
     const org = await orgWithListing('mleak', { plan: PLAN, status: 'active' });
     assert.ifError((await addMedia(org.owner.client, org.id, org.propertyId, 37)).error); // kotaya yakın
-    const attempt = (client, orgId) =>
-      client.from('media_assets').insert({
+    const attempt = (client, orgId) => {
+      const id = randomUUID();
+      return client.from('media_assets').insert({
+        id,
         organization_id: orgId,
         property_id: null,
         kind: 'post_cover',
         status: 'pending',
-        original_path: `organizations/${orgId}/content/${randomBytes(8).toString('hex')}`,
+        original_path: `organizations/${orgId}/content/${id}/original`,
         mime_type: 'image/jpeg',
         byte_size: 10 * MB,
       });
+    };
     const atQuota = await attempt(O.active.owner.client, org.id);
     assert.ok(atQuota.error, 'yetkisiz ekleme kabul edildi');
     assert.doesNotMatch(atQuota.error.message, /plan_limit_storage/);
@@ -331,7 +338,7 @@ describe('SL-06 depolama kotası veritabanında', { skip }, () => {
   test('planı sınırsız (etkin aboneliği yok, bayrak kapalı) organizasyon etkilenmez', async () => {
     await setFlag(false);
     const org = await orgWithListing('munl', null);
-    assert.ifError((await addMedia(org.owner.client, org.id, org.propertyId, 500)).error);
+    assert.ifError((await addMedia(org.owner.client, org.id, org.propertyId, 50)).error);
   });
 });
 
@@ -341,16 +348,19 @@ const lockSkip = skip || (!dbUrl && !process.env.CI ? 'DB_URL tanımlı değil (
 
 describe('SL-07 yetkisiz ekleme başka kurumun kota kilidini beklemez', { skip: lockSkip }, () => {
   const HOLD_SECONDS = 5;
-  const insertSite = (client, orgId) =>
-    client.from('media_assets').insert({
+  const insertSite = (client, orgId) => {
+    const id = randomUUID();
+    return client.from('media_assets').insert({
+      id,
       organization_id: orgId,
       property_id: null,
       kind: 'post_cover',
       status: 'pending',
-      original_path: `organizations/${orgId}/content/${randomBytes(8).toString('hex')}`,
+      original_path: `organizations/${orgId}/content/${id}/original`,
       mime_type: 'image/jpeg',
       byte_size: 1024 * 1024,
     });
+  };
   const timed = async (fn) => {
     const t0 = performance.now();
     const result = await fn();

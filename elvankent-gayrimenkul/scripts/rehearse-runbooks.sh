@@ -20,7 +20,7 @@ if [[ ! "$DB_URL" =~ ^postgres(ql)?://([^@/]*@)?(127\.0\.0\.1|localhost)(:[0-9]+
 fi
 
 OPS=supabase/ops
-RUNBOOKS=(quota_lock ops02_limits media_quota_lock company_name)
+RUNBOOKS=(quota_lock ops02_limits media_quota_lock company_name media_finalize_rpc media_privileges)
 OUT="$(mktemp -d)"
 trap 'rm -rf "$OUT"' EXIT
 

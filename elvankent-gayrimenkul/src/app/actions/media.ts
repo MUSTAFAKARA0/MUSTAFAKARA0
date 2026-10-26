@@ -4,7 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { updateTag } from 'next/cache';
 import { z } from 'zod';
 import { cacheTags } from '@/lib/cache-tags';
-import { MediaValidationError, processImage } from '@/modules/media/processing';
+import { classifyFinalizeError, decideAfterFinalizeError, finalizeMedia, isMissingRpc, markMediaFailed } from '@/modules/media/finalize';
+import { MediaValidationError, processImage, type ProcessedImage } from '@/modules/media/processing';
 import {
   ADMIN_MEDIA_FIELDS,
   contentOriginalPath,
@@ -18,8 +19,9 @@ import {
   type Rotation,
 } from '@/modules/media/server';
 import { MEDIA_BUCKETS, MEDIA_LIMITS } from '@/modules/media/variants';
-import { ActionError, assertNoDbError, NotFoundError, runAction, type ActionResult } from '@/platform/actions';
+import { ActionError, assertNoDbError, mapDbError, NotFoundError, runAction, type ActionResult } from '@/platform/actions';
 import { requirePermission, type OrgContext } from '@/platform/auth/session';
+
 
 /** Bu boyutun üzerindeki dosyalar TUS (devam ettirilebilir) protokolüyle yüklenir */
 const RESUMABLE_THRESHOLD = 6 * 1024 * 1024;
@@ -198,62 +200,33 @@ export async function renewMediaUpload(mediaId: string): Promise<ActionResult<Up
   });
 }
 
-async function markFailed(ctx: OrgContext, mediaId: string, message: string) {
-  await ctx.supabase.from('media_assets').update({ status: 'failed', error: message.slice(0, 300) }).eq('id', mediaId);
-}
+type ProcessInput = AdminMedia & { original_path: string | null };
 
 /**
- * 2. adım: yükleme tamamlanınca orijinal dosya indirilir, GERÇEK türü doğrulanır
- * ve WebP varyantları üretilip herkese açık kovaya yazılır. Başarısız olursa kayıt
- * "failed" olur (tekrar denenebilir); geçersiz dosyada orijinal hemen silinir.
+ * ESKİ VERİTABANI yedek yolu (media_mark_failed yok): bugünkü doğrudan güncelleme.
+ * Yalnız RPC "yok" (PGRST202) ise çalışır; sütun yetkileri (B) uygulanmış şemada çağrılmaz.
  */
-async function processMedia(ctx: OrgContext, media: AdminMedia & { original_path: string | null }, rotate: Rotation = 0) {
-  if (!media.original_path) throw new ActionError('Fotoğrafın orijinal dosyası bulunamadı.');
+async function legacyMarkFailed(ctx: OrgContext, mediaId: string, message: string) {
+  await ctx.supabase.from('media_assets').update({ status: 'failed', error: message.slice(0, 300) }).eq('id', mediaId).neq('status', 'ready');
+}
 
-  const { data: blob, error: downloadError } = await ctx.supabase.storage.from(MEDIA_BUCKETS.originals).download(media.original_path);
-  if (downloadError || !blob) {
-    await markFailed(ctx, media.id, 'Orijinal dosya depolamada bulunamadı; yükleme tamamlanmamış olabilir.');
-    throw new ActionError('Dosya yüklemesi tamamlanmamış görünüyor. "Tekrar dene" ile yeniden yükleyin.', 'not_uploaded');
+/** `ready` olmayan satırı başarısız yapar; `ready` satırda hiçbir şey yapmaz. Asla fırlatmaz. */
+async function markFailed(ctx: OrgContext, media: { id: string; status: string }, message: string): Promise<boolean> {
+  if (media.status === 'ready') return false;
+  const { marked, error } = await markMediaFailed(ctx.supabase, media.id, message);
+  if (!error) return marked;
+  if (isMissingRpc(error, 'media_mark_failed')) {
+    await legacyMarkFailed(ctx, media.id, message);
+    return true;
   }
-  const input = Buffer.from(await blob.arrayBuffer());
-  if (input.length > MEDIA_LIMITS.maxOriginalBytes) {
-    await ctx.supabase.storage.from(MEDIA_BUCKETS.originals).remove([media.original_path]);
-    await markFailed(ctx, media.id, 'Dosya 50 MB sınırını aşıyor.');
-    throw new ActionError('Bu görselin boyutu çok yüksek (en fazla 50 MB).', 'too_large');
-  }
+  console.error('[media] mark failed error', { mediaId: media.id, code: error.code });
+  return false;
+}
 
-  let processed;
-  try {
-    processed = await processImage(input, rotate);
-  } catch (error) {
-    if (error instanceof MediaValidationError) {
-      await ctx.supabase.storage.from(MEDIA_BUCKETS.originals).remove([media.original_path]);
-      await markFailed(ctx, media.id, error.message);
-      throw new ActionError(error.message, error.code);
-    }
-    console.error('[media] processing failed', { mediaId: media.id });
-    await markFailed(ctx, media.id, 'Görsel işlenemedi.');
-    throw new ActionError('Görsel işlenirken bir sorun oluştu. Lütfen tekrar deneyin.', 'processing');
-  }
-
-  const publicBase = newPublicBase(media.original_path, rotate);
-  const uploads = await Promise.all(
-    processed.variants.map(({ width, buffer }) =>
-      ctx.supabase.storage.from(MEDIA_BUCKETS.public).upload(`${publicBase}/w${width}.webp`, buffer, {
-        contentType: 'image/webp',
-        // Yol her işlemede değiştiği için dosyalar değişmez → uzun süreli önbellek
-        cacheControl: '31536000',
-        upsert: false,
-      }),
-    ),
-  );
+/** ESKİ VERİTABANI yedek yolu: bugünkü son güncelleme (status/boyut/taban yazımı). */
+async function legacyFinalize(ctx: OrgContext, media: ProcessInput, publicBase: string, processed: ProcessedImage) {
+  if (media.status === 'failed') await ctx.supabase.from('media_assets').update({ status: 'pending', error: null }).eq('id', media.id);
   const widths = processed.variants.map((v) => v.width);
-  if (uploads.some((u) => u.error)) {
-    await ctx.supabase.storage.from(MEDIA_BUCKETS.public).remove(variantPaths(publicBase, widths));
-    await markFailed(ctx, media.id, 'Varyantlar depolamaya yazılamadı.');
-    throw new ActionError('Fotoğraf kaydedilemedi. Lütfen tekrar deneyin.', 'storage');
-  }
-
   const { data: updated, error: updateError } = await ctx.supabase
     .from('media_assets')
     .update({
@@ -271,18 +244,141 @@ async function processMedia(ctx: OrgContext, media: AdminMedia & { original_path
     .select(ADMIN_MEDIA_FIELDS)
     .single();
   if (updateError || !updated) {
-    await ctx.supabase.storage.from(MEDIA_BUCKETS.public).remove(variantPaths(publicBase, widths));
+    await removeNewVariants(ctx, publicBase, widths);
     assertNoDbError(updateError);
     throw new ActionError('Fotoğraf kaydedilemedi. Lütfen tekrar deneyin.');
   }
+  await removePreviousVariants(ctx, media.public_base, media.variant_widths ?? [], publicBase);
+}
 
-  // Önceki sürümün varyantları (döndürme / yeniden işleme)
-  if (media.public_base && media.public_base !== publicBase && !media.public_base.startsWith('/')) {
-    await ctx.supabase.storage.from(MEDIA_BUCKETS.public).remove(variantPaths(media.public_base, media.variant_widths ?? []));
+async function removeNewVariants(ctx: OrgContext, publicBase: string, widths: number[]) {
+  const { error } = await ctx.supabase.storage.from(MEDIA_BUCKETS.public).remove(variantPaths(publicBase, widths));
+  if (error) console.error('[media] new variants cleanup failed', { publicBase });
+}
+
+/** Önceki sürümün varyantları (en iyi çaba; RPC kuyruğu ve cron garanti eder) */
+async function removePreviousVariants(ctx: OrgContext, previous: string | null, widths: number[], current: string) {
+  if (!previous || previous === current || previous.startsWith('/')) return;
+  const { error } = await ctx.supabase.storage.from(MEDIA_BUCKETS.public).remove(variantPaths(previous, widths));
+  if (error) console.error('[media] previous variants cleanup failed', { previous });
+}
+
+async function readRow(ctx: OrgContext, id: string) {
+  const { data } = await ctx.supabase.from('media_assets').select(ADMIN_MEDIA_FIELDS).eq('id', id).maybeSingle();
+  return data as unknown as AdminMedia | null;
+}
+
+/**
+ * 2. adım: yükleme tamamlanınca orijinal dosya indirilir, GERÇEK türü doğrulanır
+ * ve WebP varyantları üretilip herkese açık kovaya yazılır; satır `media_finalize` RPC'siyle
+ * tek işlemde sonlandırılır. Hazır (`ready`) bir satır (döndürme) hiçbir hatada düşürülmez ve
+ * orijinali silinmez; yalnız bu işlemde üretilen YENİ varyantlar temizlenir.
+ */
+async function processMedia(ctx: OrgContext, media: ProcessInput, rotate: Rotation = 0) {
+  if (!media.original_path) throw new ActionError('Fotoğrafın orijinal dosyası bulunamadı.');
+  const isReady = media.status === 'ready';
+
+  const { data: blob, error: downloadError } = await ctx.supabase.storage.from(MEDIA_BUCKETS.originals).download(media.original_path);
+  if (downloadError || !blob) {
+    await markFailed(ctx, media, 'Orijinal dosya depolamada bulunamadı; yükleme tamamlanmamış olabilir.');
+    throw new ActionError('Dosya yüklemesi tamamlanmamış görünüyor. "Tekrar dene" ile yeniden yükleyin.', 'not_uploaded');
   }
+  const input = Buffer.from(await blob.arrayBuffer());
+  if (input.length > MEDIA_LIMITS.maxOriginalBytes) {
+    if (!isReady) await ctx.supabase.storage.from(MEDIA_BUCKETS.originals).remove([media.original_path]);
+    await markFailed(ctx, media, 'Dosya 50 MB sınırını aşıyor.');
+    throw new ActionError('Bu görselin boyutu çok yüksek (en fazla 50 MB).', 'too_large');
+  }
+
+  let processed: ProcessedImage;
+  try {
+    processed = await processImage(input, rotate);
+  } catch (error) {
+    if (error instanceof MediaValidationError) {
+      if (!isReady) await ctx.supabase.storage.from(MEDIA_BUCKETS.originals).remove([media.original_path]);
+      await markFailed(ctx, media, error.message);
+      throw new ActionError(error.message, error.code);
+    }
+    console.error('[media] processing failed', { mediaId: media.id });
+    await markFailed(ctx, media, 'Görsel işlenemedi.');
+    throw new ActionError('Görsel işlenirken bir sorun oluştu. Lütfen tekrar deneyin.', 'processing');
+  }
+
+  const publicBase = newPublicBase(media.original_path, rotate);
+  const uploads = await Promise.all(
+    processed.variants.map(({ width, buffer }) =>
+      ctx.supabase.storage.from(MEDIA_BUCKETS.public).upload(`${publicBase}/w${width}.webp`, buffer, {
+        contentType: 'image/webp',
+        // Yol her işlemede değiştiği için dosyalar değişmez → uzun süreli önbellek
+        cacheControl: '31536000',
+        upsert: false,
+      }),
+    ),
+  );
+  const widths = processed.variants.map((v) => v.width);
+  if (uploads.some((u) => u.error)) {
+    await removeNewVariants(ctx, publicBase, widths);
+    await markFailed(ctx, media, 'Varyantlar depolamaya yazılamadı.');
+    throw new ActionError('Fotoğraf kaydedilemedi. Lütfen tekrar deneyin.', 'storage');
+  }
+
+  const finalized = await finalizeMedia(ctx.supabase, {
+    mediaId: media.id,
+    expectedBase: media.public_base,
+    publicBase,
+    widths,
+    width: processed.width,
+    height: processed.height,
+    blur: processed.blurDataUrl,
+  });
+
+  if (!finalized.error) {
+    const prev = finalized.data;
+    await removePreviousVariants(ctx, prev?.previous_base ?? null, prev?.previous_widths ?? [], publicBase);
+  } else {
+    const kind = classifyFinalizeError(finalized.error);
+    // Belirsiz sonuç: yanıt kaybolmuş olabilir → satır yeniden okunur
+    const reread = kind === 'unknown' ? await readRow(ctx, media.id) : null;
+    const decision = decideAfterFinalizeError({
+      kind,
+      rowStatus: media.status,
+      rowPublicBase: kind === 'unknown' ? (reread ? reread.public_base : undefined) : undefined,
+      newBase: publicBase,
+    });
+    if (decision.useLegacy) {
+      await legacyFinalize(ctx, media, publicBase, processed);
+    } else if (decision.treatAsSuccess) {
+      await removePreviousVariants(ctx, media.public_base, media.variant_widths ?? [], publicBase);
+    } else {
+      if (decision.removeNewVariants) await removeNewVariants(ctx, publicBase, widths);
+      if (decision.markFailed) await markFailed(ctx, media, decision.failedReason === 'quota' ? 'quota: depolama kotası doldu.' : 'Fotoğraf sonlandırılamadı.');
+      if (decision.throwCode === 'quota') throw new ActionError(mapDbError({ message: 'plan_limit_storage' }), 'quota');
+      if (decision.throwCode === 'conflict') {
+        const busy = finalized.error.message === 'media_busy';
+        throw new ActionError(mapDbError({ message: busy ? 'media_busy' : 'media_conflict' }), busy ? 'busy' : 'conflict');
+      }
+      if (kind === 'structured') assertNoDbError(finalized.error);
+      throw new ActionError('Fotoğraf kaydedilemedi. Lütfen tekrar deneyin.', 'finalize');
+    }
+  }
+
+  // Önbellekler, yeniden okuma başarısız olsa bile bayat kalmasın
+  invalidate(ctx.org.id);
   // Kapak ataması AFTER tetikleyicisiyle yapıldığından güncel satır yeniden okunur
-  const { data: fresh } = await ctx.supabase.from('media_assets').select(ADMIN_MEDIA_FIELDS).eq('id', media.id).maybeSingle();
-  return (fresh ?? updated) as unknown as AdminMedia;
+  const fresh = await readRow(ctx, media.id);
+  if (fresh) return fresh;
+  return {
+    ...media,
+    status: 'ready',
+    public_base: publicBase,
+    variant_widths: widths,
+    width: processed.width,
+    height: processed.height,
+    blur_data_url: processed.blurDataUrl,
+    variants_byte_size: processed.variantsBytes,
+    error: null,
+    processed_at: new Date().toISOString(),
+  } as AdminMedia;
 }
 
 export async function finalizeMediaUpload(input: { mediaId: string; replaceId?: string }): Promise<ActionResult<AdminMedia>> {
@@ -321,7 +417,7 @@ export async function retryMediaProcessing(mediaId: string): Promise<ActionResul
     const ctx = await requirePermission('media.manage');
     const media = await loadMedia(ctx, mediaId);
     if (media.status === 'ready') return media;
-    await ctx.supabase.from('media_assets').update({ status: 'pending', error: null }).eq('id', media.id);
+    // Durum sıfırlaması yok: media_finalize failed satırı kabul eder (eski şemada yedek yol sıfırlar)
     const result = await processMedia(ctx, media, rotationOf(media.public_base));
     invalidate(ctx.org.id);
     return result;
