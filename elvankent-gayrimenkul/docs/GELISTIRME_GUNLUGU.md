@@ -10,18 +10,43 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 | --- | --- |
 | Production dalı | `ff2f7da`, değişmedi. KARAYS yayını kapıları bekliyor (aşağıda) |
 | Çalışma dalı | `claude/karays-mission-control-vn8g65` (26.10: `claude/karay-ci-dogrulama` `7bd583f`'ün fast-forward devamı). Vercel dağıtımı iki dalda da kapalı (`a24fef8` ve K-20); yayın zinciri bu commit'ler hariç kurulur |
-| Son kod commit'i | `dc6594a` (K-21: O-5 runbook'ları `quota_lock` ve `ops02_limits`, `company_name` CHECK, kota kilidi sertleştirmesi; hepsi bekleyen) |
+| Son kod commit'i | `b9d1eab` (K-22: WP-A2 güvenli medya sonlandırma + bekleyen A/B migration'ları, runbook'lar, CI'da runbook provası) |
 | GitHub | K-13…K-16 GitHub'da (`a24fef8..968e3ad`). Production dalının yerel kopyasındaki 15 commit kaybolmadı: zincir uzak dallardan birebir yeniden kurulabiliyor (aşağıda) |
 | CI | [#91](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40169352877) yeşil (`a6169bc`, 25.10.2026): quality ve database başarılı; E2E 208 geçti, 4 koşullu atlandı. Güvenlik adayı koşusu #3: taban = aday, gerileme yok |
 | Güvenlik | Production'da next 16.3.6 ve sharp 0.35.4 var; yeni Next.js duyurularının etki alanında ([K17 §3](K17_KARAYS_RELEASE.md)). Düzeltme bu dalda; canlıya çıkması yayın onayına bağlı (O-4) |
 | Açık kapılar | P0-1 doğrulanmış canlı yedek yok · P0-2 canlı veritabanının kimliği ve şema durumu doğrulanmadı · onaylar O-1…O-6 ([K17 §1–§2](K17_KARAYS_RELEASE.md)) |
 | Bekleyen kararlar | D-01…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)). Özellikle D-05 (iptal ve veri saklama; OPS-02'nin kalıcı düzeltmesi buna bağlı), D-14 (dal ve yayın stratejisi), D-15 (güvenlik başlıkları, SVG) · PHASE4 §8 K-4…K-7 |
 
-**Yayın hazırlığı:** [K19_YAYIN_HAZIRLIK.md](K19_YAYIN_HAZIRLIK.md) (Go/No-Go, kalite kapısı, toplu karar paketi).
+**Yayın hazırlığı:** [K19_YAYIN_HAZIRLIK.md](K19_YAYIN_HAZIRLIK.md) (Go/No-Go, kalite kapısı, toplu karar paketi). **Kalan işler:** [KALAN_ISLER.md](KALAN_ISLER.md) (tek liste, KI-01…KI-37).
 
 **Sıradaki adım:** Sahibin K-17 kapılarını açması: A1–A4 (panel teyidi, salt okunur ön kontrol, geri dönüş betiği, yedek). Ardından O-4 ile kod yayını, O-5 ile migration. Canlıdaki güvenlik açığı nedeniyle bu sıranın öne alınması önerilir. Güvenlik düzeltmesini migration'dan önce, yalnızca kod olarak yayınlamak teknik olarak mümkün (yeni kod eski veritabanıyla çalışır, [K17 §5](K17_KARAYS_RELEASE.md)). Yedek kapısının (P0-1) bu kod yayınını da bekletip bekletmeyeceği sahibin kararıdır.
 
 ## Girişler
+
+### 26.10.2026 (4) · K-22: WP-A2 güvenli medya sonlandırma; eksik runbook'lar; CI'da prova
+
+**Başlangıç:** `952043c` (son çalışma dalı ucu). Production `ff2f7da`, değişmedi; canlı veritabanına bağlanılmadı; OPS-02 bayrağı kapalı. Kaynak: K-21 bağımsız inceleme talimatı §6 ve K-19 durum raporu (PDF).
+
+**Commit'ler (hepsi dağıtımı kapalı çalışma dalında):**
+- `2f090b2` WP-A2 taslağı ve 11 bulgusu `docs/drafts/wpa2/` altında (`.taslak`, çalışmaz; sır taraması temiz).
+- `ee617ab` [KALAN_ISLER.md](KALAN_ISLER.md): PDF + K-19 + günlükten tek liste (KI-01…KI-35; sonra KI-36, KI-37).
+- `98d1d1d`, `64d6ea0`, `dc361b9` WP-A2 tasarım sözleşmesi, DB onay koşulları, dondurulmuş arayüz, inceleme sonuçları ([drafts/wpa2/TASARIM.md](drafts/wpa2/TASARIM.md)).
+- `e93d6a7` Runbook'lar `media_quota_lock/`, `company_name/` (+ ayrı VALIDATE adımı); `scripts/rehearse-runbooks.sh` (yalnız yerel; 01/02/04 salt okunur oturumda; ilk/son 01 eşit; negatif ve olumlu kontrol) CI database işinde bekleyen dosyalardan önce çalışır; SL-07 yetkisiz isteğin başka kurumun kilidini beklemediğini kanıtlar.
+- `b9d1eab` WP-A2: bekleyen A (`media_finalize`, `media_mark_failed`, silme kuyruğu, `media_queue_claim/done`, `media_storage_report`) ve B (authenticated UPDATE/INSERT sütun düzeyinde daraltma + şekil koruması; A yoksa durur); runbook'lar `media_finalize_rpc/`, `media_privileges/`; uygulama: `processMedia` RPC ile sonlandırır, hazır fotoğraf asla düşürülmez ve orijinali silinmez (KI-36, canlıdaki hata), cron kanonik klasörü siler ve kuyruğu yalnız kendi kurum yollarıyla boşaltır.
+
+**Doğrulama (yerel Supabase, CI adımının kopyası; son ağaç `b9d1eab` ile birebir):**
+- Runbook provası 6/6; güvenlik kümesi **165/165**; Playwright tam küme 3 projede **208 geçti / 0 kaldı / 4 koşullu atlandı**.
+- Yeni kod + bekleyen dosyasız şema (yedek yol): medya E2E 28/28. Yeni kod + yalnız A: 28/28; sonlanan 6 satırda `byte_size` = depolamadaki gerçek boyut.
+- Cron: doğrudan silinen satırın 6 dosyası kuyruktan silindi; eski bekleyen satırın klasörü silindi; başka kurum yolunu gösteren satır ve kuyruk öğesi **silinmedi** (`deferred`, `unsafe`).
+- Birim 582/582, typecheck, ESLint, build temiz. Kırmızı/yeşil: yeni testler A/B olmadan kaldı; SL-07 erken dönüş kaldırılınca kaldı.
+
+**İncelemeler (bağımsız):** `ecc:code-reviewer` bloklayan yok (4 düzeltme yapıldı: başka kurum klasörünü silme riski dahil). `ecc:database-reviewer` tasarım ve uygulamada koşullu onay (R1 NULL boyut, R2 geri dönüş sırası düzeltildi). `ecc:security-reviewer` **H1** (kuyruk + service-role cron ile başka kurumun dosyalarının silinmesi) buldu; düzeltildi ve yeniden incelemede açık HIGH/CRITICAL kalmadı. Kalan: M1 sonlandırma sonrası nesnenin üzerine yazılması ve satırsız yükleme → yalnız tespit; önleme C'ye bağlı (**KI-37, yayın koşulu**). CI `PENDING` matrisi bu turda eklenmedi (süre); eski şema ayağı yerelde koşuldu.
+
+**Ajanlar ve skill'ler (gerçek çağrılar):** ecc:planner (kalan iş listesi), ecc:architect (WP-A2 tasarımı), ecc:database-reviewer ×4, ecc:tdd-guide ×4 (WP-D, WP-E, WP-A2 uygulama, WP-A2 DB), ecc:code-reviewer, ecc:security-reviewer ×2, ecc:e2e-runner ×2. Skill: `ecc:context-budget` bir kez; çıktısı: canlı bağlam/token ölçümü skill ile yapılamaz, Claude Code'da `/context` ve `/usage` kullanılır. Token sayısı ölçülmediği için raporlanmadı.
+
+**CI:** #94 = `952043c` yeşil. #96–#98 yeni gönderimlerle iptal. #99 = `e93d6a7`: quality yeşil, "Yerel Supabase" (runbook provası dahil) yeşil; sonraki gönderimle iptal edildiyse tam sonucu yok. `b9d1eab` ve bu girişin koşusu ayrıca kontrol edilecek.
+
+**Açık (sahip):** Değişmedi: P0-1, P0-2, O-1…O-6, D-04, D-05, D-15, PR #2. Yeni onay birimleri 4d (A) ve 4e (B; önce kod) K-19 §8'de. OPS-02 bayrağı kapalı.
 
 ### 26.10.2026 (3) · K-21: uzman ajanlarla O-5 hazırlığı ve bekleyen migration sertleştirmesi
 
