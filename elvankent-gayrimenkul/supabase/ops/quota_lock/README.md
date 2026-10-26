@@ -3,7 +3,7 @@
 Bekleyen migration'ı canlıda **tek başına** uygulayan betikler. Yalnızca **sahip** (O-5), **yazılı onaydan sonra** çalıştırır.
 Bu betikleri geliştirme ortamı ya da CI çalıştırmaz. Çıktılarda kurum adı/kimlik yoktur; yalnızca sayı ve nesne durumu.
 
-**Sıra:** önce bu klasör, sonra `../ops02_limits/` (OPS-02 buna dayanır). `media_quota_lock` için runbook henüz yoktur.
+**Sıra:** önce bu klasör, sonra `../ops02_limits/` (OPS-02 buna dayanır). Ardından `../media_quota_lock/` (K-19: bu klasör ondan önce).
 
 | Adım | Dosya | Ne yapar | Beklenen çıktı |
 |---|---|---|---|

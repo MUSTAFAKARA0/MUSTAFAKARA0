@@ -548,12 +548,15 @@ describe('LR-13 bekleyen migration\'lar (K-19)', () => {
   });
 });
 
-describe('LR-14 O-5 runbook\'ları: quota_lock ve OPS-02 (supabase/ops)', () => {
+describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock ve company_name (supabase/ops)', () => {
   // Bekleyen migration'ları canlıda tek başına uygulayan betikler (karays_brand ile aynı düzen, LR-10).
   // Pending dosya değişip 03/04/05 değişmezse canlıya provası yapılmamış bir gövde gider.
   const runbooks = [
-    { dir: 'supabase/ops/quota_lock/', pending: '20261025000001_quota_lock.sql', first: 'create or replace function public.quota_lock', fn: 'public.quota_lock' },
-    { dir: 'supabase/ops/ops02_limits/', pending: '20261025000002_ops02_subscription_limits.sql', first: 'alter table public.platform_settings', fn: 'public.org_plan' },
+    { dir: 'supabase/ops/quota_lock/', pending: '20261025000001_quota_lock.sql', first: 'create or replace function public.quota_lock', fn: 'public.quota_lock', hashFrom: 'create or replace function public.quota_lock' },
+    { dir: 'supabase/ops/ops02_limits/', pending: '20261025000002_ops02_subscription_limits.sql', first: 'alter table public.platform_settings', fn: 'public.org_plan', hashFrom: 'create or replace function public.org_plan' },
+    { dir: 'supabase/ops/media_quota_lock/', pending: '20261026000001_media_quota_lock.sql', first: 'create or replace function public.media_quota_check', fn: 'public.media_quota_check', hashFrom: 'create or replace function public.media_quota_check' },
+    // 03b_validate.sql isteğe bağlı ayrı adım (VALIDATE tabloyu tarar); varsa aşağıda ayrıca denetlenir
+    { dir: 'supabase/ops/company_name/', pending: '20261026000002_company_name_check.sql', first: 'alter table public.platform_settings drop constraint', fn: null, hashFrom: null, optional: ['03b_validate.sql'] },
   ];
   const files = ['01_preflight.sql', '02_save_state.sql', '03_apply.sql', '04_postflight.sql', '05_rollback.sql'];
   const noComments = (sql) => sql.split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
@@ -573,7 +576,7 @@ describe('LR-14 O-5 runbook\'ları: quota_lock ve OPS-02 (supabase/ops)', () => 
   for (const rb of runbooks) {
     describe(rb.dir, () => {
       test('beş betik ve README var', () => {
-        const present = readdirSync(new URL(rb.dir, root)).sort();
+        const present = readdirSync(new URL(rb.dir, root)).filter((f) => !(rb.optional ?? []).includes(f)).sort();
         assert.deepEqual(present, [...files, 'README.md'].sort());
         assert.ok(pendingOf(rb).includes(`\n${rb.first}`), 'pending gövdesi bulundu');
       });
@@ -624,13 +627,51 @@ describe('LR-14 O-5 runbook\'ları: quota_lock ve OPS-02 (supabase/ops)', () => 
         for (const s of stmts) assert.ok(rollback.includes(norm(s)), `05'te yok: ${s}`);
       });
       test('04 ve 03 gövde özeti (md5) pending dosyadaki fonksiyonla aynı', () => {
-        const hash = md5(prosrc(pendingOf(rb), rb.first.startsWith('create') ? rb.first : 'create or replace function public.org_plan'));
+        if (!rb.hashFrom) return; // yalnızca kısıt: fonksiyon gövdesi yok
+        const hash = md5(prosrc(pendingOf(rb), rb.hashFrom));
         assert.ok(read(`${rb.dir}04_postflight.sql`).includes(`'${hash}'`), '04 özeti');
         if (rb.fn === 'public.org_plan') assert.ok(read(`${rb.dir}03_apply.sql`).includes(`'${hash}'`), '03 özeti');
       });
     });
   }
 
+  test('media_quota_lock: tetikleyici adı media_assets_org\'dan sonra sıralanır; 03/04 tek tetikleyici, definer, boş search_path, yetki denetler', () => {
+    const pending = read('supabase/pending/20261026000001_media_quota_lock.sql');
+    const name = pending.match(/create trigger (\w+)\s+before insert on public\.media_assets/)[1];
+    assert.ok(name > 'media_assets_org', 'ada göre media_assets_org\'dan sonra');
+    for (const f of ['03_apply.sql', '04_postflight.sql']) {
+      const sql = read(`supabase/ops/media_quota_lock/${f}`);
+      assert.match(sql, new RegExp(`'${name}'`), `${f}: tetikleyici adı`);
+      assert.match(sql, /prosecdef/, `${f}: security definer`);
+      assert.match(sql, /search_path=""/, `${f}: boş search_path`);
+      assert.match(sql, /r\.rolname in \('anon', 'authenticated', 'service_role'\)/, `${f}: yetki`);
+      assert.match(sql, /media_assets_org/, `${f}: sıra denetimi`);
+    }
+    const pre = read('supabase/ops/media_quota_lock/01_preflight.sql');
+    assert.match(pre, /DUR: quota_lock\/03_apply\.sql henüz uygulanmamış/);
+    assert.match(pre, /20261018000001/);
+    assert.doesNotMatch(pre, /organization_id::text|\bname\b/i, 'kurum kimliği/adı seçilmez');
+  });
+  test('company_name: düzenli ifade pending ile birebir (01, 03, 04); 03b yalnızca VALIDATE; 03 NOT VALID', () => {
+    const pending = read('supabase/pending/20261026000002_company_name_check.sql');
+    const regex = pending.match(/check \(company_name !~ (E'.*?')\)/)[1];
+    for (const f of ['01_preflight.sql', '03_apply.sql', '04_postflight.sql']) {
+      assert.ok(read(`supabase/ops/company_name/${f}`).includes(regex), `${f}: düzenli ifade`);
+    }
+    assert.match(norm(read('supabase/ops/company_name/03_apply.sql')), /not valid;/);
+    assert.doesNotMatch(code(read('supabase/ops/company_name/03_apply.sql')), /validate constraint/i);
+    assert.match(read('supabase/ops/company_name/01_preflight.sql'), /DUR: /);
+    const v = read('supabase/ops/company_name/03b_validate.sql');
+    assert.match(v, /^begin;\nset local lock_timeout = '3s';\nset local statement_timeout = '30s';$/m);
+    const stmts = code(v).split(';').map((x) => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    assert.deepEqual(stmts, [
+      'begin',
+      "set local lock_timeout = ''",
+      "set local statement_timeout = ''",
+      'alter table public.platform_settings validate constraint platform_settings_company_name_plain',
+      'commit',
+    ]);
+  });
   test('quota_lock: yetkiler anon/authenticated/PUBLIC için kapalı denetlenir (03 ve 04)', () => {
     for (const f of ['03_apply.sql', '04_postflight.sql']) {
       assert.match(read(`supabase/ops/quota_lock/${f}`), /r\.rolname in \('anon', 'authenticated'\)/, f);

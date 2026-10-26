@@ -112,6 +112,9 @@ jobs:
           supabase status -o env > /tmp/supa.env
           set -a; . /tmp/supa.env; set +a
           PGOPTIONS='-c app.allow_demo_seed=on' psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/seed.sql
+          # O-5 runbook provası (supabase/ops/*): temiz, tohumlanmış veritabanında 01→05→01→03 döngüsü; bitişte hepsi
+          # uygulanmış kalır. Aşağıdaki bekleyen dosya döngüsü idempotenttir (create or replace / drop if exists)
+          bash scripts/rehearse-runbooks.sh
           # Bekleyen migration'lar (supabase/pending, canlıya uygulanmaz): bayraklar varsayılan kapalı; RLS ve E2E
           # testleri bunlar uygulanmış veritabanında koşar (geriye uyumluluk) ve yeni davranışı sınar
           for f in supabase/pending/*.sql; do psql "$DB_URL" -X -v ON_ERROR_STOP=1 -q -f "$f"; done
@@ -127,6 +130,8 @@ jobs:
             env_line NEXT_PUBLIC_SUPABASE_URL "$API_URL"
             env_line NEXT_PUBLIC_SUPABASE_ANON_KEY "$ANON_KEY"
             env_line SUPABASE_SERVICE_ROLE_KEY "$SERVICE_ROLE_KEY"
+            # SL-07: kota kilidini ayrı bir psql oturumunda tutar (yalnızca yerel veritabanı)
+            env_line DB_URL "${DB_URL:-}"
             env_line NEXT_PUBLIC_SITE_URL http://localhost:3000
             env_line IP_HASH_SALT "ci-$(openssl rand -hex 16)"
             env_line CRON_SECRET "ci-$(openssl rand -hex 32)"

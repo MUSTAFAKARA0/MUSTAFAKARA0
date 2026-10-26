@@ -17,12 +17,16 @@
  *   SL-06  Depolama kotası veritabanında denetlenir (20261026000001_media_quota_lock.sql): eşzamanlı ya da
  *          media_upload_allowed() çağrılmadan doğrudan eklenen medya kayıtları kotayı aşamaz; başka kuruma
  *          (üye olmayan kullanıcı ya da anonim) yapılan ekleme RLS hatası alır, kota durumu sızmaz.
+ *   SL-07  Yetkisiz ekleme başka kurumun kota kilidini BEKLEMEZ: kurum B'nin kilidi ayrı bir psql oturumunda
+ *          tutulurken üye olmayanın eklemesi hemen RLS hatası alır; kurumun kendi sahibi kilidi bekler (kontrol).
+ *          DB_URL (yerel) gerekir; yoksa yerelde atlanır, CI'da hata verir.
  *
  * Bekleyen migration uygulanmamış bir veritabanında testler atlanır; CI'da (CI=true) atlanmaz, hata verir.
  */
 import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import { createClient } from '@supabase/supabase-js';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -328,5 +332,74 @@ describe('SL-06 depolama kotası veritabanında', { skip }, () => {
     await setFlag(false);
     const org = await orgWithListing('munl', null);
     assert.ifError((await addMedia(org.owner.client, org.id, org.propertyId, 500)).error);
+  });
+});
+
+const dbUrl = process.env.DB_URL;
+const dbUrlLocal = !!dbUrl && /^postgres(ql)?:\/\/([^@/]*@)?(127\.0\.0\.1|localhost)(:\d+)?(\/\w+)?$/.test(dbUrl); // sorgu parametresi (?host=) kabul edilmez;
+const lockSkip = skip || (!dbUrl && !process.env.CI ? 'DB_URL tanımlı değil (kilit ayrı bir psql oturumunda tutulur)' : false);
+
+describe('SL-07 yetkisiz ekleme başka kurumun kota kilidini beklemez', { skip: lockSkip }, () => {
+  const HOLD_SECONDS = 5;
+  const insertSite = (client, orgId) =>
+    client.from('media_assets').insert({
+      organization_id: orgId,
+      property_id: null,
+      kind: 'post_cover',
+      status: 'pending',
+      original_path: `organizations/${orgId}/content/${randomBytes(8).toString('hex')}`,
+      mime_type: 'image/jpeg',
+      byte_size: 1024 * 1024,
+    });
+  const timed = async (fn) => {
+    const t0 = performance.now();
+    const result = await fn();
+    return { result, ms: performance.now() - t0 };
+  };
+
+  test('kurum B kilidi tutulurken üye olmayanın eklemesi hızla RLS hatası alır; sahibi bekler', async () => {
+    if (!dbUrl) throw new Error('CI: DB_URL tanımlı değil (SL-07 kilidi ayrı bir psql oturumunda tutar)');
+    assert.ok(dbUrlLocal, 'DB_URL yerel değil; SL-07 yalnızca yerel veritabanında çalışır');
+    const orgB = await makeOrg('lockb', { plan: PLAN, status: 'active' });
+
+    // Kilit oturumu: anahtar, tetikleyicideki ile aynı. \echo LOCKED yalnızca kilit alındıktan sonra yazılır.
+    const script = [
+      `select pg_advisory_lock(hashtextextended('karay.quota:media_assets:${orgB.id}', 0));`,
+      '\\echo LOCKED',
+      `select pg_sleep(${HOLD_SECONDS});`,
+      '',
+    ].join('\n');
+    const holder = spawn('psql', [dbUrl, '-X', '-q', '-v', 'ON_ERROR_STOP=1'], { stdio: ['pipe', 'pipe', 'pipe'] });
+    let stderr = '';
+    holder.stderr.on('data', (d) => (stderr += d));
+    try {
+      const locked = new Promise((resolve, reject) => {
+        let out = '';
+        const timer = setTimeout(() => reject(new Error(`kilit 10 sn içinde alınamadı: ${stderr}`)), 10_000);
+        holder.stdout.on('data', (d) => {
+          out += d;
+          if (out.includes('LOCKED')) { clearTimeout(timer); resolve(); }
+        });
+        holder.on('error', (e) => { clearTimeout(timer); reject(e); });
+        holder.on('exit', () => { clearTimeout(timer); reject(new Error(`psql kilit almadan çıktı: ${stderr}`)); });
+      });
+      holder.stdin.end(script);
+      await locked;
+
+      // (a) Üye olmayan: kurum B'nin kilidini beklemeden RLS hatası
+      const intruder = await timed(() => insertSite(O.active.owner.client, orgB.id));
+      assert.ok(intruder.result.error, 'yetkisiz ekleme kabul edildi');
+      assert.doesNotMatch(intruder.result.error.message, /plan_limit_storage/);
+      assert.match(intruder.result.error.message, /row-level security/);
+      assert.ok(intruder.ms < 1500, `yetkisiz ekleme kilidi bekledi (${Math.round(intruder.ms)} ms)`);
+
+      // (b) Kontrol: kurumun kendi sahibi aynı kilidi bekler (kilidin gerçekten tutulduğunu kanıtlar)
+      const owner = await timed(() => insertSite(orgB.owner.client, orgB.id));
+      assert.ifError(owner.result.error);
+      assert.ok(owner.ms > 3000, `sahibin eklemesi kilidi beklemedi (${Math.round(owner.ms)} ms); kilit tutulmuyor olabilir`);
+    } finally {
+      holder.kill('SIGKILL');
+      await new Promise((resolve) => (holder.exitCode !== null || holder.signalCode || holder.pid === undefined ? resolve() : (holder.once('exit', resolve), holder.once('error', resolve))));
+    }
   });
 });
