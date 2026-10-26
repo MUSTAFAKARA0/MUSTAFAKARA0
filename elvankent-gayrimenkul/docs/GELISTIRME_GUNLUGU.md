@@ -10,7 +10,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 | --- | --- |
 | Production dalı | `ff2f7da`, değişmedi. KARAYS yayını kapıları bekliyor (aşağıda) |
 | Çalışma dalı | `claude/karays-mission-control-vn8g65` (26.10: `claude/karay-ci-dogrulama` `7bd583f`'ün fast-forward devamı). Vercel dağıtımı iki dalda da kapalı (`a24fef8` ve K-20); yayın zinciri bu commit'ler hariç kurulur |
-| Son kod commit'i | `dd32fa7` (K-20: depolama kotası veritabanında, bekleyen migration `20261026000001`) |
+| Son kod commit'i | `dc6594a` (K-21: O-5 runbook'ları `quota_lock` ve `ops02_limits`, `company_name` CHECK, kota kilidi sertleştirmesi; hepsi bekleyen) |
 | GitHub | K-13…K-16 GitHub'da (`a24fef8..968e3ad`). Production dalının yerel kopyasındaki 15 commit kaybolmadı: zincir uzak dallardan birebir yeniden kurulabiliyor (aşağıda) |
 | CI | [#91](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40169352877) yeşil (`a6169bc`, 25.10.2026): quality ve database başarılı; E2E 208 geçti, 4 koşullu atlandı. Güvenlik adayı koşusu #3: taban = aday, gerileme yok |
 | Güvenlik | Production'da next 16.3.6 ve sharp 0.35.4 var; yeni Next.js duyurularının etki alanında ([K17 §3](K17_KARAYS_RELEASE.md)). Düzeltme bu dalda; canlıya çıkması yayın onayına bağlı (O-4) |
@@ -22,6 +22,30 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 **Sıradaki adım:** Sahibin K-17 kapılarını açması: A1–A4 (panel teyidi, salt okunur ön kontrol, geri dönüş betiği, yedek). Ardından O-4 ile kod yayını, O-5 ile migration. Canlıdaki güvenlik açığı nedeniyle bu sıranın öne alınması önerilir. Güvenlik düzeltmesini migration'dan önce, yalnızca kod olarak yayınlamak teknik olarak mümkün (yeni kod eski veritabanıyla çalışır, [K17 §5](K17_KARAYS_RELEASE.md)). Yedek kapısının (P0-1) bu kod yayınını da bekletip bekletmeyeceği sahibin kararıdır.
 
 ## Girişler
+
+### 26.10.2026 (3) · K-21: uzman ajanlarla O-5 hazırlığı ve bekleyen migration sertleştirmesi
+
+**Başlangıç:** `8b2de09`. Production `ff2f7da`, değişmedi; canlı veritabanına bağlanılmadı; OPS-02 bayrağı kapalı.
+
+**Ajanlar (ECC v2.2.3, claude.ai hesabından eşitlenen eklenti; katalogda ve oturumda 71 ajan):**
+- Aşama 1 (salt okunur): `ecc:planner` iş paketleri, `ecc:database-reviewer` bekleyen 3 migration, `ecc:code-architect` medya boyutu tasarımı.
+- Aşama 2 (paralel, ayrı dosya setleri): `ecc:tdd-guide` × 3: WP-A medya boyutu, WP-B O-5 runbook'ları, WP-C `company_name` CHECK.
+- Aşama 3: `ecc:security-reviewer`, `ecc:database-reviewer`, `ecc:code-reviewer` paralel inceleme; `ecc:e2e-runner` yerel Supabase doğrulaması (iki tur).
+
+**`dc6594a`:**
+- `supabase/ops/quota_lock/` ve `supabase/ops/ops02_limits/`: sahibin çalıştıracağı O-5 runbook'ları (karays_brand düzeni: 01 ön kontrol, 02 durum, 03 tek işlemde uygulama, `lock_timeout` 3 sn / `statement_timeout` 30 sn, 04 son kontrol, 05 geri dönüş). OPS-02'nin 03'ü kilit yoksa DUR der; hiçbir betik bayrağı açmaz. LR-14 birim testleri.
+- `20261026000001`: API rolleri (anon, authenticated) yetkisi olmadığı kuruma ekleme yaparsa tetikleyici kilit almadan döner; RLS tek tip reddeder, kota durumu sızmaz (inceleme bulgusu: anon yolu da kapsandı). `service_role` revoke listesinde.
+- `20261026000002`: `company_name` için kontrol/görünmez/yön karakterlerini reddeden `NOT VALID` CHECK (`single-line.ts` ile aynı sınıflar).
+
+**Doğrulama (yerel Supabase, CI adımının kopyası, CLI 2.121.0):**
+- Yeni dosyalar olmadan: 125 testten 2'si kaldı, `company_name` bloğu (6 test) çalışmadı (hata yeniden üretildi).
+- Yeni dosyalarla: 125/125, arka arkaya 3 kez; tüm güvenlik kümesi **128/128**.
+- Runbook provası: `quota_lock` 01→02→03→04→05→01 ve yeniden uygulama; 05 sonrası 01 ilkine birebir eşit. OPS-02 03 kilit yokken DUR ile geri alındı. Başka oturum tabloyu kilitliyken 03, 55P03 ile durdu ve iz bırakmadı. OPS-02 04'teki `text || "char"` hatası bulundu ve düzeltildi; düzeltmeden sonra 01→03→04→05→01 temiz.
+- Medya E2E (önceki tur): `admin.spec.ts` + `acceptance.spec.ts` 28/28. Birim 505/505, typecheck ve ESLint temiz.
+
+**Bu commit'e alınmayan iş (WP-A2):** medya boyutunun gerçek değerle eşlenmesi (`media_record_sizes` RPC + doğrudan güncelleme koruması). İncelemede bloklayan ve yüksek bulgular çıktı: RPC hatasında kayıt silinmiş görsellere işaret ediyordu; üye `public_base` / `original_path` değiştirerek başka kurumun dosya boyutunu okuyabiliyor ve kotayı yine aşabiliyordu; eski kod canlıdayken uygulanırsa yükleme bozuluyordu. Doğru çözüm `authenticated` için UPDATE'in sütun düzeyinde daraltılması ve sonlandırmanın tek bir definer RPC'ye taşınması; ayrı iş paketi.
+
+**Açık (sahip):** Değişmedi: P0-1, P0-2, O-1…O-6, D-04, D-05, D-15, PR #2. Yeni onay birimleri 4b ve 4c (K-19 §8). OPS-02 bayrağı kapalı.
 
 ### 26.10.2026 (2) · K-20: depolama kotası veritabanında (bekleyen migration)
 
