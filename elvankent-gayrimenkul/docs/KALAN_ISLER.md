@@ -10,7 +10,7 @@
 | Kimlik | Başlık | Kaynak | Durum | Kabul ölçütü | Bağımlılık | Sorumlu uzman | Şimdi | Kanıt |
 |---|---|---|---|---|---|---|---|---|
 | KI-01 | WP-A2 taslağını ve bulgularını kalıcı TASLAK olarak koru | K-21 §6 | kapandı | `docs/drafts/wpa2/` 3 `.taslak` dosyası + README; CI/ESLint okumuyor | — | koordinatör | — | `2f090b2` |
-| KI-02 | WP-A2 tasarımı: sütun düzeyinde UPDATE + tek definer RPC ile sonlandırma | wpa2 README | devam ediyor | Tasarım 11 bulgunun her birini karşılıyor; database-reviewer onaylıyor | KI-01 | ecc:architect, ecc:database-reviewer | ✓ | yok |
+| KI-02 | WP-A2 tasarımı: sütun düzeyinde UPDATE + tek definer RPC ile sonlandırma | wpa2 README | kapandı (koşullu onay) | Tasarım 11 bulgunun her birini karşılıyor; database-reviewer onaylıyor | KI-01 | ecc:architect, ecc:database-reviewer | — | [drafts/wpa2/TASARIM.md](drafts/wpa2/TASARIM.md) §8 (11 zorunlu değişiklik), §9 dondurulmuş arayüz |
 | KI-03 | A2-1: Boyut gerçek dosya bilgisinden | K-21 ölçüt 1 | sırada | `byte_size`/`variants_byte_size` `storage.objects`'ten; yanlış bildirilen boyut kayda geçmiyor (RLS testi) | KI-02 | ecc:tdd-guide | ✓ | yok |
 | KI-04 | A2-2: Başka kurumun yoluyla bilgi okunamaz | ölçüt 2, bulgu #2 | sırada | Yol `organizations/<kendi kurum>/` ile başlamıyorsa red; kiracılar arası test | KI-02 | ecc:tdd-guide, ecc:security-reviewer | ✓ | yok |
 | KI-05 | A2-3: Korunan sütunlara doğrudan UPDATE kapalı | ölçüt 3, bulgu #3/#10 | sırada | `authenticated` boyut/yol/`status`/`public_base` güncelleyemiyor; kota bu yolla aşılamıyor | KI-02 | ecc:database-reviewer, ecc:tdd-guide | ✓ | yok |
@@ -43,6 +43,7 @@
 | KI-32 | D-15: CSP jokerini kaldırma + HSTS | K-19 §8 birim 6 | engellendi (erişim-izin + sahip kararı) | Gerçek Supabase'e bağlı önizlemede giriş, büyük yükleme, görsel çalışıyor | — | Sahip, ecc:security-reviewer | — | `e5067fc` (hazırlık) |
 | KI-33 | PR #2'yi kapatmak (yanlış hedef dal) | K-19 §5 #8 | engellendi (sahip kararı) | Açıklama yazılarak kapatılmış | — | Sahip | — | yok |
 | KI-34 | Diğer açık kararlar: D-01…D-03, D-06…D-14, D-16…D-18 | PHASE2 karar kaydı | engellendi (sahip kararı) | Karar kaydında "Bekliyor" yerine karar (D-16 ile O-4 aynı kararı anlatır) | — | Sahip | — | yok |
+| KI-36 | Bugünkü kodda (canlıda da) medya hataları: başarısız döndürme `ready` fotoğrafı `failed` yapıp orijinali silebiliyor; doğrudan silme dosyaları bırakıyor; eşzamanlı döndürme dosya sızdırıyor | TASARIM.md "Bugünkü koddaki üç sorun" | devam ediyor | `ready` satır hiçbir hata yolunda düşürülmüyor/orijinali silinmiyor (birim + E2E); silme kuyruğu dosyaları kaldırıyor; çakışan döndürmede yalnız kaybedenin yeni varyantları siliniyor | KI-02 | ecc:tdd-guide (uygulama), ecc:code-reviewer | ✓ | yok |
 | KI-35 | Canlı izleme (P1), canlı Lighthouse/INP (P2) | PDF s.8, s.11 | engellendi (erişim-izin) | Canlı panelde hata/sağlık uçları görülüyor; canlı LCP/INP ölçülmüş | KI-26 | Sahip, ecc:e2e-runner | — | `/api/health` var |
 
 ## Şimdi yapılabilir (sahip onayı gerekmez)

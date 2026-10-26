@@ -125,3 +125,52 @@ Ayrıca: SL-06 `addMedia` B'nin koruması için `id` ve kanonik yol gönderecek 
 - **Sıra:** 0 sözleşmeyi dondur (imzalar ve hata adları yukarıda) → 1 paralel: A + MF-01/02/04/05 ‖ uygulama +
   yedek yol + birim → 2 B + MF-03 + runbook'lar ‖ cron kuyruğu + klasör temizliği → 3 C + MF-06 (imzalama kanıtından
   sonra) → 4 uyumluluk provası, E2E, bağımsız incelemeler → 5 yayın: A → kod → kapı → B → C (her biri ayrı onay).
+
+## 8. Veritabanı onayı (KI-02): KOŞULLU ONAY · `ecc:database-reviewer`, 26.10.2026
+
+Bölünme (A/B/C), sütun yetkileri ve tek kilit anahtarı uygun. Aşağıdaki değişiklikler **uygulamadan önce zorunlu**;
+bu bölüm yukarıdaki maddelerle çelişirse bu bölüm geçerlidir.
+
+1. **Yol doğrulaması ayrıştırma yapmaz**, satırın kendi sütunlarından üretilen değerle `=` karşılaştırır:
+   ilan fotoğrafı `organizations/<org>/properties/<property>/images/<id>/original`, yazı kapağı
+   `organizations/<org>/content/<id>/original`. `kind` yalnız `property_photo` ve `post_cover`; `general` reddedilir.
+   Kanonik klasör = orijinalin `/original` öncesi. Şekil tetikleyicisi istemcinin verdiği `id`'nin yolda olmasını ister.
+2. **Aralık koşulu `COLLATE "C"`:** `o.bucket_id = 'media' and o.name collate "C" >= base||'/' and o.name collate "C" < base||'0'`;
+   `p_public_base` önce rev düzenli ifadesinden geçer; MF-01'de EXPLAIN (Index Cond, Seq Scan yok) denetimi.
+3. **Depolama erişimi:** fonksiyon sahibinin `storage.objects` üzerinde SELECT'i ve RLS'yi aşması gerekir; yoksa her
+   çağrı `media_not_uploaded` olur. B kapısı 01'de `has_table_privilege(<sahip>,'storage.objects','select')` ve
+   `rolbypassrls` denetlenir; B'den önce gerçek ortamda bir yükleme + sonlandırma denemesi.
+4. **Belirsiz sonuç:** sonlandırma işlenip yanıt kaybolursa (zaman aşımı/ağ), yapılandırılmış SQLSTATE/PGRST kodu
+   olmayan her hatada satır yeniden okunur; yeni varyantlar yalnız `row.public_base <> newBase` ise silinir. Birim testi.
+5. **B kendini korur:** B, `media_finalize` yoksa `raise exception 'apply A first'` ile başlar. A `notify pgrst, 'reload schema';` ile biter.
+6. **Kuyruk:** `media_file_queue` organizasyon/ilan tablolarına yabancı anahtar içermez (org_id, bucket, path düz sütun);
+   tetikleyici fonksiyonu SECURITY DEFINER; tablo anon/authenticated/public için kapalı; boşaltma yalnız `service_role`
+   fonksiyonlarıyla: `media_queue_claim(p_limit int)` (`FOR UPDATE SKIP LOCKED`) ve `media_queue_done(p_ids bigint[])`.
+   Boşaltma tekrarlanabilir; `/` ile başlayan demo tabanları ve `legacy_path` satırları atlanır.
+7. **Toplu silme:** satır düzeyi yerine deyim düzeyi `AFTER DELETE ... REFERENCING OLD TABLE AS old_rows` tek `INSERT ... SELECT`
+   (varyant genişlikleri `unnest`); birkaç bin satırla performans notu.
+8. **Şekil tetikleyicisi:** postgres, service_role, supabase_admin dışındaki her rolde uygulanır (fail-closed), SECURITY INVOKER;
+   `byte_size` 1–52428800, `mime_type` izinli 4 tür, kurum başına bekleyen satır sınırı (ör. 50) **zorunlu**; denetim yalnız
+   çağıranın o kurumda `media.manage`/süper admin yetkisi varsa yapılır (yoksa RLS tek tip reddeder, sayı sızmaz).
+9. **B'de bozulacak testler:** `subscription-limits.test.mjs` içindeki kanonik olmayan yolla ekleyen üç yer (~267, ~311, ~345)
+   ve üye istemcisiyle `status:'ready'` ekleyen diğer testler güncellenir.
+10. **MF-07 uyumluluk:** eski kodun üç cümlesi (`markFailed`, son `ready` güncellemesi, retry) authenticated sahip olarak
+    SQL düzeyinde tekrar edilir: A altında geçer, A+B altında 42501.
+11. **A geri dönüşü:** kuyrukta satır varken `media_file_queue` ve tetikleyici silinmez; önce boşaltılır ya da dışa aktarılır.
+
+CI: `PENDING` matrisi (`none|a|all`); `none` ayağı yalnız medya E2E'si (güvenlik testleri bekleyen dosyasız şemada hata verir);
+süre maliyeti nedeniyle medya değişikliklerinde çalıştırılabilir. Ölçüt 7 kısmi: satırsız doğrudan yüklemeler C olmadan
+mümkün kalır → rapor fonksiyonu ile tespit, açık kalan risk kararı.
+
+## 9. Dondurulmuş arayüz (uygulayıcılar arası sözleşme)
+
+| Ad | İmza | Yetki | Hatalar (message) |
+| --- | --- | --- | --- |
+| `media_finalize` | `(p_media uuid, p_expected_base text, p_public_base text, p_variant_widths smallint[], p_width int, p_height int, p_blur text) returns jsonb` → `{previous_base, previous_widths, byte_size, variants_byte_size}` | authenticated | `forbidden` (42501), `media_conflict`, `media_not_uploaded`, `media_variants_missing`, `media_invalid_path`, `media_invalid_input`, `plan_limit_storage` (P0001) |
+| `media_mark_failed` | `(p_media uuid, p_error text) returns boolean` | authenticated | `forbidden` (42501) |
+| `media_queue_claim` | `(p_limit int) returns table (id bigint, bucket text, path text)` | service_role | — |
+| `media_queue_done` | `(p_ids bigint[]) returns integer` | service_role | — |
+| `media_storage_report` | `(p_org uuid) returns jsonb` | service_role, süper admin | `forbidden` |
+
+RPC yok algısı: `code === 'PGRST202'` ve mesajda tam fonksiyon adı. Dosyalar: A `20261027000001_media_finalize_rpc.sql`,
+B `20261027000002_media_column_privileges.sql`, C `20261027000003_media_storage_slots.sql`.
