@@ -547,3 +547,107 @@ describe('LR-13 bekleyen migration\'lar (K-19)', () => {
     assert.match(JSON.parse(read('package.json')).scripts['test:rls'], /--test-concurrency=1 tests\/security\/\*\.test\.mjs/);
   });
 });
+
+describe('LR-14 O-5 runbook\'ları: quota_lock ve OPS-02 (supabase/ops)', () => {
+  // Bekleyen migration'ları canlıda tek başına uygulayan betikler (karays_brand ile aynı düzen, LR-10).
+  // Pending dosya değişip 03/04/05 değişmezse canlıya provası yapılmamış bir gövde gider.
+  const runbooks = [
+    { dir: 'supabase/ops/quota_lock/', pending: '20261025000001_quota_lock.sql', first: 'create or replace function public.quota_lock', fn: 'public.quota_lock' },
+    { dir: 'supabase/ops/ops02_limits/', pending: '20261025000002_ops02_subscription_limits.sql', first: 'alter table public.platform_settings', fn: 'public.org_plan' },
+  ];
+  const files = ['01_preflight.sql', '02_save_state.sql', '03_apply.sql', '04_postflight.sql', '05_rollback.sql'];
+  const noComments = (sql) => sql.split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
+  const norm = (sql) => noComments(sql).replace(/\s+/g, ' ').trim();
+  const code = (sql) => noComments(sql).replace(/'(?:[^']|'')*'/g, "''").trim();
+  const md5 = (s) => createHash('md5').update(s.replace(/\s+/g, ' ').trim()).digest('hex');
+  const prosrc = (sql, from) => sql.slice(sql.indexOf(from)).match(/as \$\$([\s\S]*?)\$\$;/)[1];
+  const pendingOf = (rb) => read(`supabase/pending/${rb.pending}`);
+  const bodyOf = (rb) => { const p = pendingOf(rb); return p.slice(p.indexOf(`\n${rb.first}`) + 1); }; // satır başı: başlıktaki yorumlu geri dönüş satırı gövde değildir
+  // GERİ DÖNÜŞ başlığındaki SQL ifadeleri ("--   drop …;")
+  const rollbackStatements = (rb) => {
+    const p = pendingOf(rb);
+    const block = p.slice(p.indexOf('GERİ DÖNÜŞ:'), p.indexOf('-- ====', p.indexOf('GERİ DÖNÜŞ:')));
+    return [...block.matchAll(/^--\s+((?:drop|alter)\b.*;)\s*$/gim)].map((m) => m[1]);
+  };
+
+  for (const rb of runbooks) {
+    describe(rb.dir, () => {
+      test('beş betik ve README var', () => {
+        const present = readdirSync(new URL(rb.dir, root)).sort();
+        assert.deepEqual(present, [...files, 'README.md'].sort());
+        assert.ok(pendingOf(rb).includes(`\n${rb.first}`), 'pending gövdesi bulundu');
+      });
+      test('03 ve 05: tek işlem, lock_timeout 3s ve statement_timeout 30s', () => {
+        for (const f of ['03_apply.sql', '05_rollback.sql']) {
+          const sql = read(rb.dir + f);
+          assert.match(sql, /^begin;\nset local lock_timeout = '3s';\nset local statement_timeout = '30s';$/m, f);
+          assert.equal(sql.match(/^begin;$/gm)?.length, 1, `${f}: tek begin`);
+          assert.equal(sql.match(/^commit;$/gm)?.length, 1, `${f}: tek commit`);
+          assert.ok(sql.indexOf('begin;') < sql.indexOf('commit;'), `${f}: begin önce`);
+        }
+      });
+      test('03 gövdesi pending dosyadaki ifadelerle aynı (yorum ve boşluk dışında)', () => {
+        const apply = read(`${rb.dir}03_apply.sql`);
+        const start = apply.indexOf(`-- ---- ${rb.pending.replace(/\.sql$/, '')}`);
+        const end = apply.indexOf('-- ---- gövde sonu');
+        assert.ok(start > 0 && end > start, 'gövde işaretleri var');
+        const body = apply.slice(apply.indexOf('\n', start) + 1, end);
+        assert.equal(norm(body), norm(bodyOf(rb)));
+      });
+      test('03 şema sürümünü ve nesne varlığını denetler, sürümü değiştirmez', () => {
+        const sql = read(`${rb.dir}03_apply.sql`);
+        assert.match(sql, /surum < '20261018000001'/);
+        assert.match(sql, /raise exception 'DUR:/);
+        assert.match(sql, /to_regprocedure\('public\.karay_schema_version\(\)'\)/);
+        assert.doesNotMatch(norm(sql), /function public\.karay_schema_version\(\)/);
+      });
+      test('01, 02 ve 04 tek bir okuyan ifade: yazma ifadesi yok', () => {
+        for (const f of ['01_preflight.sql', '02_save_state.sql', '04_postflight.sql']) {
+          const c = code(read(rb.dir + f));
+          assert.match(c, /^(with|select)\b/i, `${f}: with/select ile başlar`);
+          assert.equal(c.match(/;/g)?.length, 1, `${f}: tek ifade`);
+          assert.ok(c.endsWith(';'), `${f}: ifade sonda biter`);
+          assert.doesNotMatch(c, /\b(begin|commit|insert|update|delete|alter|create|drop|grant|revoke|truncate|do|set|notify|call|execute)\b/i, `${f}: yazma ifadesi yok`);
+          assert.doesNotMatch(c, /\bxpath\(/, `${f}: değerler xmltable ile okunur`);
+          assert.doesNotMatch(c, /''::reg(procedure|class)\b/, `${f}: nesne adı sabit dönüşümle çözülmez`);
+        }
+      });
+      test('hiçbir dosya enforce_subscription_limits değerini true yapmaz', () => {
+        for (const f of [...files, 'README.md']) {
+          assert.doesNotMatch(read(rb.dir + f), /enforce_subscription_limits\s*(=|:=|\bto\b)\s*('?(true|t|on|1)'?)(?![a-z_])/i, f);
+        }
+      });
+      test('05 pending dosyanın GERİ DÖNÜŞ başlığındaki her ifadeyi içerir', () => {
+        const stmts = rollbackStatements(rb);
+        assert.ok(stmts.length >= 1, 'geri dönüş ifadeleri bulundu');
+        const rollback = norm(read(`${rb.dir}05_rollback.sql`));
+        for (const s of stmts) assert.ok(rollback.includes(norm(s)), `05'te yok: ${s}`);
+      });
+      test('04 ve 03 gövde özeti (md5) pending dosyadaki fonksiyonla aynı', () => {
+        const hash = md5(prosrc(pendingOf(rb), rb.first.startsWith('create') ? rb.first : 'create or replace function public.org_plan'));
+        assert.ok(read(`${rb.dir}04_postflight.sql`).includes(`'${hash}'`), '04 özeti');
+        if (rb.fn === 'public.org_plan') assert.ok(read(`${rb.dir}03_apply.sql`).includes(`'${hash}'`), '03 özeti');
+      });
+    });
+  }
+
+  test('quota_lock: yetkiler anon/authenticated/PUBLIC için kapalı denetlenir (03 ve 04)', () => {
+    for (const f of ['03_apply.sql', '04_postflight.sql']) {
+      assert.match(read(`supabase/ops/quota_lock/${f}`), /r\.rolname in \('anon', 'authenticated'\)/, f);
+    }
+  });
+  test('ops02: quota_lock\'tan sonra uygulanır (03 ve 01 aa_quota_lock eksikse DUR)', () => {
+    assert.match(read('supabase/ops/ops02_limits/03_apply.sql'), /aa_quota_lock eksik[^\n]*quota_lock\/03_apply\.sql/);
+    assert.match(read('supabase/ops/ops02_limits/01_preflight.sql'), /DUR: quota_lock\/03_apply\.sql henüz uygulanmamış/);
+  });
+  test('ops02 05: org_plan, onu SON tanımlayan migration\'dan birebir geri kurulur; sütun sonra silinir', () => {
+    const last = migrations.filter((f) => /create or replace function public\.org_plan\(/.test(read(`supabase/migrations/${f}`))).at(-1);
+    assert.equal(last, '20260930000002_site_builder.sql', 'son tanımlayan migration değişti: 05\'i güncelleyin');
+    const src = read(`supabase/migrations/${last}`);
+    const def = src.slice(src.lastIndexOf('create or replace function public.org_plan(')).match(/^[\s\S]*?\n\$\$;/)[0];
+    const rollback = read('supabase/ops/ops02_limits/05_rollback.sql');
+    assert.ok(norm(rollback).includes(norm(def)), 'tanım birebir');
+    assert.match(rollback, new RegExp(`'${md5(prosrc(src, 'create or replace function public.org_plan('))}'`), 'özet');
+    assert.ok(rollback.indexOf('create or replace function public.org_plan') < rollback.indexOf('drop column if exists enforce_subscription_limits'));
+  });
+});

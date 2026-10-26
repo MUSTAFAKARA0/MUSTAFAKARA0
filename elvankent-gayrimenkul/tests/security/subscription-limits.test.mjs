@@ -15,7 +15,8 @@
  *          Abonelik durumu (iptal/süresi doldu) yalnızca kurumun üyesine görünür; anonim ve başka kiracı görmez.
  *   SL-05  Eşzamanlı ilan eklemeleri plan limitini aşamaz.
  *   SL-06  Depolama kotası veritabanında denetlenir (20261026000001_media_quota_lock.sql): eşzamanlı ya da
- *          media_upload_allowed() çağrılmadan doğrudan eklenen medya kayıtları kotayı aşamaz.
+ *          media_upload_allowed() çağrılmadan doğrudan eklenen medya kayıtları kotayı aşamaz; başka kuruma
+ *          (üye olmayan kullanıcı ya da anonim) yapılan ekleme RLS hatası alır, kota durumu sızmaz.
  *
  * Bekleyen migration uygulanmamış bir veritabanında testler atlanır; CI'da (CI=true) atlanmaz, hata verir.
  */
@@ -297,6 +298,30 @@ describe('SL-06 depolama kotası veritabanında', { skip }, () => {
     assert.match(over.error?.message ?? '', /plan_limit_storage/);
     assert.ifError((await addMedia(org.owner.client, org.id, org.propertyId, 37)).error); // 49,95 MB
     assert.match((await addMedia(service, org.id, org.propertyId, 10)).error?.message ?? '', /plan_limit_storage/, 'service role kotayı aştı'); // 37 + 13,5
+  });
+
+  test('üyesi olmadığı kuruma site görseli ekleyen kullanıcı RLS hatası alır, kota durumu sızmaz', async () => {
+    const org = await orgWithListing('mleak', { plan: PLAN, status: 'active' });
+    assert.ifError((await addMedia(org.owner.client, org.id, org.propertyId, 37)).error); // kotaya yakın
+    const attempt = (client, orgId) =>
+      client.from('media_assets').insert({
+        organization_id: orgId,
+        property_id: null,
+        kind: 'post_cover',
+        status: 'pending',
+        original_path: `organizations/${orgId}/content/${randomBytes(8).toString('hex')}`,
+        mime_type: 'image/jpeg',
+        byte_size: 10 * MB,
+      });
+    const atQuota = await attempt(O.active.owner.client, org.id);
+    assert.ok(atQuota.error, 'yetkisiz ekleme kabul edildi');
+    assert.doesNotMatch(atQuota.error.message, /plan_limit_storage/);
+    assert.match(atQuota.error.message, /row-level security/);
+    // Oturumsuz (anon) istek de kilit/kota denetimine ulaşmadan RLS hatası alır
+    const anonAttempt = await attempt(anon, org.id);
+    assert.ok(anonAttempt.error, 'anonim ekleme kabul edildi');
+    assert.doesNotMatch(anonAttempt.error.message, /plan_limit_storage/);
+    assert.equal(await usedBytes(org.id), 37 * MB);
   });
 
   test('planı sınırsız (etkin aboneliği yok, bayrak kapalı) organizasyon etkilenmez', async () => {

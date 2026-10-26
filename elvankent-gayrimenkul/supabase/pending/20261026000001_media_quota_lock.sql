@@ -17,10 +17,18 @@
 -- bırakıldıktan sonra öncekinin kaydını görür (20261025000001_quota_lock.sql ile aynı yaklaşım).
 -- Limit, ilan limiti gibi her eklemeye uygulanır (service role dahil); plan sınırsızsa (NULL) etkisiz.
 --
--- Kapsam dışı (bilinen kalan risk): byte_size istemcinin bildirdiği boyuttur, işlem sonrası gerçek
--- boyutla eşlenmez; media_assets satırı olmadan organizations/{org}/ altına yüklenen dosyalar sayılmaz
--- (storage.objects tetikleyicisi gerektirir). Varyant boyutu (variants_byte_size) sonradan yazılır ve
--- yeniden denetlenmez; %35 payı bunun içindir.
+-- Kilit yalnızca yetkili çağıran için alınır: API istek rolü (anon ya da authenticated) media.manage
+-- yetkisi olmadığı (ve süper admin olmadığı) bir kurum adına satır eklemeye çalışırsa tetikleyici kilit
+-- almadan döner ve RLS (media_member_write WITH CHECK) satırı tek tip hatayla reddeder. Böylece başka
+-- kurumun kilidi alınmaz ve kurumun kotada olup olmadığı (plan_limit_storage ile RLS hatası farkı) sızmaz.
+-- service_role ve doğrudan veritabanı bağlantıları (bakım, seed) ile süper admin etkilenmez.
+--
+-- Kapsam dışı (bilinen kalan risk, ayrı iş WP-A2): byte_size istemcinin bildirdiği boyuttur ve gerçek
+-- boyutla eşlenmez; media_member_write (FOR ALL) üyenin byte_size / variants_byte_size / original_path /
+-- public_base sütunlarını doğrudan güncellemesine izin verir, kötü niyetli bir üye kotayı yine aşabilir.
+-- Tam çözüm: authenticated için UPDATE'in sütun düzeyinde daraltılması ve sonlandırmanın tek bir definer
+-- RPC'ye taşınması. media_assets satırı olmadan organizations/{org}/ altına yüklenen dosyalar sayılmaz.
+-- Varyant boyutu (variants_byte_size) sonradan yazılır; %35 payı bunun içindir.
 --
 -- Tekrar çalıştırılabilir. Veri değiştirmez; mevcut satırlar denetlenmez.
 --
@@ -38,6 +46,12 @@ as $$
 declare
   v_limit integer;
 begin
+  -- Yetkisiz çağıran: kilit almadan dön, RLS WITH CHECK satırı reddetsin (kota durumu sızmasın)
+  if (select auth.role()) in ('anon', 'authenticated')
+     and not coalesce(new.organization_id in (select public.user_org_ids('media.manage')), false)
+     and not (select public.is_super_admin()) then
+    return new;
+  end if;
   perform pg_advisory_xact_lock(hashtextextended('karay.quota:media_assets:' || new.organization_id::text, 0));
   select max_storage_mb into v_limit from public.org_plan(new.organization_id);
   if v_limit is null then
@@ -53,7 +67,7 @@ begin
   return new;
 end;
 $$;
-revoke all on function public.media_quota_check() from public, anon, authenticated;
+revoke all on function public.media_quota_check() from public, anon, authenticated, service_role;
 
 drop trigger if exists media_assets_quota on public.media_assets;
 create trigger media_assets_quota
