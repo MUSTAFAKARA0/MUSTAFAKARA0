@@ -9,8 +9,8 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 | Konu | Durum |
 | --- | --- |
 | Production dalı | `ff2f7da`, değişmedi. KARAYS yayını kapıları bekliyor (aşağıda) |
-| Çalışma dalı | `claude/karay-ci-dogrulama`. Vercel dağıtımı bu dalda kapalı (`a24fef8`); yayın zinciri bu commit hariç kurulur |
-| Son kod commit'i | `7997852` (K-19: OPS-02 bekleyen migration'lar, CSP modülü, erişilebilirlik, yeni güvenlik testleri) |
+| Çalışma dalı | `claude/karays-mission-control-vn8g65` (26.10: `claude/karay-ci-dogrulama` `7bd583f`'ün fast-forward devamı). Vercel dağıtımı iki dalda da kapalı (`a24fef8` ve K-20); yayın zinciri bu commit'ler hariç kurulur |
+| Son kod commit'i | `dd32fa7` (K-20: depolama kotası veritabanında, bekleyen migration `20261026000001`) |
 | GitHub | K-13…K-16 GitHub'da (`a24fef8..968e3ad`). Production dalının yerel kopyasındaki 15 commit kaybolmadı: zincir uzak dallardan birebir yeniden kurulabiliyor (aşağıda) |
 | CI | [#91](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40169352877) yeşil (`a6169bc`, 25.10.2026): quality ve database başarılı; E2E 208 geçti, 4 koşullu atlandı. Güvenlik adayı koşusu #3: taban = aday, gerileme yok |
 | Güvenlik | Production'da next 16.3.6 ve sharp 0.35.4 var; yeni Next.js duyurularının etki alanında ([K17 §3](K17_KARAYS_RELEASE.md)). Düzeltme bu dalda; canlıya çıkması yayın onayına bağlı (O-4) |
@@ -22,6 +22,19 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 **Sıradaki adım:** Sahibin K-17 kapılarını açması: A1–A4 (panel teyidi, salt okunur ön kontrol, geri dönüş betiği, yedek). Ardından O-4 ile kod yayını, O-5 ile migration. Canlıdaki güvenlik açığı nedeniyle bu sıranın öne alınması önerilir. Güvenlik düzeltmesini migration'dan önce, yalnızca kod olarak yayınlamak teknik olarak mümkün (yeni kod eski veritabanıyla çalışır, [K17 §5](K17_KARAYS_RELEASE.md)). Yedek kapısının (P0-1) bu kod yayınını da bekletip bekletmeyeceği sahibin kararıdır.
 
 ## Girişler
+
+### 26.10.2026 (2) · K-20: depolama kotası veritabanında (bekleyen migration)
+
+**Başlangıç:** `7bd583f` (`claude/karay-ci-dogrulama`'nın son commit'i). Çalışma dalı `claude/karays-mission-control-vn8g65` buna fast-forward edildi; geçmiş korunur, force push yok. Production `ff2f7da`, değişmedi; canlı veritabanına ve OPS-02 bayrağına dokunulmadı.
+
+- **Kalite kapısı (`7bd583f`, yerel, alt ajan):** birim 486/486, typecheck temiz, ESLint 0 hata (3 eski uyarı), build 73/73, `npm audit --omit=dev` 0 açık. K-19 ile aynı.
+- **Bulgu (K-19 §7'nin düzeltilmiş tanımı):** depolama kotası yalnızca uygulamada, `media_upload_allowed()` RPC'siyle, `media_assets` kaydı eklenmeden önce ayrı bir istekte denetleniyordu. Eşzamanlı kayıtlar aynı toplamı görüyordu; `media.manage` yetkili kullanıcı kaydı RLS üzerinden doğrudan ekleyip denetimi hiç çağırmayabiliyordu. Yerel Supabase'de kanıtlandı: 8 eşzamanlı 10 MB kaydın 8'i de kabul edildi (sınır 4); kotayı aşan tek kayıt da kabul edildi.
+- **`dd32fa7`:** `supabase/pending/20261026000001_media_quota_lock.sql`: `media_assets` eklemesinde kurum başına işlem kilidi ve kota denetimi veritabanında (aynı formül, %35 varyant payı). `media_assets_org`'dan sonra çalışır. `plan_limit_storage` mevcut kota mesajına bağlandı. SL-06 (3 test) eklendi. K-19 §7, OPS02 ve `quota_lock.sql` başlığındaki yanlış tanım düzeltildi; K-19 §8'e ayrı onay birimi 4b eklendi.
+- **Doğrulama (yerel Supabase, CI adımının birebir kopyası, CLI 2.121.0):** yeni migration olmadan SL-06'nın 2 testi kaldı (hata yeniden üretildi); migration ile 13/13, arka arkaya 3 kez. Tüm güvenlik kümesi **121/121** (118 + 3). Migration iki kez uygulanabiliyor; başlıktaki geri dönüş satırları tetikleyici ve fonksiyonu kaldırıyor, yeniden uygulama çalışıyor. Birim 486/486, typecheck ve ESLint temiz, demo SQL güncel.
+- **Vercel:** `vercel.json` (kök ve proje) yeni çalışma dalında da Git dağıtımını kapatır.
+- **Kalan risk (bilinçli):** `byte_size` istemcinin bildirdiği boyuttur, işlem sonrası gerçek boyutla eşlenmez; kaydı olmadan `organizations/{org}/` altına yüklenen dosya sayılmaz (`storage.objects` tetikleyicisi gerektirir).
+
+**Açık (sahip):** Değişmedi: P0-1, P0-2, O-1…O-6, D-04, D-05, D-15, PR #2. Yeni: birim 4b'nin canlıya çıkması ayrı onay. OPS-02 bayrağı kapalı.
 
 ### 26.10.2026 · CI #91 ve güvenlik adayı #3 sonuçları; ajan izleme
 

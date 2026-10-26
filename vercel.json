@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
-    "deploymentEnabled": { "claude/karay-ci-dogrulama": false }
+    "deploymentEnabled": { "claude/karay-ci-dogrulama": false, "claude/karays-mission-control-vn8g65": false }
   }
 }

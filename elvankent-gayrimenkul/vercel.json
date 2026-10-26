@@ -3,6 +3,6 @@
   "regions": ["fra1"],
   "crons": [{ "path": "/api/cron/media-cleanup", "schedule": "17 3 * * *" }],
   "git": {
-    "deploymentEnabled": { "claude/karay-ci-dogrulama": false }
+    "deploymentEnabled": { "claude/karay-ci-dogrulama": false, "claude/karays-mission-control-vn8g65": false }
   }
 }
