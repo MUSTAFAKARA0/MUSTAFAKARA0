@@ -44,6 +44,7 @@
 | KI-33 | PR #2'yi kapatmak (yanlış hedef dal) | K-19 §5 #8 | engellendi (sahip kararı) | Açıklama yazılarak kapatılmış | — | Sahip | — | yok |
 | KI-34 | Diğer açık kararlar: D-01…D-03, D-06…D-14, D-16…D-18 | PHASE2 karar kaydı | engellendi (sahip kararı) | Karar kaydında "Bekliyor" yerine karar (D-16 ile O-4 aynı kararı anlatır) | — | Sahip | — | yok |
 | KI-36 | Bugünkü kodda (canlıda da) medya hataları: başarısız döndürme `ready` fotoğrafı `failed` yapıp orijinali silebiliyor; doğrudan silme dosyaları bırakıyor; eşzamanlı döndürme dosya sızdırıyor | TASARIM.md "Bugünkü koddaki üç sorun" | devam ediyor | `ready` satır hiçbir hata yolunda düşürülmüyor/orijinali silinmiyor (birim + E2E); silme kuyruğu dosyaları kaldırıyor; çakışan döndürmede yalnız kaybedenin yeni varyantları siliniyor | KI-02 | ecc:tdd-guide (uygulama), ecc:code-reviewer | ✓ | yok |
+| KI-37 | WP-A2 C: satırsız yükleme ve sonlandırma sonrası nesne üzerine yazmayı engelleyen depolama politikası (+ CI `PENDING` matrisi değerlendirmesi) | K-22 güvenlik M1, DB R3 | sırada | İmzalama anında bekleyen satır isteyen politika yerelde kanıtlanmış (SL testi); satırsız/üzerine yazma yüklemesi reddediliyor; **ölçüt 7 için yayın koşulu** | KI-03…KI-10 | ecc:architect, ecc:database-reviewer, ecc:tdd-guide | ✓ | yok |
 | KI-35 | Canlı izleme (P1), canlı Lighthouse/INP (P2) | PDF s.8, s.11 | engellendi (erişim-izin) | Canlı panelde hata/sağlık uçları görülüyor; canlı LCP/INP ölçülmüş | KI-26 | Sahip, ecc:e2e-runner | — | `/api/health` var |
 
 ## Şimdi yapılabilir (sahip onayı gerekmez)

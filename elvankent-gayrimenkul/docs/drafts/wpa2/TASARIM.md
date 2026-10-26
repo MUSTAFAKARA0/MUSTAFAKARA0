@@ -168,9 +168,22 @@ mümkün kalır → rapor fonksiyonu ile tespit, açık kalan risk kararı.
 | --- | --- | --- | --- |
 | `media_finalize` | `(p_media uuid, p_expected_base text, p_public_base text, p_variant_widths smallint[], p_width int, p_height int, p_blur text) returns jsonb` → `{previous_base, previous_widths, byte_size, variants_byte_size}` | authenticated | `forbidden` (42501), `media_conflict`, `media_not_uploaded`, `media_variants_missing`, `media_invalid_path`, `media_invalid_input`, `plan_limit_storage` (P0001) |
 | `media_mark_failed` | `(p_media uuid, p_error text) returns boolean` | authenticated | `forbidden` (42501) |
-| `media_queue_claim` | `(p_limit int) returns table (id bigint, bucket text, path text)` | service_role | — |
+| `media_queue_claim` | `(p_limit int) returns table (id bigint, org_id uuid, bucket text, path text)` (K-22 güvenlik H1: `org_id` eklendi; 5 dk kiralama `claimed_at`) | service_role | — |
 | `media_queue_done` | `(p_ids bigint[]) returns integer` | service_role | — |
 | `media_storage_report` | `(p_org uuid) returns jsonb` | service_role, süper admin | `forbidden` |
 
 RPC yok algısı: `code === 'PGRST202'` ve mesajda tam fonksiyon adı. Dosyalar: A `20261027000001_media_finalize_rpc.sql`,
 B `20261027000002_media_column_privileges.sql`, C `20261027000003_media_storage_slots.sql`.
+
+## 10. Uygulama sonrası incelemeler (K-22)
+
+- `ecc:database-reviewer`: KOŞULLU ONAY. 11 zorunlu değişikliğin 10'u tam, 1'i kısmi (A geri dönüşünde sayım/kilit sırası → R2).
+  Ek: R1 (`p_width`/`p_height` NULL), R3 (CI `PENDING` matrisi).
+- `ecc:security-reviewer`: H1 (YÜKSEK) kuyruk + service-role cron üzerinden başka kurumun dosyalarının silinmesi (B öncesi
+  yazılmış satırlarda yol sütunları serbest) → kuyruğa yalnız `organizations/<kendi kurum>/` altı ve `..` içermeyen yol
+  girer; `claim` `org_id` döndürür; cron sahiplik denetler; B öncesi yabancı yollu satırlar media_privileges/01'de DUR.
+  M1 (sonlandırma sonrası nesnenin üzerine yazma, satırsız yükleme) → yalnız tespit; önleme C'ye bağlı ve **C, ölçüt 7 için
+  yayın koşuludur**. M2 bekleme sınırı `failed` satırları da sayar. L3 kuyruk dizisi yetkileri kaldırılır. Önceki 11 bulgunun
+  11'i kapandı (2 ve 9'un kalanları H1/M2'de).
+- **R3 kararı:** CI'a `PENDING` matrisi bu turda eklenmedi (database işinin süresi ~2 katına çıkar). "Yeni kod + eski şema"
+  yerelde E2E ile (yalnız bekleyen dosyasız şema) ve MF-07 ile doğrulanır; matris KI-37 ile birlikte tekrar değerlendirilir.
