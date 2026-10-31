@@ -4,17 +4,17 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 > Depo herkese açıktır. Buraya proje veya dağıtım kimliği, ortam değişkeni değeri ya da varlığı, alan adı ayarı, kayıt sayısı veya sır yazılmaz.
 
-## Güncel durum (26.10.2026)
+## Güncel durum (31.10.2026)
 
 | Konu | Durum |
 | --- | --- |
 | Production dalı | `ff2f7da`, değişmedi. KARAYS yayını kapıları bekliyor (aşağıda) |
 | Çalışma dalı | `claude/karays-mission-control-vn8g65` (26.10: `claude/karay-ci-dogrulama` `7bd583f`'ün fast-forward devamı). Vercel dağıtımı iki dalda da kapalı (`a24fef8` ve K-20); yayın zinciri bu commit'ler hariç kurulur |
-| Son kod commit'i | `b9d1eab` (K-22: WP-A2 güvenli medya sonlandırma + bekleyen A/B migration'ları, runbook'lar, CI'da runbook provası) |
+| Son kod commit'i | `751dc11` (K-23: WP-A2 C depolama yuvaları, bekleyen; KI-21 şerit iskeleti; KI-18) |
 | GitHub | K-13…K-16 GitHub'da (`a24fef8..968e3ad`). Production dalının yerel kopyasındaki 15 commit kaybolmadı: zincir uzak dallardan birebir yeniden kurulabiliyor (aşağıda) |
-| CI | [#91](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/40169352877) yeşil (`a6169bc`, 25.10.2026): quality ve database başarılı; E2E 208 geçti, 4 koşullu atlandı. Güvenlik adayı koşusu #3: taban = aday, gerileme yok |
+| CI | [#105](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41211573470) yeşil (`cc706e0`, 31.10.2026): quality, database ve database-legacy-schema. #104 = `87337a5` yeşil. `751dc11` + K-23 günlüğü sonraki koşuda (K-23 girdisi) |
 | Güvenlik | Production'da next 16.3.6 ve sharp 0.35.4 var; yeni Next.js duyurularının etki alanında ([K17 §3](K17_KARAYS_RELEASE.md)). Düzeltme bu dalda; canlıya çıkması yayın onayına bağlı (O-4) |
-| Açık kapılar | P0-1 doğrulanmış canlı yedek yok · P0-2 canlı veritabanının kimliği ve şema durumu doğrulanmadı · onaylar O-1…O-6 ([K17 §1–§2](K17_KARAYS_RELEASE.md)) |
+| Açık kapılar | P0-1 canlı yedek yok: sağlayıcı yedeği/PITR yok (Free Plan, 31.10 kanıtı), kendi gece yedeği (O-3) henüz açılmadı · P0-2 canlı veritabanının kimliği ve şema durumu doğrulanmadı · onaylar O-1…O-6 ([K17 §1–§2](K17_KARAYS_RELEASE.md)) |
 | Bekleyen kararlar | D-01…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)). Özellikle D-05 (iptal ve veri saklama; OPS-02'nin kalıcı düzeltmesi buna bağlı), D-14 (dal ve yayın stratejisi), D-15 (güvenlik başlıkları, SVG) · PHASE4 §8 K-4…K-7 |
 
 **Yayın hazırlığı:** [K19_YAYIN_HAZIRLIK.md](K19_YAYIN_HAZIRLIK.md) (Go/No-Go, kalite kapısı, toplu karar paketi). **Kalan işler:** [KALAN_ISLER.md](KALAN_ISLER.md) (tek liste, KI-01…KI-37).
@@ -22,6 +22,38 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 **Sıradaki adım:** Sahibin K-17 kapılarını açması: A1–A4 (panel teyidi, salt okunur ön kontrol, geri dönüş betiği, yedek). Ardından O-4 ile kod yayını, O-5 ile migration. Canlıdaki güvenlik açığı nedeniyle bu sıranın öne alınması önerilir. Güvenlik düzeltmesini migration'dan önce, yalnızca kod olarak yayınlamak teknik olarak mümkün (yeni kod eski veritabanıyla çalışır, [K17 §5](K17_KARAYS_RELEASE.md)). Yedek kapısının (P0-1) bu kod yayınını da bekletip bekletmeyeceği sahibin kararıdır.
 
 ## Girişler
+
+### 31.10.2026 · K-23: P0-1 kanıtı (sağlayıcı yedeği yok), KI-37 depolama yuvaları (C), KI-18, KI-21 iskeleti
+
+**Başlangıç:** `d2c01e5` (Mission Control izleme v2). Production `ff2f7da`, değişmedi; canlı veritabanına bağlanılmadı; Vercel, DNS ve OPS-02 bayrağına dokunulmadı; `.claude/` değişmedi.
+
+**Commit'ler (dağıtımı kapalı çalışma dalında):**
+- `87337a5` P0-1 kanıtı: 31.10'da sahip Supabase › elvankent-demo (eu-central-1, main PRODUCTION) › Database › Backups'ta "Free Plan does not include project backups" gösterdi: zamanlanmış sağlayıcı yedeği ve PITR **yok**. O-3 kararı: KARAY'ın kendi gece yedeği (`elvankent-backup.yml`); **henüz çalışmıyor** (kova, anahtarlar ve GitHub sırları sahipte). KI-22, KI-28, [BACKUP_RESTORE.md](BACKUP_RESTORE.md).
+- `8b4d3b3` KI-37 / WP-A2 C: `pending/20261027000003_media_storage_slots.sql` (yuva isteyen storage politikaları + `storage.objects` tetikleyicisi + bakım penceresi), runbook `supabase/ops/media_storage_slots/` 01–05 + README, provada; B'nin 05'i C varken durur; CI'da yeni `database-legacy-schema` işi (PENDING=none). K-19 §8 birim 4f.
+- `d415c90` KI-18: ESLint 0 uyarı.
+- `cc706e0` KI-21 iskeleti: panel abonelik şeridi + "Verilerinizi indirin" (metinler D-05'e kadar yer tutucu).
+- `751dc11` KI-37 inceleme düzeltmeleri: geri alınabilirlik kapısı (supautils), varyant yuvası sınırları, 24 saatlik pencere CHECK'i.
+- Bu commit: günlük, KALAN_ISLER (başlık, KI-18/21/37 durumları, KI-38), TASARIM §11.
+
+**Ölçüm (yerel, storage-api v1.82.1):** Storage RLS'yi istek ve imzalama anında denetliyor; imzalı adresle asıl yükleme RLS'yi atlıyor (`service_role` olarak, sahibi token kullanıcısı). Yalnız politika sonlandırma sonrası üzerine yazmayı kapatmıyordu → tetikleyici.
+
+**Doğrulama (yerel Supabase, CI adımının kopyası, CLI 2.121.0):**
+- Kırmızı/yeşil: SL testleri C olmadan 15/19 kaldı; inceleme sınırları için yeni 5 test önceki C'de kaldı. Son hâlde tümü yeşil.
+- Runbook provası **7/7**; birim **597/597**; güvenlik kümesi **189/189**; ESLint 0 hata / 0 uyarı; typecheck, build temiz.
+- E2E: C uygulanmış şemada medya + KI-21 (`admin`, `acceptance`, `subscription-strip`) **31/31**; bekleyen dosyasız şemada medya **28/28**. Tam E2E kümesi yerelde çok yavaş olduğu için yarıda bırakıldı (yarıda kesilen koşu demo verisini kirletti; temiz veritabanıyla tekrarlandı); tam küme CI'da koşar.
+
+**İncelemeler (bağımsız):** Bu oturumda `ecc:*` ajanları yüklü değil; eşdeğer olarak genel amaçlı ajanlara veritabanı ve güvenlik uzmanı görevi verildi (ikisi de salt okunur, yalnız yerel yığın).
+- Veritabanı: koşullu onay. #1 HIGH (05 için gereken DROP TRIGGER/POLICY yetkisi 01'de denetlenmiyordu) → 01 13. satır + 03 kapısı. #3 MEDIUM pencere sınırı → CHECK. #4 LOW → `media` kovasında üzerine yazma yok. #2 TUS testi → güvenlik incelemesinde elle doğrulandı. #5 LOW → KI-38.
+- Güvenlik: açık CRITICAL/HIGH yok; imzalı adres, TUS, upsert, taşıma, kopyalama, kovalar ve kiracılar arası denemeler reddedildi. MEDIUM (sınırsız sayılmayan varyant alanı) → 2 taban × 6 dosyayla sınırlandı; kalıcı çözüm KI-38.
+
+**CI `PENDING` matrisi kararı (KI-37):** tam matris yerine paralel `database-legacy-schema` işi: yeni kod + bekleyen dosyasız şema (canlıdaki şema), medya E2E. Duvar süresi artmaz. PENDING=a ayağı güvenlik testlerinde (MF-07, SL-13).
+
+**CI (koşu = commit):**
+- #104 = `87337a5` **yeşil**.
+- #105 = `cc706e0` (`8b4d3b3` ve `d415c90` aynı gönderimde; ara commit'lerin kendi koşusu yok) **yeşil**: quality; database (runbook provası, birim + güvenlik, tam Playwright E2E); yeni `database-legacy-schema` (PENDING=none medya E2E).
+- `751dc11` ve bu commit birlikte gönderildi; koşu numarası ve sonucu sahibe verilen raporda (bu commit kendi sonucunu içeremez).
+
+**Açık (sahip):** O-3 açılışı (R2 kovası + anahtar, Supabase S3 anahtarı + session pooler adresi, GitHub sırları/değişkenleri, ilk elle çalıştırma), ardından KI-24 geri yükleme provası (test veritabanında). P0-2, O-1, O-2, O-4, O-5 (4f dahil; 01'in 6./13. satırı canlıda), O-6, D-04, D-05 (KI-21 metni), D-15, PR #2. OPS-02 bayrağı kapalı.
 
 ### 26.10.2026 (4) · K-22: WP-A2 güvenli medya sonlandırma; eksik runbook'lar; CI'da prova
 

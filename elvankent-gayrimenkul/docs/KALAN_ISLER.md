@@ -1,6 +1,6 @@
 # KARAYS · Kalan işler (tek liste)
 
-> 26.10.2026 · son güncelleme `b9d1eab` (ilk sürüm `2f090b2`) (çalışma dalı `claude/karays-mission-control-vn8g65`) · production `ff2f7da`, değişmedi; canlı veritabanına dokunulmadı.
+> 31.10.2026 · son güncelleme `751dc11` (K-23; ilk sürüm `2f090b2`) (çalışma dalı `claude/karays-mission-control-vn8g65`) · production `ff2f7da`, değişmedi; canlı veritabanına dokunulmadı.
 > Kaynaklar: K-19 durum raporu (PDF, 25.10, 12 s.), K-21 bağımsız inceleme (26.10), [K19_YAYIN_HAZIRLIK.md](K19_YAYIN_HAZIRLIK.md), [GELISTIRME_GUNLUGU.md](GELISTIRME_GUNLUGU.md), [K17_KARAYS_RELEASE.md](K17_KARAYS_RELEASE.md), [OPS02_ABONELIK_DURUMLARI.md](OPS02_ABONELIK_DURUMLARI.md), [PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md), [drafts/wpa2/README.md](drafts/wpa2/README.md).
 > Liste `ecc:planner` tarafından çıkarıldı, koordinatör tarafından düzeltildi. Her oturum durumu ve kanıtı günceller; kapanan madde yeniden açılmaz.
 
@@ -25,11 +25,11 @@
 | KI-14 | Davranış testi: yetkisiz istek başka kurumun kilidini beklemez | K-21 §3 | kapandı | Kurum kilidi başka oturumda tutulurken yetkisiz ekleme süre eşiği içinde reddediliyor; kontrol isteği bekliyor | — | ecc:tdd-guide, ecc:security-reviewer | — | `e93d6a7` · yerel prova 4/4 (şimdi 6/6), güvenlik 129/129, SL-07 kırmızı/yeşil |
 | KI-15 | `quota_lock` ve `ops02_limits` runbook'ları | PDF s.11 adım 5 | kapandı | 01–05, LR-14, yerel prova | — | — | — | `dc6594a` |
 | KI-16 | Bekleyen 4 migration (`20261025000001/2`, `20261026000001/2`) | K-19 §8 4/4b/4c/5 | hazır-canlıda değil | CI'da RLS ve E2E yeşil; canlıya çıkış KI-27 ile | KI-11, KI-12 | ecc:database-reviewer | — | `dd32fa7`, `dc6594a`, CI #94 |
-| KI-17 | CI sonucunu doğru commit ile eşleştir | K-21 §6 | kapandı | Her gönderimin koşu numarası ve sonucu günlükte (#93 = `8b2de09`, #94 = `952043c`) | — | koordinatör | — | #99 = `e93d6a7`, #100 = `dc361b9`, #102 = `ebf7607` (WP-A2 `b9d1eab` dahil) yeşil; #101 iptal (yerine #102) |
-| KI-18 | ESLint'teki 3 eski uyarı | Günlük K-18 | sırada | `tests/e2e/karay-site.spec.ts:104` kullanılmayan değişkenler giderilmiş; ESLint 0 uyarı | — | ecc:code-reviewer | ✓ | yok |
+| KI-17 | CI sonucunu doğru commit ile eşleştir | K-21 §6 | kapandı | Her gönderimin koşu numarası ve sonucu günlükte (#93 = `8b2de09`, #94 = `952043c`) | — | koordinatör | — | #99 = `e93d6a7`, #100 = `dc361b9`, #102 = `ebf7607` yeşil; K-23: #104 = `87337a5`, #105 = `cc706e0` yeşil (günlük K-23) |
+| KI-18 | ESLint'teki 3 eski uyarı | Günlük K-18 | kapandı | `tests/e2e/karay-site.spec.ts:104` kullanılmayan değişkenler giderilmiş; ESLint 0 uyarı | — | ecc:code-reviewer | — | `d415c90` · ESLint 0 hata / 0 uyarı (yerel ve CI quality) |
 | KI-19 | P2: `days` dizisine `.max(7)` | Günlük K-18 | kapandı | Gün listesi en fazla 7 öğe ve tekil | — | — | — | `8d0f282` |
 | KI-20 | P2: `company_name` için CHECK + zod | Günlük K-18 | kapandı (kod) | zod `4afd83f`; CHECK bekleyen migration, canlıya çıkışı KI-27 | — | — | — | `4afd83f`, `dc6594a` |
-| KI-21 | P1: Abonelik durum şeridi + "verilerinizi indirin" | PDF s.11 | sırada | Panelde şerit ve dışa aktarma bağlantısı, E2E testi; metin D-05'e uygun | KI-30 (metin) | ecc:tdd-guide | kısmen | yok |
+| KI-21 | P1: Abonelik durum şeridi + "verilerinizi indirin" | PDF s.11 | hazır-canlıda değil | Panelde şerit ve dışa aktarma bağlantısı, E2E testi; metin D-05'e uygun | KI-30 (metin) | ecc:tdd-guide | — | `cc706e0` iskelet: deneme/ödeme gecikmesi/iptal/süre dolumu şeridi, iptalde "Verilerinizi indirin" → Ayarlar › Veri dışa aktarma (yalnız `data.export` + `settings.manage`); birim 5/5, E2E SUB-01…04. **Metinler yer tutucu** (`data-draft="D-05"`, görünür "Taslak metin · D-05"): kesin metin D-05 kararıyla |
 | KI-22 | P0-1: Canlı yedeğin kanıtı | PDF s.8, K-19 §5 #1 | engellendi (başka iş) | Panel Backups ekran görüntüsü (son yedek, PITR) + A4 `sha256sum -c` TAMAM; sağlayıcı yedeği yoksa KARAY'ın kendi gece yedeğinin ilk yeşil çalışması + `sha256sum -c` TAMAM | KI-28 (O-3 gece yedeği açılışı) | Sahip | — | **31.10.2026 sahip kanıtı:** Supabase › elvankent-demo (kuruluş "Gayrimenkul", eu-central-1, dal main PRODUCTION) › Database › Backups: "Free Plan does not include project backups" → zamanlanmış sağlayıcı yedeği **yok**, PITR **yok**. Canlı yedeğin kanıtı artık yalnız KARAY'ın kendi yedeğine bağlı (KI-28); henüz alınmış yedek yok |
 | KI-23 | P0-2: Canlı DB kimliği | PDF s.10 | engellendi (erişim-izin) | `karays_brand/01_preflight.sql` çıktısında DUR yok; şema `20261011000001`/`20261018000001` | — | Sahip | — | yok |
 | KI-24 | Gerçek yedekle geri yükleme provası | PDF s.7 | engellendi (erişim-izin) | `scripts/restore-drill.sh` gerçek yedekle test sunucusunda (canlıda değil) | KI-22 | Sahip, ecc:e2e-runner | — | betik var |
@@ -44,16 +44,15 @@
 | KI-33 | PR #2'yi kapatmak (yanlış hedef dal) | K-19 §5 #8 | engellendi (sahip kararı) | Açıklama yazılarak kapatılmış | — | Sahip | — | yok |
 | KI-34 | Diğer açık kararlar: D-01…D-03, D-06…D-14, D-16…D-18 | PHASE2 karar kaydı | engellendi (sahip kararı) | Karar kaydında "Bekliyor" yerine karar (D-16 ile O-4 aynı kararı anlatır) | — | Sahip | — | yok |
 | KI-36 | Bugünkü kodda (canlıda da) medya hataları: başarısız döndürme `ready` fotoğrafı `failed` yapıp orijinali silebiliyor; doğrudan silme dosyaları bırakıyor; eşzamanlı döndürme dosya sızdırıyor | TASARIM.md "Bugünkü koddaki üç sorun" | hazır-canlıda değil | `ready` satır hiçbir hata yolunda düşürülmüyor/orijinali silinmiyor (birim + E2E); silme kuyruğu dosyaları kaldırıyor; çakışan döndürmede yalnız kaybedenin yeni varyantları siliniyor | KI-02 | ecc:tdd-guide (uygulama), ecc:code-reviewer | — | `b9d1eab` · yerel: güvenlik 165/165, E2E 208/0/4 (3 proje), eski şema ve yalnız-A ayakları 28/28; birim karar tablosu, L4 cron |
-| KI-37 | WP-A2 C: satırsız yükleme ve sonlandırma sonrası nesne üzerine yazmayı engelleyen depolama politikası (+ CI `PENDING` matrisi değerlendirmesi) | K-22 güvenlik M1, DB R3 | sırada | İmzalama anında bekleyen satır isteyen politika yerelde kanıtlanmış (SL testi); satırsız/üzerine yazma yüklemesi reddediliyor; **ölçüt 7 için yayın koşulu** | KI-03…KI-10 | ecc:architect, ecc:database-reviewer, ecc:tdd-guide | ✓ | yok |
+| KI-37 | WP-A2 C: satırsız yükleme ve sonlandırma sonrası nesne üzerine yazmayı engelleyen depolama politikası (+ CI `PENDING` matrisi değerlendirmesi) | K-22 güvenlik M1, DB R3 | hazır-canlıda değil | İmzalama anında bekleyen satır isteyen politika yerelde kanıtlanmış (SL testi); satırsız/üzerine yazma yüklemesi reddediliyor; **ölçüt 7 için yayın koşulu** | KI-03…KI-10 | ecc:architect, ecc:database-reviewer, ecc:tdd-guide | — | `8b4d3b3`, `751dc11` · `pending/20261027000003` + runbook `media_storage_slots/` (K-19 §8 birim 4f); SL-08…SL-13 + SL-11b (C olmadan kırmızı); yerel prova 7/7, güvenlik 189/189, medya E2E 31/31 (C ile) ve 28/28 (bekleyen dosyasız); CI'da yeni `database-legacy-schema` işi (PENDING=none). DB incelemesi koşullu onay, güvenlik açık HIGH yok; bulgular düzeltildi, kalanlar KI-38. Canlı adım: O-5 (4f) + 01'in 6./13. satırı |
+| KI-38 | WP-A2 C sonrası: sayılmayan varyant alanı (satır başına ≤ 2 ek taban × 6 dosya) ve işleme sırasında orijinalin üzerine yazılması | K-23 güvenlik MEDIUM, DB #5 | sırada | Sunucunun verdiği tek "sonraki taban" ya da silmede `{id}/` klasörünün tamamı kuyruğa; sonlandırmada indirilen orijinal sürümü denetleniyor; testle | KI-37 | ecc:architect, ecc:security-reviewer | ✓ | yok |
 | KI-35 | Canlı izleme (P1), canlı Lighthouse/INP (P2) | PDF s.8, s.11 | engellendi (erişim-izin) | Canlı panelde hata/sağlık uçları görülüyor; canlı LCP/INP ölçülmüş | KI-26 | Sahip, ecc:e2e-runner | — | `/api/health` var |
 
 ## Şimdi yapılabilir (sahip onayı gerekmez)
 
-1. KI-11, KI-12 runbook'ları; ardından KI-13 (CI provası) ve KI-14 (kilit bekleme testi).
-2. KI-02 WP-A2 tasarımı; onaylanınca KI-03…KI-07, KI-09 (TDD, yalnız `pending/` altında), sonra KI-08 ve KI-10.
-3. KI-17: her yeni gönderimin CI sonucunu günlüğe yazmak.
-4. KI-18: ESLint uyarıları.
-5. KI-21: durum şeridinin iskeleti (metin D-05 kararından sonra kesinleşir).
+1. KI-38: C sonrası kalan varyant alanı ve işleme sırasındaki üzerine yazma (TDD, yalnız `pending/` altında).
+2. KI-17: her yeni gönderimin CI sonucunu günlüğe yazmak.
+3. KI-21: D-05 kararı gelince yer tutucu metinlerin değiştirilmesi (kod hazır).
 
 ## Sahipten gerekenler
 
@@ -66,8 +65,8 @@
 2. P0-2: `supabase/ops/karays_brand/01_preflight.sql` çıktısı (salt okunur, SQL Editor).
 3. O-1: Vercel'de production `ff2f7da`, Instant Rollback, `SITE_ENV` ve Root Directory ekran görüntüsü.
 4. O-4: yalnız güvenlik yaması (A) onayı ve yedek kapısının bu yayına uygulanıp uygulanmayacağı.
-5. O-5a/b/b'/c ve 4c onayları (sırayla); O-2, O-3, O-6 kararları.
-6. D-04, D-05 (hukuki görüşle), D-15 (gerçek ortamda önizleme erişimiyle).
+5. O-5a/b/b'/c, 4c, 4d, 4e ve 4f onayları (sırayla; 4f için 01'in 6. ve 13. satırı canlıda TAMAM olmalı); O-2, O-6 kararları (O-3 verildi: kendi gece yedeği).
+6. D-04, D-05 (hukuki görüşle; KI-21 şerit metni buna bağlı), D-15 (gerçek ortamda önizleme erişimiyle).
 7. PR #2'nin kapatılması.
 
 ## PDF ile güncel durum arasındaki farklar
