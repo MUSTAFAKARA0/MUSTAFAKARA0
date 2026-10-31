@@ -23,6 +23,23 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 31.10.2026 (2) · K-24: KI-38 bir kez yazma, kilit ve başıboş dosya süpürmesi; sahip adım listesi
+
+**Başlangıç:** `a0e7c52` (K-23, CI #106 yeşil). Production `ff2f7da`, değişmedi; canlı veritabanına bağlanılmadı; Vercel, DNS, OPS-02 bayrağı ve `.claude/` değişmedi.
+
+**Commit'ler:**
+- `7b93ee7` [SAHIP_ADIMLARI.md](SAHIP_ADIMLARI.md): sahibin adımları bağlantılarıyla (gece yedeğinin açılışı, geri yükleme provası, kararlar). Not: gece zamanlanmış yedek varsayılan daldaki (production) eski iş akışıyla çalışır ve herkese açık günlüğe tablo kayıt sayılarını yazar; karar sahipte.
+- `f072115` KI-38: C nesneleri bir kez yazar; `renewMediaUpload` var olan orijinali yeniden yüklemez; D `media_stray_objects` + cron süpürmesi; runbook `media_stray_sweep/`; K-19 §8 birim 4g.
+- Bu commit: inceleme düzeltmeleri. A `media_finalize` FOR SHARE; C yalnız içerik/ad/kova değişikliğini engeller; sürümleme denetimi (C 01 14. satır); D kova başına pay; cron kapatma anahtarı `MEDIA_STRAY_SWEEP=off`; istemci `x-upsert` göndermez. Günlük, KALAN_ISLER (KI-38 hazır-canlıda değil, KI-39), TASARIM §12.
+
+**Doğrulama (yerel, CI adımının kopyası):** kırmızı/yeşil (SW testleri önce 7, kilit testi 2 kaldı); runbook provası **8/8**; birim **605/605**; güvenlik **198/198**; typecheck, ESLint temiz; medya + KI-21 E2E **31/31** (tüm bekleyenler), **28/28** (bekleyen dosyasız); gerçek cron çağrısında 2 başıboş dosya silindi, güncel varyant korundu; eski şemada süpürme atlandı.
+
+**İncelemeler:** `ecc:*` ajanları bu oturumda yok; genel amaçlı ajanlara veritabanı ve güvenlik uzmanı görevi verildi (salt okunur, yalnız yerel). Güvenlik: açık CRITICAL/HIGH yok; MEDIUM düzeltildi. Veritabanı: D onay, C'nin koşulu (#1 HIGH) düzeltildi ve testlendi; #2 (ölçek) KI-39'a. Ayrıntı: [drafts/wpa2/TASARIM.md](drafts/wpa2/TASARIM.md) §12.
+
+**CI:** #106 = `a0e7c52` **yeşil** (quality, database, database-legacy-schema). #107 = `f072115` (`7b93ee7` dahil) quality ve database-legacy-schema yeşil; database işi bu commit yazılırken sürüyordu, sonucu sahibe verilen raporda. Bu commit'in koşusu sahibe verilen raporda.
+
+**Kota düzeni (sahip isteği, 31.10):** bu oturuma iki zamanlanmış görev: her 5 saatte bir ve her cumartesi 16:05 (TR) "yarım iş varsa devam et". Mission Control (`.claude/mission-control/`) değişmedi.
+
 ### 31.10.2026 · K-23: P0-1 kanıtı (sağlayıcı yedeği yok), KI-37 depolama yuvaları (C), KI-18, KI-21 iskeleti
 
 **Başlangıç:** `d2c01e5` (Mission Control izleme v2). Production `ff2f7da`, değişmedi; canlı veritabanına bağlanılmadı; Vercel, DNS ve OPS-02 bayrağına dokunulmadı; `.claude/` değişmedi.

@@ -130,7 +130,18 @@ begin
     raise exception 'media_invalid_input' using errcode = 'P0001';
   end if;
 
-  -- 4. Gerçek boyut (storage.objects, (bucket_id, name COLLATE "C") indeksi)
+  -- 4. Gerçek boyut (storage.objects, (bucket_id, name COLLATE "C") indeksi). Orijinal ve yeni varyant nesneleri işlem
+  --    sonuna kadar FOR SHARE kilitlenir: eşzamanlı silme + yeniden yükleme okunan boyutla yarışamaz (K-23 güvenlik, KI-38)
+  perform 1
+     from storage.objects o
+    where o.bucket_id = 'media-originals' and o.name = r.original_path
+      for share;
+  perform 1
+     from storage.objects o
+    where o.bucket_id = 'media'
+      and o.name collate "C" >= p_public_base || '/' collate "C"
+      and o.name collate "C" < p_public_base || '0' collate "C"
+      for share of o;
   select count(*), coalesce(sum(coalesce((o.metadata ->> 'size')::bigint, 0)), 0)
     into v_found, v_orig
     from storage.objects o

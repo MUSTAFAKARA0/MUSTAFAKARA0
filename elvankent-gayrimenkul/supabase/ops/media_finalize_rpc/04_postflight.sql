@@ -85,15 +85,15 @@ select sira, kontrol, deger, durum from (
   union all
   select 7, 'media_finalize() gövde özeti (boşluklar tek, md5)',
          coalesce((select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f), 'yok'),
-         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f) = 'b554564babb260fdbc05db63b2d804a9'
+         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f) = 'dc5da90c9b74ea25dc0e45379f94b978'
               then 'TAMAM' else 'HATA: gövde bekleneni içermiyor' end
   union all
-  select 8, 'Depolama erişimi (fonksiyon sahibi): storage.objects SELECT / rolbypassrls',
-         coalesce((select o.rolname || ' · ' || has_table_privilege(o.oid, 'storage.objects', 'select')::text || ' · ' || o.rolbypassrls::text
+  select 8, 'Depolama erişimi (fonksiyon sahibi): storage.objects SELECT / UPDATE (FOR SHARE kilidi) / rolbypassrls',
+         coalesce((select o.rolname || ' · ' || has_table_privilege(o.oid, 'storage.objects', 'select')::text || ' · ' || has_table_privilege(o.oid, 'storage.objects', 'update')::text || ' · ' || o.rolbypassrls::text
                      from f join pg_proc p on p.oid = f.oid join pg_roles o on o.oid = p.proowner), 'yok'),
          case when exists (select 1 from f join pg_proc p on p.oid = f.oid join pg_roles o on o.oid = p.proowner
-                            where has_table_privilege(o.oid, 'storage.objects', 'select') and o.rolbypassrls)
-              then 'TAMAM' else 'HATA: sahip storage.objects okuyamaz; sonlandırma media_not_uploaded verir' end
+                            where has_table_privilege(o.oid, 'storage.objects', 'select') and has_table_privilege(o.oid, 'storage.objects', 'update') and o.rolbypassrls)
+              then 'TAMAM' else 'HATA: sahip storage.objects okuyamaz ya da kilitleyemez (FOR SHARE UPDATE hakkı ister); sonlandırma çalışmaz' end
   union all
   select 9, 'media_file_queue_id_seq: anon / authenticated / service_role / PUBLIC için dizi yetkisi yok',
          case when to_regclass('public.media_file_queue_id_seq') is null then 'yok'

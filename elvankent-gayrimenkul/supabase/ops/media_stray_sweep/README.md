@@ -26,8 +26,18 @@ CI yalnızca `scripts/rehearse-runbooks.sh` ile yerel veritabanında prova eder.
 | 4 | `04_postflight.sql` | Okur | Tüm satırlar `TAMAM` |
 | 5 | `05_rollback.sql` | Yalnız geri dönüşte | Sonra 01: 5. satır `false` (uygulama öncesiyle aynı) |
 
-**İlk çalıştırmadan önce (önerilir):** service_role ile `select count(*), bucket from public.media_stray_objects(1000) group by bucket;`
-(SQL Editor'de çalışmaz: fonksiyon yalnız service_role'e açık; sayı istenirse geliştiriciden). İlk cron çalışması birikmiş başıboş dosyaları siler;
-silinen dosyalar gece yedeğinin `storage/deleted/TARİH/` klasöründe 90 gün kalır (BACKUP_RESTORE.md).
+**İlk çalıştırmadan önce (önerilir):** SQL Editor'de (veritabanı sahibi `postgres` çağırabilir; istemcilere kapalı)
+`select bucket, count(*) from public.media_stray_objects(1000) group by bucket;` ile silinecek sayıyı görün (yalnız okur).
+İlk cron çalışması birikmiş başıboş dosyaları siler; gece yedeği açıksa silinen dosyalar yedeğin `storage/deleted/TARİH/`
+klasöründe 90 gün kalır (BACKUP_RESTORE.md).
+
+**Ölçek (K-23 DB #2, KI-39):** her çağrı iki kovanın tamamını tarar (indeks yalnız kova). Çok büyük kovada (yaklaşık 1 milyon
+nesne ve üstü) çağrı zaman aşımına uğrayabilir; cron `stray.error = stray_list_failed` döndürür. Sayfalama KI-39'da.
 
 Testler: `tests/security/media-stray-sweep.test.mjs` (SW-01…SW-05), LR-14.
+
+## Kapatma anahtarı (geri yükleme)
+
+Yalnız veritabanı geri yüklemesinde (dosyalar yerinde, satırlar eski) süpürme hâlâ gerekli dosyaları silebilir. Geri yüklemeden
+**önce** Vercel ortam değişkeni `MEDIA_STRAY_SWEEP=off` (yeniden dağıtım); cron süpürmeyi atlar (`stray.skipped`). Tutarlılık
+doğrulanınca kaldırılır. Ayrıntı: docs/BACKUP_RESTORE.md "Tam geri yükleme".

@@ -61,6 +61,8 @@ Bağlantı adresini komut geçmişine yazmamak için değişkeni bir dosyadan ok
 ## Geri yükleme
 
 ### Tam geri yükleme (veritabanı)
+> **Başıboş dosya süpürmesi (KI-38, bekleyen D):** geri yüklemeden ÖNCE Vercel'de `MEDIA_STRAY_SWEEP=off` yapın (yeniden dağıtımla). Yalnız veritabanı geri yüklenince (dosyalar yerinde, satırlar eski) günlük temizlik, satırı geri giden ama dosyası yeni olan fotoğrafları "başıboş" sayıp silebilir. Dosyalar doğrulanıp tutarlılık sağlanınca değişkeni kaldırın.
+
 0. **Önce bütünlük:** `sha256sum -c db-TARIH.sha256` → üç dosya da "OK" olmalı. Uyuşmuyorsa bu yedeği kullanmayın; bir önceki geceninkine geçin.
 1. **Hedef boş olmalı**: yeni bir Supabase projesi (aynı bölge) veya boş bir veritabanı. Canlının üzerine doğrudan geri yükleme yapılmaz.
    > **Faz 3 uyarısı (prova edilmedi):** Yeni bir Supabase projesi boş değildir; `auth`, `storage` ve eklenti şemaları hazır gelir. KARAY'ın tam dump'ı yalnızca **boş PostgreSQL'e** geri yüklenerek doğrulandı (`scripts/restore-drill.sh`). Supabase'in yeni projeye geri yükleme için resmi yöntemi farklıdır: rol, şema ve veri ayrı dökülür (`supabase db dump --role-only` / şema / `--data-only`), `psql --single-transaction` ile `SET session_replication_role = replica` altında yüklenir; `auth` / `storage` şemalarına eklenen politika ve tetikleyiciler ayrıca yeniden kurulur ([Supabase: Backup and Restore using the CLI](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore)). Gerçek bir test projesinde prova yapılmadan aşağıdaki 2. adımın yeni Supabase projesinde hatasız çalışacağı **varsayılmamalıdır** (Açılış kapısı).

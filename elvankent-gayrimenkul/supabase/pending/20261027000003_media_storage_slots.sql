@@ -22,7 +22,8 @@
 --   • Tetikleyici media_storage_slot_guard (storage.objects, yalnız 'organizations/' altı, iki kova):
 --       INSERT, sahibi dolu (kullanıcının oturumu ya da imzalı adresi): yukarıdaki yuva kuralları (kurum denetimi
 --         olmadan; sahibi boş = service_role/sistem, ör. geri yükleme --apply, serbest).
---       UPDATE (üzerine yazma, taşıma), herkes: HİÇ (nesneler bir kez yazılır; KI-38). Yenilenen yükleme orijinal varsa
+--       UPDATE (üzerine yazma = yeni version, taşıma = ad/kova), herkes: HİÇ (nesneler bir kez yazılır; KI-38). Kova, ad
+--         ve version aynı kalan meta veri/bakım güncellemeleri serbest. Yenilenen yükleme orijinal varsa
 --         yüklemeyi atlar (uygulama, renewMediaUpload).
 --       Bakım penceresi (public.media_overwrite_window, en çok 24 saat — CHECK, yalnız SQL Editor/postgres açar) UPDATE'i
 --       ve sahibi dolu INSERT'i serbest bırakır: tam geri yükleme sonrası `restore:storage --apply --overwrite` için.
@@ -229,6 +230,12 @@ begin
   -- UPDATE (üzerine yazma ya da taşıma): kurum klasöründeki nesneler BİR KEZ yazılır (pencere dışında hiç UPDATE yok).
   -- Varyantlar upsert'siz yazılır; emekli (önbellekte olabilecek) tabanların üzerine yazılamaz (K-23 DB #4). Orijinal,
   -- bekleyen satırda bile işleme sırasında değiştirilemez (KI-38, K-23 DB #5); yarım kalan yükleme nesne oluşturmaz.
+  -- Yalnız içeriği/yeri değiştiren güncellemeler: storage-api her yüklemede yeni `version` yazar; meta veri ya da
+  -- Storage'ın kendi bakım/backfill güncellemeleri (kova, ad, sürüm aynı) engellenmez (K-23 DB incelemesi KI-38 #1)
+  if old.bucket_id is not distinct from new.bucket_id and old.name is not distinct from new.name
+     and old.version is not distinct from new.version then
+    return new;
+  end if;
   if (old.bucket_id in ('media-originals', 'media') and old.name like 'organizations/%')
      or (new.bucket_id in ('media-originals', 'media') and new.name like 'organizations/%') then
     raise exception 'media_slot_closed' using errcode = '42501';

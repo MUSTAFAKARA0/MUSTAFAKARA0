@@ -12,7 +12,9 @@
 --     (stale_media temizliğiyle aynı süre).
 --   • Kanonik olmayan adlar, demo ve diğer kovalar listelenmez (bilinmeyen dosya silinmez). org_id yoldaki kurumdur;
 --     cron yalnız 'organizations/<org_id>/' ile başlayan ve '..' içermeyen yolları siler (queueItemIsSafe).
---   • En çok 1000 satır; sırasız (her çalışma bir sonrakinde devam eder).
+--   • En çok 1000 satır, iki kova arasında yarı yarıya; sırasız (her çalışma bir sonrakinde devam eder). Her çağrı iki kovayı
+--     tarar (indeks yalnız bucket_id); çok büyük kovada süre KI-39 (sayfalama) ile izlenir.
+--   • Kova sürümlemesi (versioning) açık olmamalı: silme işaretleri listelenir ve C UPDATE'leri reddeder (C 01 14. satır).
 --
 -- Tekrar çalıştırılabilir. Veri değiştirmez (yalnız okur).
 -- GERİ DÖNÜŞ:
@@ -58,8 +60,10 @@ as $$
        and o.created_at < now() - interval '24 hours'
        and not exists (select 1 from public.media_assets m where m.id = (g[2])::uuid)
   )
-  select * from (select * from variants union all select * from originals) s
-   limit greatest(0, least(coalesce(p_limit, 0), 1000))
+  -- Her kova kendi payını alır (varyant birikimi orijinalleri aç bırakmaz; K-23 DB #3)
+  (select * from variants limit greatest(0, least(coalesce(p_limit, 0), 1000)) / 2 + greatest(0, least(coalesce(p_limit, 0), 1000)) % 2)
+  union all
+  (select * from originals limit greatest(0, least(coalesce(p_limit, 0), 1000)) / 2)
 $$;
 
 revoke all on function public.media_stray_objects(integer) from public, anon, authenticated;

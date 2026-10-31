@@ -7,6 +7,7 @@
  *   SW-03  media_stray_objects yalnız service_role; anon/authenticated çağıramaz; org_id yoldaki kurumdur; sınır 1000
  *   SW-04  C bir kez yazar: bekleyen satırda da var olan orijinalin üzerine yazılamaz (oturum, upsert imzası); yeni yükleme çalışır
  *   SW-05  D kendini korur: A yokken 'apply A first'; dosya sırası
+ *   SW-06  media_finalize orijinal ve varyant nesnelerini FOR SHARE kilitler: eşzamanlı silme/değiştirme sonlandırmayla yarışamaz
  *
  * Nesnelerin yaşını geri almak için storage.objects.created_at psql ile değiştirilir (bakım penceresi altında, yalnız yerel).
  * CI'da (CI=true) atlanmaz, hata verir.
@@ -14,7 +15,7 @@
 import { after, before, describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { promisify } from 'node:util';
 import { createClient } from '@supabase/supabase-js';
@@ -226,6 +227,22 @@ describe('SW-04 C: nesneler bir kez yazılır (KI-38, DB #5)', { skip }, () => {
   });
 });
 
+describe('SW-04b C yalnız içerik/yer değişikliğini engeller (K-23 DB #1)', { skip }, () => {
+  test('sonlanmış nesnede kova/ad/sürüm aynı meta veri güncellemesi (Storage bakımı) geçer; taşıma reddedilir', async () => {
+    const row = await readyRow(O.a);
+    await psql(`update storage.objects set user_metadata = '{"bakim": true}'::jsonb where bucket_id = 'media-originals' and name = '${row.original}'`);
+    await psql(`update storage.objects set metadata = metadata where bucket_id = 'media' and name = '${row.base}/w320.webp'`);
+    await assert.rejects(
+      () => psql(`update storage.objects set name = name || '-x' where bucket_id = 'media' and name = '${row.base}/w320.webp'`),
+      (err) => /media_slot_closed/.test(String(err.stderr)),
+    );
+    await assert.rejects(
+      () => psql(`update storage.objects set version = gen_random_uuid()::text where bucket_id = 'media-originals' and name = '${row.original}'`),
+      (err) => /media_slot_closed/.test(String(err.stderr)),
+    );
+  });
+});
+
 describe('SW-05 sıra', { skip }, () => {
   test("D, A yokken 'apply A first' ile durur ve işlem geri alınır", async () => {
     const script = "begin;\ndrop function public.media_queue_claim(integer);\n\\i supabase/pending/20261031000001_media_stray_sweep.sql\nrollback";
@@ -235,5 +252,32 @@ describe('SW-05 sıra', { skip }, () => {
   test("D dosyası C'den sonra sıralanır", () => {
     const files = readdirSync('supabase/pending').filter((f) => /^2026(1027|1031)/.test(f)).sort();
     assert.deepEqual(files.slice(-2), ['20261027000003_media_storage_slots.sql', '20261031000001_media_stray_sweep.sql']);
+  });
+});
+
+describe('SW-06 sonlandırma nesneleri kilitler (K-23 güvenlik MEDIUM: sil + yeniden yükle yarışı)', { skip }, () => {
+  test('orijinal satırı başka işlemde kilitliyken (silme sürüyor) sonlandırma bekler', async () => {
+    const row = await pendingRow(O.a);
+    assert.ifError((await put(O.a.client, 'media-originals', row.original, 300)).error);
+    const base = `${row.folder}/${rev()}`;
+    assert.ifError((await put(O.a.client, 'media', `${base}/w320.webp`, 100)).error);
+    // Eşzamanlı silmeyi taklit: satırı FOR UPDATE ile 3 sn tutan ayrı psql oturumu (yalnız yerel)
+    assert.ok(dbUrlLocal);
+    const holder = spawn('psql', [dbUrl, '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-c',
+      `begin; select 1 from storage.objects where bucket_id = 'media-originals' and name = '${row.original}' for update; select pg_sleep(3); commit;`]);
+    const done = new Promise((resolve) => holder.on('exit', resolve));
+    await new Promise((r) => setTimeout(r, 500));
+    const t0 = performance.now();
+    const f = await O.a.client.rpc('media_finalize', { p_media: row.id, p_expected_base: null, p_public_base: base, p_variant_widths: [320], p_width: 10, p_height: 10, p_blur: null });
+    const ms = performance.now() - t0;
+    await done;
+    assert.ifError(f.error);
+    assert.ok(ms > 1500, `sonlandırma orijinal kilidini beklemedi (${Math.round(ms)} ms)`);
+  });
+
+  test('media_finalize gövdesi orijinal ve varyantları FOR SHARE ile kilitler', async () => {
+    const src = await psql("select prosrc from pg_proc where oid = 'public.media_finalize(uuid,text,text,smallint[],integer,integer,text)'::regprocedure");
+    assert.match(src, /bucket_id = 'media-originals' and o\.name = r\.original_path\s+for share/);
+    assert.match(src, /for share of o/);
   });
 });

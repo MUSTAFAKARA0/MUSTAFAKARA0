@@ -60,6 +60,17 @@ select sira, kontrol, deger, durum from (
               then 'TAMAM (05 ve 03''ün yeniden çalıştırılması mümkün)'
               else 'DUR: tetikleyici kurulabilir ama 05 ile KALDIRILAMAZ (must be owner); sağlayıcı ayarı doğrulanmadan uygulanmaz (README "Sağlayıcı kısıtı")' end
   union all
+  select 14, 'media / media-originals kova sürümlemesi (versioning) kapalı mı  [KAYDET]',
+         coalesce((select string_agg(x.v, ', ') from xmltable('/table/row' passing query_to_xml(
+           'select id || ''='' || coalesce(versioning_status::text, ''-'') as v from storage.buckets where id in (''media'', ''media-originals'') order by id',
+           false, false, '') columns v text path 'v') x), 'sütun yok (sürümleme yok)'),
+         case when exists (select 1 from information_schema.columns where table_schema = 'storage' and table_name = 'buckets' and column_name = 'versioning_status')
+                and coalesce((select string_agg(x.v, ',') from xmltable('/table/row' passing query_to_xml(
+                  'select coalesce(versioning_status::text, ''DISABLED'') as v from storage.buckets where id in (''media'', ''media-originals'')',
+                  false, false, '') columns v text path 'v') x), '') ~ '(^|,)(?!DISABLED)[^,]+'
+              then 'DUR: sürümleme açık — silmeler UPDATE olur, C reddeder; D silme işaretlerini listeler'
+              else 'TAMAM' end
+  union all
   select 7, 'C uygulanmış mı — media_storage_slot_guard tetikleyicisi  [KAYDET]',
          (select count(*)::text from pg_trigger where tgname = 'media_storage_slot_guard' and not tgisinternal and tgrelid = to_regclass('storage.objects')),
          case when (select count(*) from pg_trigger where tgname = 'media_storage_slot_guard' and not tgisinternal and tgrelid = to_regclass('storage.objects')) = 0

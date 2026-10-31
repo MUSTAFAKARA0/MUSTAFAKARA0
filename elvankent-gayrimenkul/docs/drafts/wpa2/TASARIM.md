@@ -205,3 +205,17 @@ B `20261027000002_media_column_privileges.sql`, C `20261027000003_media_storage_
   denetlenmiyordu) → 01 13. satır + 03 kapısı; #3 MEDIUM (pencere sınırı) → `opened_at` + CHECK; #4 LOW (emekli taban) → `media`
   kovasında üzerine yazma yok; #2 MEDIUM (TUS testi) → güvenlik incelemesi elle doğruladı, otomatik test yok; #5 LOW → KI-38.
   Güvenlik: açık CRITICAL/HIGH yok; MEDIUM (sınırsız sayılmayan varyant alanı) → sınırlandı (2 taban × 6 dosya), kalıcı çözüm KI-38.
+
+## 12. KI-38 (bekleyen, K-24): bir kez yazma, kilit ve süpürme
+
+- **C:** kurum klasöründeki nesnelerde kova, ad ya da `version` değiştiren UPDATE (üzerine yazma, taşıma) bakım penceresi
+  dışında yok; meta veri/Storage bakım güncellemeleri serbest (DB incelemesi #1). Var olan orijinal için upsert imzası imzalama
+  anında reddedilir; `renewMediaUpload` orijinal varsa yüklemeyi atlar; istemci `x-upsert` göndermez, 409'u "yüklenmiş" sayar.
+- **A:** `media_finalize` orijinal ve yeni varyant nesnelerini `FOR SHARE` kilitler: eşzamanlı sil + yeniden yükle, okunan
+  boyutla yarışamaz (güvenlik incelemesi MEDIUM). Sahibin `storage.objects` UPDATE hakkı A'nın 04'ünde denetlenir.
+- **D** `20261031000001_media_stray_sweep.sql`: `media_stray_objects` (service_role) güncel taban dışındaki 1 saatten eski
+  varyantları ve satırsız 24 saatten eski orijinalleri listeler (kova başına yarı pay); günlük cron siler; `MEDIA_STRAY_SWEEP=off`
+  geri yükleme sırasında kapatır. Ölçek sınırı KI-39.
+- **İncelemeler (genel amaçlı ajanlar, ecc yok):** güvenlik: açık CRITICAL/HIGH yok; MEDIUM (sil + yeniden yükle yarışı) →
+  FOR SHARE; LOW (yalnız-DB geri yükleme sonrası süpürme) → kapatma anahtarı. Veritabanı: D onay; C koşullu → #1 düzeltildi
+  (+ test SW-04b); #3 kova payı; #4 `x-upsert`; #5/#6 README; #7 sürümleme denetimi (C 01 14. satır); #2 → KI-39.

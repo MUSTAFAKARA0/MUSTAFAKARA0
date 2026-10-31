@@ -92,6 +92,9 @@ async function sweepStray(service: DB): Promise<{ skipped?: boolean; removed: nu
   let removed = 0;
   let failed = 0;
   let unsafe = 0;
+  // Kapatma anahtarı: yalnız veritabanı geri yüklemesinden sonra (satırlar geri gitmiş, dosyalar yeni) süpürme
+  // hâlâ gerekli dosyaları silebilir. BACKUP_RESTORE.md: geri yüklemeden önce MEDIA_STRAY_SWEEP=off.
+  if (process.env.MEDIA_STRAY_SWEEP === 'off') return { skipped: true, removed, failed, unsafe };
   for (let batch = 0; batch < STRAY_MAX_BATCHES; batch += 1) {
     const { data, error } = await service.rpc('media_stray_objects', { p_limit: STRAY_BATCH });
     if (error) {
@@ -118,8 +121,11 @@ async function sweepStray(service: DB): Promise<{ skipped?: boolean; removed: nu
         progressed = true;
       }
     }
-    // Liste sırasız: tam dolu değilse ya da hiçbir şey silinemediyse (sonsuz döngü yok) dur
-    if (!progressed || (data ?? []).length < STRAY_BATCH) break;
+    // Her kova en çok yarı pay alır: hiçbir kova payını doldurmadıysa ya da hiçbir şey silinemediyse dur (sonsuz döngü yok)
+    const list = data ?? [];
+    const variants = list.filter((x) => x.bucket === MEDIA_BUCKETS.public).length;
+    const originals = list.length - variants;
+    if (!progressed || (variants < Math.ceil(STRAY_BATCH / 2) && originals < Math.floor(STRAY_BATCH / 2))) break;
   }
   return { removed, failed, unsafe };
 }

@@ -90,6 +90,11 @@ duyurusu) sağlanır ve pencere iş biter bitmez kapatılır.
 
 ## Geri dönüş
 
+**Eski koda dönüş (C açıkken) notu:** eski `renewMediaUpload` yarıda kalan yüklemeyi `upsert` ile yeniler; orijinal aslında
+yüklenmişse C üzerine yazmayı reddeder ve kullanıcı "tekrar dene"de hata görür. Kod geri alınacaksa önce C'nin 05'i (aşağıdaki sıra).
+01'in 14. satırı kova sürümlemesinin (versioning) kapalı olduğunu denetler: açıksa silmeler UPDATE olur ve C reddeder.
+
+
 `05_rollback.sql` tetikleyiciyi, yuva fonksiyonlarını ve bakım penceresi tablosunu siler; dört politikayı
 `20260926000008_v2_storage.sql`'deki hâliyle (yalnız kurum klasörü denetimi) yeniden kurar. **C her zaman B'den önce geri alınır**
 (B'nin 05'i C varken `DUR: önce C geri alınır` ile durur). Eski koda dönülecekse sıra: C'nin 05'i → B'nin 05'i → Instant Rollback.

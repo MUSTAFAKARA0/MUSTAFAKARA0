@@ -71,8 +71,10 @@ as $$
        and o.created_at < now() - interval '24 hours'
        and not exists (select 1 from public.media_assets m where m.id = (g[2])::uuid)
   )
-  select * from (select * from variants union all select * from originals) s
-   limit greatest(0, least(coalesce(p_limit, 0), 1000))
+  -- Her kova kendi payını alır (varyant birikimi orijinalleri aç bırakmaz; K-23 DB #3)
+  (select * from variants limit greatest(0, least(coalesce(p_limit, 0), 1000)) / 2 + greatest(0, least(coalesce(p_limit, 0), 1000)) % 2)
+  union all
+  (select * from originals limit greatest(0, least(coalesce(p_limit, 0), 1000)) / 2)
 $$;
 
 revoke all on function public.media_stray_objects(integer) from public, anon, authenticated;

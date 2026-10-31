@@ -43,7 +43,7 @@ select sira, kontrol, deger, durum from (
   union all
   select 4, 'media_storage_slot_guard() gövde özeti (boşluklar tek, md5)',
          coalesce((select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f), 'yok'),
-         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f) = 'bbd77fab85d7a64d9ec9df4c40c76e8d'
+         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f) = 'e84c208fea52b84b65eb505f1f62e823'
               then 'TAMAM' else 'HATA: gövde bekleneni içermiyor' end
   union all
   select 5, 'Yuva fonksiyonları (4): security definer ve boş search_path',

@@ -37,9 +37,9 @@ function standardUpload(file: Blob, ticket: UploadTicket, onProgress: (ratio: nu
   const promise = new Promise<void>((resolve, reject) => {
     xhr.open('PUT', url);
     xhr.setRequestHeader('apikey', publicEnv.supabaseAnonKey);
-    xhr.setRequestHeader('x-upsert', 'true');
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
-    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new UploadError(describeStatus(xhr.status), xhr.status !== 413 && xhr.status !== 415)));
+    // 409: orijinal zaten yüklenmiş (yanıtı kaybolan önceki deneme); nesneler bir kez yazılır (KI-38), işlemeye geçilir
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 || xhr.status === 409 ? resolve() : reject(new UploadError(describeStatus(xhr.status), xhr.status !== 413 && xhr.status !== 415)));
     xhr.onerror = () => reject(new UploadError(describeStatus(0)));
     xhr.onabort = () => reject(new UploadError('İptal edildi', false));
     const body = new FormData();
@@ -56,7 +56,7 @@ function resumableUpload(file: Blob, ticket: UploadTicket, onProgress: (ratio: n
   const promise = new Promise<void>((resolve, reject) => {
     upload = new tus.Upload(file, {
       endpoint: `${publicEnv.storageUrl}/storage/v1/upload/resumable/sign`,
-      headers: { 'x-signature': ticket.token, apikey: publicEnv.supabaseAnonKey, 'x-upsert': 'true' },
+      headers: { 'x-signature': ticket.token, apikey: publicEnv.supabaseAnonKey },
       chunkSize: TUS_CHUNK,
       uploadDataDuringCreation: true,
       removeFingerprintOnSuccess: true,

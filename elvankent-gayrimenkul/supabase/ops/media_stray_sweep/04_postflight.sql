@@ -16,7 +16,7 @@ select sira, kontrol, deger, durum from (
   union all
   select 2, 'media_stray_objects gövde özeti (boşluklar tek, md5)',
          coalesce((select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f), 'yok'),
-         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f) = 'b0b02bae61ed2ceca5693e800774f0db' then 'TAMAM' else 'HATA: gövde bekleneni içermiyor' end
+         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f) = 'a87754bc2cb4da9ffc4040c06bc3e4bf' then 'TAMAM' else 'HATA: gövde bekleneni içermiyor' end
   union all
   select 3, 'Yetki: anon / authenticated / service_role',
          coalesce((select string_agg(r.rolname::text || '=' || has_function_privilege(r.oid, f.oid, 'execute')::text, ' ' order by r.rolname::text)
