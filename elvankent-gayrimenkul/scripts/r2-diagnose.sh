@@ -123,6 +123,11 @@ export RCLONE_CONFIG_DIAG_SECRET_ACCESS_KEY="$BACKUP_S3_SECRET_ACCESS_KEY"
 rv=$(rclone version 2>/dev/null | head -1 | grep -Eo 'v[0-9]+\.[0-9]+(\.[0-9]+)?' || true)
 say "rclone sürümü: ${rv:-bilinmiyor}"
 
+# Test anahtarı depoda var mı: yalnız stdout'taki TAM dosya adı sayılır (rclone stderr'e NOTICE yazar; teşhis #3)
+object_exists() {
+  rclone lsf "diag:$BACKUP_BUCKET/$KEY" --s3-no-check-bucket 2>/dev/null | grep -qxF "${KEY##*/}"
+}
+
 aws_s3() { # aws cli, yalnız bu komut için kimlik bilgileri; R2 ile uyum için sağlama toplamı yalnız gerektiğinde
   AWS_ACCESS_KEY_ID="$BACKUP_S3_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$BACKUP_S3_SECRET_ACCESS_KEY" AWS_DEFAULT_REGION="$BACKUP_S3_REGION" \
   AWS_REQUEST_CHECKSUM_CALCULATION=when_required AWS_RESPONSE_CHECKSUM_VALIDATION=when_required AWS_EC2_METADATA_DISABLED=true \
@@ -150,11 +155,7 @@ KEY="diagnostics/r2-test-${RUN_TAG}-$(od -An -N6 -tx1 /dev/urandom | tr -d ' \n'
 printf 'KARAYS R2 baglanti testi\nrun: %s\nutc: %s\nKisisel veri icermez; teshis sonunda silinir.\n' "$RUN_TAG" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$WORK/test.txt"
 want=$(sha256sum "$WORK/test.txt" | cut -d' ' -f1)
 # Var olan bir nesnenin üzerine asla yazılmaz
-if rclone lsf "diag:$BACKUP_BUCKET/$KEY" --s3-no-check-bucket >"$WORK/exists.out" 2>&1 && [ -s "$WORK/exists.out" ]; then
-  KEY_EXISTING=1
-else
-  KEY_EXISTING=0
-fi
+if object_exists; then KEY_EXISTING=1; else KEY_EXISTING=0; fi
 if [ "$KEY_EXISTING" = 1 ]; then
   KEY=""  # başkasının nesnesi: dokunulmaz
   fail "$STAGE" "benzersiz test anahtarı zaten var (çakışma); hiçbir şey yazılmadı, yeniden çalıştırın"
@@ -188,7 +189,7 @@ if ! rclone deletefile "diag:$BACKUP_BUCKET/$KEY" --s3-no-check-bucket >"$WORK/d
   fail "$STAGE" "rclone ${rv:-?}: $(classify "$WORK/del.out")"
   finish
 fi
-if rclone lsf "diag:$BACKUP_BUCKET/$KEY" --s3-no-check-bucket >"$WORK/gone.out" 2>&1 && [ -s "$WORK/gone.out" ]; then
+if object_exists; then
   fail "$STAGE" "silindi denildi ama nesne hâlâ listeleniyor"
   finish
 fi

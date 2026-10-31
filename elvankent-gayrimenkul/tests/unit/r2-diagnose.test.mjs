@@ -36,6 +36,8 @@ const GOOD = {
 // Sahte rclone: "diag:<kova>/<anahtar>" → $FAKE_ROOT/<kova>/<anahtar>; FAKE_FAIL=<alt komut> ise FAKE_MSG ile başarısız
 const FAKE_RCLONE = `#!/usr/bin/env bash
 cmd="$1"; shift
+# Gerçek rclone gibi: yapılandırma dosyası yoksa her komutta stderr'e NOTICE (teşhis #3'teki yanlış "anahtar var" hatası)
+echo '<5>NOTICE: Config file "/home/runner/.config/rclone/rclone.conf" not found - using defaults' >&2
 if [ "$cmd" = version ]; then echo "rclone v1.60.1-DEV"; exit 0; fi
 if [ "\${FAKE_FAIL:-}" = "$cmd" ]; then printf '%b\\n' "$FAKE_MSG" >&2; exit 1; fi
 echo "$cmd $*" >> "$FAKE_ROOT/.calls"
