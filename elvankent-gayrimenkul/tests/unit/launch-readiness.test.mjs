@@ -541,6 +541,15 @@ describe('LR-13 bekleyen migration\'lar (K-19)', () => {
     assert.ok(seed > 0 && apply > seed);
     assert.ok(apply < ci.indexOf('- name: Birim + güvenlik testleri'));
   });
+  test('KI-37 PENDING=none ayağı: bekleyen dosya uygulamaz, bunu denetler ve medya E2E\'sini koşar', () => {
+    const ci = read('../.github/workflows/elvankent-ci.yml');
+    const legacy = ci.split(/\n {2}database-legacy-schema:\n/)[1]?.split(/\n {2}[a-z][\w-]*:\n/)[0] ?? '';
+    assert.ok(legacy, 'database-legacy-schema işi var');
+    assert.match(legacy, /needs: quality/);
+    assert.doesNotMatch(legacy, /supabase\/pending\/\*\.sql|rehearse-runbooks/, 'bekleyen dosya uygulanmaz');
+    assert.match(legacy, /to_regprocedure\('public\.media_finalize\([^)]*\)'\) is null/, 'şemanın bekleyen dosyasız olduğu denetlenir');
+    assert.match(legacy, /npx playwright test tests\/e2e\/admin\.spec\.ts tests\/e2e\/acceptance\.spec\.ts/);
+  });
   test('OPS-02 bayrağı varsayılan kapalı; güvenlik testleri sırayla çalışır', () => {
     const flag = read('supabase/pending/20261025000002_ops02_subscription_limits.sql');
     assert.match(flag, /add column if not exists enforce_subscription_limits boolean not null default false/);
@@ -548,7 +557,7 @@ describe('LR-13 bekleyen migration\'lar (K-19)', () => {
   });
 });
 
-describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, company_name, media_finalize_rpc ve media_privileges (supabase/ops)', () => {
+describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, company_name, media_finalize_rpc, media_privileges ve media_storage_slots (supabase/ops)', () => {
   // Bekleyen migration'ları canlıda tek başına uygulayan betikler (karays_brand ile aynı düzen, LR-10).
   // Pending dosya değişip 03/04/05 değişmezse canlıya provası yapılmamış bir gövde gider.
   const runbooks = [
@@ -558,6 +567,8 @@ describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, compan
     // WP-A2: A (RPC + kuyruk) ve B (sütun yetkileri). B'nin gövdesi 'do $guard$' ile başlar ('apply A first'); A, B'den önce sıralanır
     { dir: 'supabase/ops/media_finalize_rpc/', pending: '20261027000001_media_finalize_rpc.sql', first: 'create or replace function public.media_finalize', fn: 'public.media_finalize', hashFrom: 'create or replace function public.media_finalize' },
     { dir: 'supabase/ops/media_privileges/', pending: '20261027000002_media_column_privileges.sql', first: 'do $guard$', fn: 'public.media_assets_pending_shape', hashFrom: 'create or replace function public.media_assets_pending_shape' },
+    // KI-37: C (depolama yuvaları) 'apply B first' ile başlar; B'den sonra sıralanır, B'den önce geri alınır
+    { dir: 'supabase/ops/media_storage_slots/', pending: '20261027000003_media_storage_slots.sql', first: 'do $guard$', fn: 'public.media_storage_slot_guard', hashFrom: 'create or replace function public.media_storage_slot_guard' },
     // 03b_validate.sql isteğe bağlı ayrı adım (VALIDATE tabloyu tarar); varsa aşağıda ayrıca denetlenir
     { dir: 'supabase/ops/company_name/', pending: '20261026000002_company_name_check.sql', first: 'alter table public.platform_settings drop constraint', fn: null, hashFrom: null, optional: ['03b_validate.sql'] },
   ];
@@ -674,6 +685,23 @@ describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, compan
       'alter table public.platform_settings validate constraint platform_settings_company_name_plain',
       'commit',
     ]);
+  });
+  test('media_storage_slots: B kapısı ve TRIGGER hakkı (01, 03); B\'nin 05\'i C varken durur; 05 v2 politikalarını birebir kurar; provada', () => {
+    const pre = read('supabase/ops/media_storage_slots/01_preflight.sql');
+    assert.match(pre, /DUR: apply B first/);
+    assert.match(pre, /has_table_privilege\(current_user, 'storage\.objects', 'trigger'\)/);
+    const apply = read('supabase/ops/media_storage_slots/03_apply.sql');
+    assert.match(apply, /raise exception 'DUR: apply B first/);
+    assert.match(apply, /has_table_privilege\(current_user, 'storage\.objects', 'trigger'\)/);
+    assert.match(read('supabase/ops/media_privileges/05_rollback.sql'), /media_storage_slot_guard[\s\S]*DUR: önce C geri alınır/);
+    // 05, dört politikayı 20260926000008_v2_storage.sql'deki tanımıyla birebir yeniden kurar
+    const v2 = read('supabase/migrations/20260926000008_v2_storage.sql');
+    const rollback = norm(read('supabase/ops/media_storage_slots/05_rollback.sql'));
+    for (const name of ['media_originals_insert', 'media_originals_update', 'media_insert', 'media_update']) {
+      const def = v2.slice(v2.indexOf(`create policy "${name}"`)).match(/^[\s\S]*?\);/)[0];
+      assert.ok(rollback.includes(norm(def)), `05: ${name} birebir`);
+    }
+    assert.match(read('scripts/rehearse-runbooks.sh'), /RUNBOOKS=\([^)]*media_privileges media_storage_slots\)/);
   });
   test('quota_lock: yetkiler anon/authenticated/PUBLIC için kapalı denetlenir (03 ve 04)', () => {
     for (const f of ['03_apply.sql', '04_postflight.sql']) {

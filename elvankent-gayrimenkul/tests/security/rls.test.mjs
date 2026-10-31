@@ -291,7 +291,21 @@ describe('Kiracı izolasyonu (Tenant A ↔ Tenant B)', { skip }, () => {
   });
   test('Depolama (kontrol): A kendi klasörüne yazabilir', async () => {
     const a = T.A.users.owner.client;
-    const own = `organizations/${T.A.orgId}/properties/${T.A.publishedId}/images/${randomUUID()}/original`;
+    // Uygulamanın yolu: önce bekleyen medya satırı, sonra yükleme (KI-37: bekleyen dosya C satırsız yüklemeyi reddeder)
+    const mediaId = randomUUID();
+    const own = `organizations/${T.A.orgId}/properties/${T.A.publishedId}/images/${mediaId}/original`;
+    const row = await service.from('media_assets').insert({
+      id: mediaId,
+      organization_id: T.A.orgId,
+      property_id: T.A.publishedId,
+      kind: 'property_photo',
+      status: 'pending',
+      original_path: own,
+      mime_type: 'image/png',
+      byte_size: PNG.length,
+      created_by: T.A.users.owner.id,
+    });
+    assert.ifError(row.error);
     const up = await a.storage.from('media-originals').upload(own, PNG, { contentType: 'image/png' });
     assert.ifError(up.error);
     storageObjects.push(['media-originals', own]);

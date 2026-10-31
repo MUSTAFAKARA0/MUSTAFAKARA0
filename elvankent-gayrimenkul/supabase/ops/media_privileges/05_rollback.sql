@@ -2,7 +2,8 @@
 -- Medya sütun yetkileri — 5/5 GERİ DÖNÜŞ (20261027000002_media_column_privileges.sql'i geri alır)
 --
 -- Kaynak: supabase/pending/20261027000002_media_column_privileges.sql, "GERİ DÖNÜŞ" başlığı (birim testi LR-14
--- her ifadenin burada bulunduğunu denetler). B HER ZAMAN A'dan önce geri alınır (A'nın 05'i B varken durur).
+-- her ifadenin burada bulunduğunu denetler). B HER ZAMAN A'dan önce geri alınır (A'nın 05'i B varken durur);
+-- C (media_storage_slots) varsa önce C'nin 05'i (bu betik C varken DUR der).
 -- B'den sonra uygulama kodu geri alınacaksa (Instant Rollback) ÖNCE bu betik çalıştırılır: eski kod B ile 42501 alır.
 -- Yalnızca onayla. Tek işlem. Veri değiştirilmez: şekil tetikleyicisi silinir, authenticated'a tablo düzeyi
 -- UPDATE/INSERT ve TRUNCATE/REFERENCES/TRIGGER geri verilir (sütun yetkileri önce temizlenir).
@@ -13,6 +14,15 @@
 begin;
 set local lock_timeout = '3s';
 set local statement_timeout = '30s';
+
+-- Sıra: C (media_storage_slots) B'nin kanonik yol kuralına dayanır; C varken B geri alınmaz
+do $sira$
+begin
+  if exists (select 1 from pg_trigger where tgname = 'media_storage_slot_guard' and not tgisinternal) then
+    raise exception 'DUR: önce C geri alınır (media_storage_slots/05_rollback.sql)';
+  end if;
+end
+$sira$;
 
 drop trigger if exists media_assets_pending_shape on public.media_assets;
 drop function if exists public.media_assets_pending_shape();

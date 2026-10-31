@@ -178,3 +178,93 @@ jobs:
             elvankent-gayrimenkul/test-results
             /tmp/next.log
           retention-days: 7
+
+  # KI-37 · CI PENDING matrisi (K-22 DB R3): "yeni kod + bekleyen dosyasız şema" = canlıdaki şema. database işi bekleyen
+  # dosyaların HEPSİ uygulanmış şemayı sınar (PENDING=all); bu iş hiçbirini uygulamaz (PENDING=none) ve yalnız medya E2E'sini
+  # (yükleme, işleme, döndürme, silme: admin.spec.ts + acceptance.spec.ts) koşar: yeni kodun RPC'siz yedek yolu canlıdaki
+  # şemayla çalışır. Paralel çalışır (duvar süresi artmaz). PENDING=a (yalnız A) ayağı ayrı iş değil: MF-07 A altında
+  # eski kodu, media-storage-slots SL-13 C'nin B'siz durduğunu güvenlik testlerinde sınar (değerlendirme: GELISTIRME_GUNLUGU K-23).
+  database-legacy-schema:
+    if: ${{ vars.ELVANKENT_CI_DB_TESTS == 'true' }}
+    needs: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: elvankent-gayrimenkul/package-lock.json
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          # 19.10.2026'daki son kararlı sürüm (CI #83 o gün "latest" ile yeşildi). `supabase init`
+          # şablonu sürüme göre değişebildiği için sabit; yeni sürüm CI'da doğrulanıp ayrı commit'le seçilir.
+          version: 2.121.0
+      - run: npm ci
+      - name: Yerel Supabase (PENDING=none; supabase/pending UYGULANMAZ)
+        run: |
+          set -euo pipefail
+          mv supabase/seed.sql /tmp/seed.sql
+          [ -f supabase/config.toml ] || supabase init --force
+          supabase start -x studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor
+          supabase status -o env > /tmp/supa.env
+          set -a; . /tmp/supa.env; set +a
+          PGOPTIONS='-c app.allow_demo_seed=on' psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/seed.sql
+          # Bu ayak bekleyen dosyasız şemayı sınar: biri uygulanmışsa iş kırmızı
+          [ "$(psql "$DB_URL" -X -Atc "select to_regprocedure('public.media_finalize(uuid,text,text,smallint[],integer,integer,text)') is null")" = t ] \
+            || { echo "::error::PENDING=none ayağında media_finalize var (bekleyen dosya uygulanmış)"; exit 1; }
+          env_line() {
+            case "$2" in *"'"* | *$'\n'* | *$'\r'*) echo "::error::.env.local: $1 değeri tek tırnakla yazılamaz" >&2; return 1 ;; esac
+            printf "%s='%s'\n" "$1" "$2"
+          }
+          {
+            env_line NEXT_PUBLIC_SUPABASE_URL "$API_URL"
+            env_line NEXT_PUBLIC_SUPABASE_ANON_KEY "$ANON_KEY"
+            env_line SUPABASE_SERVICE_ROLE_KEY "$SERVICE_ROLE_KEY"
+            # SL-07: kota kilidini ayrı bir psql oturumunda tutar (yalnızca yerel veritabanı)
+            env_line DB_URL "${DB_URL:-}"
+            env_line NEXT_PUBLIC_SITE_URL http://localhost:3000
+            env_line IP_HASH_SALT "ci-$(openssl rand -hex 16)"
+            env_line CRON_SECRET "ci-$(openssl rand -hex 32)"
+            env_line NEXT_IMAGE_ALLOW_LOCAL_IP 1
+            # E2E demo ortamını bekler (DEMO ORTAMI şeridi, noindex; demo verisi yukarıda yüklenir):
+            # tests/e2e/acceptance.spec.ts ve visitor.spec.ts. Yerel çalıştırmalarla aynı ortam.
+            env_line SITE_ENV demo
+            # P0.4 davet e-postası: gerçek gönderim yok; E2E sahte Resend sunucusunu (127.0.0.1:4010) kendisi açar
+            env_line EMAIL_PROVIDER resend
+            env_line RESEND_API_KEY ci-test-key
+            env_line RESEND_API_BASE http://127.0.0.1:4010
+            env_line EMAIL_FROM 'KARAY CI <davet@example.test>'
+            # P0.5 özel alan adı: gerçek DNS yok; E2E sahte DoH sunucusunu (127.0.0.1:4011) kendisi açar
+            env_line DOMAIN_DNS_RESOLVER_URL http://127.0.0.1:4011/dns-query
+            env_line DOMAIN_TARGET_CNAME sites.karay.test
+            env_line DOMAIN_TARGET_A 203.0.113.10
+          } > .env.local
+          node scripts/check-env-file.mjs .env.local
+      - name: E2E hazırlık (yönetici hesabı, build, sunucu)
+        run: |
+          set -euo pipefail
+          # E2E yöneticisi hem ofis sahibi hem KARAY süper admini olmalı (acceptance.spec.ts ön koşulu;
+          # /platform testleri bu hesapla giriş yapar)
+          npm run create-admin -- e2e-admin@example.test 'E2e-Password-12345' --role=owner --super-admin
+          npx playwright install --with-deps chromium
+          set -a; . ./.env.local; set +a
+          npm run build
+          (npm start > /tmp/next.log 2>&1 &)
+          # Sunucu hazır olana kadar en fazla 60 sn beklenir; çalışma anında paket indirilmez
+          timeout 60 bash -c 'until curl -fs -o /dev/null http://localhost:3000/api/health; do sleep 1; done'
+      - name: Medya E2E (yeni kod + bekleyen dosyasız şema)
+        env:
+          E2E_ADMIN_EMAIL: e2e-admin@example.test
+          E2E_ADMIN_PASSWORD: E2e-Password-12345
+        run: npx playwright test tests/e2e/admin.spec.ts tests/e2e/acceptance.spec.ts
+      - name: Hata ayıklama çıktıları
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-results-legacy-schema
+          path: |
+            elvankent-gayrimenkul/test-results
+            /tmp/next.log
+          retention-days: 7

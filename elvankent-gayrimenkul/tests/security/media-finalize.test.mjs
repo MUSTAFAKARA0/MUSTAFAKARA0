@@ -924,6 +924,9 @@ describe('MQ silme kuyruğu', { skip }, () => {
 describe('MF-07 eski kod uyumluluğu (A altında geçer, A+B altında 42501)', { skip: dbSkip }, () => {
   const B_FILE = 'supabase/pending/20261027000002_media_column_privileges.sql';
   const B_ROLLBACK = 'supabase/ops/media_privileges/05_rollback.sql';
+  // C (KI-37, depolama yuvaları) B'ye dayanır: B'den önce geri alınır, B'den sonra yeniden uygulanır
+  const C_FILE = 'supabase/pending/20261027000003_media_storage_slots.sql';
+  const C_ROLLBACK = 'supabase/ops/media_storage_slots/05_rollback.sql';
 
   test('markFailed, retry, son ready güncellemesi ve eski ekleme: B yokken geçer, B varken 42501 / reddedilir', async () => {
     needDb();
@@ -965,7 +968,8 @@ describe('MF-07 eski kod uyumluluğu (A altında geçer, A+B altında 42501)', {
           .single(),
     });
     try {
-      // --- A altında (B geri alınmış) ---
+      // --- A altında (C ve B geri alınmış) ---
+      await psql(['-f', C_ROLLBACK]);
       await psql(['-f', B_ROLLBACK]);
       const row = await oldInsert();
       assert.ifError(row.error);
@@ -1005,7 +1009,8 @@ describe('MF-07 eski kod uyumluluğu (A altında geçer, A+B altında 42501)', {
       assert.equal((await readRow(row2.data.id)).status, 'pending');
       assert.equal((await oldInsert()).error?.message, 'media_invalid_input', 'eski kanonik olmayan ekleme B altında reddedilmeli');
     } finally {
-      await psql(['-f', B_FILE]); // B uygulanmış durumda bırakılır
+      await psql(['-f', B_FILE]); // B ve C uygulanmış durumda bırakılır
+      await psql(['-f', C_FILE]);
     }
   });
 });
