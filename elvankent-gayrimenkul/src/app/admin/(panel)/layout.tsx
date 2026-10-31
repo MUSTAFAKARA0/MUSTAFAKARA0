@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { AdminShell } from '@/components/admin/admin-shell';
+import { SubscriptionStrip } from '@/components/admin/subscription-strip';
+import { subscriptionStrip } from '@/modules/billing/subscription-strip';
 import { filterNav } from '@/components/admin/nav-config';
 import { brandingUrl } from '@/modules/media/variants';
 import { siteIconSvg } from '@/modules/seo/site-icon';
@@ -21,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function PanelLayout({ children }: LayoutProps<'/admin'>) {
   const ctx = await requirePageContext();
   // Marka (tema/logo) oturum bağlamıyla aynı çağrıda gelir (ek sorgu yok); rozet sayımı paralel
-  const [tenant, newLeads, brand] = await Promise.all([
+  const [tenant, newLeads, brand, subscription] = await Promise.all([
     getTenantFromRequest().catch(() => null),
     // Menüde "yeni talep" rozeti: ofisin henüz ilgilenmediği talepler
     ctx.can('leads.read')
@@ -34,7 +36,18 @@ export default async function PanelLayout({ children }: LayoutProps<'/admin'>) {
           .then((r) => r.count ?? 0)
       : Promise.resolve(0),
     getOrgBrand(),
+    // KI-21: abonelik durum şeridi için son abonelik satırı (iptal/süresi dolmuş dahil; RLS: üyeler okur)
+    ctx.supabase
+      .from('subscriptions')
+      .select('status, trial_ends_at')
+      .eq('organization_id', ctx.org.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then((r) => r.data ?? null),
   ]);
+  // "Verilerinizi indirin" Ayarlar › Veri dışa aktarma'ya gider: o sayfa settings.manage, dışa aktarma data.export ister
+  const strip = subscriptionStrip(subscription, { canExport: ctx.can('data.export') && ctx.can('settings.manage') });
   const nav = filterNav(ctx.can, ctx.plan.features);
   // Aktif organizasyonun sitesi: bulunulan alan adı aynı ofisse göreli kök, değilse yok
   const siteUrl = tenant?.id === ctx.org.id ? '/' : null;
@@ -66,6 +79,7 @@ export default async function PanelLayout({ children }: LayoutProps<'/admin'>) {
         passwordChangeRequired={ctx.profile.passwordChangeRequired}
         badges={{ '/admin/talepler': newLeads }}
       >
+        <SubscriptionStrip strip={strip} />
         {children}
       </AdminShell>
     </div>

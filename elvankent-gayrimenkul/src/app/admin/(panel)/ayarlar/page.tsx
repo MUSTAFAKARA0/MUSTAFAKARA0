@@ -15,6 +15,7 @@ import { brandingUrl } from '@/modules/media/variants';
 import { isEmailConfigured } from '@/modules/notifications/email';
 import { getSiteAdmin } from '@/modules/platform/sites';
 import { requirePagePermission } from '@/platform/auth/session';
+import { EXPORT_ANCHOR } from '@/modules/billing/subscription-strip';
 import { pendingSectionLabels, SiteDraftStatus } from '@/components/admin/site-draft-status';
 
 export const metadata: Metadata = { title: 'Ayarlar' };
@@ -149,7 +150,7 @@ export default async function SettingsPage() {
           </Panel>
 
           {canExport && (
-            <Panel title="Veri dışa aktarma" description="Kayıtlarınızı yedeklemek veya başka bir sisteme aktarmak için indirin. Her dışa aktarma güvenlik kayıtlarına yazılır.">
+            <Panel id={EXPORT_ANCHOR} title="Veri dışa aktarma" description="Kayıtlarınızı yedeklemek veya başka bir sisteme aktarmak için indirin. Her dışa aktarma güvenlik kayıtlarına yazılır.">
               <ul className="divide-y divide-border">
                 {EXPORTS.filter((e) => ctx.can(e.permission)).map((e) => (
                   <li key={e.entity} className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
