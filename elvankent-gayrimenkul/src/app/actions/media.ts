@@ -32,6 +32,8 @@ export interface UploadTicket {
   path: string;
   token: string;
   resumable: boolean;
+  /** Orijinal depoda zaten var (yükleme tamamlanmış ama istemci haber alamamış): yükleme atlanır, işlemeye geçilir */
+  alreadyUploaded?: boolean;
 }
 
 const createSchema = z.object({
@@ -180,15 +182,33 @@ export async function createContentMediaUpload(raw: z.input<typeof contentSchema
   });
 }
 
+/** Orijinal nesne depoda var mı (oturum istemcisi; kurum klasörü RLS ile okunur) */
+async function originalExists(ctx: OrgContext, path: string): Promise<boolean> {
+  const slash = path.lastIndexOf('/');
+  const name = path.slice(slash + 1);
+  const { data, error } = await ctx.supabase.storage.from(MEDIA_BUCKETS.originals).list(path.slice(0, slash), { search: name, limit: 10 });
+  if (error) return false;
+  return (data ?? []).some((f) => f.name === name && f.id !== null);
+}
+
 /** Süresi dolan / kesilen yükleme için aynı kayda yeni imzalı adres (tekrar dene) */
 export async function renewMediaUpload(mediaId: string): Promise<ActionResult<UploadTicket>> {
   return runAction(async () => {
     const ctx = await requirePermission('media.manage');
     const media = await loadMedia(ctx, mediaId);
     if (media.status !== 'pending' || !media.original_path) throw new ActionError('Bu fotoğraf için yükleme beklenmiyor.');
-    const { data: signed, error } = await ctx.supabase.storage
-      .from(MEDIA_BUCKETS.originals)
-      .createSignedUploadUrl(media.original_path, { upsert: true });
+    // KI-38: depodaki nesneler bir kez yazılır (bekleyen C). Orijinal zaten yüklendiyse yeniden yüklenmez, işlenir.
+    if (await originalExists(ctx, media.original_path)) {
+      return {
+        mediaId,
+        bucket: MEDIA_BUCKETS.originals,
+        path: media.original_path,
+        token: '',
+        resumable: false,
+        alreadyUploaded: true,
+      };
+    }
+    const { data: signed, error } = await ctx.supabase.storage.from(MEDIA_BUCKETS.originals).createSignedUploadUrl(media.original_path);
     if (error || !signed) throw new ActionError('Yükleme yeniden başlatılamadı. Lütfen tekrar deneyin.', 'upload_init');
     return {
       mediaId,

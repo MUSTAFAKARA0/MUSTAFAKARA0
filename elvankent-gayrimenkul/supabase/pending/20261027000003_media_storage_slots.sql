@@ -22,11 +22,13 @@
 --   • Tetikleyici media_storage_slot_guard (storage.objects, yalnız 'organizations/' altı, iki kova):
 --       INSERT, sahibi dolu (kullanıcının oturumu ya da imzalı adresi): yukarıdaki yuva kuralları (kurum denetimi
 --         olmadan; sahibi boş = service_role/sistem, ör. geri yükleme --apply, serbest).
---       UPDATE (üzerine yazma, taşıma), herkes: media kovasında HİÇ; orijinal için bekleyen satır.
+--       UPDATE (üzerine yazma, taşıma), herkes: HİÇ (nesneler bir kez yazılır; KI-38). Yenilenen yükleme orijinal varsa
+--         yüklemeyi atlar (uygulama, renewMediaUpload).
 --       Bakım penceresi (public.media_overwrite_window, en çok 24 saat — CHECK, yalnız SQL Editor/postgres açar) UPDATE'i
 --       ve sahibi dolu INSERT'i serbest bırakır: tam geri yükleme sonrası `restore:storage --apply --overwrite` için.
 --   • Kalan (kabul edilen) sınır: bir media.manage üyesi kendi kurumunda satır başına en çok 2 güncel olmayan taban × 6
---     dosya (kova sınırı 10 MB) kadar sayılmayan dosya tutabilir; cron eski tabanları siler (K-23 güvenlik MEDIUM, KALAN_ISLER).
+--     dosya (kova sınırı 10 MB) kadar sayılmayan dosyayı bir sonraki günlük temizliğe kadar tutabilir; D (20261031000001)
+--     1 saatten eski güncel olmayan tabanları listeler, cron siler (KI-38).
 --   • SELECT/DELETE politikaları değişmez. Veri değiştirmez; mevcut nesneler denetlenmez.
 --
 -- Hata: 'media_slot_closed' (42501). Tekrar çalıştırılabilir.
@@ -224,21 +226,11 @@ begin
     raise exception 'media_slot_closed' using errcode = '42501';
   end if;
 
-  -- UPDATE (üzerine yazma ya da taşıma). media kovasında hiç yok: uygulama varyantları upsert'siz yazar; emekli
-  -- (önbellekte olabilecek) tabanların üzerine yazılamaz (K-23 DB inceleme #4)
-  if (old.bucket_id = 'media' and old.name like 'organizations/%')
-     or (new.bucket_id = 'media' and new.name like 'organizations/%') then
-    raise exception 'media_slot_closed' using errcode = '42501';
-  end if;
-  -- Orijinal: eski ve yeni ad yuva ister (herkes için)
-  if old.bucket_id in ('media-originals', 'media') and old.name like 'organizations/%'
-     and not ((old.bucket_id = 'media-originals' and public.media_original_slot_org(old.name) is not null)
-              or (old.bucket_id = 'media' and public.media_variant_slot_org(old.name) is not null)) then
-    raise exception 'media_slot_closed' using errcode = '42501';
-  end if;
-  if new.bucket_id in ('media-originals', 'media') and new.name like 'organizations/%'
-     and not ((new.bucket_id = 'media-originals' and public.media_original_slot_org(new.name) is not null)
-              or (new.bucket_id = 'media' and public.media_variant_slot_org(new.name) is not null)) then
+  -- UPDATE (üzerine yazma ya da taşıma): kurum klasöründeki nesneler BİR KEZ yazılır (pencere dışında hiç UPDATE yok).
+  -- Varyantlar upsert'siz yazılır; emekli (önbellekte olabilecek) tabanların üzerine yazılamaz (K-23 DB #4). Orijinal,
+  -- bekleyen satırda bile işleme sırasında değiştirilemez (KI-38, K-23 DB #5); yarım kalan yükleme nesne oluşturmaz.
+  if (old.bucket_id in ('media-originals', 'media') and old.name like 'organizations/%')
+     or (new.bucket_id in ('media-originals', 'media') and new.name like 'organizations/%') then
     raise exception 'media_slot_closed' using errcode = '42501';
   end if;
   return new;

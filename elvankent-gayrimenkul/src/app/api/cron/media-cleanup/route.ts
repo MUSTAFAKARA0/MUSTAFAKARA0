@@ -80,11 +80,56 @@ async function drainFileQueue(service: DB): Promise<{ skipped?: boolean; claimed
   return { claimed, removed, failed, unsafe: skipped };
 }
 
+const STRAY_BATCH = 500;
+const STRAY_MAX_BATCHES = 4;
+
+/**
+ * KI-38: başıboş dosyalar (bekleyen D, `media_stray_objects`): satırın güncel tabanında olmayan 1 saatten eski
+ * varyantlar ve satırı olmayan 24 saatten eski orijinaller. Yalnız kendi kurum ön ekindeki güvenli yollar silinir.
+ * RPC yoksa (D uygulanmamış şema) atlanır.
+ */
+async function sweepStray(service: DB): Promise<{ skipped?: boolean; removed: number; failed: number; unsafe: number; error?: string }> {
+  let removed = 0;
+  let failed = 0;
+  let unsafe = 0;
+  for (let batch = 0; batch < STRAY_MAX_BATCHES; batch += 1) {
+    const { data, error } = await service.rpc('media_stray_objects', { p_limit: STRAY_BATCH });
+    if (error) {
+      if (isMissingRpc(error, 'media_stray_objects')) return { skipped: true, removed, failed, unsafe };
+      console.error('[media-cleanup] stray list failed', { code: error.code, message: error.message });
+      return { removed, failed, unsafe, error: 'stray_list_failed' };
+    }
+    const byBucket = new Map<string, string[]>();
+    for (const item of data ?? []) {
+      if (!ALLOWED_BUCKETS.has(item.bucket) || !queueItemIsSafe(item)) {
+        unsafe += 1;
+        continue;
+      }
+      byBucket.set(item.bucket, [...(byBucket.get(item.bucket) ?? []), item.path]);
+    }
+    let progressed = false;
+    for (const [bucket, paths] of byBucket) {
+      const { error: removeError } = await service.storage.from(bucket).remove(paths);
+      if (removeError) {
+        failed += paths.length;
+        console.error('[media-cleanup] stray remove failed', { bucket, count: paths.length, message: removeError.message });
+      } else {
+        removed += paths.length;
+        progressed = true;
+      }
+    }
+    // Liste sırasız: tam dolu değilse ya da hiçbir şey silinemediyse (sonsuz döngü yok) dur
+    if (!progressed || (data ?? []).length < STRAY_BATCH) break;
+  }
+  return { removed, failed, unsafe };
+}
+
 /**
  * Zamanlanmış bakım (Vercel Cron, günde bir; bkz. vercel.json):
  *  1. 24 saatten eski yarım kalmış / başarısız yüklemeler: dosyaları ve kayıtları
  *     silinir (yetim dosya kalmaz).
- *  2. 2 yıldan eski denetim kayıtları temizlenir.
+ *  2. Silme kuyruğu boşaltılır; başıboş dosyalar (KI-38) silinir.
+ *  3. 2 yıldan eski denetim kayıtları temizlenir.
  * Yalnızca `Authorization: Bearer CRON_SECRET` başlığıyla çalışır.
  */
 export async function GET(request: Request) {
@@ -121,8 +166,9 @@ export async function GET(request: Request) {
   for (const orgId of orgs) revalidateTag(cacheTags.properties(orgId), 'max');
 
   const queue = await drainFileQueue(service);
+  const stray = await sweepStray(service);
 
   const { data: purgedAudit } = await service.rpc('purge_old_audit_logs', { p_days: 730 });
 
-  return Response.json({ ok: true, staleMediaRemoved: removed, deferred, auditLogsPurged: purgedAudit ?? 0, queue });
+  return Response.json({ ok: true, staleMediaRemoved: removed, deferred, auditLogsPurged: purgedAudit ?? 0, queue, stray });
 }

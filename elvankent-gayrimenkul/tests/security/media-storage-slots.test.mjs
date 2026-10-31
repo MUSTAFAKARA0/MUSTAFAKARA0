@@ -230,16 +230,17 @@ describe('SL-08 orijinal: imzalama anında bekleyen satır', { skip }, () => {
     assert.ok((await sign(O.a.owner.client, `${row.folder}/x/original`)).error);
   });
 
-  test('bekleyen satırla imzalama ve imzalı yükleme çalışır; yenileme (upsert) de bekleyen satırda çalışır', async () => {
+  test('bekleyen satırla imzalama ve imzalı yükleme çalışır; yenileme (upsert imzası) nesne yokken çalışır, varken üzerine yazamaz (KI-38)', async () => {
     for (const kind of ['property_photo', 'post_cover']) {
       const row = await pendingRow(O.a, kind);
-      const s = await sign(O.a.owner.client, row.original);
-      assert.ifError(s.error);
-      assert.ifError((await viaToken(O.a.owner.client, row.original, s.data.token, 700)).error);
+      const renew = await sign(O.a.owner.client, row.original, true);
+      assert.ifError(renew.error);
+      assert.ifError((await viaToken(O.a.owner.client, row.original, renew.data.token, 700, true)).error);
+      // Var olan nesne için upsert imzası imzalama anında (deneme yazımı tetikleyiciye takılır) ya da yüklemede reddedilir
       const again = await sign(O.a.owner.client, row.original, true);
-      assert.ifError(again.error);
-      assert.ifError((await viaToken(O.a.owner.client, row.original, again.data.token, 900, true)).error);
-      assert.equal(await objectSize('media-originals', row.original), 900);
+      const rejected = again.error || (await viaToken(O.a.owner.client, row.original, again.data.token, 900, true)).error;
+      assert.ok(rejected, 'var olan orijinalin üzerine yazılamamalı');
+      assert.equal(await objectSize('media-originals', row.original), 700);
     }
   });
 

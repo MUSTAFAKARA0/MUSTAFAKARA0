@@ -152,7 +152,7 @@ export function MediaManager({ propertyId, propertyTitle, initialMedia, canManag
           patch(item.key, { ticket });
         }
 
-        if (item.failedAt !== 'process') {
+        if (item.failedAt !== 'process' && !ticket.alreadyUploaded) {
           patch(item.key, { status: 'uploading', progress: 0, error: undefined });
           const upload = startUpload(item.file, ticket, (ratio) => patch(item.key, { progress: Math.round(ratio * 100) }));
           running.current.set(item.key, upload);

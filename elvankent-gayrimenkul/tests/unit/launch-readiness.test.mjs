@@ -557,7 +557,7 @@ describe('LR-13 bekleyen migration\'lar (K-19)', () => {
   });
 });
 
-describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, company_name, media_finalize_rpc, media_privileges ve media_storage_slots (supabase/ops)', () => {
+describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, company_name, media_finalize_rpc, media_privileges, media_storage_slots ve media_stray_sweep (supabase/ops)', () => {
   // Bekleyen migration'ları canlıda tek başına uygulayan betikler (karays_brand ile aynı düzen, LR-10).
   // Pending dosya değişip 03/04/05 değişmezse canlıya provası yapılmamış bir gövde gider.
   const runbooks = [
@@ -569,6 +569,8 @@ describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, compan
     { dir: 'supabase/ops/media_privileges/', pending: '20261027000002_media_column_privileges.sql', first: 'do $guard$', fn: 'public.media_assets_pending_shape', hashFrom: 'create or replace function public.media_assets_pending_shape' },
     // KI-37: C (depolama yuvaları) 'apply B first' ile başlar; B'den sonra sıralanır, B'den önce geri alınır
     { dir: 'supabase/ops/media_storage_slots/', pending: '20261027000003_media_storage_slots.sql', first: 'do $guard$', fn: 'public.media_storage_slot_guard', hashFrom: 'create or replace function public.media_storage_slot_guard' },
+    // KI-38: D (başıboş dosya listesi) yalnız A'ya dayanır
+    { dir: 'supabase/ops/media_stray_sweep/', pending: '20261031000001_media_stray_sweep.sql', first: 'do $guard$', fn: 'public.media_stray_objects', hashFrom: 'create or replace function public.media_stray_objects' },
     // 03b_validate.sql isteğe bağlı ayrı adım (VALIDATE tabloyu tarar); varsa aşağıda ayrıca denetlenir
     { dir: 'supabase/ops/company_name/', pending: '20261026000002_company_name_check.sql', first: 'alter table public.platform_settings drop constraint', fn: null, hashFrom: null, optional: ['03b_validate.sql'] },
   ];
@@ -701,7 +703,7 @@ describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, compan
       const def = v2.slice(v2.indexOf(`create policy "${name}"`)).match(/^[\s\S]*?\);/)[0];
       assert.ok(rollback.includes(norm(def)), `05: ${name} birebir`);
     }
-    assert.match(read('scripts/rehearse-runbooks.sh'), /RUNBOOKS=\([^)]*media_privileges media_storage_slots\)/);
+    assert.match(read('scripts/rehearse-runbooks.sh'), /RUNBOOKS=\([^)]*media_privileges media_storage_slots media_stray_sweep\)/);
   });
   test('quota_lock: yetkiler anon/authenticated/PUBLIC için kapalı denetlenir (03 ve 04)', () => {
     for (const f of ['03_apply.sql', '04_postflight.sql']) {

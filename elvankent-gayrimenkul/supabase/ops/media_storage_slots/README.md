@@ -52,11 +52,13 @@ kaldırılamaz, B'nin 05'i de C varken durur) bu kapıyla önlenir. Yalnız poli
 - **Sayılmayan varyant alanı (güvenlik MEDIUM, sınırlandı):** varyant yuvası her satırda güncel taban dışında en çok 2 tabana ve
   taban başına en çok 6 dosyaya izin verir (kova sınırı dosya başına 10 MB); `media` kovasında üzerine yazma hiç yoktur.
   Bir `media.manage` üyesi kendi kurumunda satır başına bu kadar sayılmayan dosya tutabilir; satır silinince kuyruk yalnız
-  orijinal + güncel tabanı alır, ek tabanlar `media_storage_report` ile görünür. Kalıcı çözüm (sunucunun verdiği tek "sonraki
-  taban" ya da silmede `{id}/` klasörünün tamamı) ayrı iş: KALAN_ISLER KI-38.
-- **İşleme sırasında orijinal (DB LOW #5):** bekleyen satırın `upsert` imzası, `processMedia` orijinali indirdikten sonra ve
-  `media_finalize` işlemeden önce orijinalin üzerine yazabilir (C öncesi de vardı, pencere kısa). Çözüm: indirilen nesne sürümünün
-  sonlandırmada karşılaştırılması (KI-38).
+  orijinal + güncel tabanı alır, ek tabanlar `media_storage_report` ile görünür. Bekleyen D (`media_stray_sweep/`, KI-38) bu
+  dosyaları 1 saat sonra listeler, günlük cron siler.
+- **İşleme sırasında orijinal (DB LOW #5) → kapatıldı (KI-38):** kurum klasöründeki nesneler **bir kez yazılır**; bakım penceresi
+  dışında hiçbir UPDATE (üzerine yazma, taşıma) yok, bekleyen satırda da. Var olan orijinal için upsert imzası imzalama anında
+  reddedilir. Yarım kalan yükleme nesne oluşturmaz; yükleme yenilenirken orijinal zaten varsa uygulama yüklemeyi atlar ve işler
+  (`renewMediaUpload`, `alreadyUploaded`). Kalan: üye kendi bekleyen orijinalini silip yeniden yükleyebilir (kendi içeriği; kota
+  sonlandırmada gerçek boyutla sayılır).
 - **Reddedilen yüklemenin dosya baytları (güvenlik LOW):** tetikleyici veritabanı adımında reddeder; storage-api'nin o ana kadar
   yazdığı baytları silip silmediği doğrulanmadı (bütünlüğe etkisi yok, disk kullanımı).
 - **TUS (büyük dosya) yolu:** otomatik testte yok; bağımsız güvenlik incelemesi yerelde elle denedi: sonlandırma sonrası eski imzayla

@@ -2446,6 +2446,16 @@ export type Database = {
         }
         Returns: Json
       }
+      media_stray_objects: {
+        Args: {
+          p_limit: number
+        }
+        Returns: {
+          bucket: string
+          path: string
+          org_id: string
+        }[]
+      }
       media_upload_allowed: {
         Args: {
           p_org: string
