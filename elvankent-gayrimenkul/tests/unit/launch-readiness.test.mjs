@@ -380,7 +380,7 @@ describe('LR-08 CI E2E ortamı', () => {
 describe('LR-09 sabit çalıştırıcı imajı (K-16)', () => {
   // ubuntu-latest 19.10.2026'dan itibaren Ubuntu 26'ya taşınıyor. CI'nin doğruladığı ortam ubuntu-24.04'tür;
   // yeni imaj, CI'da doğrulanıp ayrı bir commit'le seçilir (etiket kendiliğinden kaymaz).
-  for (const [file, minJobs] of [['elvankent-ci.yml', 2], ['elvankent-backup.yml', 2], ['elvankent-security-candidate.yml', 1]]) {
+  for (const [file, minJobs] of [['elvankent-ci.yml', 2], ['elvankent-backup.yml', 2], ['elvankent-security-candidate.yml', 1], ['elvankent-r2-diagnose.yml', 1]]) {
     test(`${file}: her iş ubuntu-24.04 üzerinde çalışır`, () => {
       const jobs = read(`../.github/workflows/${file}`).split(/\njobs:\n/)[1] ?? '';
       const names = [...jobs.matchAll(/^ {2}([a-z][\w-]*):$/gm)].map((m) => m[1]);
@@ -462,7 +462,7 @@ describe('LR-10 KARAYS migration runbook (K-17)', () => {
 describe('LR-11 CI tedarik zinciri (K-18)', () => {
   // Etiket (@v4) ve dal (@v1) taşınabilir: ele geçirilen bir etiket depodaki her iş akışında kod çalıştırır.
   // Tam commit SHA'sı çalışan kodu sabitler; yorumdaki sürüm güncelleme için okunur.
-  const workflows = ['elvankent-ci.yml', 'elvankent-backup.yml', 'elvankent-security-candidate.yml'].map((f) => [f, read(`../.github/workflows/${f}`)]);
+  const workflows = ['elvankent-ci.yml', 'elvankent-backup.yml', 'elvankent-security-candidate.yml', 'elvankent-r2-diagnose.yml'].map((f) => [f, read(`../.github/workflows/${f}`)]);
   test('her action tam commit SHA ile sabit ve sürüm yorumu taşır', () => {
     for (const [f, wf] of workflows) {
       const uses = [...wf.matchAll(/^\s*(?:-\s+)?uses:\s*(\S+)(.*)$/gm)].map((m) => [m[1], m[2].trim()]);

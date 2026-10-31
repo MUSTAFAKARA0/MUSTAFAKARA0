@@ -1,0 +1,56 @@
+# KARAYS · Cloudflare R2 bağlantı teşhisi (yalnız elle; yedek iş akışından bağımsız)
+#
+# Backup #41: veritabanı yedeği hazır, R2'ye ilk aktarım "400 Bad Request" (önceki deneme "403 Forbidden").
+# Bu iş akışı yedeğin KULLANDIĞI sır ve değişkenlerle (yeni anahtar yok) R2'yi aşama aşama dener:
+#   0 ayarların biçimi · 1 kova erişimi (yalnız diagnostics/ öneki) · 2 diagnostics/ altına benzersiz küçük test dosyası
+#   · 3 geri okuma + SHA-256 · 4 YALNIZ o dosyanın silinmesi. Ayrıntı: elvankent-gayrimenkul/scripts/r2-diagnose.sh
+# Veritabanına bağlanmaz; müşteri verisi okumaz; var olan yedeklere dokunmaz (sync/delete/purge yok).
+# Log'a anahtar, uç nokta, hesap kimliği ya da ham hata metni yazılmaz; yalnız aşama ve güvenli hata kategorisi.
+#
+# Elle başlatma (ikisi de yalnız sizin eyleminizle çalışır; kod değişikliği tetiklemez):
+#   a) Actions › elvankent-r2-diagnose › Run workflow (GitHub bu düğmeyi yalnız iş akışı varsayılan dalda da varsa gösterir)
+#   b) Çalışma dalında elvankent-gayrimenkul/ops-requests/r2-diagnose.request dosyasını düzenleyip commit etmek
+#      (telefondan tarayıcıyla: dosya › kalem › bir satır ekle › Commit changes)
+name: elvankent-r2-diagnose
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ['claude/karays-mission-control-vn8g65']
+    paths: ['elvankent-gayrimenkul/ops-requests/r2-diagnose.request']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elvankent-r2-diagnose
+  cancel-in-progress: false
+
+jobs:
+  r2:
+    # Yalnız sahibin eylemi: Run workflow ya da istek dosyasını sahibin düzenlemesi. Geliştirme oturumunun commit'leri
+    # ("Claude-Session:" satırı taşır) istek dosyasına dokunsa bile teşhis kendiliğinden çalışmaz.
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, 'Claude-Session:') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            elvankent-gayrimenkul/scripts
+      - name: rclone (yedekle aynı kaynak ve sürüm)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rclone
+          rclone version | head -1
+          command -v aws >/dev/null && aws --version || echo "aws cli yok (ikinci görüş atlanır)"
+      - name: R2 teşhisi
+        env:
+          BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          BACKUP_S3_REGION: ${{ secrets.BACKUP_S3_REGION }}
+          BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+          BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET }}
+          BACKUP_S3_PROVIDER: ${{ vars.BACKUP_S3_PROVIDER }}
+          RUN_TAG: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: bash elvankent-gayrimenkul/scripts/r2-diagnose.sh
