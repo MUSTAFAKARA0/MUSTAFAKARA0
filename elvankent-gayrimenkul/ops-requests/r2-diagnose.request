@@ -1,3 +1,4 @@
 # R2 bağlantı teşhisi isteği (.github/workflows/elvankent-r2-diagnose.yml)
 # Teşhisi başlatmak için bu dosyaya bir satır ekleyip "Commit changes" deyin (çalışma dalında).
 # Bu dosyada sır, anahtar ya da adres YAZMAYIN; satır yalnızca tetikleyicidir (ör. tarih).
+R2 manuel test 2026-11-01
