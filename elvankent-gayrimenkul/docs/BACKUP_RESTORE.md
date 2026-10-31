@@ -28,6 +28,8 @@
 4. Storage kovaları (`media-originals`, `media`, `branding`, `property-images`) → `BACKUP_BUCKET/storage/current/…` (rclone sync; silinen/değişen dosyalar `storage/deleted/TARIH/…` altına taşınır).
 5. Saklama: veritabanı yedekleri (dört dosya birlikte) `BACKUP_RETENTION_DAYS` gün, silinen dosyaların kopyaları 90 gün.
 
+İstemci sürümü (Backup #39 sonrası): iş akışı `postgresql-client-17` kurar, `/usr/lib/postgresql/17/bin`'i sonraki adımların PATH'ine ekler ve `psql`, `pg_dump`, `pg_restore`'un bu dizinden ve 17 ana sürümünden geldiğini denetler; değilse ya da sunucu ana sürümü istemciden yeniyse yedeğe **başlamadan** hata verir. Sunucu 18'e geçerse iş akışındaki `PG_MAJOR`/`PG_BIN` güncellenir.
+
 Güvenlik ve görünürlük:
 - `ELVANKENT_BACKUP_ENABLED` `true` değilken **"Yedek alınmadı"** uyarısı ve iş özeti yazılır (`backup-disabled` işi); eksik değişken/sır varsa yedek işi yalnızca eksiklerin **adlarını** yazıp durur.
 - Log'a kayıt sayısı, dosya boyutu, bağlantı adresi, kullanıcı adı veya dosya içeriği yazılmaz (depo herkese açık olduğu sürece Actions logları da herkese açıktır). Hata mesajlarında bağlantı adresi, sunucu, kullanıcı, rol ve veritabanı adı `<gizlendi>` olarak yazılır.

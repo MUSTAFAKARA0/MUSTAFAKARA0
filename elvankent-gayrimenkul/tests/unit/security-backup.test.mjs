@@ -236,6 +236,63 @@ describe('BK-02 yedek iş akışı', () => {
   });
 });
 
+describe('BK-02b PostgreSQL 17 istemcisi (Backup #39: pg_dump 16.15 ↔ sunucu 17.6)', () => {
+  const wf = read('../.github/workflows/elvankent-backup.yml');
+  const stepRun = (name) => {
+    const start = wf.indexOf(`- name: ${name}`);
+    assert.ok(start > 0, `${name} adımı var`);
+    const block = wf.slice(start).match(/\n( +)run: \|\n([\s\S]*?)(?=\n {6}- |\n*$)/);
+    const indent = block[2].match(/^ */)[0].length;
+    return block[2].split('\n').map((l) => l.slice(indent)).join('\n');
+  };
+  test('PG 17 ikilileri kurulumdan sonra sonraki adımların PATH\'ine eklenir; sabitler iş düzeyinde', () => {
+    assert.match(wf, /\n {6}PG_MAJOR: '17'\n {6}PG_BIN: \/usr\/lib\/postgresql\/17\/bin\n/);
+    const install = stepRun('Araçları kur (pg_dump 17, rclone)');
+    assert.ok(install.indexOf('postgresql-client-17') < install.indexOf('echo "$PG_BIN" >> "$GITHUB_PATH"'), 'kurulumdan sonra PATH');
+    assert.match(install, /for tool in psql pg_dump pg_restore; do\n\s+\[ -x "\$PG_BIN\/\$tool" \]/);
+  });
+  test('sürüm denetimi yedekten önce; sunucu sürümü backup-db.sh\'den önce denetlenir', () => {
+    const order = ['Araçları kur (pg_dump 17, rclone)', 'PostgreSQL istemci sürümü (yedekten önce)', 'Veritabanı yedeği'].map((n) => wf.indexOf(`- name: ${n}`));
+    assert.deepEqual([...order].sort((a, b) => a - b), order);
+    const backup = stepRun('Veritabanı yedeği');
+    assert.ok(backup.indexOf("show server_version_num") < backup.indexOf('bash elvankent-gayrimenkul/scripts/backup-db.sh'));
+    assert.match(backup, /\$\(\(server_num \/ 10000\)\) -gt "\$PG_MAJOR"/);
+  });
+  // Denetim adımı sahte ikililerle GERÇEKTEN çalıştırılır (YAML metni değil, davranış)
+  const runCheck = (t, { pgVersions, wrapperFirst = false }) => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'karay-pg-'));
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    const pgBin = path.join(dir, 'pg17');
+    const wrapper = path.join(dir, 'usrbin');
+    for (const d of [pgBin, wrapper]) mkdirSync(d);
+    for (const tool of ['psql', 'pg_dump', 'pg_restore']) {
+      const v = pgVersions[tool] ?? '17.6';
+      writeFileSync(path.join(pgBin, tool), `#!/bin/sh\necho "${tool} (PostgreSQL) ${v} (Ubuntu ${v}-1.pgdg24.04+1)"\n`, { mode: 0o755 });
+      writeFileSync(path.join(wrapper, tool), `#!/bin/sh\necho "${tool} (PostgreSQL) 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)"\n`, { mode: 0o755 });
+    }
+    const PATH = [wrapperFirst ? wrapper : pgBin, wrapperFirst ? pgBin : wrapper, '/usr/bin', '/bin'].join(':');
+    return spawnSync('bash', ['--noprofile', '--norc', '-c', stepRun('PostgreSQL istemci sürümü (yedekten önce)')], {
+      env: { PATH, PG_BIN: pgBin, PG_MAJOR: '17' },
+      encoding: 'utf8',
+    });
+  };
+  test('üç araç da PG_BIN\'den ve 17: geçer, sürümleri yazar', (t) => {
+    const r = runCheck(t, { pgVersions: {} });
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+    assert.match(r.stdout, /pg_dump: pg_dump \(PostgreSQL\) 17\.6/);
+  });
+  test('/usr/bin sarmalayıcısı (16.15) önce gelirse: yedek başlatılmaz', (t) => {
+    const r = runCheck(t, { pgVersions: {}, wrapperFirst: true });
+    assert.equal(r.status, 1);
+    assert.match(r.stdout, /::error title=PostgreSQL istemci sürümü yanlış::psql: .*sürüm 16 .*yedek başlatılmadı/);
+  });
+  test('PG_BIN\'deki pg_restore yanlış ana sürümse: yedek başlatılmaz', (t) => {
+    const r = runCheck(t, { pgVersions: { pg_restore: '16.15' } });
+    assert.equal(r.status, 1);
+    assert.match(r.stdout, /pg_restore: .*sürüm 16 /);
+  });
+});
+
 describe('BK-03 restore-drill.sh', () => {
   const sh = read('scripts/restore-drill.sh');
   const code = sh.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');

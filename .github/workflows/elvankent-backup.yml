@@ -58,6 +58,11 @@ jobs:
     env:
       BUCKET: ${{ vars.BACKUP_BUCKET }}
       RETENTION_DAYS: ${{ vars.BACKUP_RETENTION_DAYS || '30' }}
+      # Supabase sunucusu PostgreSQL 17: istemci (psql, pg_dump, pg_restore) en az aynı ana sürüm olmalı. Ubuntu'nun
+      # /usr/bin araçları (pg_wrapper) kurulu en yeni sürümü değil, varsayılanı (16) seçebilir (Backup #39: pg_dump 16.15
+      # sunucu 17.6'yı reddetti); bu yüzden PG 17 ikilileri sonraki adımların PATH'ine açıkça eklenir ve sürüm denetlenir.
+      PG_MAJOR: '17'
+      PG_BIN: /usr/lib/postgresql/17/bin
       # rclone uzakları ortam değişkenleriyle tanımlanır (anahtarlar yalnızca secrets'ta)
       RCLONE_CONFIG_SUPA_TYPE: s3
       RCLONE_CONFIG_SUPA_PROVIDER: Other
@@ -104,7 +109,27 @@ jobs:
           sudo apt-get install -y -qq postgresql-common rclone
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y -qq postgresql-client-17
-          pg_dump --version && rclone version | head -1
+          for tool in psql pg_dump pg_restore; do
+            [ -x "$PG_BIN/$tool" ] || { echo "::error title=PostgreSQL istemcisi eksik::$PG_BIN/$tool kurulmadı; yedek başlatılmadı"; exit 1; }
+          done
+          # Sonraki adımlarda PG 17 ikilileri /usr/bin'deki sarmalayıcıdan ÖNCE bulunur
+          echo "$PG_BIN" >> "$GITHUB_PATH"
+          rclone version | head -1
+
+      - name: PostgreSQL istemci sürümü (yedekten önce)
+        run: |
+          set -euo pipefail
+          # Her araç PG_BIN'den gelmeli ve ana sürümü PG_MAJOR olmalı; değilse yedeğe hiç başlanmaz
+          for tool in psql pg_dump pg_restore; do
+            path=$(command -v "$tool" || true)
+            ver=$({ "$tool" --version 2>/dev/null || true; } | head -1)
+            major=$(printf '%s\n' "$ver" | sed -nE 's/^[^0-9]*([0-9]+).*$/\1/p')
+            if [ "$path" != "$PG_BIN/$tool" ] || [ "$major" != "$PG_MAJOR" ]; then
+              echo "::error title=PostgreSQL istemci sürümü yanlış::$tool: ${path:-bulunamadı} · sürüm ${major:-?} (beklenen $PG_BIN/$tool, ana sürüm $PG_MAJOR); yedek başlatılmadı"
+              exit 1
+            fi
+            echo "$tool: $ver"
+          done
 
       - name: Veritabanı yedeği
         env:
@@ -113,6 +138,13 @@ jobs:
           set -euo pipefail
           STAMP=$(date -u +%Y-%m-%dT%H%MZ)
           echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          # Sunucu istemciden yeni bir ana sürüme geçtiyse yedeğe başlamadan dur (pg_dump yeni sunucuyu reddeder).
+          # Bağlantı hatası burada yutulur; aynı hata backup-db.sh'de adres gizlenerek raporlanır.
+          server_num=$(psql "$SUPABASE_DB_URL" -X -q -At -c 'show server_version_num' 2>/dev/null || true)
+          if [[ "$server_num" =~ ^[0-9]+$ ]] && [ $((server_num / 10000)) -gt "$PG_MAJOR" ]; then
+            echo "::error title=PostgreSQL sürüm uyuşmazlığı::Sunucu ana sürümü $((server_num / 10000)), istemci $PG_MAJOR; PG_MAJOR/PG_BIN güncellenmeli. Yedek başlatılmadı"
+            exit 1
+          fi
           # Yetkiler (GRANT/REVOKE) yedekte KALIR: --no-privileges ile alınan yedekten geri yüklemede
           # yalnızca sunucuya açık fonksiyonlar (davet, alan adı, şifre sıfırlama sınırı) herkese açılır.
           # Parmak izi ve tablo sayıları dump ile AYNI anlık görüntüden alınır (backup_fingerprint.sql, backup_table_counts.sql).
