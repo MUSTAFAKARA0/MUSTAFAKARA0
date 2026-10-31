@@ -1,5 +1,7 @@
 # Yedekleme ve geri yükleme
 
+> **31.10.2026:** Sahip panelde sağlayıcı yedeği olmadığını gösterdi (Free Plan; zamanlanmış yedek ve PITR yok). O-3 kararı: KARAY'ın kendi gece yedeği. İş akışı **hâlâ kapalı**; aşağıdaki "Açılış kapısı" tamamlanıp ilk elle çalıştırma yeşil olana kadar canlı verinin hiçbir yedeği yoktur.
+>
 > **FAZ 3 (11.10.2026) durumu:** Yedek mekanizması kodda hazır ve yerelde uçtan uca doğrulandı (aşağıda "Doğrulama kaydı"). Canlıda **çalışmıyor**: 28.09–11.10 arasındaki 14 zamanlanmış çalışmanın 14'ü de `ELVANKENT_BACKUP_ENABLED` değişkeni `true` olmadığı için **atlandı**; hiç yedek alınmadı. Faz 3'ten sonra yedek kapalıyken her çalışmada görünür bir **"Yedek alınmadı"** uyarısı çıkar (sessiz atlama yok). İlk müşteri alınmadan önce aşağıdaki "Açılış kapısı" adımları tamamlanmalıdır.
 
 ## İki ayrı yedek: sağlayıcının yedeği ≠ KARAY'ın yedeği
@@ -9,7 +11,7 @@
 | Ne | Supabase'in proje yedeği / PITR | `pg_dump` (özel biçim, yetkiler dahil) + Storage dosyaları + kritik veri parmak izi |
 | Nerede | Supabase altyapısında | KARAY'ın S3 uyumlu yedek deposunda (R2 / B2 / S3 — Supabase'ten bağımsız) |
 | Kapsam | Veritabanı. **Storage dosyalarını (fotoğraf, logo) kapsamaz.** | Veritabanı + tüm Storage kovaları |
-| Sıklık / saklama | **Projenin Supabase planına bağlıdır; bu depodan doğrulanamaz.** Supabase › Database › Backups ekranından plan, sıklık, saklama süresi ve PITR durumu okunup buraya yazılmalıdır. | Her gece 04:23 (TR). Veritabanı: `BACKUP_RETENTION_DAYS` (varsayılan **30 gün**). Silinen/değişen dosyaların eski kopyaları: **90 gün**. |
+| Sıklık / saklama | **Yok (31.10.2026, sahip kanıtı).** Supabase › elvankent-demo (eu-central-1, main PRODUCTION) › Database › Backups: "Free Plan does not include project backups" — zamanlanmış yedek yok, PITR yok. Plan yükseltilirse bu satır yeniden okunup güncellenir. | Her gece 04:23 (TR). Veritabanı: `BACKUP_RETENTION_DAYS` (varsayılan **30 gün**). Silinen/değişen dosyaların eski kopyaları: **90 gün**. |
 | Kim geri yükler | Supabase paneli (Restore / PITR) | KARAY (aşağıdaki prosedür) |
 | Sağlayıcı kapanırsa / hesap erişimi kaybolursa | Kullanılamaz | Kullanılabilir |
 
@@ -43,7 +45,7 @@ Zamanlama kuralları (GitHub): zamanlanmış iş akışı yalnızca varsayılan 
   - Variables: `ELVANKENT_BACKUP_ENABLED=true`, `BACKUP_BUCKET`, (isteğe bağlı) `BACKUP_S3_PROVIDER` (ör. `Cloudflare`, `AWS`), `BACKUP_RETENTION_DAYS`
 - [ ] Actions › elvankent-backup › **Run workflow** ile elle çalıştırın; yeşil bitmeli ("Yedek alınmadı" uyarısı görünmemeli), depoda `db-TARIH.dump` + `.fingerprint.txt` + `.tables.txt` + `.sha256` ve `storage/current/…` oluşmalı. Log'da "Ortak anlık görüntü alınamadı" uyarısı varsa `SUPABASE_DB_URL` oturum (session) kipindeki bağlantı olmalıdır.
 - [ ] Bu yedeği indirip bir **test** sunucusunda `scripts/restore-drill.sh` ile geri yükleyin (aşağıdaki "Geri yükleme tatbikatı"); tatbikat "başarılı" bitmeli.
-- [ ] Supabase › Database › Backups: planın sunduğu yedek/PITR durumunu bu belgenin tablosuna yazın.
+- [x] Supabase › Database › Backups: planın sunduğu yedek/PITR durumunu bu belgenin tablosuna yazın. (31.10.2026: Free Plan, sağlayıcı yedeği ve PITR **yok** → canlı verinin tek yedeği bu iş akışı olacak; O-3 kararı bu yöndedir.)
 
 ## Elle yedek (bilgisayarınızdan)
 

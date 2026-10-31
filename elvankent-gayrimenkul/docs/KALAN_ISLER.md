@@ -30,13 +30,13 @@
 | KI-19 | P2: `days` dizisine `.max(7)` | Günlük K-18 | kapandı | Gün listesi en fazla 7 öğe ve tekil | — | — | — | `8d0f282` |
 | KI-20 | P2: `company_name` için CHECK + zod | Günlük K-18 | kapandı (kod) | zod `4afd83f`; CHECK bekleyen migration, canlıya çıkışı KI-27 | — | — | — | `4afd83f`, `dc6594a` |
 | KI-21 | P1: Abonelik durum şeridi + "verilerinizi indirin" | PDF s.11 | sırada | Panelde şerit ve dışa aktarma bağlantısı, E2E testi; metin D-05'e uygun | KI-30 (metin) | ecc:tdd-guide | kısmen | yok |
-| KI-22 | P0-1: Canlı yedeğin kanıtı | PDF s.8, K-19 §5 #1 | engellendi (erişim-izin) | Panel Backups ekran görüntüsü (son yedek, PITR) + A4 `sha256sum -c` TAMAM | — | Sahip | — | yok |
+| KI-22 | P0-1: Canlı yedeğin kanıtı | PDF s.8, K-19 §5 #1 | engellendi (başka iş) | Panel Backups ekran görüntüsü (son yedek, PITR) + A4 `sha256sum -c` TAMAM; sağlayıcı yedeği yoksa KARAY'ın kendi gece yedeğinin ilk yeşil çalışması + `sha256sum -c` TAMAM | KI-28 (O-3 gece yedeği açılışı) | Sahip | — | **31.10.2026 sahip kanıtı:** Supabase › elvankent-demo (kuruluş "Gayrimenkul", eu-central-1, dal main PRODUCTION) › Database › Backups: "Free Plan does not include project backups" → zamanlanmış sağlayıcı yedeği **yok**, PITR **yok**. Canlı yedeğin kanıtı artık yalnız KARAY'ın kendi yedeğine bağlı (KI-28); henüz alınmış yedek yok |
 | KI-23 | P0-2: Canlı DB kimliği | PDF s.10 | engellendi (erişim-izin) | `karays_brand/01_preflight.sql` çıktısında DUR yok; şema `20261011000001`/`20261018000001` | — | Sahip | — | yok |
 | KI-24 | Gerçek yedekle geri yükleme provası | PDF s.7 | engellendi (erişim-izin) | `scripts/restore-drill.sh` gerçek yedekle test sunucusunda (canlıda değil) | KI-22 | Sahip, ecc:e2e-runner | — | betik var |
 | KI-25 | O-1 ortam teyidi (Vercel API 403) | K17 §1, PDF s.10 | engellendi (erişim-izin) | Production = `ff2f7da`, Instant Rollback görüldü, `SITE_ENV` ve Root Directory teyitli | — | Sahip | — | yok |
 | KI-26 | Yayın A: yalnız güvenlik yaması (O-4) | K-19 §4, §8 birim 1 | engellendi (sahip kararı) | Yayın sonrası sağlık kontrolü geçiyor, production next 16.4.3 | KI-25 | Sahip | — | aday #3, `release/security-only/` |
 | KI-27 | Yayın B/C: tam kod + migration'lar (O-5a/b/b'/c, 4c) | K-19 §8 birim 2–5 | engellendi (sahip kararı + erişim) | Her birim kendi runbook'uyla uygulanmış, 04 temiz | KI-22, KI-23, KI-11, KI-12, KI-16 | Sahip | — | yok |
-| KI-28 | O-2, O-3 (yedek yöntemi, gece yedeği), O-6 (geri alma yetkisi) | K17 §1 | engellendi (sahip kararı) | Yazılı karar; O-3 seçildiyse iş akışı ilk kez yeşil | — | Sahip | — | yok |
+| KI-28 | O-2, O-3 (yedek yöntemi, gece yedeği), O-6 (geri alma yetkisi) | K17 §1 | engellendi (erişim-izin) | Yazılı karar; O-3 seçildiyse iş akışı ilk kez yeşil | — | Sahip | — | **O-3 kararı (31.10.2026, sahip):** KARAY'ın kendi gece yedeği `.github/workflows/elvankent-backup.yml` → S3 uyumlu kova. **Henüz çalışmıyor:** kova/anahtarlar ve [BACKUP_RESTORE.md](BACKUP_RESTORE.md) "Açılış kapısı"ndaki sır ve değişkenler sahipte; hiç yedek alınmadı. O-2, O-6 bekliyor |
 | KI-29 | D-04: Ödeme gecikmesinde ek süre | K-19 §5 #5 | engellendi (sahip kararı) | Yazılı karar (öneri: `past_due` 7 gün) | — | Sahip | — | yok |
 | KI-30 | D-05: İptal ve veri saklama (hukuki görüş) | K-19 §5 #6 | engellendi (sahip kararı) | Yazılı karar + sözleşme metni; otomatik silme yok | — | Sahip | — | yok |
 | KI-31 | OPS-02 bayrağını açmak (5b) | K-19 §8 | engellendi (başka iş) | Aboneliksiz aktif ofis listesi incelenmiş; bayrak açık ve SL testleri geçiyor | KI-27, KI-29, KI-30 | Sahip | — | yok |
@@ -57,7 +57,12 @@
 
 ## Sahipten gerekenler
 
-1. P0-1: Supabase › Database › Backups ekran görüntüsü (isteğe bağlı A4 kopyası ve geri yükleme provası).
+1. P0-1 / O-3 gece yedeğinin açılışı (31.10: sağlayıcı yedeği yok, Free Plan; kendi yedeğimiz seçildi, henüz çalışmıyor). Sırayla, [BACKUP_RESTORE.md](BACKUP_RESTORE.md) "Açılış kapısı":
+   1. Cloudflare R2'de **özel** bir yedek kovası + yalnız bu kovaya yazabilen erişim anahtarı.
+   2. Supabase › Project Settings › Storage › S3 Connection: S3 erişim anahtarı (uç nokta, bölge); Database › Connection string › **Session pooler** adresi.
+   3. GitHub › Settings › Secrets and variables › Actions: belgede adı geçen 9 sır ve `ELVANKENT_BACKUP_ENABLED=true`, `BACKUP_BUCKET` (+ isteğe bağlı `BACKUP_S3_PROVIDER`, `BACKUP_RETENTION_DAYS`). Değerleri kimseyle paylaşmayın.
+   4. Actions › elvankent-backup › Run workflow: ilk elle çalıştırma yeşil; kovada `db-TARIH.dump/.fingerprint.txt/.tables.txt/.sha256` ve `storage/current/`.
+   5. KI-24: bu yedeği indirip **test** veritabanında `scripts/restore-drill.sh` (asla canlıda değil).
 2. P0-2: `supabase/ops/karays_brand/01_preflight.sql` çıktısı (salt okunur, SQL Editor).
 3. O-1: Vercel'de production `ff2f7da`, Instant Rollback, `SITE_ENV` ve Root Directory ekran görüntüsü.
 4. O-4: yalnız güvenlik yaması (A) onayı ve yedek kapısının bu yayına uygulanıp uygulanmayacağı.
