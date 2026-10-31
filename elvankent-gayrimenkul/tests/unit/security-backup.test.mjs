@@ -25,6 +25,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = new URL('../../', import.meta.url).pathname;
 const read = (p) => readFileSync(root + p, 'utf8');
@@ -290,6 +291,51 @@ describe('BK-02b PostgreSQL 17 istemcisi (Backup #39: pg_dump 16.15 ↔ sunucu 1
     const r = runCheck(t, { pgVersions: { pg_restore: '16.15' } });
     assert.equal(r.status, 1);
     assert.match(r.stdout, /pg_restore: .*sürüm 16 /);
+  });
+});
+
+describe('BK-02c herkese açık günlükte müşteri yolu yok (Backup #43)', () => {
+  const wf = read('../.github/workflows/elvankent-backup.yml');
+  const storage = wf.slice(wf.indexOf('- name: Fotoğraf ve marka dosyaları (Storage)'), wf.indexOf('- name: Saklama süresi'));
+  test('Storage adımı rclone çıktısını dosyaya yazar, yalnız maskelenmiş özet basar, günlüğü siler', () => {
+    assert.match(storage, /--log-file "\$log" --log-level NOTICE \|\| rc=\$\?/);
+    assert.match(storage, /bash elvankent-gayrimenkul\/scripts\/rclone-log-summary\.sh "\$log" "\$b"/);
+    assert.match(storage, /rm -f "\$log"/);
+    assert.doesNotMatch(storage, /cat "\$log"|tail [^\n]*\$log|--stats-one-line/);
+    assert.match(storage, /exit "\$rc"/, 'hata yine işi kırmızı yapar');
+    assert.match(storage, /--backup-dir "dest:\$BUCKET\/storage\/deleted\/\$STAMP\/\$b"/, 'silinen dosyalar korunur');
+  });
+  const summarize = (t, text) => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'karay-rlog-'));
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    const f = path.join(dir, 'r.log');
+    writeFileSync(f, text);
+    return spawnSync('bash', ['scripts/rclone-log-summary.sh', f, 'media-originals'], { cwd: fileURLToPath(new URL('../../', import.meta.url)), encoding: 'utf8' });
+  };
+  const ORG = '8eb88b55-ce41-43ac-ad21-cba9bf4dd469'.replace(/[0-9a-f]/g, (c) => ((parseInt(c, 16) + 3) % 16).toString(16));
+  const MED = 'abcdef01-2345-4678-9abc-def012345678';
+  test('özet: hata türleri ve HTTP kodları sayılır; yol, kurum/medya kimliği, kova yolu ve adres yazılmaz', (t) => {
+    const r = summarize(t, [
+      `2026/10/31 22:59:51 ERROR : organizations/${ORG}/properties/${MED}/images/${MED}/original: Failed to copy: NotImplemented: Not Implemented`,
+      '\tstatus code: 501, request id: , host id: ',
+      `2026/10/31 22:59:52 ERROR : organizations/${ORG}/content/${MED}/original: Failed to copy: NotImplemented: Not Implemented`,
+      '\tstatus code: 501, request id: , host id: ',
+      '2026/10/31 23:00:21 ERROR : S3 bucket karays-yedek path storage/current/media-originals: not deleting files as there were IO errors',
+      `2026/10/31 23:00:21 ERROR : Attempt 1/3 failed with 43 errors and: Get "https://${'a'.repeat(32)}.r2.cloudflarestorage.com/x": dial tcp`,
+      '',
+    ].join('\n'));
+    assert.equal(r.status, 0);
+    assert.match(r.stdout, /media-originals: 4 hata satırı/);
+    assert.match(r.stdout, /×2 {2}Failed to copy · NotImplemented/);
+    assert.match(r.stdout, /HTTP 501 ×2/);
+    for (const leak of [ORG, MED, 'organizations/', 'karays-yedek', 'storage/current', 'r2.cloudflarestorage.com', 'a'.repeat(32)]) {
+      assert.ok(!r.stdout.includes(leak), `sızıntı: ${leak.slice(0, 12)}`);
+    }
+  });
+  test('hatasız günlük ve olmayan günlük', (t) => {
+    assert.match(summarize(t, '2026/10/31 NOTICE: Config file not found\n').stdout, /media-originals: hata yok/);
+    const r = spawnSync('bash', ['scripts/rclone-log-summary.sh', '/yok/r.log', 'media'], { cwd: fileURLToPath(new URL('../../', import.meta.url)), encoding: 'utf8' });
+    assert.match(r.stdout, /media: rclone günlüğü yok/);
   });
 });
 

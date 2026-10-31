@@ -105,7 +105,10 @@ describe('R2-01 iş akışı', () => {
       assert.match(m[1], /^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/);
       assert.match(m[2].trim(), /^# v\d+\.\d+\.\d+$/);
     }
-    assert.doesNotMatch(wf, /SUPABASE_DB_URL|SUPABASE_S3/);
+    assert.doesNotMatch(wf, /SUPABASE_DB_URL/);
+    // Supabase S3 anahtarları yalnız storage-probe işinde (Backup #43 kaynak tarafı, salt okuma)
+    const r2Job = wf.slice(wf.indexOf('\n  r2:'), wf.indexOf('\n  storage-probe:'));
+    assert.doesNotMatch(r2Job, /SUPABASE_S3/);
     assert.match(wf, /bash elvankent-gayrimenkul\/scripts\/r2-diagnose\.sh/);
     assert.doesNotMatch(wf, /echo[^\n]*secrets\./);
   });
@@ -207,5 +210,64 @@ describe('R2-06 kalan test dosyası', () => {
     assert.equal(r.left.length, 1);
     assert.ok(r.backupIntact);
     noLeak(r.out);
+  });
+});
+
+describe('R2-07 Storage aktarım sondası (Backup #43)', () => {
+  const probe = read('scripts/storage-transfer-probe.sh');
+  const pcode = probe.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+  test('iş: R2 teşhisinden sonra, aynı elle tetikleme koşulu; güncel rclone imza + SHA-256 ile doğrulanır', () => {
+    const job = wf.slice(wf.indexOf('\n  storage-probe:'));
+    assert.match(job, /needs: r2/);
+    assert.match(job, /if: \$\{\{ github\.event_name == 'workflow_dispatch' \|\| !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\) \}\}/);
+    assert.match(job, /RCLONE_NEW: v\d+\.\d+\.\d+/);
+    assert.match(job, /RCLONE_KEY_FPR: [0-9A-F]{40}/);
+    assert.match(job, /gpg --batch --status-fd 1 --verify SHA256SUMS[^\n]*\| grep -q "VALIDSIG \.\*\$RCLONE_KEY_FPR"/);
+    assert.match(job, /grep " \$zip\\\$" SHA256SUMS \| sha256sum -c --quiet -/);
+    assert.doesNotMatch(job, /SUPABASE_DB_URL/);
+  });
+  test('kaynak yalnız okunur; hedefte yalnız sonda önekine yazılır/silinir; toplu komut yok', () => {
+    assert.doesNotMatch(pcode, /"(supa):[^"]*"[^\n]*(copyto|deletefile|sync|delete|purge|move)|(copyto|deletefile|sync|delete|purge|move) "supa:/);
+    assert.doesNotMatch(pcode, /rclone[^\n]* (sync|delete|purge|move|moveto|rmdirs?|cleanup) /);
+    for (const m of pcode.matchAll(/(copyto|deletefile) [^\n]*/g)) {
+      if (m[0].includes('"R2')) assert.match(m[0], /\$BACKUP_BUCKET\/(\$PREFIX\/|\$dst|\$d")/, m[0]);
+    }
+    assert.match(pcode, /PREFIX="diagnostics\/\$TAG"/);
+    assert.match(pcode, /dst="\$PREFIX\/dst\//);
+  });
+  test('günlüğe yalnız özet: ham döküm, yol ve uç nokta basılmaz', () => {
+    assert.doesNotMatch(pcode, /cat "\$WORK\/(a-|b-|src)/);
+    assert.doesNotMatch(pcode, /(say|md|echo|printf)[^\n]*\$(obj|SUPA_HOST|R2_HOST|SUPABASE_S3_ENDPOINT|BACKUP_S3_ENDPOINT)\b/);
+    assert.match(pcode, /--dump headers --log-level DEBUG --log-file/);
+  });
+  test('döküm özetleyici: taraf/yöntem/durum sayar, 501 başlık ADLARINI verir; yol ve adres yazmaz', (t) => {
+    const fn = probe.slice(probe.indexOf('summarize_dump() {'), probe.indexOf('\ncleanup() {'));
+    const dump = [
+      '2026/10/31 DEBUG : HTTP REQUEST (req 0xc0001)',
+      '2026/10/31 DEBUG : HEAD /karays-yedek/storage/current/media-originals/organizations/x/original HTTP/1.1',
+      'Host: acct.r2.example',
+      'Authorization: XXXX',
+      'X-Amz-Date: 20261031T000000Z',
+      '2026/10/31 DEBUG : HTTP RESPONSE (req 0xc0001)',
+      '2026/10/31 DEBUG : HTTP/1.1 501 Not Implemented',
+      '2026/10/31 DEBUG : HTTP REQUEST (req 0xc0002)',
+      '2026/10/31 DEBUG : GET /media-originals/organizations/x/original HTTP/1.1',
+      'Host: proj.supabase.example',
+      '2026/10/31 DEBUG : HTTP RESPONSE (req 0xc0002)',
+      '2026/10/31 DEBUG : HTTP/1.1 200 OK',
+      '',
+    ].join('\n');
+    const dir = mkdtempSync(path.join(tmpdir(), 'karay-dump-'));
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    writeFileSync(path.join(dir, 'd.log'), dump);
+    const r = spawnSync('bash', ['--noprofile', '--norc', '-c', `${fn}\nsummarize_dump "$1"`, 'x', path.join(dir, 'd.log')], {
+      env: { PATH: '/usr/bin:/bin', SUPA_HOST: 'proj.supabase.example', R2_HOST: 'acct.r2.example' },
+      encoding: 'utf8',
+    });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /^r2 HEAD 501 ×1$/m);
+    assert.match(r.stdout, /^supabase GET 200 ×1$/m);
+    assert.match(r.stdout, /501 başlık adları \(r2 HEAD\): authorization x-amz-date/);
+    for (const leak of ['organizations', 'karays-yedek', 'acct.r2.example', 'proj.supabase.example', 'XXXX']) assert.ok(!r.stdout.includes(leak), leak);
   });
 });

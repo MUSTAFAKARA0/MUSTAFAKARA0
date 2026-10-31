@@ -159,10 +159,21 @@ jobs:
       - name: Fotoğraf ve marka dosyaları (Storage)
         run: |
           set -euo pipefail
+          # Herkese açık günlük: rclone hata satırları nesne yollarını (kurum/ilan/medya kimlikleri) içerir (Backup #43).
+          # rclone çıktısı yalnız geçici dosyaya yazılır; ekrana maskelenmiş, türlere göre sayılmış özet basılır.
           for b in media-originals media branding property-images; do
+            log="$RUNNER_TEMP/rclone-storage-$b.log"
+            rc=0
             rclone sync "supa:$b" "dest:$BUCKET/storage/current/$b" \
               --backup-dir "dest:$BUCKET/storage/deleted/$STAMP/$b" \
-              --s3-no-check-bucket --transfers 8 --checkers 16 --stats-one-line --stats 60s
+              --s3-no-check-bucket --transfers 8 --checkers 16 \
+              --log-file "$log" --log-level NOTICE || rc=$?
+            bash elvankent-gayrimenkul/scripts/rclone-log-summary.sh "$log" "$b"
+            rm -f "$log"
+            if [ "$rc" != 0 ]; then
+              echo "::error title=Storage yedeği eksik::$b kovasının aktarımı başarısız (rclone çıkış kodu $rc; ayrıntı yukarıdaki maskelenmiş özette)"
+              exit "$rc"
+            fi
           done
 
       - name: Saklama süresi
