@@ -11,7 +11,7 @@
 --     (CREATE TRIGGER / CREATE POLICY storage.objects üzerinde kilit ister; 55P03'te hiçbir şey değişmemiştir, sakin anda tekrar).
 --     Uygulama anında süren yüklemeler (kısa) kilidi bekletebilir; trafiğin az olduğu bir anda çalıştırın.
 --   • Koruma: şema sürümü en az 20261018000001; A ve B kurulu ('apply B first'); çalıştıran rolün storage.objects üzerinde
---     TRIGGER hakkı var.
+--     TRIGGER hakkı ve geri dönüş için DROP TRIGGER / POLICY yetkisi (sahip üyeliği ya da supautils izin listeleri) var.
 --   • Gövde supabase/pending/20261027000003_media_storage_slots.sql ile birebir aynıdır (birim testi LR-14 denetler).
 --     Tekrar çalıştırılabilir. Veri değiştirmez; mevcut nesneler denetlenmez.
 --   • Geri dönüş: 05 (C HER ZAMAN B'den önce geri alınır).
@@ -44,6 +44,11 @@ begin
   if not has_table_privilege(current_user, 'storage.objects', 'trigger') then
     raise exception 'DUR: % rolünün storage.objects üzerinde TRIGGER hakkı yok; tetikleyici kurulamaz (README: sağlayıcı kısıtı)', current_user;
   end if;
+  if not (pg_has_role(current_user, (select c.relowner from pg_class c where c.oid = to_regclass('storage.objects')), 'member')
+            or (coalesce(current_setting('supautils.drop_trigger_grants', true), '') like '%"' || current_user || '":[%"storage.objects"%'
+                and coalesce(current_setting('supautils.policy_grants', true), '') like '%"' || current_user || '":[%"storage.objects"%')) then
+    raise exception 'DUR: % rolü storage.objects üzerinde DROP TRIGGER / POLICY yapamaz (sahip değil, supautils izin listesinde yok); 05 ile geri alınamaz', current_user;
+  end if;
 end
 $koruma$;
 
@@ -62,7 +67,11 @@ $guard$;
 -- Bakım penceresi: tek satır; istemcilere ve service_role'e kapalı (yalnız veritabanı sahibi açar)
 create table if not exists public.media_overwrite_window (
   id boolean primary key default true check (id),
-  open_until timestamptz not null
+  opened_at timestamptz not null default now(),
+  open_until timestamptz not null,
+  -- En çok 24 saat; ileri tarihli "uyuyan" pencere kurulamaz (DB inceleme #3)
+  constraint media_overwrite_window_max_1d check (open_until > opened_at and open_until <= opened_at + interval '1 day'),
+  constraint media_overwrite_window_opened_now check (opened_at <= now() + interval '1 minute')
 );
 alter table public.media_overwrite_window enable row level security;
 revoke all on table public.media_overwrite_window from public, anon, authenticated, service_role;
@@ -97,12 +106,24 @@ as $$
       '^(organizations/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/(?:properties/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/images|content)/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/([A-Za-z0-9_]{8}(?:-r(?:90|180|270))?)/w[0-9]{1,4}\.webp$'
     ) as g
   )
+  -- Sınırlar (K-23 güvenlik MEDIUM): hedef tabanda en çok 6 dosya (uygulama ≤ 6 genişlik üretir); klasörde güncel taban
+  -- ve hedef dışında en çok 1 taban daha (döndürmeden sonra cron'un sileceği eski taban) → satır başına sayılmayan alan sınırlı
   select m.organization_id
     from p
     join public.media_assets m on m.id = (p.g[2])::uuid
    where p.g is not null
      and m.original_path = p.g[1] || '/original'
      and m.public_base is distinct from p.g[1] || '/' || p.g[3]
+     and (select count(*) from storage.objects o
+           where o.bucket_id = 'media'
+             and o.name collate "C" >= p.g[1] || '/' || p.g[3] || '/' collate "C"
+             and o.name collate "C" < p.g[1] || '/' || p.g[3] || '0' collate "C") < 6
+     and (select count(distinct split_part(substr(o.name, length(p.g[1]) + 2), '/', 1)) from storage.objects o
+           where o.bucket_id = 'media'
+             and o.name collate "C" >= p.g[1] || '/' collate "C"
+             and o.name collate "C" < p.g[1] || '0' collate "C"
+             and not starts_with(o.name, p.g[1] || '/' || p.g[3] || '/')
+             and (m.public_base is null or not starts_with(o.name, m.public_base || '/'))) < 2
 $$;
 
 revoke all on function public.media_original_slot_org(text) from public, anon, authenticated, service_role;
@@ -194,8 +215,7 @@ begin
      and (tg_op = 'INSERT' or old.bucket_id not in ('media-originals', 'media')) then
     return new;
   end if;
-  v_window := exists (select 1 from public.media_overwrite_window w
-                       where w.open_until > now() and w.open_until <= now() + interval '1 day');
+  v_window := exists (select 1 from public.media_overwrite_window w where w.open_until > now());
   if v_window then
     return new;
   end if;
@@ -212,7 +232,13 @@ begin
     raise exception 'media_slot_closed' using errcode = '42501';
   end if;
 
-  -- UPDATE (üzerine yazma ya da taşıma): eski ve yeni ad, kurum öneki altındaysa yuva ister (herkes için)
+  -- UPDATE (üzerine yazma ya da taşıma). media kovasında hiç yok: uygulama varyantları upsert'siz yazar; emekli
+  -- (önbellekte olabilecek) tabanların üzerine yazılamaz (K-23 DB inceleme #4)
+  if (old.bucket_id = 'media' and old.name like 'organizations/%')
+     or (new.bucket_id = 'media' and new.name like 'organizations/%') then
+    raise exception 'media_slot_closed' using errcode = '42501';
+  end if;
+  -- Orijinal: eski ve yeni ad yuva ister (herkes için)
   if old.bucket_id in ('media-originals', 'media') and old.name like 'organizations/%'
      and not ((old.bucket_id = 'media-originals' and public.media_original_slot_org(old.name) is not null)
               or (old.bucket_id = 'media' and public.media_variant_slot_org(old.name) is not null)) then

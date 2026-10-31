@@ -187,3 +187,21 @@ B `20261027000002_media_column_privileges.sql`, C `20261027000003_media_storage_
   11'i kapandı (2 ve 9'un kalanları H1/M2'de).
 - **R3 kararı:** CI'a `PENDING` matrisi bu turda eklenmedi (database işinin süresi ~2 katına çıkar). "Yeni kod + eski şema"
   yerelde E2E ile (yalnız bekleyen dosyasız şema) ve MF-07 ile doğrulanır; matris KI-37 ile birlikte tekrar değerlendirilir.
+
+## 11. C uygulandı (bekleyen, K-23 · KI-37)
+
+- **Dosya:** `supabase/pending/20261027000003_media_storage_slots.sql`; runbook `supabase/ops/media_storage_slots/` (01–05 + README);
+  prova `scripts/rehearse-runbooks.sh` (7 runbook). Sıra: A → kod → B → C; geri alma C → B → A (B'nin 05'i C varken durur).
+- **Yerel ölçüm (storage-api v1.82.1):** RLS istek ve imzalama anında denetlenir; imzalı adresle asıl yükleme RLS'yi atlar
+  (veritabanına `service_role` olarak, sahibi token kullanıcısı). Bu yüzden iki katman: yuva isteyen politikalar + `storage.objects`
+  `BEFORE INSERT OR UPDATE` tetikleyicisi; tam geri yükleme sonrası üzerine yazma için en çok 24 saatlik bakım penceresi.
+- **Yuva:** orijinal = çağıranın kurumundaki `pending` satırın `original_path`'ine birebir eşit ad; varyant = satır klasöründe
+  `<sürüm>/w<genişlik>.webp`, güncel taban değil, taban başına ≤ 6 dosya, güncel dışı ≤ 2 taban; `media` kovasında üzerine yazma yok.
+- **Testler:** `tests/security/media-storage-slots.test.mjs` SL-08…SL-13 + SL-11b (C olmadan kırmızı: önce 15/19, sınırlar için 5);
+  MF-07 C'yi B'den önce geri alıp sonra yeniden uygular; `rls.test.mjs` kontrol testi önce bekleyen satır oluşturur.
+- **CI `PENDING` matrisi (R3) kararı:** tam matris yerine paralel `database-legacy-schema` işi (PENDING=none: yeni kod + bekleyen
+  dosyasız şema, medya E2E). PENDING=a ayrı iş değil: MF-07 ve SL-13 güvenlik testlerinde kapsanır.
+- **Bağımsız incelemeler (K-23):** veritabanı: koşullu onay. #1 HIGH (05 için supautils `drop_trigger_grants`/`policy_grants`
+  denetlenmiyordu) → 01 13. satır + 03 kapısı; #3 MEDIUM (pencere sınırı) → `opened_at` + CHECK; #4 LOW (emekli taban) → `media`
+  kovasında üzerine yazma yok; #2 MEDIUM (TUS testi) → güvenlik incelemesi elle doğruladı, otomatik test yok; #5 LOW → KI-38.
+  Güvenlik: açık CRITICAL/HIGH yok; MEDIUM (sınırsız sayılmayan varyant alanı) → sınırlandı (2 taban × 6 dosya), kalıcı çözüm KI-38.

@@ -6,7 +6,8 @@
 --   psql: PGOPTIONS='-c default_transaction_read_only=on' psql "$DB_URL" -X -f 01_preflight.sql
 --
 -- Çıktının TAMAMINI saklayın (metin olarak). "durum" sütununda DUR varsa 03 UYGULANMAZ.
--- Bu betik C'nin kapısıdır: A ya da B uygulanmamışsa, çalıştıran rolün storage.objects üzerinde TRIGGER hakkı yoksa DUR.
+-- Bu betik C'nin kapısıdır: A ya da B uygulanmamışsa, çalıştıran rolün storage.objects üzerinde TRIGGER hakkı yoksa ya da
+-- tetikleyici/politikalar 05 ile geri alınamayacaksa (13. satır: sahip üyeliği ya da supautils izin listeleri) DUR.
 -- Çıktıda kurum adı, kimlik, dosya yolu ya da kişi verisi yoktur; yalnızca sayı ve nesne durumu.
 -- =============================================================================
 with
@@ -51,6 +52,14 @@ select sira, kontrol, deger, durum from (
          case when has_table_privilege(current_user, 'storage.objects', 'trigger') then 'TAMAM'
               else 'DUR: tetikleyici kurulamaz — sağlayıcı storage şemasını kısıtlıyor olabilir; README "Sağlayıcı kısıtı"' end
   union all
+  select 13, 'Geri alınabilirlik: storage.objects sahibi rolüne üyelik ya da supautils drop_trigger_grants + policy_grants (DROP TRIGGER / POLICY)  [KAYDET]',
+         current_user || ' · ' || (pg_has_role(current_user, (select c.relowner from pg_class c where c.oid = to_regclass('storage.objects')), 'member') or (coalesce(current_setting('supautils.drop_trigger_grants', true), '') like '%"' || current_user || '":[%"storage.objects"%'     and coalesce(current_setting('supautils.policy_grants', true), '') like '%"' || current_user || '":[%"storage.objects"%'))::text,
+         case when (pg_has_role(current_user, (select c.relowner from pg_class c where c.oid = to_regclass('storage.objects')), 'member')
+            or (coalesce(current_setting('supautils.drop_trigger_grants', true), '') like '%"' || current_user || '":[%"storage.objects"%'
+                and coalesce(current_setting('supautils.policy_grants', true), '') like '%"' || current_user || '":[%"storage.objects"%'))
+              then 'TAMAM (05 ve 03''ün yeniden çalıştırılması mümkün)'
+              else 'DUR: tetikleyici kurulabilir ama 05 ile KALDIRILAMAZ (must be owner); sağlayıcı ayarı doğrulanmadan uygulanmaz (README "Sağlayıcı kısıtı")' end
+  union all
   select 7, 'C uygulanmış mı — media_storage_slot_guard tetikleyicisi  [KAYDET]',
          (select count(*)::text from pg_trigger where tgname = 'media_storage_slot_guard' and not tgisinternal and tgrelid = to_regclass('storage.objects')),
          case when (select count(*) from pg_trigger where tgname = 'media_storage_slot_guard' and not tgisinternal and tgrelid = to_regclass('storage.objects')) = 0
@@ -74,8 +83,8 @@ select sira, kontrol, deger, durum from (
          'BİLGİ: süren yüklemeler bekleyen satırla devam eder; C onları etkilemez'
   union all
   select 11, '1 dakikadan uzun açık işlem',
-         (select count(*)::text from pg_stat_activity where xact_start < now() - interval '1 minute' and pid <> pg_backend_pid()),
-         case when (select count(*) from pg_stat_activity where xact_start < now() - interval '1 minute' and pid <> pg_backend_pid()) = 0
+         (select count(*)::text from pg_stat_activity where backend_type = 'client backend' and xact_start < now() - interval '1 minute' and pid <> pg_backend_pid()),
+         case when (select count(*) from pg_stat_activity where backend_type = 'client backend' and xact_start < now() - interval '1 minute' and pid <> pg_backend_pid()) = 0
               then 'TAMAM' else 'DUR: uzun işlem storage.objects kilidini (55P03) bekletir; bitmesini bekleyin' end
   union all
   select 12, 'Verilmemiş (bekleyen) kilit sayısı',

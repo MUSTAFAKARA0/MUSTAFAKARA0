@@ -19,12 +19,14 @@ anında RLS'yi geri alınan bir deneme yazımıyla denetler; imzalı adresle yap
 
 1. `../media_finalize_rpc/` (A) ve `../media_privileges/` (B) uygulanmış, 04'leri `TAMAM`. C dosyası B yoksa kendisi `apply B first` ile durur.
 2. Yeni kod (`media_finalize` kullanan sürüm) production'da; B'nin README'sindeki yükleme + döndürme denemesi başarılı.
-3. 01 çıktısında `DUR` yok; özellikle **6. satır** (çalıştıran rolün `storage.objects` üzerinde TRIGGER hakkı) `TAMAM`.
+3. 01 çıktısında `DUR` yok; özellikle **6. satır** (çalıştıran rolün `storage.objects` üzerinde TRIGGER hakkı) ve **13. satır**
+   (geri alınabilirlik: `storage.objects` sahibi rolüne üyelik ya da supautils `drop_trigger_grants` + `policy_grants` listesinde
+   `storage.objects`) `TAMAM`.
 4. 02 çıktısı saklandı; tam yedek alındı; bu adım için yazılı O-5 onayı var.
 
 | Adım | Dosya | Ne yapar | Beklenen çıktı |
 |---|---|---|---|
-| 1 | `01_preflight.sql` | Okur (tek SELECT) — C'nin kapısı | `DUR` yok; 4., 5., 6. satırlar `TAMAM`; 8. satır `4 / 0` |
+| 1 | `01_preflight.sql` | Okur (tek SELECT) — C'nin kapısı | `DUR` yok; 4., 5., 6., 13. satırlar `TAMAM`; 8. satır `4 / 0` |
 | 2 | `02_save_state.sql` | Okur; dört politikanın ve tetikleyicilerin tanımını kaydeder | Çıktı saklanır (`KAYDET` satırları) |
 | 3 | `03_apply.sql` | Tek işlemde uygular (`lock_timeout 3s`, `statement_timeout 30s`) | Sonuç satırı: `media_storage_slot_guard tetikleyici sayısı = 1` |
 | 4 | `04_postflight.sql` | Okur | Tüm satırlar `TAMAM` |
@@ -38,9 +40,27 @@ anında RLS'yi geri alınan bir deneme yazımıyla denetler; imzalı adresle yap
 
 ## Sağlayıcı kısıtı
 
-Tetikleyici `storage.objects` üzerinde kurulur (sahibi `supabase_storage_admin`). Yerelde `postgres` rolünün bu tabloda TRIGGER
-hakkı vardır; canlı projede bu hak sağlayıcının storage şeması politikasına bağlıdır ve **bu depodan doğrulanamaz**. 01'in
-6. satırı `DUR` derse 03 uygulanmaz (03 de aynı denetimle durur); yalnız politikalı yarım çözüm uygulanmaz, karar sahipte kalır.
+Tetikleyici ve politikalar `storage.objects` üzerinde kurulur (sahibi `supabase_storage_admin`). `postgres` bu tablonun sahibi
+değildir: CREATE TRIGGER için TRIGGER hakkı yeter, ama **DROP TRIGGER ve CREATE/DROP POLICY** (05 ve 03'ün yeniden çalıştırılması)
+için Supabase'in supautils ayarları (`supautils.drop_trigger_grants`, `supautils.policy_grants`) `storage.objects`'i bu rol için
+listelemelidir. Yerelde (CLI 2.121.0) ikisi de listeliyor; canlı projede **bu depodan doğrulanamaz**. 01'in 6. ya da 13. satırı
+`DUR` derse 03 uygulanmaz (03 de aynı denetimlerle durur): ilk uygulama başarılı olup 05'in "must be owner" ile kalması (tetikleyici
+kaldırılamaz, B'nin 05'i de C varken durur) bu kapıyla önlenir. Yalnız politikalı yarım çözüm uygulanmaz; karar sahipte kalır.
+
+## Bilinen ve kabul edilen sınırlar (K-23 bağımsız incelemeler)
+
+- **Sayılmayan varyant alanı (güvenlik MEDIUM, sınırlandı):** varyant yuvası her satırda güncel taban dışında en çok 2 tabana ve
+  taban başına en çok 6 dosyaya izin verir (kova sınırı dosya başına 10 MB); `media` kovasında üzerine yazma hiç yoktur.
+  Bir `media.manage` üyesi kendi kurumunda satır başına bu kadar sayılmayan dosya tutabilir; satır silinince kuyruk yalnız
+  orijinal + güncel tabanı alır, ek tabanlar `media_storage_report` ile görünür. Kalıcı çözüm (sunucunun verdiği tek "sonraki
+  taban" ya da silmede `{id}/` klasörünün tamamı) ayrı iş: KALAN_ISLER KI-38.
+- **İşleme sırasında orijinal (DB LOW #5):** bekleyen satırın `upsert` imzası, `processMedia` orijinali indirdikten sonra ve
+  `media_finalize` işlemeden önce orijinalin üzerine yazabilir (C öncesi de vardı, pencere kısa). Çözüm: indirilen nesne sürümünün
+  sonlandırmada karşılaştırılması (KI-38).
+- **Reddedilen yüklemenin dosya baytları (güvenlik LOW):** tetikleyici veritabanı adımında reddeder; storage-api'nin o ana kadar
+  yazdığı baytları silip silmediği doğrulanmadı (bütünlüğe etkisi yok, disk kullanımı).
+- **TUS (büyük dosya) yolu:** otomatik testte yok; bağımsız güvenlik incelemesi yerelde elle denedi: sonlandırma sonrası eski imzayla
+  ve oturumla `x-upsert` TUS yüklemesi reddedildi, bekleyen yuvaya TUS yüklemesi çalıştı.
 
 ## Etki
 
@@ -57,12 +77,14 @@ C, `service_role`'ün de sonlanmış nesnelerin üzerine yazmasını engeller. T
 eksik) üzerine yazma gerekiyorsa, **hedef** projenin SQL Editor'ünde en çok 24 saatlik bakım penceresi açılır, iş bitince kapatılır:
 
 ```sql
-insert into public.media_overwrite_window (id, open_until) values (true, now() + interval '2 hours')
-  on conflict (id) do update set open_until = excluded.open_until;   -- aç
+insert into public.media_overwrite_window (id, opened_at, open_until) values (true, now(), now() + interval '2 hours')
+  on conflict (id) do update set opened_at = excluded.opened_at, open_until = excluded.open_until;   -- aç (CHECK: en çok 24 saat)
 delete from public.media_overwrite_window;                           -- kapat (04'ün 9. satırı açık pencereyi HATA sayar)
 ```
 
 Pencere yalnız tetikleyiciyi gevşetir; oturum istemcileri politikaya yine takılır. Tabloya istemciler ve `service_role` erişemez.
+Pencere açıkken imzalı adresler de serbest yazar: geri yükleme bitene kadar ofis kullanıcılarının yükleme yapmaması (bakım
+duyurusu) sağlanır ve pencere iş biter bitmez kapatılır.
 
 ## Geri dönüş
 

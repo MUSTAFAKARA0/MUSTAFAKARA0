@@ -43,7 +43,7 @@ select sira, kontrol, deger, durum from (
   union all
   select 4, 'media_storage_slot_guard() gövde özeti (boşluklar tek, md5)',
          coalesce((select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f), 'yok'),
-         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f) = '69075479c5ae1122d2caa3a4192b19f7'
+         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f) = '2e1c1307555926446fd2ef64cbc30d48'
               then 'TAMAM' else 'HATA: gövde bekleneni içermiyor' end
   union all
   select 5, 'Yuva fonksiyonları (4): security definer ve boş search_path',
@@ -64,9 +64,10 @@ select sira, kontrol, deger, durum from (
          (select toplam::text || ' / ' || yuvali::text || ' / ' || guncelleme_kontrol::text from pol),
          case when (select toplam from pol) = 4 and (select yuvali from pol) = 4 and (select guncelleme_kontrol from pol) = 2 then 'TAMAM' else 'HATA' end
   union all
-  select 8, 'Bakım penceresi tablosu: RLS açık, anon/authenticated/service_role erişimi yok',
+  select 8, 'Bakım penceresi tablosu: RLS açık, en çok 24 saat (CHECK), anon/authenticated/service_role erişimi yok',
          coalesce((select c.relrowsecurity::text from pg_class c where c.oid = to_regclass('public.media_overwrite_window')), 'yok'),
          case when exists (select 1 from pg_class c where c.oid = to_regclass('public.media_overwrite_window') and c.relrowsecurity)
+                and exists (select 1 from pg_constraint k where k.conrelid = to_regclass('public.media_overwrite_window') and k.conname = 'media_overwrite_window_max_1d')
                 and not exists (select 1 from pg_roles r where r.rolname in ('anon', 'authenticated', 'service_role')
                                   and (has_table_privilege(r.oid, 'public.media_overwrite_window', 'select')
                                        or has_table_privilege(r.oid, 'public.media_overwrite_window', 'insert')

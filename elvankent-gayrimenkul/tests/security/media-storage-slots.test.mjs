@@ -11,6 +11,7 @@
  *   SL-09  sonlandırma sonrası: orijinal için yeni imza (upsert) ve doğrudan üzerine yazma reddedilir
  *   SL-10  bekleme anında alınmış imzalı adres: sonlandırmadan sonra üzerine yazamaz; satır silinince yükleyemez
  *   SL-11  media (varyant): satırsız, başka kurum ve güncel (sonlanmış) tabana yazma reddedilir; yeni tabana yazılır
+ *   SL-11b varyant yuvası sınırları: taban başına 6 dosya, güncel dışı en çok 2 taban, media kovasında üzerine yazma yok
  *   SL-12  service_role: yeni nesne yükler (geri yükleme --apply); sonlanmış nesnenin üzerine yalnız bakım penceresinde
  *   SL-13  yardımcı fonksiyonlar anon'a kapalı; C kendini korur (B yoksa 'apply B first'); dosya sırası
  *
@@ -336,6 +337,31 @@ describe('SL-11 varyantlar (media kovası)', { skip }, () => {
   });
 });
 
+describe('SL-11b varyant yuvası sınırları (K-23 güvenlik MEDIUM, DB #4)', { skip }, () => {
+  test('hedef tabanda en çok 6 dosya: 7. reddedilir', async () => {
+    const row = await pendingRow(O.a);
+    const base = `${row.folder}/${rev()}`;
+    for (const w of [320, 640, 960, 1440, 2048, 2880]) assert.ifError((await uput(O.a.owner.client, 'media', `${base}/w${w}.webp`, 10, WEBP)).error);
+    assert.ok((await uput(O.a.owner.client, 'media', `${base}/w1000.webp`, 10, WEBP)).error, '7. dosya reddedilmeli');
+  });
+
+  test('güncel taban dışında en çok 2 taban: 3. yeni taban reddedilir; döndürme sonrası eski taban duruyorken yeni döndürme çalışır', async () => {
+    const row = await readyRow(O.a);
+    assert.ifError((await uput(O.a.owner.client, 'media', `${row.folder}/${rev()}/w320.webp`, 10, WEBP)).error, '1. ek taban');
+    assert.ifError((await uput(O.a.owner.client, 'media', `${row.folder}/${rev()}/w320.webp`, 10, WEBP)).error, '2. ek taban');
+    assert.ok((await uput(O.a.owner.client, 'media', `${row.folder}/${rev()}/w320.webp`, 10, WEBP)).error, '3. ek taban reddedilmeli');
+  });
+
+  test('güncel olmayan (emekli) tabandaki dosyanın üzerine yazılamaz (oturum ve service_role)', async () => {
+    const row = await pendingRow(O.a);
+    const base = `${row.folder}/${rev()}`;
+    assert.ifError((await uput(O.a.owner.client, 'media', `${base}/w320.webp`, 10, WEBP)).error);
+    assert.ok((await uput(O.a.owner.client, 'media', `${base}/w320.webp`, 99, WEBP, true)).error, 'oturumla üzerine yazma reddedilmeli');
+    assert.ok((await sput('media', `${base}/w320.webp`, 99, WEBP, true)).error, 'service_role üzerine yazma reddedilmeli');
+    assert.equal(await objectSize('media', `${base}/w320.webp`), 10);
+  });
+});
+
 describe('SL-12 service_role ve bakım penceresi', { skip: dbSkip }, () => {
   test('service_role yeni nesne yükler (geri yükleme --apply), satırsız da', async () => {
     const path = `organizations/${O.a.id}/properties/${O.a.propertyId}/images/${randomUUID()}/original`;
@@ -360,6 +386,16 @@ describe('SL-12 service_role ve bakım penceresi', { skip: dbSkip }, () => {
     }
     assert.ok((await sput('media-originals', row.original, 4000, JPEG, true)).error, 'pencere kapanınca yine reddedilmeli');
     assert.equal(await objectSize('media-originals', row.original), 3000);
+  });
+
+  test('pencere en çok 24 saat: ileri tarihli ya da 24 saatten uzun pencere kurulamaz (CHECK)', async () => {
+    for (const sql of [
+      "insert into public.media_overwrite_window (id, open_until) values (true, now() + interval '25 hours')",
+      "insert into public.media_overwrite_window (id, opened_at, open_until) values (true, now() + interval '6 days', now() + interval '7 days')",
+    ]) {
+      await assert.rejects(() => psqlSql(sql), (err) => /media_overwrite_window_(max_1d|opened_now)/.test(String(err.stderr)));
+    }
+    assert.equal((await psqlSql('select count(*) from public.media_overwrite_window')).trim(), '0');
   });
 
   test('bakım penceresi tablosuna istemciler erişemez', async () => {
