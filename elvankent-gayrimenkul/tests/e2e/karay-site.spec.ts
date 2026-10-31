@@ -101,7 +101,8 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   if (!service) return;
   if (S.settings) {
-    const { id: _id, updated_at: _u, updated_by: _b, ...rest } = S.settings;
+    // Kimlik ve denetim sütunları geri yazılmaz (KI-18: kullanılmayan değişken bırakmadan ayıklanır)
+    const rest = Object.fromEntries(Object.entries(S.settings).filter(([key]) => !['id', 'updated_at', 'updated_by'].includes(key)));
     await service.from('platform_settings').update(rest).eq('id', true);
   }
   await service.from('platform_leads').delete().in('email', [LEAD_EMAIL]);
