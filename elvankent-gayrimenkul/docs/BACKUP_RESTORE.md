@@ -30,6 +30,8 @@
 
 İstemci sürümü (Backup #39 sonrası): iş akışı `postgresql-client-17` kurar, `/usr/lib/postgresql/17/bin`'i sonraki adımların PATH'ine ekler ve `psql`, `pg_dump`, `pg_restore`'un bu dizinden ve 17 ana sürümünden geldiğini denetler; değilse ya da sunucu ana sürümü istemciden yeniyse yedeğe **başlamadan** hata verir. Sunucu 18'e geçerse iş akışındaki `PG_MAJOR`/`PG_BIN` güncellenir.
 
+rclone sürümü (Backup #43 sonrası): Ubuntu paketi (1.60.1) Cloudflare R2'ye yüklemeden sonraki HEAD isteğinde HTTP 501 alıyordu (elvankent-r2-diagnose #5: 1.60.1'de `r2 HEAD 501`, 1.75.2'de yok; Supabase okumaları ve SHA-256 doğrulamaları iki sürümde de temiz). İş akışı sabit `rclone v1.75.2`'yi resmî GitHub sürümünden indirir, SHA-256 özetini doğrular ve sürüm tam eşleşmezse yedeğe başlamaz. Yükleme sonrası doğrulama (HEAD) korunur (`--s3-no-head` kullanılmaz).
+
 Güvenlik ve görünürlük:
 - `ELVANKENT_BACKUP_ENABLED` `true` değilken **"Yedek alınmadı"** uyarısı ve iş özeti yazılır (`backup-disabled` işi); eksik değişken/sır varsa yedek işi yalnızca eksiklerin **adlarını** yazıp durur.
 - Log'a kayıt sayısı, dosya boyutu, bağlantı adresi, kullanıcı adı veya dosya içeriği yazılmaz (depo herkese açık olduğu sürece Actions logları da herkese açıktır). Hata mesajlarında bağlantı adresi, sunucu, kullanıcı, rol ve veritabanı adı `<gizlendi>` olarak yazılır.

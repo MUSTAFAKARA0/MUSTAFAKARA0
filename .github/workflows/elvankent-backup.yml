@@ -63,6 +63,12 @@ jobs:
       # sunucu 17.6'yı reddetti); bu yüzden PG 17 ikilileri sonraki adımların PATH'ine açıkça eklenir ve sürüm denetlenir.
       PG_MAJOR: '17'
       PG_BIN: /usr/lib/postgresql/17/bin
+      # rclone: Ubuntu paketi (1.60.1) Cloudflare R2'ye yüklemeden sonraki HEAD isteğinde HTTP 501 alıyor (Backup #43;
+      # elvankent-r2-diagnose #5: 1.60.1'de "r2 HEAD 501", 1.75.2'de yok, PUT/GET/Supabase okuma ikisinde de temiz).
+      # Sabit sürüm resmî GitHub sürümünden indirilir ve SHA-256 ile doğrulanır (özet, teşhis #5'te rclone'un GPG imzalı
+      # SHA256SUMS dosyasıyla doğrulanan arşivin özeti). Yükseltme: yeni sürüm teşhisle doğrulanıp ayrı commit'le değişir.
+      RCLONE_VERSION: v1.75.2
+      RCLONE_SHA256: 349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702
       # rclone uzakları ortam değişkenleriyle tanımlanır (anahtarlar yalnızca secrets'ta)
       RCLONE_CONFIG_SUPA_TYPE: s3
       RCLONE_CONFIG_SUPA_PROVIDER: Other
@@ -103,10 +109,10 @@ jobs:
             elvankent-gayrimenkul/supabase/ops
             elvankent-gayrimenkul/scripts
 
-      - name: Araçları kur (pg_dump 17, rclone)
+      - name: Araçları kur (pg_dump 17, rclone sabit sürüm)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-common rclone
+          sudo apt-get install -y -qq postgresql-common unzip
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y -qq postgresql-client-17
           for tool in psql pg_dump pg_restore; do
@@ -114,7 +120,21 @@ jobs:
           done
           # Sonraki adımlarda PG 17 ikilileri /usr/bin'deki sarmalayıcıdan ÖNCE bulunur
           echo "$PG_BIN" >> "$GITHUB_PATH"
-          rclone version | head -1
+          # rclone (sabit sürüm, özet doğrulamalı); /usr/local/bin PATH'te /usr/bin'den önce gelir
+          (
+            set -euo pipefail
+            cd "$RUNNER_TEMP"
+            zip="rclone-$RCLONE_VERSION-linux-amd64.zip"
+            curl -fsSLO "https://github.com/rclone/rclone/releases/download/$RCLONE_VERSION/$zip"
+            echo "$RCLONE_SHA256  $zip" | sha256sum -c --quiet - \
+              || { echo "::error title=rclone doğrulanamadı::$zip özeti beklenen değil; yedek başlatılmadı"; exit 1; }
+            unzip -q "$zip"
+            sudo install -m 0755 "rclone-$RCLONE_VERSION-linux-amd64/rclone" /usr/local/bin/rclone
+          )
+          got=$(rclone version | head -1)
+          [ "$got" = "rclone $RCLONE_VERSION" ] \
+            || { echo "::error title=rclone sürümü yanlış::'$got' (beklenen rclone $RCLONE_VERSION); yedek başlatılmadı"; exit 1; }
+          echo "$got (SHA-256 doğrulandı)"
 
       - name: PostgreSQL istemci sürümü (yedekten önce)
         run: |

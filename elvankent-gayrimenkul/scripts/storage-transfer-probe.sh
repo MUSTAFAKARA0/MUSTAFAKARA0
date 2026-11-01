@@ -56,8 +56,9 @@ summarize_dump() { # günlük → stdout
       q = ($0 ~ /\?(uploads|partNumber|uploadId)/) ? "+multipart" : ""; method[id] = method[id] q; next }
     mode == "req" && /^[^ ]*Host: / { h = $0; sub(/.*Host: /, "", h); sub(/\r$/, "", h); host[id] = h; next }
     mode == "req" && /^[A-Za-z0-9-]+: / { n = $0; sub(/:.*/, "", n); hdrs[id] = hdrs[id] " " tolower(n); next }
-    mode == "resp" && /HTTP\/1\.[01] [0-9][0-9][0-9]/ {
-      match($0, /HTTP\/1\.[01] [0-9][0-9][0-9]/); code = substr($0, RSTART + 9, 3)
+    mode == "resp" && /HTTP\/[0-9.]+ [0-9][0-9][0-9]/ {
+      # HTTP/1.1 ve HTTP/2.0 (Supabase HTTP/2 yanıt verir; teşhis 5 kaynak özeti bu yüzden boştu)
+      match($0, /HTTP\/[0-9.]+ [0-9][0-9][0-9]/); st = substr($0, RSTART, RLENGTH); code = substr(st, length(st) - 2, 3)
       key = side(host[id]) " " method[id] " " code; count[key]++
       if (code == "501") { n501[side(host[id]) " " method[id]] = hdrs[id] }
       mode = ""; next }

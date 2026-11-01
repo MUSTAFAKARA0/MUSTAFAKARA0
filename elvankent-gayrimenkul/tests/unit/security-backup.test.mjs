@@ -248,12 +248,12 @@ describe('BK-02b PostgreSQL 17 istemcisi (Backup #39: pg_dump 16.15 ↔ sunucu 1
   };
   test('PG 17 ikilileri kurulumdan sonra sonraki adımların PATH\'ine eklenir; sabitler iş düzeyinde', () => {
     assert.match(wf, /\n {6}PG_MAJOR: '17'\n {6}PG_BIN: \/usr\/lib\/postgresql\/17\/bin\n/);
-    const install = stepRun('Araçları kur (pg_dump 17, rclone)');
+    const install = stepRun('Araçları kur (pg_dump 17, rclone sabit sürüm)');
     assert.ok(install.indexOf('postgresql-client-17') < install.indexOf('echo "$PG_BIN" >> "$GITHUB_PATH"'), 'kurulumdan sonra PATH');
     assert.match(install, /for tool in psql pg_dump pg_restore; do\n\s+\[ -x "\$PG_BIN\/\$tool" \]/);
   });
   test('sürüm denetimi yedekten önce; sunucu sürümü backup-db.sh\'den önce denetlenir', () => {
-    const order = ['Araçları kur (pg_dump 17, rclone)', 'PostgreSQL istemci sürümü (yedekten önce)', 'Veritabanı yedeği'].map((n) => wf.indexOf(`- name: ${n}`));
+    const order = ['Araçları kur (pg_dump 17, rclone sabit sürüm)', 'PostgreSQL istemci sürümü (yedekten önce)', 'Veritabanı yedeği'].map((n) => wf.indexOf(`- name: ${n}`));
     assert.deepEqual([...order].sort((a, b) => a - b), order);
     const backup = stepRun('Veritabanı yedeği');
     assert.ok(backup.indexOf("show server_version_num") < backup.indexOf('bash elvankent-gayrimenkul/scripts/backup-db.sh'));
@@ -291,6 +291,29 @@ describe('BK-02b PostgreSQL 17 istemcisi (Backup #39: pg_dump 16.15 ↔ sunucu 1
     const r = runCheck(t, { pgVersions: { pg_restore: '16.15' } });
     assert.equal(r.status, 1);
     assert.match(r.stdout, /pg_restore: .*sürüm 16 /);
+  });
+});
+
+describe('BK-02d rclone sabit sürüm (Backup #43: 1.60.1 → R2 HEAD 501)', () => {
+  const wf = read('../.github/workflows/elvankent-backup.yml');
+  const diag = read('../.github/workflows/elvankent-r2-diagnose.yml');
+  const install = wf.slice(wf.indexOf('- name: Araçları kur (pg_dump 17, rclone sabit sürüm)'), wf.indexOf('- name: PostgreSQL istemci sürümü'));
+  test('Ubuntu paketi kurulmaz; sürüm ve özet iş düzeyinde sabit; teşhisle doğrulanan sürümle aynı', () => {
+    assert.doesNotMatch(install, /apt-get install[^\n]*\brclone\b/);
+    const ver = wf.match(/\n {6}RCLONE_VERSION: (v\d+\.\d+\.\d+)\n/)?.[1];
+    assert.ok(ver, 'RCLONE_VERSION');
+    assert.match(wf, /\n {6}RCLONE_SHA256: [0-9a-f]{64}\n/);
+    assert.equal(diag.match(/RCLONE_NEW: (v\d+\.\d+\.\d+)/)?.[1], ver, 'teşhis iş akışında doğrulanan sürüm');
+  });
+  test('resmî sürümden indirilir, SHA-256 denetlenir, /usr/local/bin\'e kurulur, sürüm tam eşleşmezse yedek başlamaz', () => {
+    assert.match(install, /https:\/\/github\.com\/rclone\/rclone\/releases\/download\/\$RCLONE_VERSION\/\$zip/);
+    assert.match(install, /echo "\$RCLONE_SHA256 {2}\$zip" \| sha256sum -c --quiet -/);
+    assert.match(install, /sudo install -m 0755 "rclone-\$RCLONE_VERSION-linux-amd64\/rclone" \/usr\/local\/bin\/rclone/);
+    assert.match(install, /\[ "\$got" = "rclone \$RCLONE_VERSION" \]/);
+    assert.ok(install.indexOf('sha256sum -c') < install.indexOf('sudo install -m 0755'), 'özet kurulumdan önce');
+  });
+  test('yükleme sonrası doğrulama (HEAD) korunur: --s3-no-head kullanılmaz', () => {
+    assert.doesNotMatch(wf, /--s3-no-head/);
   });
 });
 

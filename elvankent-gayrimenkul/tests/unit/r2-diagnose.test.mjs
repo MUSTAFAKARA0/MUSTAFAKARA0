@@ -254,7 +254,7 @@ describe('R2-07 Storage aktarım sondası (Backup #43)', () => {
       '2026/10/31 DEBUG : GET /media-originals/organizations/x/original HTTP/1.1',
       'Host: proj.supabase.example',
       '2026/10/31 DEBUG : HTTP RESPONSE (req 0xc0002)',
-      '2026/10/31 DEBUG : HTTP/1.1 200 OK',
+      '2026/10/31 DEBUG : HTTP/2.0 200 OK',
       '',
     ].join('\n');
     const dir = mkdtempSync(path.join(tmpdir(), 'karay-dump-'));
