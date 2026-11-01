@@ -54,7 +54,9 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
   Düzeltme: (1) satır biçimi `(kategori, özet, nesne)` — özet adın önünde; yeni biçim yok sayma listesi olmadan temiz;
   (2) geçmiş zorla değiştirilmediği için `2d71287`'nin 141 bulgusu kök dizindeki `.gitleaksignore`'da **tek tek parmak iziyle**
   (commit:dosya:kural:satır) yok sayıldı; başka commit/dosya yok, tarama ayarı değişmedi (birim testi KT-08). Yerel tam tarama:
-  144 commit, bulgu yok. Database işleri #147'de çalışmadı (quality'ye bağlı); yeni koşuda doğrulanır.
+  144 commit, bulgu yok. Database işleri #147'de çalışmadı (quality'ye bağlı).
+- **CI #148 yeşil (`4862e29`):** quality (gitleaks dahil), database (KI-24 sentetik prova + **KI-23 canlı denetim provası**: tarihî
+  demo paketleri → İÇERİKSİZ=21/KAYITSIZ=10, köken, 828 nesne AYNI, 6 negatif, KI-24 9. adım), database-legacy-schema.
 
 ### 01.11.2026 (10) · K-34: KI-23 canlı tespit sonucu, migration geçmişi incelemesi, O-5a dosyaları (canlıya dokunulmadı)
 
