@@ -88,12 +88,12 @@ jobs:
           row "Next.js sürüm parmak izi (alias JS, $nj dosya)" "\"16.4.3\": $v_new dosyada · \"16.3.6\": $v_old dosyada"
           if [ "$v_new" -gt 0 ] && [ "$v_old" = 0 ]; then row "Alias → sürüm" "**Next.js 16.4.3** (O-4 güvenlik yaması ve sonrası)"; else bad "alias Next.js 16.4.3 sunmuyor (16.4.3: $v_new, 16.3.6: $v_old)"; fi
           row "Derleme kimliği: production alias" "${prod_id:-okunamadı}"
-          row "Derleme kimliği: 650fd4e dağıtımı" "${new_id:-okunamadı (HTTP $new_code; dağıtım adresi korumalı olabilir)}"
-          row "Derleme kimliği: ff2f7da dağıtımı" "${old_id:-okunamadı (HTTP $old_code)}"
+          row "Derleme kimliği: yeni dağıtım" "${new_id:-okunamadı (HTTP $new_code; dağıtım adresi korumalı olabilir)}"
+          row "Derleme kimliği: önceki dağıtım" "${old_id:-okunamadı (HTTP $old_code)}"
           if [ -n "$prod_id" ] && [ -n "$new_id" ]; then
-            [ "$prod_id" = "$new_id" ] && row "Alias → dağıtım" "**650fd4e** (yeni dağıtımla aynı derleme)" || bad "production alias yeni dağıtımı sunmuyor"
+            [ "$prod_id" = "$new_id" ] && row "Alias → dağıtım" "yeni dağıtımla aynı derleme" || bad "production alias yeni dağıtımı sunmuyor"
           fi
-          if [ -n "$prod_id" ] && [ -n "$old_id" ] && [ "$prod_id" = "$old_id" ]; then bad "production alias hâlâ ff2f7da derlemesini sunuyor"; fi
+          if [ -n "$prod_id" ] && [ -n "$old_id" ] && [ "$prod_id" = "$old_id" ]; then bad "production alias hâlâ önceki derlemeyi sunuyor"; fi
 
           # 3) Ana sayfa görselleri (ilk 6)
           imgs() { grep -oE '<img[^>]+src="[^"]+"' "$1" 2>/dev/null | sed -E 's/.*src="([^"]+)".*/\1/' | sed 's/&amp;/\&/g' | grep -v '^data:' | head -"$2"; }
@@ -140,8 +140,9 @@ jobs:
           }
           karay_check "KARAY-01 /karay (ekran görüntüleri, logolar, simgeler)" /karay
           karay_check "KARAY-19 /platform/giris (logo, simgeler)" /platform/giris
-          # Ekran görüntüleri statik import ile /_next/static/media altından gelmeli (74013a5); eski yol /karay/ekran-*.png
+          # Ekran görüntüleri statik import ile /_next/static/media altından gelmeli (74013a5); eski yol /karay/ekran-*.png.
+          # next/image adresi URL-kodludur (/_next/image?url=%2F_next%2Fstatic%2Fmedia%2F…): iki yazım da kabul (ilk koşu yanlış negatif)
           r=$(get "$PROD/karay")
-          if grep -q '_next/static/media/ekran-kontrol-merkezi' "$T/body"; then row "/karay ekran görüntüsü kaynağı" "/_next/static/media (KARAY-01 düzeltmesi yayında)"; else row "/karay ekran görüntüsü kaynağı" "eski /karay/ yolu (düzeltme yayında değil)"; fi
+          if grep -qiE '_next(/|%2F)static(/|%2F)media(/|%2F)ekran-kontrol-merkezi' "$T/body"; then row "/karay ekran görüntüsü kaynağı" "/_next/static/media (KARAY-01 düzeltmesi yayında)"; else row "/karay ekran görüntüsü kaynağı" "eski /karay/ yolu (düzeltme yayında değil)"; fi
           rm -rf "$T"
           exit "$fail"
