@@ -32,7 +32,7 @@ defaults:
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       # Build veritabanına bağlanmaz; yer tutucu değerler yeterlidir (gizli değer değildir)
@@ -73,7 +73,7 @@ jobs:
   database:
     if: ${{ vars.ELVANKENT_CI_DB_TESTS == 'true' }}
     needs: quality
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
@@ -84,7 +84,8 @@ jobs:
           cache-dependency-path: elvankent-gayrimenkul/package-lock.json
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Sabit: "latest" kayıyordu (çalışma dalında doğrulanan sürüm)
+          version: 2.121.0
       - run: npm ci
       - name: Yerel Supabase (migration'lar sıfırdan uygulanır)
         run: |
@@ -98,31 +99,44 @@ jobs:
           supabase status -o env > /tmp/supa.env
           set -a; . /tmp/supa.env; set +a
           PGOPTIONS='-c app.allow_demo_seed=on' psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/seed.sql
+          # .env.local'ı hem Node (create-admin, RLS testleri, Playwright) hem bash ("E2E hazırlık": . ./.env.local) okur.
+          # Her değer tek tırnakla yazılır (çalışma dalı K-11): tırnaksız EMAIL_FROM=KARAY CI <davet@example.test> satırını
+          # bash yönlendirme sanıyordu ("syntax error near unexpected token `newline'", CI #129/#130).
+          env_line() {
+            case "$2" in *"'"* | *$'\n'* | *$'\r'*) echo "::error::.env.local: $1 değeri tek tırnakla yazılamaz" >&2; return 1 ;; esac
+            printf "%s='%s'\n" "$1" "$2"
+          }
           {
-            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
-            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
-            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
-            echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000"
-            echo "IP_HASH_SALT=ci-$(openssl rand -hex 16)"
-            echo "CRON_SECRET=ci-$(openssl rand -hex 32)"
-            echo "NEXT_IMAGE_ALLOW_LOCAL_IP=1"
-            echo "SITE_ENV=development"
+            env_line NEXT_PUBLIC_SUPABASE_URL "$API_URL"
+            env_line NEXT_PUBLIC_SUPABASE_ANON_KEY "$ANON_KEY"
+            env_line SUPABASE_SERVICE_ROLE_KEY "$SERVICE_ROLE_KEY"
+            env_line NEXT_PUBLIC_SITE_URL http://localhost:3000
+            env_line IP_HASH_SALT "ci-$(openssl rand -hex 16)"
+            env_line CRON_SECRET "ci-$(openssl rand -hex 32)"
+            env_line NEXT_IMAGE_ALLOW_LOCAL_IP 1
+            # E2E demo ortamını ve süper admin yöneticiyi bekler (çalışma dalı K-10; SITE_ENV=development E2E'yi ortam yüzünden düşürüyordu)
+            env_line SITE_ENV demo
             # P0.4 davet e-postası: gerçek gönderim yok; E2E sahte Resend sunucusunu (127.0.0.1:4010) kendisi açar
-            echo "EMAIL_PROVIDER=resend"
-            echo "RESEND_API_KEY=ci-test-key"
-            echo "RESEND_API_BASE=http://127.0.0.1:4010"
-            echo "EMAIL_FROM=KARAY CI <davet@example.test>"
+            env_line EMAIL_PROVIDER resend
+            env_line RESEND_API_KEY ci-test-key
+            env_line RESEND_API_BASE http://127.0.0.1:4010
+            env_line EMAIL_FROM 'KARAY CI <davet@example.test>'
             # P0.5 özel alan adı: gerçek DNS yok; E2E sahte DoH sunucusunu (127.0.0.1:4011) kendisi açar
-            echo "DOMAIN_DNS_RESOLVER_URL=http://127.0.0.1:4011/dns-query"
-            echo "DOMAIN_TARGET_CNAME=sites.karay.test"
-            echo "DOMAIN_TARGET_A=203.0.113.10"
+            env_line DOMAIN_DNS_RESOLVER_URL http://127.0.0.1:4011/dns-query
+            env_line DOMAIN_TARGET_CNAME sites.karay.test
+            env_line DOMAIN_TARGET_A 203.0.113.10
           } > .env.local
+          # Yazılan dosya bash'te hatasız okunabilmeli (#129'daki hata burada, E2E'den önce yakalanır)
+          bash -c 'set -a; . ./.env.local' || { echo "::error::.env.local bash ile okunamıyor"; exit 1; }
       - name: Birim + güvenlik testleri (RLS, MFA, kiracı izolasyonu)
         run: npm test
       - name: E2E hazırlık (yönetici hesabı, build, sunucu)
         run: |
           set -euo pipefail
-          npm run create-admin -- e2e-admin@example.test 'E2e-Password-12345' --role=owner
+          npm run create-admin -- e2e-admin@example.test 'E2e-Password-12345' --role=owner --super-admin
+          # Masaüstü OBR-A/SEO-A logo dosyasını bekler; ff2f7da'da onu yalnız mobil projedeki acceptance.spec üretir
+          mkdir -p tests/e2e/.fixtures
+          node -e "require('sharp')({ create: { width: 600, height: 200, channels: 4, background: { r: 16, g: 80, b: 70, alpha: 1 } } }).png().toFile('tests/e2e/.fixtures/kabul-logo.png')"
           npx playwright install --with-deps chromium
           set -a; . ./.env.local; set +a
           npm run build

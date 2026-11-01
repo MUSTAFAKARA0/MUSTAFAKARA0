@@ -29,6 +29,10 @@ export default defineConfig({
     locale: 'tr-TR',
     timezoneId: 'Europe/Istanbul',
     userAgent,
+    // Headless'ta da tam Chromium (çalışma dalı a052a7e, K-14): varsayılan Chrome Headless Shell
+    // --unsafely-treat-insecure-origin-as-secure bayrağını uygulamaz; önizleme testlerinin Secure çerezleri http test
+    // alan adlarında reddedilir. launchOptions'ın dışında durur (testler launchOptions'ı test.use ile değiştirir).
+    channel: 'chromium',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: { executablePath },
