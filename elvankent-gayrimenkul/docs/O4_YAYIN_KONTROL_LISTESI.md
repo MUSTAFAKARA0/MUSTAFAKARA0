@@ -6,14 +6,39 @@
 
 ## 1. Son kontrollerin sonucu
 
-<!-- KANIT-TABLOSU -->
+**Karar: YAYINA HAZIR (teknik).** Tüm otomatik kontroller yeşil; yama kaynaklı gerileme yok. Yayın, §4 A1 (manuel yedek)
+ve A2 (Vercel'de production'ın `ff2f7da` olduğunun ve Node sürümünün panelde teyidi) tamamlanıp sahip yazılı onay verince yapılır.
+
+| # | Kontrol | Kanıt | Sonuç |
+| --- | --- | --- | --- |
+| 1 | Yayın commit'i Node **22** | [elvankent-o4-onkontrol #1](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41294282197) `node-22`: sürüm denetimi, npm ci, typecheck, ESLint, birim **388/388** (SP-01…06 dahil), build, `npm audit` (yüksek/kritik, bastırma yok), RLS/MFA/kiracı izolasyonu **105/105** | ✓ |
+| 1 | Yayın commit'i Node **24** | aynı koşu `node-24` (Node 24.22.1, npm 11.19.1): birim **388/388**, Next.js **16.4.3** build, `npm audit` **0 açık**, RLS/MFA/kiracı **105/105** | ✓ |
+| 2 | E2E, eski test düzeneği | [o4-hazirlik #1](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41289097024): taban 205 / 8 başarısız, aday 205 / 8; hata mesajları ve satırları **birebir aynı**; yeni 0 | ✓ |
+| 2 | E2E, düzeltilmiş test düzeneği (uygulama kodu aynen) | o4-onkontrol #1 `compare`: taban **205 / 1**, aday **205 / 1** (yalnız KARAY-01); yeni 0, düzelen 0 | ✓ |
+| 3 | Production ↔ yayın commit'i farkı | §3 | ✓ (Vercel panel teyidi A2'de) |
+| — | Çalışma dalı CI | [#127](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41294282135) `cea98cf` yeşil (quality, database, database-legacy-schema) | ✓ |
+| — | Yerel | ff2f7da ↔ 650fd4e kilit dosyası farkı, `npm audit` A + PR #3 = 0 açık (K-25), birim 711/711 | ✓ |
 
 ## 2. Mevcut 8 E2E başarısızlığının sınıflandırması
 
 Kaynak: `elvankent-o4-hazirlik` #1 (eski test düzeneğiyle) taban ve aday günlükleri — hata mesajları ve satırları **birebir aynı**;
 ve `elvankent-o4-onkontrol` (düzeltilmiş test düzeneğiyle, uygulama kodu aynen).
 
-<!-- E2E-TABLOSU -->
+| # | Test | Hata (iki kolda aynı) | Sınıf | Neden | Düzeltildiği yer | Yama ile ilgisi |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | TEST-KARAY-09 | "ÖNİZLEME" şeridi yok | **Test düzeneği** | Headless Shell, `http://*.e2e.test` test alan adlarında **Secure** önizleme çerezlerini (`eg_site_preview`, `__prerender_bypass`) reddediyor; önizleme hiç açılmıyor | `a052a7e` (K-14, yalnız `playwright.config.ts`) | Yok |
+| 2 | LC-4 | "ÖNİZLEME" şeridi yok | Test düzeneği | aynı | aynı | Yok |
+| 3 | OFS-01 | "ÖNİZLEME" şeridi yok | Test düzeneği | aynı | aynı | Yok |
+| 4 | TEST-SITE-02 | "ÖNİZLEME" şeridi yok | Test düzeneği | aynı | aynı | Yok |
+| 5 | SF-02 | "ÖNİZLEME" şeridi yok | Test düzeneği | aynı | aynı | Yok |
+| 6 | SEO-A | önizleme başlığı taslak değil canlı ("Eski SEO …") | Test düzeneği | aynı (önizleme kipi açılmadığı için canlı başlık okunuyor) | aynı | Yok |
+| 7 | OBR-A | `ENOENT … tests/e2e/.fixtures/kabul-logo.png` | **Test düzeneği** | Logo dosyasını yalnız **mobil** projede koşan `acceptance.spec` üretiyor; masaüstü OBR-A ona bağımlı | `a052a7e` (test, dosyayı kendi üretir) | Yok |
+| 8 | KARAY-01 | `/karay` sayfasında 4 kırık görsel | **Ürün hatası (canlıda var)** | `public/platform/` altındaki logolar `/platform/*` konsol rotasına düşüyor; oturumsuz ziyaretçi görsel yerine giriş sayfasına yönleniyor (platform giriş sayfası da etkileniyor) | `09e935b` (K-15, B sürümünde) | Yok (yama `processing.ts` ve bağımlılıklar; bu yol değişmedi) |
+
+**Kanıt:** test düzeneği düzeltilmiş koşuda (yalnız `channel: 'chromium'` + önceden üretilen fixture; iş akışı başka dosya değişmediğini
+denetler) 1–7 **hem tabanda hem adayda geçti**, yalnız 8 kaldı (iki kolda). Yani 1–7 canlıdaki ürün hatası **değil**; gerçek tarayıcıda
+önizleme çalışır (yayın günü D5'te gözle teyit). Bu, K19 §3'teki "8'i de canlıda var" ifadesini düzeltir: canlıda var olan **1** (KARAY-01).
+**Yama kaynaklı yeni gerileme: yok** (iki düzenekte de aday = taban).
 
 ## 3. `ff2f7da` (production) ↔ `650fd4e` (yayın commit'i) farkı — yeniden doğrulandı
 

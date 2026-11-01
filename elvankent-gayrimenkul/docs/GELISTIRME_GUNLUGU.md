@@ -23,6 +23,18 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 (3) · K-27: O-4 yayın öncesi son kontroller — YAYINA HAZIR (teknik)
+
+**Başlangıç:** `e8710eb` (CI #126 yeşil). Production `ff2f7da`; PR #3 taslak; merge, production push, migration yok; gerçek veri provası kapalı. Sahip bildirimi: Backup #46, varsayılan daldaki eski iş akışının PG 16.15 istemcisi yüzünden (sunucu 17.6) düştü; PR #3 giderir, taslak kalır.
+
+- **Node 22/24:** `elvankent-o4-onkontrol` #1 (yayın commit'i `650fd4e`, salt okunur): iki Node'da typecheck, ESLint, birim 388/388 (SP-01…06), build (Next 16.4.3), `npm audit` 0 açık (bastırma yok), RLS/MFA/kiracı 105/105.
+- **8 E2E hatası:** 7'si test düzeneği (Headless Shell + Secure önizleme çerezleri: 6; masaüstünde eksik fixture: 1), 1'i canlıda var olan ürün hatası (KARAY-01, `/karay` logoları; B'de `09e935b`). Düzenek düzeltilmiş koşuda taban 205/1, aday 205/1; yeni gerileme 0. K19 §3'teki "8'i de canlıda" ifadesi düzeltildi.
+- **Production farkı:** GitHub dağıtım kaydına göre son production dağıtımı `ff2f7da` (11.10, success). Vercel MCP proje listesini gösteriyor, dağıtım listesini 403 ile reddediyor → panel teyidi kontrol listesinde (A2). Fark: 4 dosya; kilit dosyasında 39 kayıt (next/@next 16.4.3, sharp/@img 0.35.5, libvips 1.3.4, zod 4.6.7, source-map-js 1.2.2).
+- **Kontrol listesi:** [O4_YAYIN_KONTROL_LISTESI.md](O4_YAYIN_KONTROL_LISTESI.md) (manuel yedek çalışma dalından, Vercel teyidi, fast-forward push, sağlık, temel senaryolar, Instant Rollback ölçütü ve adımları, PR #3 sırası).
+- **Testler:** O4-01…03; LR-09/LR-11 aynı depodaki yeniden kullanılabilir iş akışı çağrılarını kabul eder (yalnız `./.github/workflows/elvankent-*.yml`) ve depodaki her iş akışının LR-09 listesinde olmasını ister. Birim 711/711, ESLint temiz.
+
+**CI:** [#127](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41294282135) = `cea98cf` yeşil; o4-onkontrol #1 yeşil. Bu commit'in koşusu sahibe verilen raporda.
+
 ### 01.11.2026 (2) · K-26: KI-24 canlının gerçek durumu (sürüm fonksiyonu yok), K6 Storage doğrulaması; O-4 hazırlık dalı
 
 **Başlangıç:** `5298dbe` (CI #123 yeşil). Production `ff2f7da`, değişmedi; PR #3 taslak; canlıya bağlanılmadı, migration uygulanmadı, gerçek veri kullanılmadı; gerçek veri iş akışının kapıları kapalı.
@@ -42,7 +54,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 **O-4 hazırlık dalı** `claude/karays-guvenlik-yamasi`: yayın commit'i `650fd4e` (`ff2f7da` + yama, ağaç `29f81af`), hazırlık commit'i `913b7c0` (bu dal için Vercel dağıtımı kapalı, production CI'ı bu dalda atlanır, doğrulama iş akışları; production'a gitmez). [elvankent-o4-hazirlik #1](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41289097024) **yeşil**: kimlik ✓; taban ve aday aynı tam test kümesi (typecheck, ESLint, birim, build, RLS/MFA/kiracı izolasyonu) ✓; adayda `npm audit` ✓ (bastırma yok); E2E taban 205 test / 8 başarısız, aday 205 / 8 — **yeni başarısızlık 0** (8'i bilinen canlı işlev hataları, B ile kapanır). Push'ta dağıtım açılmadı (deployments 0); production `ff2f7da`. Yerelde kimlik denetimi iki bozuk varyantı reddetti; karşılaştırma mantığı sentetik Playwright sonuçlarıyla denendi. İlk taslakta `download-artifact` için doğrulanmamış bir SHA yazılmıştı; gönderilmeden fark edildi, artifact'siz (iş çıktısı) tasarıma geçildi.
 
-**Bu commit'in CI'ı:** sahibe verilen raporda.
+**Bu commit'in CI'ı:** [#126](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41291606535) = `e8710eb` yeşil.
 
 ### 01.11.2026 · K-25: KI-24 iş akışı ve sentetik kuru prova; O-4 + PR #3 yayın sırası
 
