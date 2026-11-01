@@ -68,10 +68,24 @@ jobs:
           row "Varlık yolu biçimi (ilk, yalnız dizin)" "$(cp "$T/home" "$T/body"; assets | head -1 | sed -E 's#[^/]+$#…#')"
           row "Derleme izi: 650fd4e dağıtımı" "HTTP $new_code · $new_ch ($new_n dosya)"
           row "Derleme izi: ff2f7da dağıtımı" "HTTP $old_code · $old_ch ($old_n dosya)"
-          if [ "$prod_n" -gt 0 ] && [ "$new_n" -gt 0 ]; then
+          if [ "$new_n" -gt 0 ] && [ "$new_ch" = "$old_ch" ]; then
+            # Koşu #3: iki dağıtım adresi AYNI sayfayı döndürdü (Vercel kimlik doğrulaması / deployment protection) → sonuçsuz
+            row "Dağıtım adresleriyle karşılaştırma" "sonuçsuz: iki benzersiz adres de aynı koruma sayfasını döndürüyor"
+          elif [ "$prod_n" -gt 0 ] && [ "$new_n" -gt 0 ]; then
             if [ "$prod_ch" = "$new_ch" ]; then row "Alias → dağıtım (derleme izi)" "**650fd4e** ile aynı"; else bad "alias derleme izi 650fd4e dağıtımından farklı"; fi
+            if [ "$prod_ch" = "$old_ch" ]; then bad "alias derleme izi hâlâ ff2f7da ile aynı"; fi
           fi
-          if [ "$prod_n" -gt 0 ] && [ "$old_n" -gt 0 ] && [ "$prod_ch" = "$old_ch" ]; then bad "alias derleme izi hâlâ ff2f7da ile aynı"; fi
+          # Kesin parmak izi: Next.js istemci çalışma zamanı sürümünü pakete gömer (dist/client/app-bootstrap.js:
+          # const version = "16.4.3"). Alias'ın yüklediği herkese açık JS dosyalarında hangi sürüm geçiyor?
+          v_new=0; v_old=0; nj=0
+          while read -r a; do
+            [ -z "$a" ] && continue; nj=$((nj + 1))
+            curl -sS -L --max-time 20 -o "$T/js" "$PROD$a" 2>/dev/null || continue
+            grep -q '"16\.4\.3"' "$T/js" && v_new=$((v_new + 1))
+            grep -q '"16\.3\.6"' "$T/js" && v_old=$((v_old + 1))
+          done < <(cp "$T/home" "$T/body"; assets | grep '\.js$' | head -40)
+          row "Next.js sürüm parmak izi (alias JS, $nj dosya)" "\"16.4.3\": $v_new dosyada · \"16.3.6\": $v_old dosyada"
+          if [ "$v_new" -gt 0 ] && [ "$v_old" = 0 ]; then row "Alias → sürüm" "**Next.js 16.4.3 = yayın commit'i 650fd4e**"; else bad "alias Next.js 16.4.3 sunmuyor (16.4.3: $v_new, 16.3.6: $v_old)"; fi
           row "Derleme kimliği: production alias" "${prod_id:-okunamadı}"
           row "Derleme kimliği: 650fd4e dağıtımı" "${new_id:-okunamadı (HTTP $new_code; dağıtım adresi korumalı olabilir)}"
           row "Derleme kimliği: ff2f7da dağıtımı" "${old_id:-okunamadı (HTTP $old_code)}"
