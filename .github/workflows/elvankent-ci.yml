@@ -89,6 +89,9 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # KI-23 canlı denetim provası tarihî demo paketlerini git geçmişinden okur (scripts/canli-denetim-prova.sh)
+          fetch-depth: 0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
@@ -178,6 +181,16 @@ jobs:
             LIVE_DRILL_URL=postgresql://supabase_admin:postgres@127.0.0.1:55322/postgres REQUIRE_LIVE_LIKE=1 \
             STORAGE_DRILL_URL="$NEXT_PUBLIC_SUPABASE_URL" STORAGE_DRILL_KEY="$SUPABASE_SERVICE_ROLE_KEY" REQUIRE_STORAGE=1 \
             bash scripts/restore-drill-synthetic.sh
+      - name: KI-23 canlı denetim provası (tarihî demo paketleriyle kurulan canlı benzeri şema; salt okunur denetimler)
+        run: |
+          set -euo pipefail
+          # Müşteri verisi YOK, sır YOK. scripts/canli-denetim-prova.sh: canlının kuruluş yolu (supabase/demo paketleri,
+          # TARİHÎ hâlleri git geçmişinden; SQL Editor gibi tek işlem) → sahibin canlı çıktısı (İÇERİKSİZ=21, KAYITSIZ=10)
+          # yeniden üretilir; köken (xmin), şema/güvenlik parmak izi (828 nesne) ve 6 negatif kontrol; ardından KI-24 yolu:
+          # yedek → yerel geçici veritabanı → restore-drill 9. adım (G TAMAM / P AYNI; RLS kapalı kopya ŞEMA HATA).
+          export PATH=/usr/lib/postgresql/17/bin:$PATH
+          trap 'bash scripts/live-like-stack.sh stop' EXIT
+          DRILL_URL=postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres bash scripts/canli-denetim-prova.sh
       - name: E2E hazırlık (yönetici hesabı, build, sunucu)
         run: |
           set -euo pipefail

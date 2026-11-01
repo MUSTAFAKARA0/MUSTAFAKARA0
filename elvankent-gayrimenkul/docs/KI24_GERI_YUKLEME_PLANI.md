@@ -138,7 +138,7 @@ Sahip "başla" dediğinde, sırayla (her kutu işaretlenmeden sonrakine geçilme
 | 6 | GitHub › Settings › Variables › `RESTORE_DRILL_REAL_DATA_APPROVED = true` | Sahip | Ekran |
 | 7 | Tetik: `ops-requests/restore-drill.request` dosyasına bir satır (GitHub web arayüzünden, çalışma dalında) ya da Actions › Run workflow | Sahip | Koşu no. |
 | 8 | Actions › Review deployments › **Approve** | Sahip | — |
-| 9 | Sonuç okuma: BÜTÜNLÜK = TAMAM (zorunlu); ŞEMA = BİLGİ beklenir (canlı geride; `SEMA_ILK_EKSIK` KI-23 tespitiyle aynı olmalı); ŞEMA = HATA ise gerçek güvenlik bulgusu → durulur, incelenir; K6 STORAGE = TAMAM | Geliştirici | Özet satırları (ham veri yok) |
+| 9 | Sonuç okuma: BÜTÜNLÜK = TAMAM (zorunlu); ŞEMA = BİLGİ beklenir (canlı geride; `SEMA_ILK_EKSIK` KI-23 tespitiyle aynı olmalı); ŞEMA = HATA ise gerçek güvenlik bulgusu → durulur, incelenir; K6 STORAGE = TAMAM; **K-35:** 9. adım (KI-23 şema ve güvenlik denetimi, yedeğin geçmişi `20261001000001`'de bitiyorsa) `DENETIM_G=TAMAM`, `DENETIM_P=AYNI` — O-5a engelinin (İÇERİKSİZ geçmiş) üç koşulundan biri; FARKLI nesneler adlarıyla listelenir | Geliştirici | Özet satırları (ham veri yok) |
 | 10 | Kapanış: değişkeni `false` yap, R2 okuma anahtarını **sil**, sırları sil (ya da süre dolsun) | Sahip | Ekran |
 | 11 | Kayıt: KALAN_ISLER KI-24, BACKUP_RESTORE.md "Doğrulama kaydı", GELISTIRME_GUNLUGU | Geliştirici | Commit |
 

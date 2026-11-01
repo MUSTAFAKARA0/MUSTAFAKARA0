@@ -27,6 +27,10 @@
 #      8) postflight_v2.sql: "…uygulanmamış" / "şema sürümü eski" satırları, şema geride (sürüm eski YA DA sürüm
 #         fonksiyonu hiç yok — canlıdaki durum) ve eksikler tutarlıysa (denetlenen migration'ların son kısmı) BİLGİ;
 #         tutarsız eksikler ve diğer tüm HATA satırları (RLS, yetki, istemciye açık fonksiyon …) → ŞEMA: HATA, çıkış 3
+#      9) KI-23 şema ve güvenlik denetimi (supabase/ops/canli_sema_denetimi.sql): yalnız yedeğin migration geçmişi canlının
+#         bilinen durumundaysa (son kayıt 20261001000001 = denetimin başvurusu). G (mutlak güvenlik kuralı) HATA → ŞEMA: HATA,
+#         çıkış 3; P (parmak izi) AYNI olmayan nesne sayısı bilgi olarak yazılır (DENETIM_P=…), nesne adları da yazılır.
+#         Başka durumda ATLANDI. (xmin geri yüklemede korunmaz: köken sorgusu yedekte anlamsızdır, burada çalıştırılmaz.)
 #   Geçici veritabanı her durumda silinir (KEEP_DB=1 ile inceleme için bırakılabilir; sonra elle silin).
 #
 # Çıktı yalnızca adım durumlarını ve satır eşleşme sayılarını yazar; kayıt içeriği veya sayısı, bağlantı adresi yazmaz.
@@ -89,24 +93,24 @@ fail() { echo "✗ $1" >&2; echo "BÜTÜNLÜK: HATA — $1"; result BUTUNLUK=HAT
 
 echo "A) BÜTÜNLÜK"
 
-step "1/8 SHA-256 doğrulaması"
+step "1/9 SHA-256 doğrulaması"
 if command -v sha256sum > /dev/null; then SUM=(sha256sum -c --quiet); else SUM=(shasum -a 256 -c --quiet); fi
 ( cd "$DIR" && "${SUM[@]}" "$NAME.sha256" ) || fail "SHA-256 uyuşmuyor: yedek dosyaları bozuk veya eksik"
 
-step "2/8 Dump okunabilirliği"
+step "2/9 Dump okunabilirliği"
 pg_restore --list "$DIR/$NAME.dump" > /dev/null || fail "Dump okunamıyor"
 
-step "3/8 Geçici veritabanı: $TMPDB"
+step "3/9 Geçici veritabanı: $TMPDB"
 psql "$ADMIN_DB_URL" -X -q -v ON_ERROR_STOP=1 -c "create database \"$TMPDB\" template template0" > /dev/null || fail "Geçici veritabanı oluşturulamadı"
 created=1
 
-step "4/8 Geri yükleme (tek işlem)"
+step "4/9 Geri yükleme (tek işlem)"
 pg_restore --no-owner --single-transaction --exit-on-error --dbname "$TARGET_URL" "$DIR/$NAME.dump" 2> "$WORK/restore.err" \
   || { sed -E 's#postgres(ql)?://[^[:space:]"]+#<bağlantı>#g; s/(server at |host name |host |user |role |database )"[^"]*"/\1"<gizlendi>"/g' "$WORK/restore.err" | head -20 >&2; fail "Geri yükleme başarısız (hiçbir şey yarım kalmadı; geçici veritabanı silinecek)"; }
 
 target() { psql "$TARGET_URL" -X -q -At -v ON_ERROR_STOP=1 -c 'set row_security = off' "$@"; }
 
-step "5/8 Parmak izi karşılaştırması"
+step "5/9 Parmak izi karşılaştırması"
 target -f "$OPS/backup_fingerprint.sql" > "$WORK/fingerprint.txt"
 if ! diff -q "$DIR/$NAME.fingerprint.txt" "$WORK/fingerprint.txt" > /dev/null; then
   diff "$DIR/$NAME.fingerprint.txt" "$WORK/fingerprint.txt" | grep '^[<>]' | awk -F' \\| ' '{print "    fark: " $2}' | sort -u >&2 || true
@@ -114,7 +118,7 @@ if ! diff -q "$DIR/$NAME.fingerprint.txt" "$WORK/fingerprint.txt" > /dev/null; t
 fi
 echo "    $(grep -c . "$WORK/fingerprint.txt") / $(grep -c . "$DIR/$NAME.fingerprint.txt") satır aynı"
 
-step "6/8 Tablo satır sayıları"
+step "6/9 Tablo satır sayıları"
 target -f "$OPS/backup_table_counts.sql" > "$WORK/tables.all.txt"
 # Yedekteki tablo listesine göre süz (yedeği alan rolün göremediği tablolar listede yoktur)
 awk -F' \\| ' 'NR == FNR { want[$1] = 1; next } ($1 in want)' "$DIR/$NAME.tables.txt" "$WORK/tables.all.txt" > "$WORK/tables.txt"
@@ -128,7 +132,7 @@ echo "BÜTÜNLÜK: TAMAM — yedek sağlam ve eksiksiz geri yüklendi"
 result BUTUNLUK=TAMAM
 
 echo "B) ŞEMA UYGUNLUĞU (bütünlükten ayrı)"
-step "7/8 Şema sürümü"
+step "7/9 Şema sürümü"
 VERSION=$(target -c 'select public.karay_schema_version()' 2> /dev/null | tail -1) || VERSION=""
 [[ "$VERSION" =~ ^[0-9]{14}$ ]] || VERSION=""
 result "SEMA_SURUM=${VERSION:-yok}"
@@ -144,7 +148,7 @@ fi
 echo "    $sema_not"
 echo "    $PENDING bekleyen dosya (supabase/pending) canlıda henüz uygulanmamış olabilir — bilgi, uygunluk ölçütü değil"
 
-step "8/8 Son kontrol (postflight_v2.sql)"
+step "8/9 Son kontrol (postflight_v2.sql)"
 target -f "$OPS/postflight_v2.sql" > "$WORK/postflight.txt"
 # durum sütunu: "TAMAM", "HATA" veya "HATA: <ayrıntı>" ya da "... ile KARŞILAŞTIRIN" (önek ile eşlenir)
 errors=$(awk -F'|' '$4 ~ /^HATA/' "$WORK/postflight.txt" | wc -l)
@@ -199,6 +203,30 @@ if [ "$real" -ne 0 ]; then
   exit 3
 fi
 echo "    $(awk -F'|' '$4 == "TAMAM"' "$WORK/postflight.txt" | wc -l) TAMAM, $(awk -F'|' '$4 ~ /KARŞILAŞTIR/' "$WORK/postflight.txt" | wc -l) karşılaştırılacak satır, $gap gecikme, 0 HATA"
+
+step "9/9 KI-23 şema ve güvenlik denetimi (canli_sema_denetimi.sql)"
+REG_LAST=$(target -c "select case when to_regclass('supabase_migrations.schema_migrations') is null then '' else (select coalesce(max(version), '') from supabase_migrations.schema_migrations) end" | tail -1)
+if [ "$REG_LAST" = 20261001000001 ] && [ -f "$OPS/canli_sema_denetimi.sql" ]; then
+  # Tanımlar oturumun search_path'ine göre yazılır (auth yoldaysa "auth.users" → "users"): SQL Editor'ün (postgres rolü) yolu
+  target -F'|' -c 'set search_path = "$user", public, extensions' -f "$OPS/canli_sema_denetimi.sql" > "$WORK/denetim.txt"
+  g_errors=$(awk -F'|' '$1 ~ /^G[0-9]/' "$WORK/denetim.txt" | wc -l)
+  p_diff=$(awk -F'|' '$1 ~ /^P /' "$WORK/denetim.txt" | wc -l)
+  awk -F'|' '$1 == "ÖZET" { print "    " $2 ": " $3 }' "$WORK/denetim.txt"
+  if [ "$p_diff" -ne 0 ]; then awk -F'|' '$1 ~ /^P / { print "      " $1 " " $2 ": " $3 }' "$WORK/denetim.txt"; fi
+  result "DENETIM_G=$([ "$g_errors" = 0 ] && echo TAMAM || echo HATA)"
+  result "DENETIM_P=$([ "$p_diff" = 0 ] && echo AYNI || echo "FARKLI_$p_diff")"
+  if [ "$g_errors" -ne 0 ]; then
+    awk -F'|' '$1 ~ /^G[0-9]/ { print "    " $1 " " $2 ": " $3 }' "$WORK/denetim.txt" >&2
+    echo "ŞEMA: HATA — KI-23 denetiminde $g_errors mutlak güvenlik kuralı ihlali"
+    result SEMA=HATA
+    echo "✗ Geri yükleme tatbikatı: bütünlük TAMAM, şema uygunluğu HATA: $NAME" >&2
+    exit 3
+  fi
+else
+  echo "    ATLANDI (yedeğin son geçmiş kaydı ${REG_LAST:-yok}; denetimin başvurusu 20261001000001)"
+  result DENETIM=ATLANDI
+fi
+
 if [ "$sema" = TAMAM ]; then
   echo "ŞEMA: TAMAM — $sema_not"
 else

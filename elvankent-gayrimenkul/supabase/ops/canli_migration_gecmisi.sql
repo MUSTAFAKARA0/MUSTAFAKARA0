@@ -13,7 +13,9 @@
 --                  sürümü ifadeleri farklı bölmüş olabilir → HATA değil, elle inceleme gerekir
 --   AYNI (O-5a kaydı)        supabase/ops/o5a dosyasıyla SQL Editor'den uygulanmış; ifade = dosyanın tamamı, özet aynı
 --   AYNI (KARAYS runbook kaydı)  karays_brand/03_apply.sql'in yazdığı içeriksiz kayıt (beklenen)
---   İÇERİKSİZ      ifade listesi boş: "migration repair" ile işaretlenmiş (uygulandığının kanıtı DEĞİL)
+--   İÇERİKSİZ      ifade listesi boş (NULL / boş dizi): kayıt yalnız (version, name) ile yazılmış — ör. supabase/demo
+--                  kurulum paketleri; CLI 2.122.0'ın db push / migration repair'i ifadeleri DOLDURUR. Uygulandığının kanıtı DEĞİL:
+--                  canli_kayit_kokeni.sql ve canli_sema_denetimi.sql ile değerlendirilir (KI23 belgesi §2)
 --   DEPODA YOK     kayıtlı sürüm depoda yok (başka dal / elle eklenmiş)
 --   KAYITSIZ       depodaki sürüm kayıt defterinde yok (uygulanmamış ya da SQL Editor ile uygulanmış)
 -- Son satırlar: kayıt sayısı, en yeni sürüm, kayıtlı-ama-nesnesi-olmayan ayrımı için canli_sema_tespiti.sql ile birlikte okunur.

@@ -1,4 +1,4 @@
-# KI-23 · Canlı veritabanı şema ön kontrolü (01.11.2026, K-33 / K-34)
+# KI-23 · Canlı veritabanı şema ön kontrolü (01.11.2026, K-33 / K-34 / K-35)
 
 Bu belge, canlı Supabase veritabanında (proje `elvankent-demo`) **hangi migration'ların eksik olduğunu**, bunun nasıl
 doğrulandığını ve bugünkü production kodu (`a0f0a67`) ile uyumunu toplar. Geliştirme ortamının canlı veritabanına erişimi
@@ -23,36 +23,92 @@ yoktur; canlıda tek sorgu sahip tarafından, salt okunur olarak çalıştırıl
 denmişti. Gerçek durum ikisinin arasında: **10 eksik**, ilki `20261002000001`. (Parmak izi uyarısı `organization_invitations`
 kaynaklıymış; `site_configs` canlıda var.)
 
-## 2. Nesne kontrolü kanıt değildir — migration geçmişi ayrıca incelendi
+## 2. Migration geçmişi: canlı sonuç İÇERİKSİZ=21 — kök neden ve ayrım (K-35)
 
-`canli_sema_tespiti.sql` her dosya için **yalnız bir ayırt edici nesneye** bakar. `VAR`, o dosyanın bütün ifadelerinin eksiksiz
-uygulandığını kanıtlamaz (ör. dosya elle kısmen çalıştırılmış ya da sonradan bir nesne elle değiştirilmiş olabilir). Bu yüzden
-üç ayrı kanıt birlikte değerlendirilir:
+### 2.1 Sahibin ikinci canlı çıktısı (01.11, "Supabase Snippet Untitled query 4.csv")
 
-| Kanıt | Bulgu | Değerlendirme |
-| --- | --- | --- |
-| a) Nesne kontrolü (CSV) | 21 VAR, sonra 10 YOK; arada boşluk yok | Sıralı uygulama ile tutarlı |
-| b) Kayıt defteri özeti (CSV satır 101) | `supabase_migrations.schema_migrations`: **21 kayıt, en yeni `20261001000001`** | Kayıt sayısı ve en yeni sürüm (a) ile birebir aynı: ilk 21 dosya Supabase CLI ile kaydedilerek uygulanmış görünüyor. **Ama** özet, kayıtların hangi sürümler olduğunu ve içeriğini göstermez |
-| c) Depo geçmişi (git, tam geçmiş indirildi) | 21 dosyanın her biri **tek commit**: oluşturulduktan sonra hiç değişmemiş | Canlıya uygulanan içerik, hangi tarihte uygulanmış olursa olsun, depodaki içerikle aynı olmalı |
+`supabase/ops/canli_migration_gecmisi.sql` → **`İÇERİKSİZ=21, KAYITSIZ=10`, `AYNI=0`**; kayıt defteri 21 kayıt · en yeni
+`20261001000001`. Beklenen `AYNI=21` **doğrulanmadı**: 21 kaydın hiçbirinde ifade listesi yok (adlar dolu).
 
-**Açık kalan ve tek bir salt okunur sorguyla kapanacak olan:** kayıt defterindeki 21 kaydın sürüm sürüm depodaki dosyalarla
-**aynı içerikle** yapıldığı. Bunun için yeni dosya: `supabase/ops/canli_migration_gecmisi.sql`.
+**Düzeltme (K-34'te yanlış yazılanlar):** (1) "ilk 21 dosya Supabase CLI ile kaydedilerek uygulanmış görünüyor" — yanlış; CLI
+kaydı ifadeleri doldurur. (2) "İÇERİKSİZ = `migration repair` ile işaretlenmiş" — kanıtsız bir varsayımdı ve yerel deneyle
+çürütüldü (aşağıda).
 
-- **Ne yapar:** kayıt defterindeki her sürüm için ifade sayısını ve ifadelerin MD5 özetini depodan beklenen değerlerle
-  karşılaştırır (beklenenler, 31 migration'ın Supabase CLI 2.122.0 ile yerelde uygulanmasından alındı).
-  Sonuç: `AYNI` · `FARKLI` (sayı/özet farklı) · `İÇERİKSİZ` (ifade listesi boş: `migration repair` ile işaretlenmiş, uygulandığının
-  kanıtı değil) · `DEPODA YOK` (kayıtlı ama depoda olmayan sürüm) · `KAYITSIZ` (depoda var, kayıtta yok).
-- **Ne yapmaz:** tek `SELECT`; yazmaz; ifade metnini yazdırmaz (yalnız sayı ve özet; içerik zaten depodaki migration dosyası).
-- **Beklenen canlı sonuç:** `AYNI=21, KAYITSIZ=10`. `FARKLI` çıkarsa hata sayılmaz ama O-5a'dan önce elle incelenir (en olası
-  neden farklı bir CLI sürümünün ifadeleri farklı bölmesi; bu durumda o dosyanın nesneleri postflight ile ayrıca denetlenir).
-  `İÇERİKSİZ` ya da `DEPODA YOK` çıkarsa O-5a başlamaz.
-- **Yerel doğrulama:** canlı benzeri yığın (21 migration) → `AYNI=21, KAYITSIZ=10` (sahibin CSV'siyle aynı tablo); geri alınan
-  bir işlem içinde bir kaydın içeriği değiştirildi → `FARKLI`, bir kaydın içeriği boşaltıldı → `İÇERİKSİZ`, depoda olmayan sürüm
-  eklendi → `DEPODA YOK`.
+### 2.2 Kök neden araştırması (kanıt; varsayım değil)
 
-Uygulanmış 21 dosyanın **içeriğinin** (RLS, politikalar, yetkiler) tam denetimi canlıya dokunmadan KI-24 gerçek provasında yapılır:
-gerçek yedek yerel veritabanına yüklenir, `postflight_v2` çalışır; eksik migration kaynaklı satırlar BİLGİ, uygulanmış dosyalardaki
-gerçek RLS/yetki hataları HATA olarak ayrılır (sentetik D2–D4 senaryoları bunun gizlenmediğini gösteriyor).
+| # | Soru | Kanıt | Sonuç |
+| --- | --- | --- | --- |
+| 1 | CLI `db push` / `supabase start` kaydı nasıl? | Yerel: her kayıt dolu (ör. `20261002000001` → 30 ifade) | İÇERİKSİZ üretmez |
+| 2 | CLI `migration repair --status applied` kaydı nasıl? | Yerel deney (CLI 2.122.0, canlı benzeri yığın): `repair` dosyayı okur, **ifadeleri doldurur (30)**, şema nesnesi oluşturmaz | Bu sürümde İÇERİKSİZ üretmez. (Eski CLI sürümleri denenmedi.) |
+| 3 | Depoda `(version, name)` ile kayıt yazan bir şey var mı? | `supabase/demo/01_v1_schema.sql`, `02_v2_enums.sql`, `03_v2_stage3.sql`, `06_platform_updates.sql` (SQL Editor kurulum paketleri, `scripts/build-demo-sql.mjs` üretir): sonda `insert into supabase_migrations.schema_migrations (version, name) … on conflict do nothing` — **statements yazılmaz (NULL)** | İÇERİKSİZ ile birebir uyumlu tek mekanizma |
+| 4 | Hangi paket sürümü canlıdaki listeyle örtüşüyor? | Git geçmişi: `06_platform_updates.sql`'in kayıt listesi **`d721428` (28.09)** sürümünde `20261001000001`'de biter; sonraki sürüm (`17a19b6`, 03.10) `20261002000001`'i ekler. 01/02/03 yalnız `f760625` (27.09) sürümü var | Canlının 21 kaydı = 01+02+03 (17) + 06@≤`d721428` (4) |
+| 5 | O paketlerin içeriği depodaki migration'larla aynı mı? | Tarihî paketlerdeki 27 migration bölümü (`f760625` 01/02/03, `62c0614`/`86cd928`/`e1f64f4`/`d721428` 06) **bugünkü dosyalarla bayt bayt aynı** (`scripts/canli-denetim-prova.sh` 1. adım; CI'da her gönderimde) | İçerik farkı yok |
+| 6 | Bu yol canlının çıktısını yeniden üretiyor mu? | Boş yerel yığına tarihî paketler SQL Editor gibi tek işlemde uygulandı → `canli_sema_tespiti`: 21 VAR / ilk eksik `20261002000001`; `canli_migration_gecmisi`: **`İÇERİKSİZ=21, KAYITSIZ=10`** — sahibin iki CSV'siyle aynı | Mekanizma yerelde yeniden üretildi |
+
+**En olası kök neden (henüz canlıda doğrulanmadı):** canlı veritabanı, depodaki **demo kurulum paketleriyle** (SQL Editor) kurulmuş
+ve güncellenmiş; kayıtlar bu paketlerin sonundaki `(version, name)` satırıyla yazılmış. Bu bir varsayım olarak bırakılır;
+canlıda doğrulaması §2.4'teki köken sorgusudur. **Dikkat:** paketlerin başlığı "YALNIZCA DEMO SUPABASE PROJESİ İÇİNDİR. Canlı
+(production) veritabanında çalıştırmayın" der; doğrulanırsa production'ın bağlı olduğu veritabanı bir **demo kurulumudur**
+(proje adı da `elvankent-demo`). Bu, KI-23'ün asıl sorusu olan "canlı DB kimliği"ne doğrudan bilgi verir (demo ilanları /
+demo yönetici hesabı olup olmadığı ayrıca, veri okumadan, sahipçe değerlendirilmelidir).
+
+### 2.3 İÇERİKSİZ = eksik uygulama mı, yalnız eksik geçmiş mi?
+
+Ayırt edici özellik: demo paketleri her biri **tek SQL Editor sorgusu = tek işlem**dir ve kayıt satırı paketin **sonundadır**.
+Kayıt satırı varsa, aynı işlemdeki bütün migration gövdeleri de işlenmiştir (biri hata verseydi işlem bütünüyle geri alınır, kayıt
+da yazılmazdı). Yani kayıt, aynı işlemde yazıldıysa **eksiksiz uygulamanın** kanıtıdır; ayrı yazıldıysa hiçbir şey kanıtlamaz.
+Bunu ölçmenin yolu PostgreSQL'in işlem numarası (`xmin`): kayıt satırını yazan işlemde oluşturulmuş sistem kataloğu satırları
+(tablo, sütun, fonksiyon, politika, tür) bugün hâlâ duruyorsa kayıt şemayla aynı işlemde yazılmıştır.
+
+- **ŞEMA İLE AYNI İŞLEM** → o gruptaki migration'lar eksiksiz uygulanmış (atomiklik); İÇERİKSİZ yalnız eksik geçmiş bilgisidir.
+- **BELİRSİZ** (o işlemden katalog satırı kalmamış) → kanıt yok. Yerelde görüldü: 06'nın ilk sürümü sonraki 06 sürümleriyle
+  yeniden çalıştırılınca (create or replace, drop/create policy) ilk işlemin bütün katalog satırları yenilenir. Bu gruptaki
+  migration'lar için içerik kanıtı §2.5'teki parmak izidir.
+- Yerel negatif: uygulama yapmadan elle yazılan kayıt → BELİRSİZ (yakalandı).
+
+### 2.4 Köken sorgusu: `supabase/ops/canli_kayit_kokeni.sql` (tek SELECT, salt okunur, kişisel veri yok)
+
+K1 demo işaret tablosu (`elvankent_demo.environment`, 01 paketinin oluşturduğu) var mı + kurulum tarihi · K2 kayıt tablosu
+sütunları · K3 her kayıt: ad, statements NULL / boş dizi / sayı, işlem no · K4 her işlem grubu: o işlemde oluşturulup bugün duran
+katalog satırı sayıları → ŞEMA İLE AYNI İŞLEM / BELİRSİZ · K5 demo işaretini oluşturan işlem hangi kayıt grubunun işlemi.
+
+Yerel simülasyonda (tarihî paketlerle): K1 VAR · 21 kayıt statements NULL · 7 işlem grubunun 6'sı ŞEMA İLE AYNI İŞLEM, yeniden
+çalıştırılan ilk 06 grubu BELİRSİZ · K5 işaret V1 grubuyla (`20260922000001…04`) aynı işlemde. CLI ile kurulmuş yığında ise
+K1 YOK ve her kayıt dolu — iki yol çıktıdan ayırt edilir.
+
+### 2.5 Şema ve güvenlik denetimi: `supabase/ops/canli_sema_denetimi.sql` (tek SELECT, salt okunur, yalnız sistem kataloğu)
+
+- **G — mutlak kurallar (beklenen değere gerek yok; kiracı yalıtımına öncelik):** G1 RLS'i kapalı public tablo · G2 kiracı
+  tablosunda (organization_id sütunlu) anon/herkese koşulsuz (`true`) okuma politikası · G3 `search_path`'i sabit olmayan
+  SECURITY DEFINER fonksiyon · G4 RLS'i kapalı kiracı tablosunda anon yazma yetkisi. Herhangi biri = HATA, dur.
+- **P — parmak izi (828 nesne):** 37 tablo (sütunlar, varsayılanlar, RLS/force bayrakları), 37 tablo yetkisi (anon /
+  authenticated / service_role / PUBLIC), 82 politika (public + storage.objects; komut, roller, USING, WITH CHECK), 77 fonksiyon
+  (tam tanım: gövde, SECURITY DEFINER, search_path), 77 fonksiyon yetkisi, 317 kısıt, 56 tetikleyici, 123 indeks, 18 enum,
+  4 kova (herkese açık mı, boyut sınırı, MIME). Beklenen = migration'ları `20261001000001`'e kadar **Supabase CLI ile** uygulanmış
+  yerel başvuru (`scripts/sema-denetimi-build.sh`). Sonuç: AYNI / FARKLI / EKSİK / FAZLA; yalnız AYNI olmayanlar yazılır.
+- **Yöntemden bağımsızlık:** demo paketleriyle (SQL Editor) kurulmuş yerel veritabanında da **828/828 AYNI, G TAMAM**.
+- **Negatif kontroller (geri alınan işlemlerde, CI'da her gönderimde):** RLS kapatma → G1 · kiracı tablosuna koşulsuz anon
+  politika → G2 · fonksiyon gövdesi değişikliği → P FARKLI · sabitsiz SECURITY DEFINER → G3 · anon'a yazma yetkisi → P FARKLI ·
+  uygulamasız elle kayıt → köken BELİRSİZ. Hepsi yakalandı.
+- **Okuma notu:** tanımlar oturumun `search_path`'ine göre yazılır; çıktının özet satırında yol görünür (SQL Editor:
+  `"$user", public, extensions`). PostgreSQL sürümü de yazılır (başvuru 17.11); farklı ana sürüm bazı ifadeleri farklı yazabilir.
+
+### 2.6 Canlıya dokunmadan ikinci kaynak: KI-24 geri yükleme provası
+
+`scripts/restore-drill.sh` 9. adım: geri yüklenen kopyanın kayıt defteri `20261001000001`'de bitiyorsa (canlının durumu)
+`canli_sema_denetimi.sql` o kopyada çalışır; G HATA → ŞEMA HATA (çıkış 3), P sonucu `DENETIM_P=` satırı. Yerelde: demo
+paketleriyle kurulmuş veritabanının yedeği → geri yükleme → **G TAMAM, P 828/828 AYNI**; RLS'i kapatılmış kopyanın yedeği →
+ŞEMA HATA, çıkış 3. Gerçek yedekle bu adım ancak KI-24 gerçek provası **onaylanıp** çalıştırılınca sonuç verir (başlatılmadı).
+Not: `xmin` geri yüklemede korunmaz; köken sorgusu yalnız canlıda anlamlıdır.
+
+### 2.7 Karar kuralı (O-5a engeli)
+
+O-5a için **İÇERİKSİZ engeli açık kalır** ve şu üçü sağlanmadan kalkmaz:
+1. `canli_kayit_kokeni.sql` (canlı): K1 VAR ya da başka bir mekanizmayı gösteren açık kanıt; K4'te her grup ŞEMA İLE AYNI İŞLEM
+   ya da BELİRSİZ gruplar için 2. madde.
+2. `canli_sema_denetimi.sql` (canlı): G TAMAM ve P'de FARKLI / EKSİK / FAZLA yok (varsa her biri tek tek açıklanır).
+3. KI-24 gerçek provası (sahip onayıyla): 9. adım `DENETIM_G=TAMAM`, `DENETIM_P=AYNI`.
+Kayıt defterini "düzeltmek" (statements doldurmak, repair) bu planın parçası değildir ve ayrı onay gerektirir.
 
 ## 3. Eksik migration listesi (CSV'ye göre kesin, tam sıra)
 
@@ -127,7 +183,8 @@ canlıda izlenecek sırayı uçtan uca dener: tespit → eksik dosyalar (O-5a do
 Bulgu (K-33, düzeltildi): canlı benzeri yığın `supabase init` varsayılanıyla TOTP'yi kapalı açıyordu; 4 MFA testi ortam yüzünden
 düşmüştü. Canlıda TOTP açık olduğundan betik artık CI ile aynı ayarı yapar.
 
-## 6. Sahipten istenen sıradaki tek şey
+## 6. Sahipten istenen sıradaki şey
 
-`supabase/ops/canli_migration_gecmisi.sql` çıktısı (bir kez, salt okunur, SQL Editor). Beklenen: `AYNI=21, KAYITSIZ=10`.
-Bu çıktı ve KI-24 gerçek provası O-5a'nın ön koşuludur. Migration uygulamak ayrı ve açık onay gerektirir.
+İki salt okunur sorgu, SQL Editor'de, birer kez: `supabase/ops/canli_kayit_kokeni.sql` ve `supabase/ops/canli_sema_denetimi.sql`
+(ikincisi uzun bir dosyadır; tamamı yapıştırılır). Çıktılar CSV olarak. Migration uygulamak ya da kayıt defterini düzeltmek
+ayrı ve açık onay gerektirir; bu çıktılar gelmeden ve §2.7 sağlanmadan O-5a önerilmez.

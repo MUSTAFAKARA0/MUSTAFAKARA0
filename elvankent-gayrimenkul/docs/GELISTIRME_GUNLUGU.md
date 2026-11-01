@@ -23,6 +23,32 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 (11) · K-35: KI-23 İÇERİKSİZ migration geçmişi — kök neden, köken ve şema/güvenlik denetimleri (canlıya dokunulmadı)
+
+**Kaynak:** sahibin `canli_migration_gecmisi.sql` canlı çıktısı (CSV): `İÇERİKSİZ=21, KAYITSIZ=10`, `AYNI=0`; 21 kayıt · en yeni
+`20261001000001`. Beklenen `AYNI=21` doğrulanmadı. K-34'teki iki varsayım düzeltildi ("CLI ile kaydedilmiş", "İÇERİKSİZ = repair").
+
+- **Kök neden (kanıtlar):** yerel deney — CLI 2.122.0 `migration repair --status applied` dosyayı okuyup ifadeleri **doldurur**
+  (30), nesne oluşturmaz; `db push` da doldurur. Depoda `(version, name)` ile içeriksiz kayıt yazan tek mekanizma `supabase/demo`
+  SQL Editor paketleri. 06 paketinin kayıt listesi `d721428` (28.09) sürümünde `20261001000001`'de biter = canlı. Tarihî paketlerin
+  27 migration bölümü bugünkü dosyalarla bayt bayt aynı. Boş yığına tarihî paketler (tek işlem) → sahibin iki CSV'si birebir.
+  **Varsayım, canlıda doğrulanmadı:** canlı DB demo paketleriyle kurulmuş (paket başlıkları "canlıda çalıştırmayın" der) — KI-23
+  "canlı DB kimliği" sorusuna doğrudan girdi.
+- **Ayrım yöntemi:** paket = tek işlem, kayıt satırı sonda → kayıt aynı işlemde yazıldıysa gövdeler eksiksiz uygulanmıştır.
+  `supabase/ops/canli_kayit_kokeni.sql` (salt okunur): demo işareti, statements NULL/boş, işlem no (`xmin`) ve o işlemde oluşturulup
+  duran katalog satırları → ŞEMA İLE AYNI İŞLEM / BELİRSİZ. Bulgu: yeniden çalıştırılan paketin ilk işlemi BELİRSİZ görünür (katalog
+  satırları yenilenir) → 0 satır "ayrı yazıldı" kanıtı sayılmaz.
+- **Şema/güvenlik denetimi:** `supabase/ops/canli_sema_denetimi.sql` (salt okunur, yalnız katalog): G1–G4 mutlak kurallar (RLS kapalı,
+  kiracı tablosunda koşulsuz anon politika, sabitsiz SECURITY DEFINER, korumasız anon yazma) + 828 nesnelik parmak izi (tablo,
+  yetki, politika, fonksiyon, kısıt, tetikleyici, indeks, enum, kova); beklenen `scripts/sema-denetimi-build.sh` (CLI başvurusu).
+  Demo yoluyla kurulmuş yerel DB: 828/828 AYNI, G TAMAM. 6 negatif kontrol yakalandı. Bulgu: tanımlar `search_path`'e göre yazılır
+  (`supabase_admin` yolunda `auth` var → FK/politika FARKLI görünür); restore-drill denetimi SQL Editor yoluyla çalıştırır, sorgu yolu yazar.
+- **KI-24 yolu:** `restore-drill.sh` 9. adım (yalnız geçmişi `20261001000001`'de biten yedekte; G HATA → çıkış 3, `DENETIM_P=`).
+  Yerelde: yedek → geri yükleme → G TAMAM / P AYNI; RLS kapalı kopya → ŞEMA HATA. Sentetik prova A/B/C/D/S yeniden yeşil (9. adım ATLANDI).
+- **CI:** `database` işine `fetch-depth: 0` + "KI-23 canlı denetim provası" adımı (`scripts/canli-denetim-prova.sh`). Birim KT-05…07.
+- **O-5a ENGELLİ** (O5_YAYIN_PLANI 0.4, KI23 §2.7). Kayıt defteri düzeltilmedi; migration uygulanmadı.
+- CI: K-34 `ceb7821` → elvankent-ci **#146 yeşil**.
+
 ### 01.11.2026 (10) · K-34: KI-23 canlı tespit sonucu, migration geçmişi incelemesi, O-5a dosyaları (canlıya dokunulmadı)
 
 **Kaynak:** sahibin `canli_sema_tespiti.sql` çıktısı (CSV, 01.11): 21 VAR / 10 YOK, ilk eksik `20261002000001_karay_platform.sql`,

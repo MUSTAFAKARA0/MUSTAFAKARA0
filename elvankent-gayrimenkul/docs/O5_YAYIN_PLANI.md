@@ -1,6 +1,7 @@
 # O-5 · Canlı veritabanı migration planı (sıralı, geri dönüşü tanımlı) — K-33, güncelleme K-34 (01.11.2026)
 
-**Durum: PLAN.** Hiçbir aşama başlatılmadı. Her aşama **ayrı, açık, yazılı sahip onayı** ister; bir aşamanın onayı sonrakini
+**Durum: PLAN — O-5a ENGELLİ (K-35).** Hiçbir aşama başlatılmadı. Ön koşul 0.4 (İÇERİKSİZ geçmiş) çözülmeden hiçbir aşama
+önerilmez. Her aşama **ayrı, açık, yazılı sahip onayı** ister; bir aşamanın onayı sonrakini
 kapsamaz. OPS-02 bayrağı (`enforce_subscription_limits`) bu planın hiçbir aşamasında açılmaz (ayrı karar, K19 §8 birim 5b).
 
 **Kaynak (K-34):** sahibin canlı tespit çıktısı (01.11, CSV): 31 temel migration'ın 21'i VAR, 10'u YOK; ilk eksik
@@ -29,7 +30,7 @@ medya, davet, alan adı):
 | 0.1 | Faz A kapanışı: en az bir **zamanlanmış** gece yedeği başarılı | Elle yedeğe ek olarak otomatik zincir çalışıyor | Backup koşu no. |
 | 0.2 | KI-24 gerçek prova **TAMAM** (BÜTÜNLÜK TAMAM, K6 TAMAM; ŞEMA BİLGİ ve `SEMA_ILK_EKSIK = 20261002000001` beklenir) | Free planda son çare geri dönüş R2 yedeğidir; ayrıca uygulanmış 21 dosyanın RLS/yetki içeriği canlıya dokunmadan orada denetlenir | KI-24 kaydı |
 | 0.3 | ✓ **Yapıldı (01.11):** `canli_sema_tespiti.sql` → 21 VAR / 10 YOK, TUTARLILIK TAMAM | Eksik liste kesin | Sahibin CSV'si |
-| 0.4 | `canli_migration_gecmisi.sql` → beklenen `AYNI=21, KAYITSIZ=10`; `İÇERİKSİZ` / `DEPODA YOK` varsa plan durur, `FARKLI` varsa O-5a öncesi elle incelenir | Nesne kontrolü tek başına "dosya eksiksiz uygulandı" kanıtı değildir; kayıt defterinin sürüm sürüm içeriği karşılaştırılır | Çıktı |
+| 0.4 | ✗ **ENGEL AÇIK (K-35):** `canli_migration_gecmisi.sql` canlı sonucu `İÇERİKSİZ=21, KAYITSIZ=10` (beklenen `AYNI=21` doğrulanmadı). Engel ancak KI23 §2.7'deki üç koşulla kalkar: köken sorgusu (`canli_kayit_kokeni.sql`), şema/güvenlik denetimi (`canli_sema_denetimi.sql`: G TAMAM, P'de açıklanmamış fark yok) ve KI-24 gerçek provasının 9. adımı (`DENETIM_G=TAMAM`, `DENETIM_P=AYNI`) | Nesne kontrolü tek başına "dosya eksiksiz uygulandı" kanıtı değildir; kayıtların içeriksiz olması uygulanmış 21 dosyanın bütünlüğünü kanıtsız bırakıyor | Üç çıktı |
 | 0.5 | Vercel production = beklenen commit (bugün `a0f0a67`) ve önceki dağıtımda Instant Rollback | Kod geri dönüşü hazır | Ekran |
 | 0.6 | Sakin saat seçimi (müşteri trafiği az), sahip ve geliştirici aynı anda erişilebilir | İlk 30 dk yoğun kontrol | — |
 
@@ -47,7 +48,7 @@ Sıra (değişmez): `20261002000001_karay_platform` → `20261004000001_design_f
 - **Neden `supabase/ops/o5a` dosyaları:** her dosya = migration'ın birebir içeriği + **aynı işlemde** kayıt defteri kaydı
   (`scripts/o5a-build.sh` üretir, birim testi O5A-01 denetler). Ham dosya SQL Editor'den uygulanırsa kayıt defteri 21'de kalır ve
   ileride `supabase db push` bu dosyaları yeniden çalıştırmaya kalkar. Sürüm zaten kayıtlıysa dosya hiç uygulanmaz.
-- **Ön kontrol:** 0.3 ve 0.4 sonuçları. Kodun yeni dağıtımı **gerekmez** (production kodu bu nesneleri bekliyor).
+- **Ön kontrol:** 0.3 ve 0.4 sonuçları (0.4 şu an ENGEL). Kodun yeni dağıtımı **gerekmez** (production kodu bu nesneleri bekliyor).
 - **Uygulama:** SQL Editor'de her dosya ayrı sorgu, dosyanın tamamı, seçim yokken Run; RLS uyarısında **Run without RLS**
   (dosyalar RLS'i kendileri açar). Hata → **dur**, sonraki dosyaya geçme (dosya ve kaydı birlikte geri alınmıştır).
 - **Her dosyadan sonra:** `canli_sema_tespiti.sql` → o dosya `VAR`, TUTARLILIK TAMAM; `canli_migration_gecmisi.sql` → o sürüm

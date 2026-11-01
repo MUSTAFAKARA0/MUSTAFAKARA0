@@ -163,3 +163,91 @@ describe('O5A-01 O-5a dosyaları = migration + aynı işlemde geçmiş kaydı', 
     assert.equal(r.status, 0, r.stderr);
   });
 });
+
+/** Yorumları çıkar, tırnak içi metinleri ve dolar tırnaklı gövdeleri boşalt (yalnız SQL iskeleti kalır) */
+const skeleton = (t) => t.split('\n').filter((l) => !/^\s*--/.test(l)).join('\n').replace(/'(?:[^']|'')*'/g, "''");
+const FORBIDDEN = [/\binsert\b/i, /\bupdate\b/i, /\bdelete\b/i, /\bcreate\b/i, /\balter\b/i, /\bdrop\b/i, /\btruncate\b/i,
+  /\bgrant\b/i, /\brevoke\b/i, /\bset\s+\w/i, /\bcopy\b/i, /set_config/i, /dblink/i, /pg_terminate|pg_cancel|pg_reload|lo_import|lo_export/i];
+
+describe('KT-05 köken sorgusu (canli_kayit_kokeni.sql): salt okunur, kişisel veri yok', () => {
+  const k = read('supabase/ops/canli_kayit_kokeni.sql');
+  const sk = skeleton(k);
+  test('tek ifade, yazma / DDL / ayar yok', () => {
+    assert.equal((sk.match(/;/g) ?? []).length, 1);
+    for (const bad of FORBIDDEN) assert.doesNotMatch(sk, bad, String(bad));
+  });
+  test('statements içeriği değil yalnız NULL/uzunluk; demo tablosundan yalnız kurulum tarihi', () => {
+    for (const m of k.matchAll(/\bstatements\b/g)) {
+      const around = k.slice(m.index - 20, m.index + 20);
+      assert.match(around, /(statements is null|array_length\(statements|statements NULL|statements boş|statements'ı|statements \+)/, around);
+    }
+    const inner = [...k.matchAll(/query_to_xml\(\s*'((?:[^']|'')*)'/g)].map((m) => m[1]);
+    assert.deepEqual(inner, ['select min(created_at)::date::text as n from elvankent_demo.environment']);
+  });
+  test('0 katalog satırı BELİRSİZ sayılır, "ayrı yazıldı" denmez', () => {
+    assert.match(k, /'BELİRSİZ: bu işlemin katalog satırı kalmamış'/);
+    assert.doesNotMatch(skeleton(k).replace(/''/g, ''), /AYRI/);
+    assert.doesNotMatch(k, /'AYRI İŞLEM/);
+  });
+});
+
+describe('KT-06 şema ve güvenlik denetimi (canli_sema_denetimi.sql)', () => {
+  const d = read('supabase/ops/canli_sema_denetimi.sql');
+  const sk = skeleton(d);
+  test('tek ifade, yazma / DDL / ayar yok; kullanıcı tablosu okunmaz (yalnız katalog + storage.buckets)', () => {
+    assert.equal((sk.match(/;/g) ?? []).length, 1);
+    for (const bad of FORBIDDEN) assert.doesNotMatch(sk, bad, String(bad));
+    const froms = [...sk.matchAll(/\bfrom\s+([a-z_][a-z_.]*)/gi)].map((m) => m[1].toLowerCase());
+    const allowed = new Set(['pg_class', 'pg_attribute', 'pg_attrdef', 'aclexplode', 'pg_roles', 'pg_policies', 'pg_proc', 'pg_constraint',
+      'pg_trigger', 'pg_index', 'pg_type', 'storage.buckets', 'fp', 'exp', 'unnest', 'cmp', 'g', 'tenant_tables', 'pg_enum']);
+    for (const f of froms) assert.ok(allowed.has(f) || f === 'select', `okunan kaynak: ${f}`);
+  });
+  test('beklenen değerler başvurudan üretilmiş: her kategori dolu, nesne başına bir kez', () => {
+    const exp = [...d.matchAll(/^ {4}\('([a-z-ıüçşğö]+)', '((?:[^']|'')+)', '([0-9a-f]{32})'\)/gm)];
+    assert.ok(exp.length >= 800, `beklenen sayısı ${exp.length}`);
+    const keys = exp.map((m) => `${m[1]}|${m[2]}`);
+    assert.equal(new Set(keys).size, keys.length, 'tekrar yok');
+    const cats = new Set(exp.map((m) => m[1]));
+    for (const c of ['tablo', 'tablo-yetki', 'politika', 'fonksiyon', 'fonksiyon-yetki', 'kısıt', 'tetikleyici', 'indeks', 'enum', 'kova']) {
+      assert.ok(cats.has(c), c);
+    }
+    // Başvuru = 20261001000001'e kadar: sonraki migration'ların nesneleri beklenmez
+    assert.ok(!keys.some((k) => /platform_settings|platform_org_notes|organization_invitations|karay_schema_version/.test(k)), 'başvuru canlının durumunda');
+    assert.ok(keys.includes('tablo|site_configs') && keys.includes('fonksiyon|site_apply_brand(uuid,jsonb)'), '20260930000002 / 20261001000001 nesneleri var');
+  });
+  test('mutlak güvenlik kuralları G1–G4 ve search_path özeti', () => {
+    for (const r of ["'G1'", "'G2'", "'G3'", "'G4'"]) assert.ok(d.includes(r), r);
+    assert.match(d, /'HATA: RLS kapalı'/);
+    assert.match(d, /current_setting\('search_path'\)/);
+  });
+  test('üretici yalnız yerel başvuruya bağlanır ve son kaydı 20261001000001 ister', () => {
+    const r = spawnSync('bash', ['scripts/sema-denetimi-build.sh'], { cwd: root, env: { ...process.env, REF_DB_URL: 'postgresql://u@db.x.supabase.co:5432/postgres' }, encoding: 'utf8' });
+    assert.equal(r.status, 2);
+    assert.match(read('scripts/sema-denetimi-build.sh'), /\[ "\$v" = 20261001000001 \]/);
+  });
+});
+
+describe('KT-07 KI-24 yolu ve CI', () => {
+  test('restore-drill 9. adım: yalnız geçmişi 20261001000001 olan yedekte; G HATA → çıkış 3; SQL Editor search_path', () => {
+    const r = read('scripts/restore-drill.sh');
+    assert.match(r, /step "9\/9 KI-23 şema ve güvenlik denetimi/);
+    assert.match(r, /if \[ "\$REG_LAST" = 20261001000001 \]/);
+    assert.match(r, /-c 'set search_path = "\$user", public, extensions' -f "\$OPS\/canli_sema_denetimi\.sql"/);
+    assert.match(r, /result "DENETIM_G=/);
+    const i9 = r.indexOf('step "9/9'), iSema = r.lastIndexOf('result "SEMA=$sema"');
+    assert.ok(i9 > 0 && iSema > i9, 'SEMA sonucu 9. adımdan sonra yazılır');
+  });
+  test('CI database: tam geçmiş + canlı denetim provası (DRILL_URL ile KI-24 yolu)', () => {
+    const ci = read('../.github/workflows/elvankent-ci.yml');
+    const db = ci.slice(ci.indexOf('\n  database:\n'), ci.indexOf('\n  database-legacy-schema:\n'));
+    assert.match(db, /checkout@[0-9a-f]{40} # v7\.0\.1\n {8}with:\n[^\n]*\n {10}fetch-depth: 0/);
+    assert.match(db, /DRILL_URL=postgresql:\/\/supabase_admin:postgres@127\.0\.0\.1:54322\/postgres bash scripts\/canli-denetim-prova\.sh/);
+  });
+  test('prova betiği: tarihî paketler sabit commit\'lerden, beklenen canlı çıktı, 6 negatif kontrol', () => {
+    const p = read('scripts/canli-denetim-prova.sh');
+    for (const c of ['f760625:01_v1_schema', 'f760625:03_v2_stage3', 'd721428:06_platform_updates']) assert.ok(p.includes(c), c);
+    assert.match(p, /İÇERİKSİZ=21, KAYITSIZ=10/);
+    assert.equal((p.match(/^neg '/gm) ?? []).length, 6);
+    assert.equal(spawnSync('bash', ['-n', 'scripts/canli-denetim-prova.sh'], { cwd: root }).status, 0);
+  });
+});
