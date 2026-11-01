@@ -14,12 +14,12 @@ import { MEDIA_LIMITS, planVariantWidths } from '@/modules/media/variants';
  */
 
 export class MediaValidationError extends Error {
-  constructor(
-    message: string,
-    public readonly code: 'unsupported' | 'too_small' | 'too_large' | 'corrupt',
-  ) {
+  // Alan açıkça tanımlanır (TS parametre özelliği değil): birim testleri modülü tip silme kipinde yükleyebilir
+  readonly code: 'unsupported' | 'too_small' | 'too_large' | 'corrupt';
+  constructor(message: string, code: MediaValidationError['code']) {
     super(message);
     this.name = 'MediaValidationError';
+    this.code = code;
   }
 }
 
@@ -40,14 +40,54 @@ export interface ProcessedImage {
 
 const INPUT_OPTIONS = { limitInputPixels: MEDIA_LIMITS.maxPixels, failOn: 'error' as const };
 
+const UNSUPPORTED_MESSAGE = 'Bu dosya desteklenmeyen bir formatta. JPG, PNG, WEBP veya AVIF yükleyin.';
+const CORRUPT_MESSAGE = 'Dosya okunamadı. Bozuk veya desteklenmeyen bir görsel olabilir.';
+
+export type ImageContainer = 'jpeg' | 'png' | 'webp' | 'isobmff' | 'svg' | 'gif' | 'tiff';
+
+/**
+ * Dosyanın ilk baytlarından kapsayıcı türünü belirler (çözücü çalıştırmadan).
+ * isobmff = HEIF/AVIF ("ftyp" kutusu); hangi kodek olduğuna sonra sharp bakar.
+ */
+export function sniffImageContainer(input: Buffer): ImageContainer | null {
+  const ascii = (start: number, end: number) => input.subarray(start, end).toString('latin1');
+  if (input.length >= 3 && input[0] === 0xff && input[1] === 0xd8 && input[2] === 0xff) return 'jpeg';
+  if (input.length >= 8 && input.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'png';
+  if (input.length >= 12 && ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WEBP') return 'webp';
+  if (input.length >= 12 && ascii(4, 8) === 'ftyp') return 'isobmff';
+  if (input.length >= 6 && /^GIF8[79]a$/.test(ascii(0, 6))) return 'gif';
+  if (input.length >= 4 && (ascii(0, 4) === 'II*\0' || ascii(0, 4) === 'MM\0*')) return 'tiff';
+  // SVG / XML: isteğe bağlı UTF-8 BOM ve boşluktan sonra "<"
+  let i = input.length >= 3 && input[0] === 0xef && input[1] === 0xbb && input[2] === 0xbf ? 3 : 0;
+  while (i < input.length && i < 1024 && (input[i] === 0x20 || input[i] === 0x09 || input[i] === 0x0a || input[i] === 0x0d)) i++;
+  if (input[i] === 0x3c) return 'svg';
+  return null;
+}
+
+/** Çözücüye (libvips) ulaşmasına izin verilen kapsayıcılar: JPEG, PNG, WebP, HEIF/AVIF */
+const DECODABLE: ReadonlySet<ImageContainer> = new Set(['jpeg', 'png', 'webp', 'isobmff']);
+
 function qualityFor(width: number): number {
   if (width <= 640) return 76;
   if (width <= 1440) return 80;
   return 84;
 }
 
-/** Dosyanın gerçek biçimini ve boyutlarını doğrular. */
+/**
+ * Dosyanın gerçek biçimini ve boyutlarını doğrular.
+ *
+ * Önce dosya imzası denetlenir: yalnızca JPEG, PNG, WebP ve HEIF/AVIF kapsayıcıları sharp'a
+ * (libvips) verilir. SVG/XML, GIF, TIFF ve diğer biçimler hiç ayrıştırılmadan reddedilir; çözücü
+ * yüzeyi daralır (ör. librsvg açığı GHSA-wq5f-xc86-pv6w bu yoldan erişilebiliyordu). Kabul edilen
+ * biçimler değişmedi; önceden reddedilen her dosya yine reddedilir. Tek fark mesajdadır: "<" ile
+ * başlayıp geçerli SVG olmayan içerik (HTML, bozuk SVG) "Dosya okunamadı" yerine "desteklenmeyen
+ * format" mesajı alır (önceden librsvg ayrıştırmayı deneyip hata veriyordu).
+ */
 export async function inspectImage(input: Buffer): Promise<InspectedImage> {
+  const container = sniffImageContainer(input);
+  if (!container) throw new MediaValidationError(CORRUPT_MESSAGE, 'corrupt');
+  if (!DECODABLE.has(container)) throw new MediaValidationError(UNSUPPORTED_MESSAGE, 'unsupported');
+
   let meta: Metadata;
   try {
     meta = await sharp(input, INPUT_OPTIONS).metadata();
@@ -56,7 +96,7 @@ export async function inspectImage(input: Buffer): Promise<InspectedImage> {
     if (/pixel limit/i.test(message)) {
       throw new MediaValidationError('Bu görselin çözünürlüğü çok yüksek (en fazla 100 megapiksel).', 'too_large');
     }
-    throw new MediaValidationError('Dosya okunamadı. Bozuk veya desteklenmeyen bir görsel olabilir.', 'corrupt');
+    throw new MediaValidationError(CORRUPT_MESSAGE, 'corrupt');
   }
 
   let mime: InspectedImage['mime'];
@@ -78,7 +118,7 @@ export async function inspectImage(input: Buffer): Promise<InspectedImage> {
       mime = 'image/avif';
       break;
     default:
-      throw new MediaValidationError('Bu dosya desteklenmeyen bir formatta. JPG, PNG, WEBP veya AVIF yükleyin.', 'unsupported');
+      throw new MediaValidationError(UNSUPPORTED_MESSAGE, 'unsupported');
   }
 
   const rawWidth = meta.width ?? 0;
