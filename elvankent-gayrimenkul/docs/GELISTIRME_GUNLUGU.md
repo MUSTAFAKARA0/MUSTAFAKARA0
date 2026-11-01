@@ -48,6 +48,13 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 - **CI:** `database` işine `fetch-depth: 0` + "KI-23 canlı denetim provası" adımı (`scripts/canli-denetim-prova.sh`). Birim KT-05…07.
 - **O-5a ENGELLİ** (O5_YAYIN_PLANI 0.4, KI23 §2.7). Kayıt defteri düzeltilmedi; migration uygulanmadı.
 - CI: K-34 `ceb7821` → elvankent-ci **#146 yeşil**.
+- **CI #147 kırmızı (`2d71287`, quality › gitleaks: 141 bulgu) — yanlış alarm, düzeltildi:** bulguların hepsi
+  `canli_sema_denetimi.sql`'in beklenen değerleri; kısıt adlarındaki `_key`/`_pkey`/`_fkey` (ve bir `facebook_url` sütunu) hemen
+  ardından gelen 32 haneli MD5'i "anahtar" gibi gösterdi (aynı sürüm gitleaks 8.24.2 ile yerelde birebir üretildi). Sır yok.
+  Düzeltme: (1) satır biçimi `(kategori, özet, nesne)` — özet adın önünde; yeni biçim yok sayma listesi olmadan temiz;
+  (2) geçmiş zorla değiştirilmediği için `2d71287`'nin 141 bulgusu kök dizindeki `.gitleaksignore`'da **tek tek parmak iziyle**
+  (commit:dosya:kural:satır) yok sayıldı; başka commit/dosya yok, tarama ayarı değişmedi (birim testi KT-08). Yerel tam tarama:
+  144 commit, bulgu yok. Database işleri #147'de çalışmadı (quality'ye bağlı); yeni koşuda doğrulanır.
 
 ### 01.11.2026 (10) · K-34: KI-23 canlı tespit sonucu, migration geçmişi incelemesi, O-5a dosyaları (canlıya dokunulmadı)
 

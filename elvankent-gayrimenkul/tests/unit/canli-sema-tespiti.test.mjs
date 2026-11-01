@@ -203,9 +203,11 @@ describe('KT-06 şema ve güvenlik denetimi (canli_sema_denetimi.sql)', () => {
     for (const f of froms) assert.ok(allowed.has(f) || f === 'select', `okunan kaynak: ${f}`);
   });
   test('beklenen değerler başvurudan üretilmiş: her kategori dolu, nesne başına bir kez', () => {
-    const exp = [...d.matchAll(/^ {4}\('([a-z-ıüçşğö]+)', '((?:[^']|'')+)', '([0-9a-f]{32})'\)/gm)];
+    // Sıra (kategori, özet, nesne): özet adın ÖNÜNDE (CI #147: "…_key', '<hex>'" gizli anahtar sanıldı)
+    const exp = [...d.matchAll(/^ {4}\('([a-z-ıüçşğö]+)', '([0-9a-f]{32})', '((?:[^']|'')+)'\)/gm)];
     assert.ok(exp.length >= 800, `beklenen sayısı ${exp.length}`);
-    const keys = exp.map((m) => `${m[1]}|${m[2]}`);
+    assert.doesNotMatch(d, /^ {4}\('[^']+', '[^']+', '[0-9a-f]{32}'\)/m, 'özet sonda olmamalı');
+    const keys = exp.map((m) => `${m[1]}|${m[3]}`);
     assert.equal(new Set(keys).size, keys.length, 'tekrar yok');
     const cats = new Set(exp.map((m) => m[1]));
     for (const c of ['tablo', 'tablo-yetki', 'politika', 'fonksiyon', 'fonksiyon-yetki', 'kısıt', 'tetikleyici', 'indeks', 'enum', 'kova']) {
@@ -249,5 +251,18 @@ describe('KT-07 KI-24 yolu ve CI', () => {
     assert.match(p, /İÇERİKSİZ=21, KAYITSIZ=10/);
     assert.equal((p.match(/^neg '/gm) ?? []).length, 6);
     assert.equal(spawnSync('bash', ['-n', 'scripts/canli-denetim-prova.sh'], { cwd: root }).status, 0);
+  });
+});
+
+describe('KT-08 gitleaks yok sayma listesi yalnız CI #147 yanlış alarmları', () => {
+  test('her satır: commit 2d71287 + canli_sema_denetimi.sql + iki kural; başka commit/dosya yok; tarama gevşetilmedi', () => {
+    const lines = read('../.gitleaksignore').split('\n').filter((l) => l && !l.startsWith('#'));
+    assert.equal(lines.length, 141);
+    for (const l of lines) {
+      assert.match(l, /^2d712879441b8af24ba37a03bc5ae342264b85b7:elvankent-gayrimenkul\/supabase\/ops\/canli_sema_denetimi\.sql:(generic-api-key|facebook-secret):\d+$/, l);
+    }
+    const ci = read('../.github/workflows/elvankent-ci.yml');
+    assert.match(ci, /\.\/gitleaks git \. --log-opts="-- elvankent-gayrimenkul" --no-banner --redact --exit-code 1\n/);
+    assert.doesNotMatch(ci, /gitleaks[^\n]*(--config|--baseline|--ignore-gitleaks-allow|--max-target|--log-level error)/);
   });
 });

@@ -19,12 +19,13 @@ select max(version) from supabase_migrations.schema_migrations")
 fpsql=$(awk '/^-- PARMAK-IZI-BAS/{f=1;next} /^-- PARMAK-IZI-SON/{f=0} f' "$F" | sed '$ s/),$/)/')
 vals=$(PGOPTIONS='-c default_transaction_read_only=on' psql "$REF_DB_URL" -X -v ON_ERROR_STOP=1 -q -At -c "
 with $fpsql
-select string_agg(format('    (%L, %L, %L)', kategori, nesne, h), E',\n' order by kategori, nesne) from fp")
+select string_agg(format('    (%L, %L, %L)', kategori, h, nesne), E',\n' order by kategori, nesne) from fp")
 python3 - "$F" "$vals" <<'PY'
 import sys, re
 p, vals = sys.argv[1], sys.argv[2]
 s = open(p).read()
-new = "-- BEKLENEN-BAS\nexp(kategori, nesne, h) as (\n  values\n" + vals + "\n),\n-- BEKLENEN-SON"
+new = ("-- BEKLENEN-BAS\n-- Sıra (kategori, özet, nesne): özet adın önünde — gizli anahtar tarayıcısı \"…_key', '<hex>'\" biçimini anahtar\n"
+       "-- sanıyordu (CI #147)\nexp(kategori, h, nesne) as (\n  values\n" + vals + "\n),\n-- BEKLENEN-SON")
 s2, n = re.subn(r"-- BEKLENEN-BAS\n.*?-- BEKLENEN-SON", lambda m: new, s, flags=re.S)
 assert n == 1
 open(p, 'w').write(s2)
