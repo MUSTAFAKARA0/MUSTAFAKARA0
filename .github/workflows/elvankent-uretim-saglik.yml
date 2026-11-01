@@ -37,8 +37,11 @@ jobs:
           get() { : > "$T/body"; : > "$T/head"; curl -sS -L --max-time 20 -A 'KARAYS-saglik-kontrolu' -o "$T/body" -D "$T/head" -w '%{http_code} %{content_type}' "$1" 2>/dev/null || echo "000 -"; }
           build_id() { { grep -oE '/_next/static/[A-Za-z0-9_-]{8,}/_(buildManifest|ssgManifest)' "$T/body" || grep -oE '"buildId":"[A-Za-z0-9_-]{8,}"' "$T/body"; } | head -1 | sed -E 's#^/_next/static/([^/]+)/.*#\1#; s#^"buildId":"([^"]+)"#\1#'; }
           # Derlemeye özgü iz: sayfanın yüklediği /_next/static/chunks dosya adlarının özeti (her derlemede değişir)
-          chunks() { grep -oE '/_next/static/chunks/[A-Za-z0-9._~-]+\.(js|css)' "$T/body" 2>/dev/null | sort -u | sha256sum | cut -c1-16; }
-          nchunks() { grep -oE '/_next/static/chunks/[A-Za-z0-9._~-]+\.(js|css)' "$T/body" 2>/dev/null | sort -u | wc -l; }
+          # Next 16 (Turbopack) yolları /_next/static/chunks dışında da olabilir (koşu #2: 0 eşleşme): /_next/ altındaki
+          # tüm .js/.css varlık yolları (yalnız derleme çıktısı; kullanıcı verisi değil) alınır
+          assets() { grep -oE '/_next/[A-Za-z0-9/._~%-]+\.(js|css)' "$T/body" 2>/dev/null | sort -u; }
+          chunks() { assets | sha256sum | cut -c1-16; }
+          nchunks() { assets | wc -l; }
           abs() { case "$1" in http*) echo "$1" ;; /*) echo "$PROD$1" ;; *) echo "$PROD/$1" ;; esac; }
           {
             echo "### Production sağlık kontrolü ($(date -u +%FT%TZ))"
@@ -62,6 +65,7 @@ jobs:
           r=$(get "$NEW_DEPLOY/"); new_code=${r%% *}; new_id=$(build_id); new_ch=$(chunks); new_n=$(nchunks)
           r=$(get "$OLD_DEPLOY/"); old_code=${r%% *}; old_id=$(build_id); old_ch=$(chunks); old_n=$(nchunks)
           row "Derleme izi (chunk adları özeti): production alias" "$prod_ch ($prod_n dosya)"
+          row "Varlık yolu biçimi (ilk, yalnız dizin)" "$(cp "$T/home" "$T/body"; assets | head -1 | sed -E 's#[^/]+$#…#')"
           row "Derleme izi: 650fd4e dağıtımı" "HTTP $new_code · $new_ch ($new_n dosya)"
           row "Derleme izi: ff2f7da dağıtımı" "HTTP $old_code · $old_ch ($old_n dosya)"
           if [ "$prod_n" -gt 0 ] && [ "$new_n" -gt 0 ]; then
