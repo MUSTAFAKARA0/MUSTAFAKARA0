@@ -1,7 +1,8 @@
 # Elvankent Gayrimenkul — günlük yedek (veritabanı + fotoğraflar)
 #
 # Supabase'in kendi yedekleri Storage dosyalarını kapsamaz. Bu iş akışı her gece:
-#   1) veritabanının pg_dump yedeğini alır,
+#   1) veritabanının pg_dump yedeğini alır (elvankent-gayrimenkul/scripts/backup-db.sh): dump,
+#      kritik veri parmak izi, tablo satır sayıları ve SHA-256 özetleri — hepsi AYNI anlık görüntüden,
 #   2) Storage kovalarını (S3 uyumlu Supabase uç noktası üzerinden) sizin yedek
 #      deponuza (Cloudflare R2, Backblaze B2, AWS S3...) eşitler; silinen/değişen
 #      dosyalar tarihli "deleted" klasörüne taşınır,
@@ -12,7 +13,15 @@
 #   Repository secrets:   SUPABASE_DB_URL, SUPABASE_S3_ENDPOINT, SUPABASE_S3_REGION, SUPABASE_S3_ACCESS_KEY_ID,
 #                         SUPABASE_S3_SECRET_ACCESS_KEY, BACKUP_S3_ENDPOINT, BACKUP_S3_REGION,
 #                         BACKUP_S3_ACCESS_KEY_ID, BACKUP_S3_SECRET_ACCESS_KEY
-# Not: Zamanlanmış (schedule) iş akışları yalnızca deponun varsayılan dalında çalışır.
+# ELVANKENT_BACKUP_ENABLED 'true' değilken yedek ALINMAZ; her çalışmada "Yedek alınmadı" uyarısı
+# görünür (backup-disabled işi). Eksik ayar varsa yedek işi yalnızca eksiklerin ADLARINI yazıp durur.
+# Log'a kayıt sayısı, dosya boyutu, bağlantı adresi veya dosya içeriği yazılmaz (depo herkese açık).
+# Not: Zamanlanmış (schedule) iş akışları yalnızca deponun varsayılan dalında çalışır; GitHub yoğunlukta
+# başlatmayı geciktirebilir veya atlayabilir (gözlenen gecikme 5–6 saat). Herkese açık depoda 60 gün
+# hiç etkinlik olmazsa zamanlanmış iş akışları GitHub tarafından kapatılır.
+# Çalıştırıcı imajı sabittir: ubuntu-24.04 (gerekçe elvankent-ci.yml'de; LR-09). Araçlar (rclone,
+# PGDG deposundan postgresql-client-17) bu imajın paket kaynaklarına (noble) göre kurulur.
+# Action'lar tam commit SHA'sıyla sabittir (gerekçe elvankent-ci.yml'de; LR-11).
 name: elvankent-backup
 
 on:
@@ -28,13 +37,41 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Yedek kapalıyken iş sessizce "atlandı" olarak bitmesin: her çalışmada görünür uyarı
+  backup-disabled:
+    if: ${{ vars.ELVANKENT_BACKUP_ENABLED != 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Yedek kapalı
+        run: |
+          echo "::warning title=Yedek alınmadı::ELVANKENT_BACKUP_ENABLED değişkeni 'true' değil; bu çalışmada veritabanı ve dosya yedeği ALINMADI. Açılış adımları: elvankent-gayrimenkul/docs/BACKUP_RESTORE.md (Açılış kapısı)."
+          {
+            echo "### Yedek alınmadı"
+            echo "ELVANKENT_BACKUP_ENABLED değişkeni 'true' değil. Açılış adımları: elvankent-gayrimenkul/docs/BACKUP_RESTORE.md (Açılış kapısı)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
   backup:
     if: ${{ vars.ELVANKENT_BACKUP_ENABLED == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
       BUCKET: ${{ vars.BACKUP_BUCKET }}
       RETENTION_DAYS: ${{ vars.BACKUP_RETENTION_DAYS || '30' }}
+      # Supabase sunucusu PostgreSQL 17: istemci (psql, pg_dump, pg_restore) en az aynı ana sürüm olmalı. Ubuntu'nun
+      # /usr/bin araçları (pg_wrapper) kurulu en yeni sürümü değil, varsayılanı (16) seçebilir (Backup #39: pg_dump 16.15
+      # sunucu 17.6'yı reddetti); bu yüzden PG 17 ikilileri sonraki adımların PATH'ine açıkça eklenir ve sürüm denetlenir.
+      PG_MAJOR: '17'
+      PG_BIN: /usr/lib/postgresql/17/bin
+      # rclone: Ubuntu paketi (1.60.1) Cloudflare R2'ye yüklemeden sonraki HEAD isteğinde HTTP 501 alıyor (Backup #43;
+      # elvankent-r2-diagnose #5: 1.60.1'de "r2 HEAD 501", 1.75.2'de yok, PUT/GET/Supabase okuma ikisinde de temiz).
+      # Sabit sürüm resmî GitHub sürümünden indirilir ve SHA-256 ile doğrulanır (özet, teşhis #5'te rclone'un GPG imzalı
+      # SHA256SUMS dosyasıyla doğrulanan arşivin özeti). Yükseltme: yeni sürüm teşhisle doğrulanıp ayrı commit'le değişir.
+      # Ad BACKUP_ önekli OLMALI: rclone RCLONE_<SEÇENEK> ortam değişkenlerini kendi seçenekleri sayar; RCLONE_VERSION
+      # "--version" (evet/hayır) seçeneğine düşüp her rclone komutunu "Invalid value … RCLONE_VERSION" ile durdurdu (Backup #44).
+      # İş akışında RCLONE_CONFIG_* dışında RCLONE_ önekli değişken bulunmaz (BK-02d regresyon testi).
+      BACKUP_RCLONE_VERSION: v1.75.2
+      BACKUP_RCLONE_SHA256: 349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702
       # rclone uzakları ortam değişkenleriyle tanımlanır (anahtarlar yalnızca secrets'ta)
       RCLONE_CONFIG_SUPA_TYPE: s3
       RCLONE_CONFIG_SUPA_PROVIDER: Other
@@ -50,16 +87,77 @@ jobs:
       RCLONE_CONFIG_DEST_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
       RCLONE_CONFIG_DEST_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Gerekli ayarlar tanımlı mı (yalnızca adlar yazılır)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          missing=()
+          for pair in BUCKET:BACKUP_BUCKET SUPABASE_DB_URL:SUPABASE_DB_URL \
+            RCLONE_CONFIG_SUPA_ENDPOINT:SUPABASE_S3_ENDPOINT RCLONE_CONFIG_SUPA_REGION:SUPABASE_S3_REGION \
+            RCLONE_CONFIG_SUPA_ACCESS_KEY_ID:SUPABASE_S3_ACCESS_KEY_ID RCLONE_CONFIG_SUPA_SECRET_ACCESS_KEY:SUPABASE_S3_SECRET_ACCESS_KEY \
+            RCLONE_CONFIG_DEST_ENDPOINT:BACKUP_S3_ENDPOINT RCLONE_CONFIG_DEST_REGION:BACKUP_S3_REGION \
+            RCLONE_CONFIG_DEST_ACCESS_KEY_ID:BACKUP_S3_ACCESS_KEY_ID RCLONE_CONFIG_DEST_SECRET_ACCESS_KEY:BACKUP_S3_SECRET_ACCESS_KEY; do
+            name=${pair%%:*}
+            [ -n "${!name:-}" ] || missing+=("${pair#*:}")
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error title=Yedek ayarları eksik::Tanımlı olmayan değişken/sır: ${missing[*]} (bkz. docs/BACKUP_RESTORE.md)"
+            exit 1
+          fi
+          echo "Gerekli ayarların hepsi tanımlı."
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          sparse-checkout: elvankent-gayrimenkul/supabase/ops
-      - name: Araçları kur (pg_dump 17, rclone)
+          sparse-checkout: |
+            elvankent-gayrimenkul/supabase/ops
+            elvankent-gayrimenkul/scripts
+
+      - name: Araçları kur (pg_dump 17, rclone sabit sürüm)
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-common rclone
+          sudo apt-get install -y -qq postgresql-common unzip
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y -qq postgresql-client-17
-          pg_dump --version && rclone version | head -1
+          for tool in psql pg_dump pg_restore; do
+            [ -x "$PG_BIN/$tool" ] || { echo "::error title=PostgreSQL istemcisi eksik::$PG_BIN/$tool kurulmadı; yedek başlatılmadı"; exit 1; }
+          done
+          # Sonraki adımlarda PG 17 ikilileri /usr/bin'deki sarmalayıcıdan ÖNCE bulunur
+          echo "$PG_BIN" >> "$GITHUB_PATH"
+          # rclone (sabit sürüm, özet doğrulamalı); /usr/local/bin PATH'te /usr/bin'den önce gelir
+          (
+            set -euo pipefail
+            cd "$RUNNER_TEMP"
+            zip="rclone-$BACKUP_RCLONE_VERSION-linux-amd64.zip"
+            curl -fsSLO "https://github.com/rclone/rclone/releases/download/$BACKUP_RCLONE_VERSION/$zip"
+            echo "$BACKUP_RCLONE_SHA256  $zip" | sha256sum -c --quiet - \
+              || { echo "::error title=rclone doğrulanamadı::$zip özeti beklenen değil; yedek başlatılmadı"; exit 1; }
+            unzip -q "$zip"
+            sudo install -m 0755 "rclone-$BACKUP_RCLONE_VERSION-linux-amd64/rclone" /usr/local/bin/rclone
+          )
+          # Sürüm komutu kendisi de başarılı olmalı (Backup #44: ortam değişkeni çakışmasında her rclone komutu çıkış 1)
+          if ! out=$(rclone version 2>&1); then
+            echo "::error title=rclone çalışmıyor::'rclone version' başarısız: $(printf '%s\n' "$out" | head -1 | cut -c1-200); yedek başlatılmadı"
+            exit 1
+          fi
+          got=$(printf '%s\n' "$out" | head -1)
+          [ "$got" = "rclone $BACKUP_RCLONE_VERSION" ] \
+            || { echo "::error title=rclone sürümü yanlış::'$got' (beklenen rclone $BACKUP_RCLONE_VERSION); yedek başlatılmadı"; exit 1; }
+          echo "$got (SHA-256 doğrulandı)"
+
+      - name: PostgreSQL istemci sürümü (yedekten önce)
+        run: |
+          set -euo pipefail
+          # Her araç PG_BIN'den gelmeli ve ana sürümü PG_MAJOR olmalı; değilse yedeğe hiç başlanmaz
+          for tool in psql pg_dump pg_restore; do
+            path=$(command -v "$tool" || true)
+            ver=$({ "$tool" --version 2>/dev/null || true; } | head -1)
+            major=$(printf '%s\n' "$ver" | sed -nE 's/^[^0-9]*([0-9]+).*$/\1/p')
+            if [ "$path" != "$PG_BIN/$tool" ] || [ "$major" != "$PG_MAJOR" ]; then
+              echo "::error title=PostgreSQL istemci sürümü yanlış::$tool: ${path:-bulunamadı} · sürüm ${major:-?} (beklenen $PG_BIN/$tool, ana sürüm $PG_MAJOR); yedek başlatılmadı"
+              exit 1
+            fi
+            echo "$tool: $ver"
+          done
 
       - name: Veritabanı yedeği
         env:
@@ -68,29 +166,47 @@ jobs:
           set -euo pipefail
           STAMP=$(date -u +%Y-%m-%dT%H%MZ)
           echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          # Sunucu istemciden yeni bir ana sürüme geçtiyse yedeğe başlamadan dur (pg_dump yeni sunucuyu reddeder).
+          # Bağlantı hatası burada yutulur; aynı hata backup-db.sh'de adres gizlenerek raporlanır.
+          server_num=$(psql "$SUPABASE_DB_URL" -X -q -At -c 'show server_version_num' 2>/dev/null || true)
+          if [[ "$server_num" =~ ^[0-9]+$ ]] && [ $((server_num / 10000)) -gt "$PG_MAJOR" ]; then
+            echo "::error title=PostgreSQL sürüm uyuşmazlığı::Sunucu ana sürümü $((server_num / 10000)), istemci $PG_MAJOR; PG_MAJOR/PG_BIN güncellenmeli. Yedek başlatılmadı"
+            exit 1
+          fi
           # Yetkiler (GRANT/REVOKE) yedekte KALIR: --no-privileges ile alınan yedekten geri yüklemede
           # yalnızca sunucuya açık fonksiyonlar (davet, alan adı, şifre sıfırlama sınırı) herkese açılır.
-          pg_dump "$SUPABASE_DB_URL" --format=custom --no-owner --file "db-$STAMP.dump"
-          pg_restore --list "db-$STAMP.dump" > /dev/null   # yedeğin okunabilir olduğunu doğrula
-          # Kritik veri parmak izi: geri yüklemeden sonra aynı betiğin çıktısıyla birebir karşılaştırılır
-          psql "$SUPABASE_DB_URL" -X -At -v ON_ERROR_STOP=1 -f elvankent-gayrimenkul/supabase/ops/backup_fingerprint.sql > "db-$STAMP.fingerprint.txt"
-          cat "db-$STAMP.fingerprint.txt" | cut -d'|' -f1-3
-          ls -lh "db-$STAMP.dump"
+          # Parmak izi ve tablo sayıları dump ile AYNI anlık görüntüden alınır (backup_fingerprint.sql, backup_table_counts.sql).
+          OUT_DIR=. STAMP="$STAMP" bash elvankent-gayrimenkul/scripts/backup-db.sh
           rclone copyto "db-$STAMP.dump" "dest:$BUCKET/db/db-$STAMP.dump" --s3-no-check-bucket
           rclone copyto "db-$STAMP.fingerprint.txt" "dest:$BUCKET/db/db-$STAMP.fingerprint.txt" --s3-no-check-bucket
+          rclone copyto "db-$STAMP.tables.txt" "dest:$BUCKET/db/db-$STAMP.tables.txt" --s3-no-check-bucket
+          rclone copyto "db-$STAMP.sha256" "dest:$BUCKET/db/db-$STAMP.sha256" --s3-no-check-bucket
+          # Depoya yazılan dört dosya yereldekilerle aynı mı (boyut + özet). -q: başarı özeti (kova adıyla) yazılmaz, yalnızca hatalar
+          rclone check . "dest:$BUCKET/db" --one-way --include "db-$STAMP.*" --s3-no-check-bucket -q
 
       - name: Fotoğraf ve marka dosyaları (Storage)
         run: |
           set -euo pipefail
+          # Herkese açık günlük: rclone hata satırları nesne yollarını (kurum/ilan/medya kimlikleri) içerir (Backup #43).
+          # rclone çıktısı yalnız geçici dosyaya yazılır; ekrana maskelenmiş, türlere göre sayılmış özet basılır.
           for b in media-originals media branding property-images; do
+            log="$RUNNER_TEMP/rclone-storage-$b.log"
+            rc=0
             rclone sync "supa:$b" "dest:$BUCKET/storage/current/$b" \
               --backup-dir "dest:$BUCKET/storage/deleted/$STAMP/$b" \
-              --s3-no-check-bucket --transfers 8 --checkers 16 --stats-one-line --stats 60s
+              --s3-no-check-bucket --transfers 8 --checkers 16 \
+              --log-file "$log" --log-level NOTICE || rc=$?
+            bash elvankent-gayrimenkul/scripts/rclone-log-summary.sh "$log" "$b"
+            rm -f "$log"
+            if [ "$rc" != 0 ]; then
+              echo "::error title=Storage yedeği eksik::$b kovasının aktarımı başarısız (rclone çıkış kodu $rc; ayrıntı yukarıdaki maskelenmiş özette)"
+              exit "$rc"
+            fi
           done
 
       - name: Saklama süresi
         run: |
           set -euo pipefail
-          rclone delete "dest:$BUCKET/db" --min-age "${RETENTION_DAYS}d"   # .dump ve .fingerprint.txt birlikte
+          rclone delete "dest:$BUCKET/db" --min-age "${RETENTION_DAYS}d"   # .dump, .fingerprint.txt, .tables.txt, .sha256 birlikte
           rclone delete "dest:$BUCKET/storage/deleted" --min-age 90d
           rclone rmdirs "dest:$BUCKET/storage/deleted" --leave-root || true

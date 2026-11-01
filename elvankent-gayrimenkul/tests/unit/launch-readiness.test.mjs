@@ -60,14 +60,18 @@ describe('LR-02 son kontrol ve şema sürümü', () => {
 
 describe('LR-03 yedek', () => {
   const wf = read('../.github/workflows/elvankent-backup.yml');
+  // Faz 3: pg_dump iş akışından scripts/backup-db.sh betiğine taşındı (iş akışı betiği çalıştırır)
+  const script = read('scripts/backup-db.sh');
   test('pg_dump yetkileri korur', () => {
-    const dump = wf.split('\n').find((l) => /^\s*pg_dump "\$SUPABASE_DB_URL"/.test(l));
+    const dump = script.split('\n').find((l) => /^\s*pg_dump "\$SUPABASE_DB_URL"/.test(l));
     assert.ok(dump, 'pg_dump satırı var');
     assert.doesNotMatch(dump, /--no-privileges/);
     assert.match(dump, /--format=custom/);
+    assert.match(wf, /bash elvankent-gayrimenkul\/scripts\/backup-db\.sh/, 'iş akışı yedek betiğini çalıştırır');
+    for (const l of wf.split('\n').filter((x) => /\bpg_dump\b/.test(x) && !/^\s*#/.test(x))) assert.doesNotMatch(l, /--no-privileges/);
   });
   test('parmak izi üretilir ve yedekle birlikte saklanır', () => {
-    assert.match(wf, /backup_fingerprint\.sql/);
+    assert.match(script, /backup_fingerprint\.sql/);
     assert.match(wf, /fingerprint\.txt" "dest:\$BUCKET\/db\//);
   });
   test('parmak izi betiği kritik tabloları kapsar ve kişisel veri yazmaz', () => {
