@@ -23,6 +23,18 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 (5) · K-29: PR #3 production tabanında; production CI onarımı
+
+**Başlangıç:** `9eef002`. **CI #132 = `9eef002` yeşil** (quality, database, database-legacy-schema; #131 = `40f1304` yeşil). Production `650fd4e` (O-4 A; sahip bağımsız doğruladı: Vercel Production READY, Backup #47, sağlık #4). PR #3 taslak; merge, production push, migration yok.
+
+**Sahip bulgusu:** production CI #129 (push) ve #130 (PR #2) `650fd4e`'de E2E hazırlığında düştü: tırnaksız `EMAIL_FROM=KARAY CI <…>` (`.env.local: line 12: syntax error near unexpected token 'newline'`; günlükle doğrulandı).
+
+**Yapılan (PR #3 dalı `claude/backup-workflow-default-branch`, zorla push yok):** `c2d0ef3` production `650fd4e`'nin merge'ü (çakışma yok; yedek dosyaları çalışma dalındakiyle birebir aynı) · `fea4e01` CI onarımı: `env_line` (K-11) + bash okuma denetimi, `SITE_ENV=demo` ve süper admin test yöneticisi (K-10), `playwright.config.ts` `channel: 'chromium'` ve masaüstü logo fixture'ı (K-14), `ubuntu-24.04`, Supabase CLI 2.121.0. Uygulama koduna dokunulmadı.
+
+**Doğrulama:** yerel birim 406/406, `npm audit` 0, typecheck ✓, ESLint 0 hata. [CI #133](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41302169798) (push) ve [#134](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41302173738) (pull_request): quality ✓ (audit dahil), RLS/MFA/kiracı ✓, E2E hazırlık ✓ (hata giderildi), E2E **183 geçti / 1 başarısız (KARAY-01)** / 4 atlandı / 17 çalışmadı (seri dosya). KARAY-01: `/karay`'da 2 kırık ekran görüntüsü (`public/karay/*.png`), production'da önceden var; çalışma dalında uygulama koduyla düzeltildi (statik import + `09e935b`).
+
+**Karar:** PR #3 **HAZIR DEĞİL** (CI kırmızı, neden PR değil). Seçenekler A (önce KARAY-01 düzeltmesi, ayrı onay) / B (yazılı istisna ile merge): [PR3_HAZIRLIK_PLANI.md](PR3_HAZIRLIK_PLANI.md). Bu commit'in CI'ı sahibe verilen raporda.
+
 ### 01.11.2026 (4) · K-28: O-4 A YAYINLANDI (yalnız güvenlik yaması)
 
 **Onay:** sahibin yazılı ve açık onayı ("O-4 A production yayını için açık onay"). GitHub entegrasyonu üzerinden deneme "Resource not accessible by integration" ile olmamıştı.
