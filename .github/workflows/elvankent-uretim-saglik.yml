@@ -23,9 +23,9 @@ jobs:
     timeout-minutes: 10
     env:
       PROD: https://mustafakara-0-7hh3.vercel.app
-      # KARAY-01 yayını (74013a5) ve önceki production (650fd4e) dağıtımlarının kendi adresleri (GitHub dağıtım kaydından)
-      NEW_DEPLOY: https://mustafakara-0-7hh3-do02vsewt-kara-6892.vercel.app
-      OLD_DEPLOY: https://mustafakara-0-7hh3-8u946k8to-kara-6892.vercel.app
+      # PR #3 yayını (a0f0a67) ve önceki production (74013a5) dağıtımlarının kendi adresleri (GitHub dağıtım kaydından)
+      NEW_DEPLOY: https://mustafakara-0-7hh3-46yz1kuwv-kara-6892.vercel.app
+      OLD_DEPLOY: https://mustafakara-0-7hh3-do02vsewt-kara-6892.vercel.app
     steps:
       - name: Sağlık ve temel sayfalar
         run: |
