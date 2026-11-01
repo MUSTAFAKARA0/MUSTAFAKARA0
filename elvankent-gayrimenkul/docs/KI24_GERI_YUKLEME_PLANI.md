@@ -12,6 +12,12 @@
 | **Ş1** Canlıda henüz uygulanmamış migration'lar yüzünden prova yanlışlıkla başarısız sayılmasın; yedek bütünlüğü ve güncel şema uygunluğu ayrı kontroller olsun | `restore-drill.sh` iki ayrı karar yazar: **BÜTÜNLÜK** (SHA-256, dump, tek işlem geri yükleme, parmak izi, tablo sayıları → hata: çıkış 1) ve **ŞEMA** (şema sürümü ↔ depodaki son migration, bekleyen dosyalar, postflight → TAMAM / BİLGİ / HATA). Şema geride ise postflight'ın "…uygulanmamış" / "şema sürümü eski" satırları **migration gecikmesi = BİLGİ** (çıkış 0). `supabase/pending` dosyaları yalnız bilgi. RLS / yetki / istemciye açık fonksiyon hataları şema geride olsa da **HATA** (çıkış 3), gizlenmez | `tests/unit/restore-drill.test.mjs` RD-02 (11 test); sentetik prova senaryo B (gerçek PG 17 Supabase yığınında) |
 | **Ş2** Geri yükleme yalnız izole yerel test veritabanına yapılabilsin | Hedef adresi yalnız `127.0.0.1` / `localhost` / `[::1]` + veritabanı adı; sorgu parametresi (`?host=`, `?hostaddr=`, `?service=`), birden çok ana makine, uzak ad, anahtar=değer biçimi ve `PGHOSTADDR`/`PGSERVICE`/`PGSERVICEFILE` reddedilir — **hiçbir veritabanı aracı çağrılmadan** (çıkış 2). `localhost` yalnız loopback'e çözülüyorsa kabul. Bağlandıktan sonra sunucu kendini genel ağ adresiyle görüyorsa veritabanı oluşturulmadan durur. Yalnız yeni `karay_restore_drill_*` veritabanı oluşturulur, her durumda silinir. Gerçek veri iş akışında canlı sır hiç yoktur | RD-01 (24 test, sahte psql/pg_restore çağrı günlüğü boş); RD-03 (iş akışında canlı sır / yazma anahtarı / artifact / R2 yazma komutu yok; sentetik betik de yalnız yerel); sentetik prova senaryo C2 |
 
+**Ş1 eki (01.11, ikinci tur):** canlı veritabanında `karay_schema_version()` **yok** ve birden çok migration eksik. Sürüm
+fonksiyonu yokken de şema "geride" sayılır; ancak yalnız eksikler **tutarlıysa**: postflight'ın "…uygulanmamış" dediği migration'lar
+denetlenen migration listesinin **son kısmı** olmalı (ilk eksikten sonraki hepsi eksik). Arada bir eksik görünüp sonrakiler uygulanmışsa
+(ör. açık bir kiracı politikası 14. satırda "…uygulanmamış" yazdırır) ya da sürüm "uygulandı" diyorsa → **HATA**. RLS, yetki ve
+istemciye açık fonksiyon satırları hiçbir durumda bilgiye çevrilmez. Sonuç dosyası `SEMA_ILK_EKSIK=<id>` yazar.
+
 Not (Docker): yerel Supabase konteynerde çalışır; loopback port yönlendirmesiyle bağlanılır ve sunucu kendini köprü ağı adresiyle
 (ör. `172.18.0.x`) görür. Bu yüzden çalışma anı kontrolü "loopback" değil "genel ağ değil" denetler; asıl güvence istemci tarafındaki
 loopback zorunluluğudur (loopback adresi yalnız aynı makinedeki süreçlere ulaşır).
@@ -58,7 +64,9 @@ Prova, GitHub'ın **tek kullanımlık** çalıştırıcısında (ubuntu-24.04) y
    (yalnız `db-<STAMP>.*`; listeleme yalnız ad, boyut yazılmaz).
 3. **Veritabanı provası:** `ADMIN_DB_URL=postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres bash scripts/restore-drill.sh <klasör> <STAMP>` → K1–K5, K7 (bütünlük ve şema ayrı; §0).
 4. **Storage örneği (K6):** `storage/current/media-originals` altından rastgele N=20 dosya (ve `branding`'den 5) çalıştırıcıya indirilir,
-   yerel Storage'a yüklenir, geri indirilir; SHA-256'lar karşılaştırılır. Yollar yazılmaz. **Henüz yazılmadı** (gerçek veri onayından sonra).
+   yerel Storage'a yüklenir, geri indirilir; SHA-256'lar karşılaştırılır. Yollar yazılmaz. **Yazıldı (kapalı iş akışında):**
+   `scripts/storage-roundtrip-drill.mjs` — hedef yalnız yerel Storage (başka adres istek gönderilmeden çıkış 2), yeni **özel** geçici
+   kova `karay-k6-<zaman>-<pid>`, nesne adları sıra numarası (gerçek yol Storage'a da gitmez), kova her durumda silinir.
 5. **Özet:** her ölçüt için TAMAM/HATA, süreler (K8). Ham çıktı yok.
 6. **Temizlik:** geçici veritabanı (betik siler), indirilen dosyalar, yerel Supabase (`supabase stop --no-backup`).
 
@@ -73,8 +81,17 @@ veritabanlarına yüklenir. CI'da `database` işinin "KI-24 sentetik geri yükle
 | B canlı gibi geride şema (son migration uygulanmamış: sürüm `20261011000001`, KARAYS sütun varsayılanı geri) | BÜTÜNLÜK TAMAM, ŞEMA **BİLGİ**, çıkış 0 | 17/17, 80/80; postflight 21 TAMAM, **1 migration gecikmesi** (27: KARAYS marka geçişi), 0 HATA. **Eski betik bu yedeği "Son kontrolde 1 HATA" ile başarısız sayardı** (Ş1'in düzelttiği durum) |
 | C1 bozuk dump | BÜTÜNLÜK HATA, çıkış 1, veritabanı oluşturulmaz | SHA-256 uyuşmadı, durdu |
 | C2 uzak hedef | YALITIM, çıkış 2 | Hiçbir araç çağrılmadan reddedildi |
+| **D1 canlının gerçek durumu**: ikinci yerel yığın (`scripts/live-like-stack.sh`, portlar 553xx), yalnız 28/31 migration (`20261010000001` öncesi), `karay_schema_version()` **yok**, demo verisi | BÜTÜNLÜK TAMAM, ŞEMA BİLGİ, çıkış 0 | 17/17, 79/79; postflight 19 TAMAM, **3 migration gecikmesi** (25–27), 0 HATA; `SEMA_ILK_EKSIK=20261010000001`. Bu düzeltmeden önce aynı yedek "ŞEMA: HATA (3)" alıyordu |
+| D2 aynı şema + RLS kapalı tablo | ŞEMA HATA, çıkış 3 | 2. satır HATA; gizlenmedi |
+| D3 aynı şema + kiracı listesi herkese açık politika | ŞEMA HATA, çıkış 3 | 14. satır "…20260929000001 uygulanmamış" → tutarsız eksik olarak yakalandı, gecikmeler de bilgi sayılmadı |
+| D4 aynı şema + davet fonksiyonu `anon`'a açık | ŞEMA HATA, çıkış 3 | 23. satır HATA; gizlenmedi |
+| **S1 K6 sentetik Storage**: 25 sentetik dosya (boş ve 3 MB dahil) → yerel geçici kova → geri indirme | STORAGE=TAMAM | 25/25 SHA-256 aynı; geçici kova ve nesneler silindi (veritabanında 0 kalıntı) |
+| S2 uzak Storage adresi | YALITIM, çıkış 2 | İstek gönderilmedi |
 
-Bekleyen 8 dosya uygulanmış veritabanında (CI ile aynı koşul) da dört senaryo aynı sonucu verdi. Her çalışmadan sonra
+Bekleyen 8 dosya uygulanmış veritabanında (CI ile aynı koşul) da aynı sonuçlar. CI'da D ve S zorunludur (`REQUIRE_LIVE_LIKE=1`,
+`REQUIRE_STORAGE=1`); birim testleri: RD-02 (canlı durumu, tutarsız eksik, gizlenmeyen hatalar), SR-01…04 (sahte yerel Storage ile
+bozuk içerik, yükleme hatası, yalıtım, boş örnek). Gerçek iş akışının K6 adımı sahte rclone + gerçek yerel Storage ile yerelde
+çalıştırıldı (22/22, günlükte yol yok). Her çalışmadan sonra
 `karay_restore_drill_*` / `karay_kuru_eski_*` veritabanı kalmadı. Süre: dört senaryo toplam ≈ 8 sn (demo verisi).
 
 **Bulgu (düzeltildi):** tam Supabase yedeği yerel yığının `postgres` rolüyle geri **yüklenemiyor** (`realtime.list_changes`:

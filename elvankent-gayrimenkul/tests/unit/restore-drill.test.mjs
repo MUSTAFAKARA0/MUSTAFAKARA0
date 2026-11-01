@@ -30,7 +30,7 @@ echo "psql $*" >> "$FAKE_LOG"
 args="$*"
 case "$args" in
   *inet_server_addr*) printf '%s\\n' "\${FAKE_SERVER_ADDR-127.0.0.1}"; exit 0 ;;
-  *karay_schema_version*) printf '%s\\n' "\${FAKE_VERSION:-${LATEST}}"; exit 0 ;;
+  *karay_schema_version*) printf '%s\\n' "\${FAKE_VERSION-${LATEST}}"; exit 0 ;;
   *backup_fingerprint.sql*) cat "$FAKE_DIR/restored.fingerprint.txt"; exit 0 ;;
   *backup_table_counts.sql*) cat "$FAKE_DIR/restored.tables.txt"; exit 0 ;;
   *postflight_v2.sql*) cat "$FAKE_DIR/postflight.txt"; exit 0 ;;
@@ -207,6 +207,46 @@ describe('RD-02 bütünlük ve şema uygunluğu ayrı', () => {
     assert.equal(r.status, 3, r.out);
     assert.match(r.out, /ŞEMA: HATA — son kontrolde 1 /);
   });
+  // Canlının gerçek durumu (sahip, 01.11): karay_schema_version() yok (FAKE_VERSION=''), birden çok migration eksik
+  const LIVE = '1|tablolar|20 / 20|TAMAM\n2|RLS|yok|TAMAM\n14|Kiracı listesi|0 açık politika|TAMAM\n'
+    + '25|Şema sürümü|sürüm yok|HATA: 20261010000001_password_reset_requests.sql uygulanmamış\n'
+    + '26|Müşteri operasyonları|not tablosu yok|HATA: 20261011000001_customer_operations.sql uygulanmamış\n'
+    + '27|KARAYS marka geçişi|KARAY|HATA: 20261018000001_karays_brand.sql uygulanmamış\n';
+  test('canlı durumu: sürüm fonksiyonu yok + son 3 migration eksik → BÜTÜNLÜK TAMAM, ŞEMA BİLGİ, çıkış 0', (t) => {
+    const r = setup(t, { postflight: LIVE }).run(LOCAL, { FAKE_VERSION: '' });
+    assert.equal(r.status, 0, r.out);
+    assert.match(r.out, /3 satır migration gecikmesi/);
+    assert.match(r.out, /ŞEMA: BİLGİ — şema sürümü fonksiyonu yok; son kontrole göre ilk eksik migration 20261010000001/);
+    assert.match(r.result, /^BUTUNLUK=TAMAM$/m);
+    assert.match(r.result, /^SEMA=BILGI$/m);
+    assert.match(r.result, /^SEMA_SURUM=yok$/m);
+    assert.match(r.result, /^SEMA_ILK_EKSIK=20261010000001$/m);
+  });
+  test('canlı durumu + RLS kapalı tablo: gizlenmez (çıkış 3)', (t) => {
+    const r = setup(t, { postflight: LIVE.replace('2|RLS|yok|TAMAM', '2|RLS|properties|HATA: RLS kapalı tablo var') }).run(LOCAL, { FAKE_VERSION: '' });
+    assert.equal(r.status, 3, r.out);
+    assert.match(r.out, /BÜTÜNLÜK: TAMAM/);
+    assert.match(r.out, /ŞEMA: HATA — son kontrolde 1 /);
+  });
+  test('canlı durumu + istemciye açık fonksiyon: gizlenmez (çıkış 3)', (t) => {
+    const r = setup(t, { postflight: LIVE + '23|Sahip daveti|0|HATA: davet fonksiyonları istemciye açık veya eksik\n' }).run(LOCAL, { FAKE_VERSION: '' });
+    assert.equal(r.status, 3, r.out);
+  });
+  test('tutarsız eksik: arada bir migration "uygulanmamış" ama sonrakiler uygulanmış (ör. açık politika) → HATA', (t) => {
+    const r = setup(t, { postflight: LIVE.replace('14|Kiracı listesi|0 açık politika|TAMAM', '14|Kiracı listesi|1 açık politika|HATA: 20260929000001_platform_owner_isolation.sql uygulanmamış') }).run(LOCAL, { FAKE_VERSION: '' });
+    assert.equal(r.status, 3, r.out);
+    assert.match(r.out, /eksikler tutarsız: 20260929000001 eksik görünüyor/);
+    assert.match(r.result, /^SEMA=HATA$/m);
+  });
+  test('tutarsız eksik: sürüm 20261011000001 diyor ama 20261010000001 "uygulanmamış" → HATA', (t) => {
+    const r = setup(t, { postflight: LIVE }).run(LOCAL, { FAKE_VERSION: '20261011000001' });
+    assert.equal(r.status, 3, r.out);
+    assert.match(r.out, /şema sürümü 20261011000001, 20261010000001 uygulanmış olmalıydı/);
+  });
+  test('sürüm fonksiyonu yokken "şema sürümü eski" satırı beklenmez → HATA', (t) => {
+    const r = setup(t, { postflight: LIVE + '28|x|y|HATA: şema sürümü eski\n' }).run(LOCAL, { FAKE_VERSION: '' });
+    assert.equal(r.status, 3, r.out);
+  });
   test('geçici veritabanı her durumda silinir (başarı ve bütünlük hatası)', (t) => {
     for (const opts of [{}, { restoredFp: 'farklı\n' }]) {
       const r = setup(t, opts).run(LOCAL);
@@ -219,17 +259,67 @@ describe('RD-03 iş akışları', () => {
   const ci = read('../.github/workflows/elvankent-ci.yml');
   // Yorum satırları belgeleme içindir (yasak adları anlatır); denetim yalnız çalışan YAML'a yapılır
   const wf = read('../.github/workflows/elvankent-restore-drill.yml').split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
-  test('CI database işi: sentetik kuru prova (yerel yedek → yerel geçici veritabanı; A/B/C senaryoları)', () => {
+  test('CI database işi: sentetik kuru prova (A/B/C + canlının gerçek durumu D + K6 Storage S zorunlu)', () => {
     const db = ci.split(/\n {2}database:\n/)[1]?.split(/\n {2}[a-z][\w-]*:\n/)[0] ?? '';
     const step = db.slice(db.indexOf('- name: KI-24 sentetik geri yükleme provası'));
     assert.ok(step.length > 40, 'adım var');
     assert.match(step, /DRILL_URL=postgresql:\/\/supabase_admin:postgres@127\.0\.0\.1:54322\/postgres/);
+    assert.match(step, /bash scripts\/live-like-stack\.sh start\n/);
+    assert.match(step, /trap 'bash scripts\/live-like-stack\.sh stop' EXIT/);
+    assert.match(step, /LIVE_DRILL_URL=postgresql:\/\/supabase_admin:postgres@127\.0\.0\.1:55322\/postgres REQUIRE_LIVE_LIKE=1/);
+    assert.match(step, /REQUIRE_STORAGE=1/);
     assert.match(step, /bash scripts\/restore-drill-synthetic\.sh/);
-    assert.doesNotMatch(step, /secrets\./, 'sentetik provada sır yok');
+    assert.doesNotMatch(step.split('\n      - name:')[0], /secrets\./, 'sentetik provada sır yok');
     const syn = read('scripts/restore-drill-synthetic.sh');
     assert.match(syn, /SUPABASE_DB_URL="\$DB_URL"[^\n]*bash "\$HERE\/backup-db\.sh"/);
-    assert.match(syn, /ADMIN_DB_URL="\$DRILL_URL"[^\n]*bash "\$HERE\/restore-drill\.sh"/);
-    for (const want of ["'BUTUNLUK=TAMAM' 'SEMA=TAMAM'", "'BUTUNLUK=TAMAM' 'SEMA=BILGI'", "'BUTUNLUK=HATA'"]) assert.ok(syn.includes(want), want);
+    assert.match(syn, /ADMIN_DB_URL="\$\{4:-\$DRILL_URL\}"[^\n]*bash "\$HERE\/restore-drill\.sh"/);
+    for (const want of [
+      "'BUTUNLUK=TAMAM' 'SEMA=TAMAM'", "'BUTUNLUK=TAMAM' 'SEMA=BILGI'", "'BUTUNLUK=HATA'",
+      "'BUTUNLUK=TAMAM' 'SEMA=BILGI' 'SEMA_SURUM=yok'", 'disable row level security', 'organizations_public_read',
+      'to anon"', "'STORAGE=TAMAM' 'STORAGE_DOSYA=25' 'STORAGE_AYNI=25'",
+    ]) assert.ok(syn.includes(want), want);
+    assert.equal((syn.match(/'BUTUNLUK=TAMAM' 'SEMA=HATA'/g) ?? []).length, 3, 'D2–D4 HATA bekler');
+  });
+  test('canlı benzeri yığın: ayrı proje ve 553xx portları, kesim karay_schema_version öncesi, yalnız yerel', () => {
+    const sh = read('scripts/live-like-stack.sh');
+    assert.match(sh, /CUTOFF=\$\{2:-20261010000000\}/);
+    assert.match(sh, /project_id = "karay-canli-benzeri"/);
+    assert.match(sh, /s\/= 543\(\[0-9\]\{2\}\)\$\/= 553\\1\//);
+    assert.match(sh, /grep -qE '\^port = 55322\$'/);
+    assert.doesNotMatch(sh, /supabase\.co|SUPABASE_DB_URL|secrets/);
+    assert.ok(LATEST > '20261010000000', 'kesimden sonra en az bir migration var: canlı benzeri şema gerçekten geride');
+  });
+  test('gerçek veri iş akışı K6: R2 örneği → yerel geçici Storage → SHA-256; yollar günlüğe yazılmaz', () => {
+    const k6 = wf.slice(wf.indexOf('- name: Storage örneği (K6'), wf.indexOf('- name: Temizlik'));
+    assert.ok(k6.length > 100, 'K6 adımı var');
+    assert.match(k6, /if: \$\{\{ !cancelled\(\) \}\}/);
+    assert.match(k6, /rclone lsf "src:\$BACKUP_BUCKET\/storage\/current\/\$b\/" -R --files-only[^\n]*\n[^\n]*--log-file[^\n]*> "\$RUNNER_TEMP\/k6-\$b\.all"/);
+    assert.match(k6, /rclone copy "src:\$BACKUP_BUCKET\/storage\/current\/\$b\/" "\$K6\/\$b\/" --files-from/);
+    assert.match(k6, /STORAGE_DRILL_URL="\$API_URL" STORAGE_DRILL_KEY="\$SERVICE_ROLE_KEY"/);
+    assert.match(k6, /node scripts\/storage-roundtrip-drill\.mjs/);
+    assert.match(k6, /::add-mask::\$SERVICE_ROLE_KEY/);
+    assert.doesNotMatch(k6, /cat "\$RUNNER_TEMP\/k6-|head "\$RUNNER_TEMP\/k6-/, 'liste günlüğe basılmaz');
+    assert.match(wf, /rm -rf [^\n]*"\$RUNNER_TEMP\/k6"/);
+  });
+  test('iş akışlarındaki run betikleri bash sözdizimine uygun', () => {
+    for (const [name, text] of [['elvankent-restore-drill.yml', read('../.github/workflows/elvankent-restore-drill.yml')], ['elvankent-ci.yml', ci]]) {
+      const lines = text.split('\n');
+      for (let i = 0; i < lines.length; i += 1) {
+        const m = lines[i].match(/^(\s*)(?:- )?run: \|$/);
+        if (!m) continue;
+        const body = [];
+        let indent = null;
+        for (let j = i + 1; j < lines.length; j += 1) {
+          if (lines[j].trim() === '') { body.push(''); continue; }
+          const ind = lines[j].match(/^\s*/)[0].length;
+          if (indent === null) indent = ind;
+          if (ind < indent) break;
+          body.push(lines[j].slice(indent));
+        }
+        const r = spawnSync('bash', ['-n'], { input: body.join('\n'), encoding: 'utf8' });
+        assert.equal(r.status, 0, `${name}:${i + 1} ${r.stderr}`);
+      }
+    }
   });
   test('sentetik prova betiği de yalnız yerel adreslerle çalışır (hiçbir araç çağrılmaz)', (t) => {
     const dir = mkdtempSync(path.join(tmpdir(), 'karay-syn-'));

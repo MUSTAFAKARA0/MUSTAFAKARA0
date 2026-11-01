@@ -14,7 +14,9 @@
 #   - Hedef yalnız çalıştırıcıdaki yerel `supabase start` (127.0.0.1); restore-drill.sh yerel olmayan hedefi reddeder.
 #   - R2 yalnız okunur: yalnız `rclone copy` R2 → çalıştırıcı; sync/delete/move/purge yok.
 #   - upload-artifact yok; günlükte yalnız adım durumu ve eşleşen satır/tablo SAYISI (kayıt sayısı/içerik/yol yok).
-#   - Dump ve yerel veritabanı iş sonunda silinir; makine tek kullanımlıktır.
+#   - K6: R2'den rastgele 20 media-originals + 5 branding dosyası çalıştırıcıya indirilir, yerel geçici Storage kovasına
+#     yüklenip geri indirilir, SHA-256 karşılaştırılır (scripts/storage-roundtrip-drill.mjs; yollar günlüğe yazılmaz).
+#   - Dump, örnek dosyalar ve yerel veritabanı iş sonunda silinir; makine tek kullanımlıktır.
 # Çalıştırıcı imajı sabit (ubuntu-24.04, LR-09); action'lar tam commit SHA'sıyla sabit (LR-11).
 name: elvankent-restore-drill
 
@@ -139,8 +141,39 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           exit "$code"
 
+      - name: Storage örneği (K6 — R2 → çalıştırıcı → yerel GEÇİCİ Storage → geri indirme → SHA-256)
+        # Veritabanı provası başarısız olsa da çalışır (iki ayrı kanıt); iptalde çalışmaz
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          # Yerel yığının adresi ve yerel anahtarı (gerçek proje anahtarı değil); yine de günlükte maskelenir
+          eval "$(supabase status -o env 2>/dev/null | grep -E '^(API_URL|SERVICE_ROLE_KEY)=')"
+          echo "::add-mask::$SERVICE_ROLE_KEY"
+          K6="$RUNNER_TEMP/k6"
+          mkdir -p "$K6"
+          # Rastgele örnek: media-originals'tan 20, branding'den 5 dosya. Liste ve yollar yalnız dosyada; günlüğe yazılmaz
+          for spec in media-originals:20 branding:5; do
+            b=${spec%%:*}; n=${spec#*:}
+            rclone lsf "src:$BACKUP_BUCKET/storage/current/$b/" -R --files-only --s3-no-check-bucket \
+              --log-file "$RUNNER_TEMP/rclone-k6.log" --log-level INFO > "$RUNNER_TEMP/k6-$b.all" || true
+            shuf -n "$n" "$RUNNER_TEMP/k6-$b.all" > "$RUNNER_TEMP/k6-$b.list" || true
+            echo "$b: $(grep -c . "$RUNNER_TEMP/k6-$b.list" || true) örnek seçildi"
+            [ -s "$RUNNER_TEMP/k6-$b.list" ] || continue
+            rclone copy "src:$BACKUP_BUCKET/storage/current/$b/" "$K6/$b/" --files-from "$RUNNER_TEMP/k6-$b.list" --s3-no-check-bucket \
+              --log-file "$RUNNER_TEMP/rclone-k6.log" --log-level INFO \
+              || { bash scripts/rclone-log-summary.sh "$RUNNER_TEMP/rclone-k6.log" storage-ornek; exit 1; }
+          done
+          bash scripts/rclone-log-summary.sh "$RUNNER_TEMP/rclone-k6.log" storage-ornek
+          code=0
+          STORAGE_DRILL_URL="$API_URL" STORAGE_DRILL_KEY="$SERVICE_ROLE_KEY" \
+            node scripts/storage-roundtrip-drill.mjs --from="$K6" --result="$RUNNER_TEMP/k6.txt" --min=1 || code=$?
+          {
+            sed -nE 's/^STORAGE=(.*)$/| Storage örneği (K6, SHA-256 gidiş-dönüş) | \1 |/p; s/^STORAGE_AYNI=(.*)$/| Storage örneği: aynı dosya | \1 |/p; s/^STORAGE_DOSYA=(.*)$/| Storage örneği: toplam dosya | \1 |/p' "$RUNNER_TEMP/k6.txt"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+
       - name: Temizlik (dump, yerel veritabanı)
         if: always()
         run: |
-          rm -rf "$RUNNER_TEMP/yedek" "$RUNNER_TEMP/rclone.log" "$RUNNER_TEMP/sonuc.txt"
+          rm -rf "$RUNNER_TEMP/yedek" "$RUNNER_TEMP/rclone.log" "$RUNNER_TEMP/sonuc.txt" "$RUNNER_TEMP/k6" "$RUNNER_TEMP"/k6-* "$RUNNER_TEMP/k6.txt" "$RUNNER_TEMP/rclone-k6.log"
           supabase stop --no-backup || true

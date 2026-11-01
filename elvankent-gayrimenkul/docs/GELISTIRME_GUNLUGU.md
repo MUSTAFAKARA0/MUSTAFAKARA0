@@ -23,6 +23,23 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 (2) · K-26: KI-24 canlının gerçek durumu (sürüm fonksiyonu yok), K6 Storage doğrulaması; O-4 hazırlık dalı
+
+**Başlangıç:** `5298dbe` (CI #123 yeşil). Production `ff2f7da`, değişmedi; PR #3 taslak; canlıya bağlanılmadı, migration uygulanmadı, gerçek veri kullanılmadı; gerçek veri iş akışının kapıları kapalı.
+
+**Sahip bulgusu (01.11):** canlıda `karay_schema_version()` yok ve birden çok migration eksik; B senaryosu yalnız tek migration geride ve fonksiyonu olan şemayı deniyordu. K6 gerçek iş akışında yoktu.
+
+**Kırmızı → yeşil:** canlı benzeri şemadan alınan sağlam yedek eski betikte `ŞEMA: HATA (3)` alıyordu (25–27 "…uygulanmamış", sürüm yokken gecikme sayılmıyordu).
+- `restore-drill.sh`: sürüm fonksiyonu yokken de şema geride sayılır; "…uygulanmamış" satırları yalnız eksikler denetlenen migration'ların **son kısmıysa** bilgi; tutarsız eksik (arada eksik / sürümle çelişen) ve diğer tüm HATA satırları çıkış 3. `SEMA_ILK_EKSIK`.
+- `scripts/live-like-stack.sh`: ikinci yerel Supabase yığını (ayrı proje, 553xx), kesim `20261010000000` (28/31 migration, sürüm fonksiyonu yok), demo verisi.
+- Sentetik prova D1 (BİLGİ), D2 RLS kapalı, D3 kiracı listesi açık politika (tutarsız eksik), D4 davet fonksiyonu `anon`'a açık → üçü de HATA. CI'da zorunlu.
+- K6: `scripts/storage-roundtrip-drill.mjs` (yalnız yerel Storage; özel geçici kova; opak nesne adları; SHA-256; kova her durumda silinir; bağımlılıksız). Sentetik S1/S2 CI'da zorunlu; gerçek iş akışına K6 adımı (R2'den rastgele 20 + 5 dosya, yollar günlüğe yazılmaz), kapalı.
+- Testler: RD-02 +6, RD-03 +4 (K6 adımı, canlı benzeri yığın, iş akışı `run` betiklerinin bash sözdizimi), SR-01…04 (11).
+
+**Doğrulama (yerel):** birim **702/702**, ESLint temiz. Sentetik prova A, B, C1, C2, D1–D4, S1–S2 **10/10** (yerel PostgreSQL 17.11 yığınları, gerçek yerel Storage). Gerçek iş akışının K6 adımı sahte rclone + gerçek yerel Storage ile 22/22; geçici kova kalmadı.
+
+**CI:** sahibe verilen raporda (ve aşağıdaki O-4 bölümünde).
+
 ### 01.11.2026 · K-25: KI-24 iş akışı ve sentetik kuru prova; O-4 + PR #3 yayın sırası
 
 **Başlangıç:** `17663e7` (CI #122 yeşil). Production `ff2f7da`, değişmedi; PR #3 taslak (merge yok); canlı veritabanına bağlanılmadı, migration uygulanmadı, gerçek yedek indirilmedi/geri yüklenmedi; Vercel, DNS, OPS-02 bayrağı ve `.claude/` değişmedi.
@@ -42,7 +59,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 **Yayın sırası kanıtı (geçici yerel çalışma ağacı, push yok):** yama SHA-256 OK, ağaç `29f81af` beklenenle aynı; yama ile PR #3 dosya kesişimi yok, iki sıra da çakışmasız. `npm audit --omit=dev --audit-level=high`: PR #3 tek başına başarısız, A + PR #3 **0 açık**. Öneri: A → PR #3 A'nın üstüne → A yayını → kontrol → PR #3 merge.
 
-**CI:** bu commit'in koşusu sahibe verilen raporda.
+**CI:** [#123](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41285876677) = `5298dbe` **yeşil** (quality, database — sentetik prova adımı A/B/C1/C2 ✓ —, database-legacy-schema). `elvankent-restore-drill` #1 aynı push'ta **atlandı** (onay kapısı kapalı).
 
 ### 31.10.2026 (2) · K-24: KI-38 bir kez yazma, kilit ve başıboş dosya süpürmesi; sahip adım listesi
 
