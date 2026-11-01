@@ -1,0 +1,95 @@
+# Elvankent Gayrimenkul — production sağlık kontrolü (YALNIZ OKUMA)
+#
+# Herkese açık production adresine yalnız GET istekleri atar: /api/health (uygulama + veritabanı bağlantısı), ana sayfa,
+# /satilik ilan listesi, bir ilan ayrıntısı ve görselleri. Production alias'ının hangi dağıtımı sunduğunu, sayfadaki Next.js
+# derleme kimliğini yeni ve eski dağıtımın kendi adresleriyle karşılaştırarak gösterir.
+# Hiçbir şey yazmaz, giriş yapmaz, form göndermez, sır kullanmaz, artifact yüklemez. Günlüğe yalnız HTTP kodu, içerik türü,
+# sayı ve derleme kimliği yazılır (sayfa içeriği, ilan yolu, kayıt yazılmaz). Kırmızı = rapor; geri dönüş kararı sahibindir.
+name: elvankent-uretim-saglik
+
+on:
+  push:
+    branches: ['claude/karays-mission-control-vn8g65']
+    paths: ['.github/workflows/elvankent-uretim-saglik.yml']
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  saglik:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PROD: https://mustafakara-0-7hh3.vercel.app
+      # O-4 yayını (650fd4e) ve önceki production (ff2f7da) dağıtımlarının kendi adresleri (GitHub dağıtım kaydından)
+      NEW_DEPLOY: https://mustafakara-0-7hh3-8u946k8to-kara-6892.vercel.app
+      OLD_DEPLOY: https://mustafakara-0-7hh3-2bu29064l-kara-6892.vercel.app
+    steps:
+      - name: Sağlık ve temel sayfalar
+        run: |
+          set -uo pipefail
+          fail=0
+          T=$(mktemp -d)
+          bad() { echo "::error title=Production sağlık::$1"; fail=1; }
+          get() { curl -sS -L --max-time 20 -A 'KARAYS-saglik-kontrolu' -o "$T/body" -D "$T/head" -w '%{http_code} %{content_type}' "$1" 2>/dev/null || echo "000 -"; }
+          build_id() { grep -oE '/_next/static/[A-Za-z0-9_-]{8,}/_(buildManifest|ssgManifest)' "$T/body" | head -1 | cut -d/ -f4; }
+          abs() { case "$1" in http*) echo "$1" ;; /*) echo "$PROD$1" ;; *) echo "$PROD/$1" ;; esac; }
+          {
+            echo "### Production sağlık kontrolü ($(date -u +%FT%TZ))"
+            echo "| Kontrol | Sonuç |"
+            echo "| --- | --- |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          row() { echo "| $1 | $2 |" >> "$GITHUB_STEP_SUMMARY"; echo "$1: $2"; }
+
+          # 1) /api/health: uygulama + veritabanı (yalnız status/db/latency alanları)
+          r=$(get "$PROD/api/health"); code=${r%% *}
+          h=$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d.get("status"), d.get("db"), d.get("latencyMs"))' "$T/body" 2>/dev/null || echo "? ? ?")
+          set -- $h
+          row "/api/health" "HTTP $code · status=$1 · db=$2 · ${3} ms"
+          [ "$code" = 200 ] && [ "$1" = ok ] && [ "$2" = ok ] || bad "/api/health 200/ok/db ok değil"
+
+          # 2) Ana sayfa + hangi dağıtım (derleme kimliği karşılaştırması)
+          r=$(get "$PROD/"); code=${r%% *}; prod_id=$(build_id)
+          cp "$T/body" "$T/home"
+          row "Ana sayfa /" "HTTP $code · ${r#* }"
+          [ "$code" = 200 ] || bad "ana sayfa $code"
+          r=$(get "$NEW_DEPLOY/"); new_code=${r%% *}; new_id=$(build_id)
+          r=$(get "$OLD_DEPLOY/"); old_code=${r%% *}; old_id=$(build_id)
+          row "Derleme kimliği: production alias" "${prod_id:-okunamadı}"
+          row "Derleme kimliği: 650fd4e dağıtımı" "${new_id:-okunamadı (HTTP $new_code; dağıtım adresi korumalı olabilir)}"
+          row "Derleme kimliği: ff2f7da dağıtımı" "${old_id:-okunamadı (HTTP $old_code)}"
+          if [ -n "$prod_id" ] && [ -n "$new_id" ]; then
+            [ "$prod_id" = "$new_id" ] && row "Alias → dağıtım" "**650fd4e** (yeni dağıtımla aynı derleme)" || bad "production alias yeni dağıtımı sunmuyor"
+          fi
+          if [ -n "$prod_id" ] && [ -n "$old_id" ] && [ "$prod_id" = "$old_id" ]; then bad "production alias hâlâ ff2f7da derlemesini sunuyor"; fi
+
+          # 3) Ana sayfa görselleri (ilk 6)
+          imgs() { grep -oE '<img[^>]+src="[^"]+"' "$1" | sed -E 's/.*src="([^"]+)".*/\1/' | sed 's/&amp;/\&/g' | grep -v '^data:' | head -"$2"; }
+          n=0; ok=0
+          while read -r src; do [ -z "$src" ] && continue; n=$((n + 1)); r=$(get "$(abs "$src")"); case "$r" in "200 image/"*) ok=$((ok + 1)) ;; esac; done < <(imgs "$T/home" 6)
+          row "Ana sayfa görselleri" "$ok / $n görsel 200 + image/*"
+          [ "$n" -gt 0 ] && [ "$ok" = "$n" ] || bad "ana sayfa görselleri: $ok/$n"
+
+          # 4) İlan listesi ve bir ilan ayrıntısı + görselleri
+          r=$(get "$PROD/satilik"); code=${r%% *}
+          cp "$T/body" "$T/list"
+          count=$(grep -oE 'href="/ilan/[^"#?]+"' "$T/list" | sort -u | wc -l)
+          row "İlan listesi /satilik" "HTTP $code · $count ilan bağlantısı"
+          [ "$code" = 200 ] && [ "$count" -gt 0 ] || bad "/satilik $code, $count ilan"
+          first=$(grep -oE 'href="/ilan/[^"#?]+"' "$T/list" | head -1 | sed -E 's/href="([^"]+)"/\1/')
+          if [ -n "$first" ]; then
+            r=$(get "$PROD$first"); code=${r%% *}
+            cp "$T/body" "$T/detail"
+            row "İlan ayrıntısı (ilk ilan)" "HTTP $code"
+            [ "$code" = 200 ] || bad "ilan ayrıntısı $code"
+            n=0; ok=0
+            while read -r src; do [ -z "$src" ] && continue; n=$((n + 1)); r=$(get "$(abs "$src")"); case "$r" in "200 image/"*) ok=$((ok + 1)) ;; esac; done < <(imgs "$T/detail" 6)
+            row "İlan görselleri" "$ok / $n görsel 200 + image/*"
+            [ "$n" -gt 0 ] && [ "$ok" = "$n" ] || bad "ilan görselleri: $ok/$n"
+          fi
+
+          # 5) Bilgi (yayından önce de var olan KARAY-01): /karay sayfası açılıyor mu
+          r=$(get "$PROD/karay"); row "/karay (bilgi; bilinen kırık logolar KARAY-01)" "HTTP ${r%% *}"
+          rm -rf "$T"
+          exit "$fail"

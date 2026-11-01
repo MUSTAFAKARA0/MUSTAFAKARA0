@@ -380,7 +380,7 @@ describe('LR-08 CI E2E ortamı', () => {
 describe('LR-09 sabit çalıştırıcı imajı (K-16)', () => {
   // ubuntu-latest 19.10.2026'dan itibaren Ubuntu 26'ya taşınıyor. CI'nin doğruladığı ortam ubuntu-24.04'tür;
   // yeni imaj, CI'da doğrulanıp ayrı bir commit'le seçilir (etiket kendiliğinden kaymaz).
-  const LR09 = [['elvankent-ci.yml', 2], ['elvankent-backup.yml', 2], ['elvankent-security-candidate.yml', 1], ['elvankent-r2-diagnose.yml', 1], ['elvankent-restore-drill.yml', 1], ['elvankent-o4-onkontrol.yml', 1], ['elvankent-o4-e2e.yml', 1]];
+  const LR09 = [['elvankent-ci.yml', 2], ['elvankent-backup.yml', 2], ['elvankent-security-candidate.yml', 1], ['elvankent-r2-diagnose.yml', 1], ['elvankent-restore-drill.yml', 1], ['elvankent-o4-onkontrol.yml', 1], ['elvankent-o4-e2e.yml', 1], ['elvankent-uretim-saglik.yml', 1]];
   const LR09_FILES = LR09.map(([f]) => f);
   test('depodaki her iş akışı LR-09 listesinde', () => {
     const all = readdirSync(new URL('../.github/workflows/', root)).filter((f) => /^elvankent-.*\.yml$/.test(f));
