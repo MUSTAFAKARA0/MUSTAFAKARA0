@@ -1,6 +1,7 @@
 # Elvankent Gayrimenkul — production sağlık kontrolü (YALNIZ OKUMA)
 #
 # Herkese açık production adresine yalnız GET istekleri atar: /api/health (uygulama + veritabanı bağlantısı), ana sayfa,
+# KARAY-01 (/karay görselleri, /platform/giris logosu ve simgeleri; yönlendirmesiz 200 image/*),
 # /satilik ilan listesi, bir ilan ayrıntısı ve görselleri. Production alias'ının hangi dağıtımı sunduğunu, sayfadaki Next.js
 # derleme kimliğini yeni ve eski dağıtımın kendi adresleriyle karşılaştırarak gösterir.
 # Hiçbir şey yazmaz, giriş yapmaz, form göndermez, sır kullanmaz, artifact yüklemez. Günlüğe yalnız HTTP kodu, içerik türü,
@@ -119,7 +120,28 @@ jobs:
             [ "$n" -gt 0 ] && [ "$ok" = "$n" ] || bad "ilan görselleri: $ok/$n"
           fi
 
-          # 5) Bilgi (yayından önce de var olan KARAY-01): /karay sayfası açılıyor mu
-          r=$(get "$PROD/karay"); row "/karay (bilgi; bilinen kırık logolar KARAY-01)" "HTTP ${r%% *}"
+          # 5) KARAY-01: /karay ekran görüntüleri + logolar ve platform giriş sayfası logosu/simgeleri oturumsuz ziyaretçide
+          #    görsel olarak (yönlendirmesiz) yüklenmeli. Yönlendirme izlenmez: /platform/x.svg giriş sayfasına 307 dönüyordu.
+          getnr() { : > "$T/body"; curl -sS --max-time 20 -A 'KARAYS-saglik-kontrolu' -o "$T/body" -w '%{http_code} %{content_type}' "$1" 2>/dev/null || echo "000 -"; }
+          karay_check() { # ad, sayfa yolu
+            local name=$1 page=$2 code n=0 ok=0 bad_list="" src r
+            r=$(get "$PROD$page"); code=${r%% *}; cp "$T/body" "$T/kp"
+            [ "$code" = 200 ] || { row "$name" "sayfa HTTP $code"; bad "$name sayfası $code"; return; }
+            # img src + favicon/apple-touch simgeleri
+            { grep -oE '<img[^>]+src="[^"]+"' "$T/kp" | sed -E 's/.*src="([^"]+)".*/\1/'
+              grep -oE '<link[^>]+rel="(icon|apple-touch-icon)"[^>]*>' "$T/kp" | grep -oE 'href="[^"]+"' | sed -E 's/href="([^"]+)"/\1/'; } 2>/dev/null \
+              | sed 's/&amp;/\&/g' | grep -v '^data:' | sort -u > "$T/klist"
+            while read -r src; do
+              [ -z "$src" ] && continue; n=$((n + 1)); r=$(getnr "$(abs "$src")")
+              case "$r" in "200 image/"*) ok=$((ok + 1)) ;; *) bad_list="$bad_list ${r%% *}" ;; esac
+            done < "$T/klist"
+            row "$name" "HTTP $code · $ok / $n görsel+simge 200 image/* (yönlendirmesiz)${bad_list:+ · başarısız kodlar:$bad_list}"
+            [ "$n" -gt 0 ] && [ "$ok" = "$n" ] || bad "$name: $ok/$n görsel+simge"
+          }
+          karay_check "KARAY-01 /karay (ekran görüntüleri, logolar, simgeler)" /karay
+          karay_check "KARAY-19 /platform/giris (logo, simgeler)" /platform/giris
+          # Ekran görüntüleri statik import ile /_next/static/media altından gelmeli (74013a5); eski yol /karay/ekran-*.png
+          r=$(get "$PROD/karay")
+          if grep -q '_next/static/media/ekran-kontrol-merkezi' "$T/body"; then row "/karay ekran görüntüsü kaynağı" "/_next/static/media (KARAY-01 düzeltmesi yayında)"; else row "/karay ekran görüntüsü kaynağı" "eski /karay/ yolu (düzeltme yayında değil)"; fi
           rm -rf "$T"
           exit "$fail"
