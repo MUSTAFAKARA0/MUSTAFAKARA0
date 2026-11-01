@@ -108,10 +108,11 @@ GitHub iş akışının yedeği S3 deposundadır: önce `rclone copy dest:BACKUP
 
 ### Geri yükleme tatbikatı (`scripts/restore-drill.sh`)
 ```bash
-ADMIN_DB_URL="postgresql://kullanici@test-sunucusu:5432/postgres" bash scripts/restore-drill.sh ./yedek 2026-10-11T0123Z
+ADMIN_DB_URL="postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres" bash scripts/restore-drill.sh ./yedek 2026-10-11T0123Z
 ```
-- Yalnızca **yerel / test** sunucusunda çalıştırın (`CREATE DATABASE` yetkisi ve Supabase rolleri gerekir). Betik bu sunucuda yalnızca `karay_restore_drill_<zaman>` adlı **yeni** bir veritabanı oluşturur (`template0`); var olan hiçbir veritabanına yazmaz.
-- Sıra: SHA-256 → dump okunabilir mi → geçici veritabanı → **tek işlemde** geri yükleme → parmak izi birebir → yedekteki her tablonun satır sayısı birebir → postflight'ta HATA yok → geçici veritabanı silinir (başarılı ya da başarısız). `KEEP_DB=1` incelemek için bırakır.
+- **Yalnız yerel test sunucusu** (KI-24 şartı): adres yalnız `127.0.0.1` / `localhost` / `[::1]` + veritabanı adı olabilir; sorgu parametresi, uzak adres ve `PGHOSTADDR`/`PGSERVICE`/`PGSERVICEFILE` hiçbir araç çağrılmadan reddedilir (çıkış 2). Yerel `supabase start` yığınında süper kullanıcı (`supabase_admin`) gerekir: tam Supabase yedeği `postgres` rolüyle geri yüklenemez (realtime şeması). Betik yalnızca `karay_restore_drill_<zaman>` adlı **yeni** bir veritabanı oluşturur (`template0`); var olan hiçbir veritabanına yazmaz.
+- **İki ayrı karar:** `BÜTÜNLÜK` (SHA-256 → dump okunabilir mi → geçici veritabanı → **tek işlemde** geri yükleme → parmak izi birebir → her tablonun satır sayısı birebir) ve `ŞEMA` (şema sürümü ↔ depodaki son migration; postflight). Canlıda henüz uygulanmamış migration'lar ve `supabase/pending` dosyaları **BİLGİ**'dir, başarısızlık değildir. Çıkış: 0 tamam/bilgi · 1 bütünlük hatası · 2 yalıtım · 3 şema/güvenlik hatası (RLS, yetki). `DRILL_RESULT=<dosya>` makine okunur özet yazar. Geçici veritabanı her durumda silinir; `KEEP_DB=1` incelemek için bırakır.
+- Sentetik kuru prova (müşteri verisi yok): `scripts/restore-drill-synthetic.sh` (CI'da her gönderimde).
 - Çıktı yalnızca adım durumlarını ve eşleşen satır/tablo sayısını yazar; kayıt içeriği veya kayıt sayısı yazmaz.
 
 ### Tatbikat (veya test geri yüklemesi) başarısız olursa: temizleme ve geri alma
@@ -120,8 +121,8 @@ ADMIN_DB_URL="postgresql://kullanici@test-sunucusu:5432/postgres" bash scripts/r
 | SHA-256 uyuşmadı (1. adım) | Veritabanı oluşturulmadı | Bu yedeği kullanmayın. Depodan yeniden indirin (indirme bozulmuş olabilir) ve tekrar deneyin; yine uyuşmuyorsa bir önceki gecenin yedeğine geçin ve olay notu düşün. |
 | Dump okunamadı (2. adım) | Veritabanı oluşturulmadı | Aynı. |
 | Geri yükleme hatası (4. adım) | Tek işlem: geçici veritabanı boş kalır ve otomatik silinir | Hata ilk 20 satırda yazılır (bağlantı adresi gizli). Sık nedenler: hedefte Supabase rolleri yok, `pg_restore` dump'tan eski sürüm, eklenti eksik. Düzeltip tekrarlayın. |
-| Parmak izi veya tablo sayısı farkı (5–6) | Geçici veritabanı otomatik silinir | Farklı tabloların yalnızca adları yazılır. Bir önceki yedekle tekrarlayın; iki yedekte de fark varsa yedek betiği / şema sorununu araştırın. Canlıya geri yükleme **yapılmaz**. |
-| Son kontrolde HATA (7) | Geçici veritabanı silinir | HATA satırları yazılır. 18, 23–25 yetki kaybı demektir: yedek `--no-privileges` ile alınmış olabilir. |
+| Parmak izi veya tablo sayısı farkı (5–6, BÜTÜNLÜK: HATA) | Geçici veritabanı otomatik silinir | Farklı tabloların yalnızca adları yazılır. Bir önceki yedekle tekrarlayın; iki yedekte de fark varsa yedek betiği / şema sorununu araştırın. Canlıya geri yükleme **yapılmaz**. |
+| Son kontrolde HATA (8, çıkış 3; bütünlük TAMAM) | Geçici veritabanı silinir | HATA satırları yazılır. Şema geride iken "…uygulanmamış" satırları HATA değil BİLGİ'dir. 18, 23–25 yetki kaybı demektir: yedek `--no-privileges` ile alınmış olabilir. |
 | Betik yarıda kesildi (Ctrl+C, makine kapandı) | Geçici veritabanı kalmış olabilir | `select datname from pg_database where datname like 'karay_restore_drill_%';` → her biri için `drop database "<ad>" with (force);` |
 | Temizlik başarısız ("SİLİNEMEDİ") | Geçici veritabanı duruyor | Aynı komutla elle silin (`with (force)` açık bağlantıları kapatır). |
 

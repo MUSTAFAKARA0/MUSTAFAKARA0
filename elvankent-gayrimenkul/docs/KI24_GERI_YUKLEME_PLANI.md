@@ -1,7 +1,20 @@
-# KI-24 · Gerçek yedekle geri yükleme provası — test planı (TASLAK, onay bekliyor)
+# KI-24 · Gerçek yedekle geri yükleme provası — test planı
 
-> 01.11.2026 · Bu belge yalnız **plandır**. Hiçbir geri yükleme başlatılmadı; iş akışı henüz yazılmadı.
-> Uygulama ve ilk çalıştırma sahibin **açık onayından** sonra yapılır (aşağıda "Onay kapıları").
+> 01.11.2026 · **Durum:** iş akışı yazıldı; **sentetik kuru prova** yerelde yeşil, CI'da her gönderimde koşar (§5).
+> **Gerçek veriyle prova KAPALI:** sahip, müşteri verisinin GitHub çalıştırıcısında işlenmesine henüz onay vermedi (01.11).
+> `elvankent-restore-drill` iş akışı `RESTORE_DRILL_REAL_DATA_APPROVED` değişkeni, `restore-drill` ortam onayı ve sahibin
+> tetiği olmadan çalışmaz. Hiçbir gerçek geri yükleme başlatılmadı.
+
+## 0. Sahibin iki şartı (01.11) ve karşılığı
+
+| Şart | Uygulama | Otomatik kanıt |
+| --- | --- | --- |
+| **Ş1** Canlıda henüz uygulanmamış migration'lar yüzünden prova yanlışlıkla başarısız sayılmasın; yedek bütünlüğü ve güncel şema uygunluğu ayrı kontroller olsun | `restore-drill.sh` iki ayrı karar yazar: **BÜTÜNLÜK** (SHA-256, dump, tek işlem geri yükleme, parmak izi, tablo sayıları → hata: çıkış 1) ve **ŞEMA** (şema sürümü ↔ depodaki son migration, bekleyen dosyalar, postflight → TAMAM / BİLGİ / HATA). Şema geride ise postflight'ın "…uygulanmamış" / "şema sürümü eski" satırları **migration gecikmesi = BİLGİ** (çıkış 0). `supabase/pending` dosyaları yalnız bilgi. RLS / yetki / istemciye açık fonksiyon hataları şema geride olsa da **HATA** (çıkış 3), gizlenmez | `tests/unit/restore-drill.test.mjs` RD-02 (11 test); sentetik prova senaryo B (gerçek PG 17 Supabase yığınında) |
+| **Ş2** Geri yükleme yalnız izole yerel test veritabanına yapılabilsin | Hedef adresi yalnız `127.0.0.1` / `localhost` / `[::1]` + veritabanı adı; sorgu parametresi (`?host=`, `?hostaddr=`, `?service=`), birden çok ana makine, uzak ad, anahtar=değer biçimi ve `PGHOSTADDR`/`PGSERVICE`/`PGSERVICEFILE` reddedilir — **hiçbir veritabanı aracı çağrılmadan** (çıkış 2). `localhost` yalnız loopback'e çözülüyorsa kabul. Bağlandıktan sonra sunucu kendini genel ağ adresiyle görüyorsa veritabanı oluşturulmadan durur. Yalnız yeni `karay_restore_drill_*` veritabanı oluşturulur, her durumda silinir. Gerçek veri iş akışında canlı sır hiç yoktur | RD-01 (24 test, sahte psql/pg_restore çağrı günlüğü boş); RD-03 (iş akışında canlı sır / yazma anahtarı / artifact / R2 yazma komutu yok; sentetik betik de yalnız yerel); sentetik prova senaryo C2 |
+
+Not (Docker): yerel Supabase konteynerde çalışır; loopback port yönlendirmesiyle bağlanılır ve sunucu kendini köprü ağı adresiyle
+(ör. `172.18.0.x`) görür. Bu yüzden çalışma anı kontrolü "loopback" değil "genel ağ değil" denetler; asıl güvence istemci tarafındaki
+loopback zorunluluğudur (loopback adresi yalnız aynı makinedeki süreçlere ulaşır).
 
 ## 1. Amaç ve kabul ölçütü
 
@@ -38,27 +51,42 @@ Prova, GitHub'ın **tek kullanımlık** çalıştırıcısında (ubuntu-24.04) y
 | Yanlış/bozuk yedek | K1 başarısızsa hiçbir şey yüklenmez; bir önceki gecenin yedeğiyle tekrarlanır (BACKUP_RESTORE.md "Tatbikat başarısız olursa"). |
 | Kişisel veri saklama | Dump yalnız iş süresince bellekte/geçici diskte. Kalıcı kopya oluşmaz. KVKK açısından veri, işlemci sıfatıyla GitHub'ın geçici makinesinde birkaç dakika işlenir — sahibin kabulü gerekir (Onay kapısı 1). |
 
-## 4. Akış (onaydan sonra yazılacak iş akışı: `elvankent-restore-drill`)
+## 4. Akış (iş akışı yazıldı, kapalı: `.github/workflows/elvankent-restore-drill.yml`)
 
 1. **Hazırlık:** PG 17 istemcisi + rclone v1.75.2 (SHA-256 doğrulamalı) + `supabase start` (yerel, studio vb. kapalı).
 2. **Yedek seçimi:** R2 `db/` altındaki **en yeni** (ya da istek dosyasında yazılan) `STAMP`; dört dosya çalıştırıcıya indirilir
    (yalnız `db-<STAMP>.*`; listeleme yalnız ad, boyut yazılmaz).
-3. **Veritabanı provası:** `ADMIN_DB_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres bash scripts/restore-drill.sh <klasör> <STAMP>` → K1–K5, K7.
+3. **Veritabanı provası:** `ADMIN_DB_URL=postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres bash scripts/restore-drill.sh <klasör> <STAMP>` → K1–K5, K7 (bütünlük ve şema ayrı; §0).
 4. **Storage örneği (K6):** `storage/current/media-originals` altından rastgele N=20 dosya (ve `branding`'den 5) çalıştırıcıya indirilir,
-   yerel Storage'a yüklenir, geri indirilir; SHA-256'lar karşılaştırılır. Yollar yazılmaz.
+   yerel Storage'a yüklenir, geri indirilir; SHA-256'lar karşılaştırılır. Yollar yazılmaz. **Henüz yazılmadı** (gerçek veri onayından sonra).
 5. **Özet:** her ölçüt için TAMAM/HATA, süreler (K8). Ham çıktı yok.
 6. **Temizlik:** geçici veritabanı (betik siler), indirilen dosyalar, yerel Supabase (`supabase stop --no-backup`).
 
-## 5. Önce sentetik "kuru prova" (müşteri verisi yok)
+## 5. Sentetik "kuru prova" (müşteri verisi yok) — YAPILDI
 
-İlk çalıştırma gerçek yedekle değil, **CI'da** yapılır: CI'nin yerel veritabanından `backup-db.sh` ile alınan sentetik (demo) yedek
-aynı iş akışı adımlarıyla geri yüklenir. Bu, K1–K7 mekanizmasını müşteri verisi olmadan kanıtlar (birim + CI testi). Gerçek yedekle
-çalıştırma ancak bu yeşil olduktan sonra açılır.
+`scripts/restore-drill-synthetic.sh`: yerel demo verisinin yedeği `backup-db.sh` ile alınır, `restore-drill.sh` ile yine yerel geçici
+veritabanlarına yüklenir. CI'da `database` işinin "KI-24 sentetik geri yükleme provası" adımı her gönderimde aynısını koşar (sır yok).
+
+| Senaryo | Beklenen | Yerel sonuç (01.11, yerel Supabase yığını PostgreSQL 17.11) |
+| --- | --- | --- |
+| A güncel şema | BÜTÜNLÜK TAMAM, ŞEMA TAMAM, çıkış 0 | Parmak izi **17/17**, tablolar **80/80**, şema `20261018000001` = depo, postflight 22 TAMAM + 4 karşılaştırma, **0 HATA** |
+| B canlı gibi geride şema (son migration uygulanmamış: sürüm `20261011000001`, KARAYS sütun varsayılanı geri) | BÜTÜNLÜK TAMAM, ŞEMA **BİLGİ**, çıkış 0 | 17/17, 80/80; postflight 21 TAMAM, **1 migration gecikmesi** (27: KARAYS marka geçişi), 0 HATA. **Eski betik bu yedeği "Son kontrolde 1 HATA" ile başarısız sayardı** (Ş1'in düzelttiği durum) |
+| C1 bozuk dump | BÜTÜNLÜK HATA, çıkış 1, veritabanı oluşturulmaz | SHA-256 uyuşmadı, durdu |
+| C2 uzak hedef | YALITIM, çıkış 2 | Hiçbir araç çağrılmadan reddedildi |
+
+Bekleyen 8 dosya uygulanmış veritabanında (CI ile aynı koşul) da dört senaryo aynı sonucu verdi. Her çalışmadan sonra
+`karay_restore_drill_*` / `karay_kuru_eski_*` veritabanı kalmadı. Süre: dört senaryo toplam ≈ 8 sn (demo verisi).
+
+**Bulgu (düzeltildi):** tam Supabase yedeği yerel yığının `postgres` rolüyle geri **yüklenemiyor** (`realtime.list_changes`:
+"permission denied to set parameter log_min_messages"); Faz 3 doğrulaması süper kullanıcılı düz PostgreSQL 16'da yapılmıştı.
+Prova yerel yığının süper kullanıcısıyla (`supabase_admin`, yalnız çalıştırıcıdaki yerel yığın) yapılır.
 
 ## 6. Onay kapıları (sırayla, her biri yazılı)
 
 1. **Plan onayı:** "KI-24 planını onaylıyorum; müşteri verisinin GitHub'ın geçici çalıştırıcısında işlenmesini kabul ediyorum."
-2. **İş akışının yazılması:** sentetik kuru prova + testler (CI yeşil) — geliştirici.
+   **01.11:** iş akışı ve sentetik prova onaylandı; **gerçek veri işlenmesi onaylanmadı.** Onaydan sonra sahip
+   `RESTORE_DRILL_REAL_DATA_APPROVED=true` depo değişkenini açar.
+2. **İş akışının yazılması:** sentetik kuru prova + testler (CI yeşil) — geliştirici. **Yapıldı (01.11).**
 3. **Sahip ayarları:** (a) R2'de yalnız *Object Read* yetkili yeni anahtar → `RESTORE_S3_ACCESS_KEY_ID`, `RESTORE_S3_SECRET_ACCESS_KEY`
    sırları (uç nokta ve bölge mevcut `BACKUP_S3_ENDPOINT`/`BACKUP_S3_REGION` ile aynı); (b) GitHub › Settings › Environments ›
    `restore-drill` › **Required reviewers: sahip**.

@@ -23,6 +23,27 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 · K-25: KI-24 iş akışı ve sentetik kuru prova; O-4 + PR #3 yayın sırası
+
+**Başlangıç:** `17663e7` (CI #122 yeşil). Production `ff2f7da`, değişmedi; PR #3 taslak (merge yok); canlı veritabanına bağlanılmadı, migration uygulanmadı, gerçek yedek indirilmedi/geri yüklenmedi; Vercel, DNS, OPS-02 bayrağı ve `.claude/` değişmedi.
+
+**Sahip kararları (01.11):** PR #3 taslak; önce O-4 ile güvenli yayın sırası; `npm audit` bastırılmaz. KI-24 iş akışı + sentetik prova onaylı, iki şartla: (Ş1) bütünlük ve güncel şema uygunluğu ayrı kontroller, canlıda uygulanmamış migration'lar başarısızlık sayılmaz; (Ş2) geri yükleme yalnız izole yerel test veritabanına, otomatik testle kanıtlı. Gerçek müşteri verisinin GitHub çalıştırıcısında işlenmesine onay yok.
+
+**Bu commit:**
+- `scripts/restore-drill.sh`: yalıtım koruması (yalnız loopback adres + veritabanı adı; sorgu parametresi, çoklu ana makine, uzak ad, `PGHOSTADDR`/`PGSERVICE`/`PGSERVICEFILE` hiçbir araç çağrılmadan çıkış 2; `localhost` loopback'e çözülmeli; bağlantı sonrası genel ağ adresi → çıkış 2). BÜTÜNLÜK ve ŞEMA ayrı kararlar; şema geride iken postflight "…uygulanmamış / şema sürümü eski" satırları migration gecikmesi (BİLGİ); RLS/yetki hataları her durumda çıkış 3. `DRILL_RESULT` özeti. Eski hata: fark listesinde `set -e` + `pipefail` yüzünden `fail` mesajı hiç yazılmıyordu (çıkış yine 1) → düzeltildi.
+- `scripts/restore-drill-synthetic.sh` (A güncel şema, B geride şema, C1 bozuk dump, C2 uzak hedef) ve CI `database` işinde "KI-24 sentetik geri yükleme provası" adımı (PG 17 istemcisi, sır yok).
+- `.github/workflows/elvankent-restore-drill.yml` (gerçek veri, **kapalı**: `RESTORE_DRILL_REAL_DATA_APPROVED` + `restore-drill` ortamı + sahip tetiği; canlı sır yok, R2 yalnız okuma anahtarı `RESTORE_S3_*`, artifact yok) ve `ops-requests/restore-drill.request`.
+- `tests/unit/restore-drill.test.mjs` RD-01 (yalıtım, 24), RD-02 (ayrı kontroller, 11), RD-03 (iş akışları, 3); LR-09/LR-11 listelerine yeni iş akışı.
+- Belgeler: [KI24_GERI_YUKLEME_PLANI.md](KI24_GERI_YUKLEME_PLANI.md) §0 ve §5, [BACKUP_RESTORE.md](BACKUP_RESTORE.md) tatbikat, [YAYIN_SIRASI_O4_PR3.md](YAYIN_SIRASI_O4_PR3.md) (yeni), KALAN_ISLER KI-24/KI-26.
+
+**Doğrulama (yerel):** testler önce kırmızı (6/26), sonra yeşil. Birim **682/682**, ESLint temiz. Sentetik prova yerel Supabase yığınında (PostgreSQL 17.11): A 17/17 parmak izi, 80/80 tablo, şema TAMAM, 0 HATA; B şema BİLGİ, 1 migration gecikmesi, 0 HATA (eski betik başarısız sayardı); C1 çıkış 1; C2 çıkış 2. Bekleyen 8 dosya uygulanmışken de aynı. Artık geçici veritabanı yok.
+
+**Bulgu:** tam Supabase yedeği yerel yığının `postgres` rolüyle geri yüklenemiyor (realtime şeması, "permission denied to set parameter"); Faz 3 doğrulaması süper kullanıcılı düz PostgreSQL 16'daydı. Prova yerel `supabase_admin` ile yapılır.
+
+**Yayın sırası kanıtı (geçici yerel çalışma ağacı, push yok):** yama SHA-256 OK, ağaç `29f81af` beklenenle aynı; yama ile PR #3 dosya kesişimi yok, iki sıra da çakışmasız. `npm audit --omit=dev --audit-level=high`: PR #3 tek başına başarısız, A + PR #3 **0 açık**. Öneri: A → PR #3 A'nın üstüne → A yayını → kontrol → PR #3 merge.
+
+**CI:** bu commit'in koşusu sahibe verilen raporda.
+
 ### 31.10.2026 (2) · K-24: KI-38 bir kez yazma, kilit ve başıboş dosya süpürmesi; sahip adım listesi
 
 **Başlangıç:** `a0e7c52` (K-23, CI #106 yeşil). Production `ff2f7da`, değişmedi; canlı veritabanına bağlanılmadı; Vercel, DNS, OPS-02 bayrağı ve `.claude/` değişmedi.

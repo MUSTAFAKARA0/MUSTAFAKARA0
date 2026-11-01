@@ -1,0 +1,146 @@
+# Elvankent Gayrimenkul — KI-24 GERÇEK yedekle geri yükleme provası (R2'deki gece yedeği → çalıştırıcıdaki YEREL veritabanı)
+#
+# DURUM: KAPALI. Sahip, müşteri verisinin GitHub'ın geçici çalıştırıcısında işlenmesine HENÜZ ONAY VERMEDİ (01.11.2026).
+# Bu iş akışı yalnızca şu ÜÇ koşulun hepsi sağlanınca çalışır (elvankent-gayrimenkul/docs/KI24_GERI_YUKLEME_PLANI.md):
+#   1) Depo değişkeni RESTORE_DRILL_REAL_DATA_APPROVED = true   (sahibin yazılı onayından sonra, yalnız sahip açar)
+#   2) GitHub ortamı "restore-drill" — Required reviewers: sahip (her çalışma "Approve" bekler)
+#   3) Tetik sahibin eylemi: istek dosyası (ops-requests/restore-drill.request) düzenlemesi ya da elle başlatma.
+#      Geliştirme oturumunun commit'leri ("Claude-Session:" satırlı) tetiklemez.
+# Ön koşulun sahibe düşen kısmı: R2'de yalnız "Object Read" yetkili YENİ bir anahtar → RESTORE_S3_ACCESS_KEY_ID /
+# RESTORE_S3_SECRET_ACCESS_KEY sırları. Gece yedeğinin yazma anahtarı (BACKUP_S3_ACCESS_KEY_ID …) burada KULLANILMAZ.
+#
+# Güvenceler (tests/unit/restore-drill.test.mjs RD-03 denetler):
+#   - Canlı Supabase sırrı YOK (SUPABASE_DB_URL, SUPABASE_S3_*): canlıya bağlanmak yapısal olarak imkânsız.
+#   - Hedef yalnız çalıştırıcıdaki yerel `supabase start` (127.0.0.1); restore-drill.sh yerel olmayan hedefi reddeder.
+#   - R2 yalnız okunur: yalnız `rclone copy` R2 → çalıştırıcı; sync/delete/move/purge yok.
+#   - upload-artifact yok; günlükte yalnız adım durumu ve eşleşen satır/tablo SAYISI (kayıt sayısı/içerik/yol yok).
+#   - Dump ve yerel veritabanı iş sonunda silinir; makine tek kullanımlıktır.
+# Çalıştırıcı imajı sabit (ubuntu-24.04, LR-09); action'lar tam commit SHA'sıyla sabit (LR-11).
+name: elvankent-restore-drill
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ['claude/karays-mission-control-vn8g65']
+    paths: ['elvankent-gayrimenkul/ops-requests/restore-drill.request']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elvankent-restore-drill
+  cancel-in-progress: false
+
+jobs:
+  restore-drill:
+    if: ${{ vars.RESTORE_DRILL_REAL_DATA_APPROVED == 'true' && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, 'Claude-Session:')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    environment: restore-drill
+    defaults:
+      run:
+        working-directory: elvankent-gayrimenkul
+    env:
+      BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET }}
+      PG_MAJOR: '17'
+      PG_BIN: /usr/lib/postgresql/17/bin
+      # Yedek iş akışıyla aynı sabit rclone (Backup #43/#44 gerekçesi orada); BACKUP_ öneki zorunlu (BK-02d)
+      BACKUP_RCLONE_VERSION: v1.75.2
+      BACKUP_RCLONE_SHA256: 349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702
+      # Yalnız OKUMA anahtarı (sahibin açacağı ayrı R2 anahtarı)
+      RCLONE_CONFIG_SRC_TYPE: s3
+      RCLONE_CONFIG_SRC_PROVIDER: ${{ vars.BACKUP_S3_PROVIDER || 'Other' }}
+      RCLONE_CONFIG_SRC_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+      RCLONE_CONFIG_SRC_REGION: ${{ secrets.BACKUP_S3_REGION }}
+      RCLONE_CONFIG_SRC_ACCESS_KEY_ID: ${{ secrets.RESTORE_S3_ACCESS_KEY_ID }}
+      RCLONE_CONFIG_SRC_SECRET_ACCESS_KEY: ${{ secrets.RESTORE_S3_SECRET_ACCESS_KEY }}
+    steps:
+      - name: Gerekli ayarlar tanımlı mı (yalnızca adlar yazılır)
+        run: |
+          missing=()
+          for pair in BACKUP_BUCKET:BACKUP_BUCKET RCLONE_CONFIG_SRC_ENDPOINT:BACKUP_S3_ENDPOINT RCLONE_CONFIG_SRC_REGION:BACKUP_S3_REGION \
+            RCLONE_CONFIG_SRC_ACCESS_KEY_ID:RESTORE_S3_ACCESS_KEY_ID RCLONE_CONFIG_SRC_SECRET_ACCESS_KEY:RESTORE_S3_SECRET_ACCESS_KEY; do
+            name=${pair%%:*}
+            [ -n "${!name:-}" ] || missing+=("${pair#*:}")
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error title=Prova ayarları eksik::Tanımlı olmayan değişken/sır: ${missing[*]} (bkz. docs/KI24_GERI_YUKLEME_PLANI.md)"
+            exit 1
+          fi
+        working-directory: .
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.121.0
+
+      - name: Araçları kur (PostgreSQL 17 istemcisi, rclone sabit sürüm)
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common unzip
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq postgresql-client-17
+          for tool in psql pg_dump pg_restore; do
+            [ -x "$PG_BIN/$tool" ] || { echo "::error title=PostgreSQL istemcisi eksik::$PG_BIN/$tool kurulmadı"; exit 1; }
+          done
+          echo "$PG_BIN" >> "$GITHUB_PATH"
+          (
+            cd "$RUNNER_TEMP"
+            zip="rclone-$BACKUP_RCLONE_VERSION-linux-amd64.zip"
+            curl -fsSLO "https://github.com/rclone/rclone/releases/download/$BACKUP_RCLONE_VERSION/$zip"
+            echo "$BACKUP_RCLONE_SHA256  $zip" | sha256sum -c --quiet - \
+              || { echo "::error title=rclone doğrulanamadı::$zip özeti beklenen değil"; exit 1; }
+            unzip -q "$zip"
+            sudo install -m 0755 "rclone-$BACKUP_RCLONE_VERSION-linux-amd64/rclone" /usr/local/bin/rclone
+          )
+          [ "$(rclone version | head -1)" = "rclone $BACKUP_RCLONE_VERSION" ] || { echo "::error title=rclone sürümü yanlış::"; exit 1; }
+
+      - name: Yerel Supabase (Supabase rolleri; demo verisi yüklenmez; prova AYRI geçici veritabanında)
+        run: |
+          set -euo pipefail
+          rm -f supabase/seed.sql
+          [ -f supabase/config.toml ] || supabase init --force
+          supabase start -x studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor
+
+      - name: Yedeği seç ve indir (R2 → çalıştırıcı, yalnız okuma)
+        run: |
+          set -euo pipefail
+          # İstek dosyasında "STAMP=2026-11-01T0423Z" satırı varsa o yedek, yoksa en yenisi
+          STAMP=$(sed -nE 's/^STAMP=([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{4}Z)$/\1/p' ops-requests/restore-drill.request 2>/dev/null | tail -1)
+          if [ -z "$STAMP" ]; then
+            STAMP=$(rclone lsf "src:$BACKUP_BUCKET/db/" --include 'db-*.sha256' 2>/dev/null | sed -nE 's/^db-(.+)\.sha256$/\1/p' | sort | tail -1)
+          fi
+          [[ "$STAMP" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{4}Z$ ]] || { echo "::error title=Yedek bulunamadı::db/ altında okunabilir yedek yok (anahtar yetkisi?)"; exit 1; }
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/yedek"
+          rclone copy "src:$BACKUP_BUCKET/db/" "$RUNNER_TEMP/yedek/" --include "db-$STAMP.*" --s3-no-check-bucket \
+            --log-file "$RUNNER_TEMP/rclone.log" --log-level INFO \
+            || { bash scripts/rclone-log-summary.sh "$RUNNER_TEMP/rclone.log" db; exit 1; }
+          bash scripts/rclone-log-summary.sh "$RUNNER_TEMP/rclone.log" db
+          echo "İndirilen yedek: db-$STAMP ($(find "$RUNNER_TEMP/yedek" -type f | wc -l) dosya)"
+
+      - name: Geri yükleme provası (bütünlük + şema uygunluğu ayrı)
+        run: |
+          set -euo pipefail
+          # Yerel yığının süper kullanıcısı: tam Supabase dump'ı (realtime şeması) yalnız süper kullanıcıyla yüklenebilir
+          DB_URL=postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres
+          start=$(date +%s)
+          code=0
+          ADMIN_DB_URL="$DB_URL" DRILL_RESULT="$RUNNER_TEMP/sonuc.txt" bash scripts/restore-drill.sh "$RUNNER_TEMP/yedek" "$STAMP" || code=$?
+          {
+            echo "### KI-24 geri yükleme provası: db-$STAMP"
+            echo "| Kontrol | Sonuç |"
+            echo "| --- | --- |"
+            sed -nE 's/^BUTUNLUK=(.*)$/| Yedek bütünlüğü | \1 |/p; s/^SEMA=(.*)$/| Şema uygunluğu | \1 |/p; s/^SEMA_SURUM=(.*)$/| Yedeğin şema sürümü | \1 |/p' "$RUNNER_TEMP/sonuc.txt"
+            echo "| Süre (RTO ölçümü, geri yükleme + doğrulama) | $(( $(date +%s) - start )) sn |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+
+      - name: Temizlik (dump, yerel veritabanı)
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/yedek" "$RUNNER_TEMP/rclone.log" "$RUNNER_TEMP/sonuc.txt"
+          supabase stop --no-backup || true

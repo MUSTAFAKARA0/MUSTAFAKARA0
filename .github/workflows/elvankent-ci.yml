@@ -152,6 +152,21 @@ jobs:
           node scripts/check-env-file.mjs .env.local
       - name: Birim + güvenlik testleri (RLS, MFA, kiracı izolasyonu)
         run: npm test
+      - name: KI-24 sentetik geri yükleme provası (demo verisi; yerel yedek → yerel geçici veritabanı)
+        run: |
+          set -euo pipefail
+          # Müşteri verisi YOK, sır YOK. scripts/restore-drill-synthetic.sh: A güncel şema (bütünlük + şema TAMAM),
+          # B canlı gibi geride şema (BİLGİ, başarısızlık değil), C1 bozuk dump (BÜTÜNLÜK HATA), C2 uzak hedef (YALITIM).
+          # Supabase sunucusu PG 17: pg_dump/pg_restore 17 gerekir (runner'ın /usr/bin araçları 16; Backup #39)
+          sudo apt-get install -y -qq postgresql-common > /dev/null
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
+          sudo apt-get install -y -qq postgresql-client-17 > /dev/null
+          export PATH=/usr/lib/postgresql/17/bin:$PATH
+          [ "$(pg_restore --version | sed -nE 's/^[^0-9]*([0-9]+).*$/\1/p')" = 17 ] || { echo "::error::pg_restore 17 kurulamadı"; exit 1; }
+          set -a; . ./.env.local; set +a
+          # Yerel yığının süper kullanıcısı: tam Supabase dump'ı (realtime şeması) yalnız süper kullanıcıyla yüklenebilir
+          DRILL_URL=postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres
+          DB_URL="$DB_URL" DRILL_URL="$DRILL_URL" bash scripts/restore-drill-synthetic.sh
       - name: E2E hazırlık (yönetici hesabı, build, sunucu)
         run: |
           set -euo pipefail
