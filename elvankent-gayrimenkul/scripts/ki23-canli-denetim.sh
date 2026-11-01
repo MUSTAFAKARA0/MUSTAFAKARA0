@@ -9,9 +9,10 @@
 #   1 Bağlantı adresi ve parçaları (kullanıcı, parola, ana makine, port) GitHub günlüğünde maskelenir (::add-mask::).
 #   2 Denetim dosyasının SHA-256'sı iş akışında sabitlenen onaylı özetle aynı olmalı (dosya değişirse iş akışı da güncellenmeli).
 #   3 scripts/ki23-denetim-guard.mjs: tek ifade, WITH … SELECT, yazma/DDL/ayar/dosya/süreç komutu yok.
-#   4 Oturum BAŞLANGIÇTA salt okunur: PGOPTIONS="-c default_transaction_read_only=on …" (+ zaman aşımları). İlk sorgu yalnız
-#     ayarları okur; default_transaction_read_only ve transaction_read_only "on" değilse denetim GÖNDERİLMEZ.
-#   5 Denetim dosyası (tek SELECT) çalışır; çıktı geçici dosyaya yazılır, günlüğe YAZILMAZ.
+#   4 Oturum BAŞLANGIÇTA salt okunur: PGOPTIONS="-c default_transaction_read_only=on …" (+ zaman aşımları).
+#   5 TEK bağlantı, TEK işlem: BEGIN READ ONLY → aynı işlemde default_transaction_read_only ve transaction_read_only okunur →
+#     ikisi de "on" ise denetim dosyası (tek SELECT) aynı işlemde çalışır, değilse hiç dahil edilmez → ROLLBACK. Herhangi bir hata
+#     (ON_ERROR_STOP) işlemi bırakır ve betik çıkış 3 ile durur. Çıktı geçici dosyaya yazılır, günlüğe YAZILMAZ.
 #   6 Günlüğe ve özet sayfasına yalnız: PostgreSQL ana sürümü, G1–G4 kural başına sayı, P kategori başına AYNI/FARKLI/EKSİK/FAZLA
 #     sayıları ve genel sonuç. Nesne adı, fonksiyon gövdesi, kayıt içeriği, bağlantı adresi, kimlik bilgisi YAZILMAZ.
 #   7 Hata olursa ham hata metni yazılmaz; yalnız güvenli sınıf (kimlik doğrulama / bağlantı / havuz ayarı reddi / SQLSTATE).
@@ -77,19 +78,37 @@ classify() { # ham hata metnini YAZMADAN güvenli sınıf
     esac
   else echo "bilinmeyen hata (ayrıntı güvenlik nedeniyle yazılmadı)"; fi
 }
-q() { # psql: ayrıntısız hata (VERBOSITY=sqlstate), psqlrc yok, çıktı dosyaya
-  psql "$DENETIM_DB_URL" -X -q -A -t -F'|' -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate "$@" > "$T/out" 2> "$T/err"
+# TEK BAĞLANTI, TEK İŞLEM: BEGIN READ ONLY → aynı işlemde ayar kontrolü → yalnız ikisi de "on" ise denetim (\i) → ROLLBACK.
+# ON_ERROR_STOP: herhangi bir hata işlemi ve bağlantıyı bırakır (çıkış 3); işlem salt okunur olduğundan hiçbir şey yazılamaz.
+# Sarmalayıcı metni testte birebir kullanılır (scripts/ki23-canli-denetim-test.sh, T10/T11): işaretler arasını değiştirmeyin.
+wrapper() { # $1 = denetim dosyasının yolu (SHA'sı ve bekçisi yukarıda doğrulandı)
+# SARMALAYICI-BAS
+  cat <<SARMA
+\set ON_ERROR_STOP 1
+\set VERBOSITY sqlstate
+BEGIN READ ONLY;
+SELECT current_setting('default_transaction_read_only') = 'on' AND current_setting('transaction_read_only') = 'on' AS ro_tamam,
+       current_setting('default_transaction_read_only') AS ro_varsayilan, current_setting('server_version_num') AS surum \gset
+SELECT 'KONTROL|' || :'ro_varsayilan' || '|' || current_setting('transaction_read_only') || '|' || :'surum';
+\if :ro_tamam
+\i '$1'
+\else
+SELECT 'KONTROL|DENETIM GONDERILMEDI';
+\endif
+ROLLBACK;
+SARMA
+# SARMALAYICI-SON
 }
-
-if ! q -c "select current_setting('default_transaction_read_only') || '|' || current_setting('transaction_read_only') || '|' || current_setting('server_version_num')"; then
-  die 3 "Oturum açılamadı: $(classify "$T/err")"
+case "$SQL" in *"'"*|*'\'*) die 2 "Denetim dosyası yolu geçersiz" ;; esac
+wrapper "$SQL" > "$T/run.sql"
+psql "$DENETIM_DB_URL" -X -q -A -t -F'|' -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate -f "$T/run.sql" > "$T/out" 2> "$T/err" \
+  || die 3 "Denetim çalışmadı (işlem geri alındı): $(classify "$T/err")"
+IFS='|' read -r tag dro tro ver < <(grep -m1 '^KONTROL|' "$T/out" || true)
+[ "${tag:-}" = KONTROL ] || die 3 "Oturum kontrol satırı okunamadı; denetim sonucu kullanılmadı"
+if [ "$dro" != on ] || [ "$tro" != on ] || grep -q '^KONTROL|DENETIM GONDERILMEDI' "$T/out"; then
+  die 3 "Oturum salt okunur başlamadı (default_transaction_read_only=$dro, işlem salt okunur=$tro); denetim gönderilmedi"
 fi
-IFS='|' read -r dro tro ver < "$T/out"
-[ "$dro" = on ] && [ "$tro" = on ] || die 3 "Oturum salt okunur başlamadı (default_transaction_read_only=$dro); denetim gönderilmedi"
-say "• Oturum salt okunur başladı (default_transaction_read_only=on); PostgreSQL ana sürüm $((ver / 10000))"
-
-# 5 Denetim
-q -f "$SQL" || die 3 "Denetim çalışmadı: $(classify "$T/err")"
+say "• Tek bağlantı, tek işlem: BEGIN READ ONLY; default_transaction_read_only=on ve işlem salt okunur=on; PostgreSQL ana sürüm $((ver / 10000))"
 grep -q '^ÖZET|P beklenen değer sayısı|' "$T/out" || die 3 "Denetim çıktısı beklenen biçimde değil"
 
 # 6 Güvenli özet (yalnız sayılar)

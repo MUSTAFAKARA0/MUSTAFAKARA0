@@ -23,6 +23,15 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 (13) · K-37: KI-23 canlı denetim — tek işlem (BEGIN READ ONLY) ve tek kullanımlık tetik (ÇALIŞTIRILMADI)
+
+- **Tek bağlantı/tek işlem:** `scripts/ki23-canli-denetim.sh` tek `psql` çağrısı: BEGIN READ ONLY → aynı işlemde ayar kontrolü
+  (`\gset` + `\if`) → denetim (`\i`, SHA ve bekçi önceden) → ROLLBACK; hata → çıkış 3, güvenli sınıf.
+- **Tek kullanımlık tetik:** `scripts/ki23-tetik-kontrol.sh` (önceki ↔ yeni commit; yalnız kapalı→açık), iş akışında `fetch-depth: 0`,
+  `github.run_attempt == 1`; istek dosyası talimatları güncellendi.
+- **Testler:** sentetik T10–T13 (13/13, `GITHUB_ACTIONS=true` ile de), birim KT-09 güncellendi + KT-10 (11 durum). Birim 744/744.
+- CI: K-36 düzeltmesi `6671673` → elvankent-ci **#151 yeşil**.
+
 ### 01.11.2026 (12) · K-36: KI-23 canlı denetimi GitHub Actions'ta (salt okunur) — hazır, ÇALIŞTIRILMADI
 
 **İstek:** 84 KB `canli_sema_denetimi.sql` Android SQL Editor'ü donduruyor; kapsam azaltmadan, mevcut `SUPABASE_DB_URL` ile,

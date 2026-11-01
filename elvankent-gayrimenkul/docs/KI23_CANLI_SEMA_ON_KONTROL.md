@@ -229,3 +229,20 @@ kova EKSİK ayrıca "görünmüyor olabilir" diye işaretlenir.
 **Bilinen risk:** Supabase bağlantı havuzunun (pooler) `options` başlangıç parametresini kabul edip etmediği yerelde sınanamaz.
 Kabul etmezse ya da sessizce yok sayarsa iş, denetimi GÖNDERMEDEN "oturum salt okunur başlamadı / havuz PGOPTIONS'ı kabul etmedi"
 ile durur (çıkış 3). Bu durumda farklı bir yöntem (ör. oturum içinde ayarla salt okunur) ayrı onayla değerlendirilir.
+
+### 7.1 İki güvenlik iyileştirmesi (K-37, sahip isteği; HÂLÂ ÇALIŞTIRILMADI)
+
+1. **Tek bağlantı, tek işlem.** Ayar kontrolü ile denetim artık aynı `psql` bağlantısında, aynı işlemdedir:
+   `BEGIN READ ONLY` → aynı işlemde `default_transaction_read_only` ve `transaction_read_only` okunur → ikisi de `on` ise denetim
+   dosyası `\i` ile aynı işlemde çalışır, değilse hiç dahil edilmez → `ROLLBACK`. `ON_ERROR_STOP`: herhangi bir hata işlemi bırakır,
+   betik çıkış 3 ile ve yalnız güvenli sınıfla durur. Yazmayı iki bağımsız katman engeller (bağlantı başlangıcındaki
+   `default_transaction_read_only=on` ve `BEGIN READ ONLY`); sentetik T12 yalnız ikincisinin de yettiğini gösterir.
+2. **Tek kullanımlık tetik.** Push'ta `scripts/ki23-tetik-kontrol.sh` önceki ve yeni commit'teki istek dosyasını karşılaştırır:
+   yalnız `CALISTIR=evet` satırının **kapalıdan açığa** geçtiği gönderim çalışır. Satır açıkken yapılan sıradan düzenlemeler,
+   satırın kapatılması ve Actions'taki "Re-run" (`github.run_attempt == 1` koşulu) yeni denetim başlatamaz; önceki commit geçmişte
+   yoksa (zorla gönderim) güvenli tarafta kalınır. Yeniden çalıştırmak için sahip satırı kapatıp (commit) yeniden açar (commit).
+
+Kapsam (828 nesne + G1–G4), günlük gizliliği ve SHA-256 sabitlemesi değişmedi (denetim dosyası aynı; özet aynı).
+Yeni sentetik testler: T10 havuz PGOPTIONS'ı yok sayarsa denetim dahil edilmez · T11 bekçiyi atlatmış yazma aynı işlemde 25006 ·
+T12 yalnız BEGIN READ ONLY ile de 25006 · T13 yarıda hata → çıkış 3, yalnız SQLSTATE. Birim KT-10: tetik kuralı geçici git
+deposunda 11 durumla (kapalı→açık, açık→açık, kapanış, kapat-yeniden aç, çok commit'li gönderim, yeni dal, bilinmeyen geçmiş, geçersiz girdi).

@@ -13,6 +13,10 @@
 #   T7 betiğin PGOPTIONS'ıyla açılan oturumda yazma → SQLSTATE 25006 (oturum gerçekten salt okunur)
 #   T8 GitHub maskesi: GITHUB_ACTIONS=true iken adres, kullanıcı, parola, ana makine, port ::add-mask:: ile bildirilir
 #   T9 RLS'i aşamayan rol: storage.buckets görünmez → kova EKSİK; betik bunu ayrıca "görünmüyor olabilir" diye yazar
+#   T10 betiğin sarmalayıcısı (birebir) + havuz PGOPTIONS'ı yok sayarsa: aynı işlemde kontrol "off" → denetim DAHİL EDİLMEZ
+#   T11 sarmalayıcı + betiğin PGOPTIONS'ı + bekçiyi atlatmış yazma dosyası: aynı işlemde 25006, hiçbir şey oluşmaz
+#   T12 yalnız BEGIN READ ONLY (PGOPTIONS yok, kapı zorla açık): yazma yine 25006 — iki katmandan biri yeterli
+#   T13 betik uçtan uca: denetim yarıda hata verirse çıkış 3 "işlem geri alındı", ham hata/SQL metni yok
 # =============================================================================
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
@@ -25,7 +29,7 @@ SHA=$(sha256sum "$SQL" | cut -d' ' -f1)
 T=$(mktemp -d)
 cleanup() {
   psql "$ADMIN" -X -q -c "alter table public.leads enable row level security" -c "drop policy if exists ki23_test_acik on public.properties" \
-    > /dev/null 2>&1 || true
+    -c "drop table if exists public.ki23_yazma_denemesi" > /dev/null 2>&1 || true
   psql "postgresql://supabase_admin:postgres@127.0.0.1:55322/postgres" -X -q -c "drop owned by $ROLE" -c "drop role if exists $ROLE" > /dev/null 2>&1 || true
   rm -rf "$T"
 }
@@ -55,7 +59,8 @@ clean() { # günlükte sır / adres / gövde / nesne adı yok (::add-mask:: sat�
 c=$(run DENETIM_DB_URL="$URL" DENETIM_SQL_SHA256="$SHA")
 [ "$c" = 0 ] || { cat "$T/log" >&2; fail "T1 çıkış $c"; }
 grep -q '^G1–G4: TAMAM$' "$T/log" && grep -q 'P toplam: AYNI=828 FARKLI=0 EKSİK=0 FAZLA=0 (beklenen nesne: 828)' "$T/log" \
-  && grep -q 'Oturum salt okunur başladı' "$T/log" || { cat "$T/log" >&2; fail "T1 özet"; }
+  && grep -q 'Tek bağlantı, tek işlem: BEGIN READ ONLY; default_transaction_read_only=on ve işlem salt okunur=on' "$T/log" \
+  || { cat "$T/log" >&2; fail "T1 özet"; }
 clean T1; echo "  ✓ T1 temiz şema: TAMAM, 828 AYNI, günlükte sır/adres/gövde/nesne adı yok (ayrı test rolüyle)"
 
 psql "$ADMIN" -X -q -v ON_ERROR_STOP=1 -c "alter table public.leads disable row level security" \
@@ -100,4 +105,36 @@ c=$(run DENETIM_DB_URL="$URL" DENETIM_SQL_SHA256="$SHA")
 [ "$c" = 4 ] && grep -q 'kova: AYNI=0 FARKLI=0 EKSİK=4' "$T/log" && grep -q 'storage.buckets bu rolle görünmüyor olabilir' "$T/log" \
   || { cat "$T/log" >&2; fail "T9 (çıkış $c)"; }
 clean T9; echo "  ✓ T9 RLS'i aşamayan rol: kova EKSİK ayrıca 'görünmüyor olabilir' diye işaretlendi"
-echo "✓ KI-23 canlı denetim betiği sentetik testleri tamam (9/9)"
+psql "$SUPER" -X -q -v ON_ERROR_STOP=1 -c "alter role $ROLE bypassrls" > /dev/null
+# Sarmalayıcı, betikteki işaretler arasından BİREBİR alınır
+body=$(sed -n '/^# SARMALAYICI-BAS/,/^# SARMALAYICI-SON/p' scripts/ki23-canli-denetim.sh | sed '1d;$d')
+eval "wrap() {
+$body
+}"
+printf 'with x as (select 1 as n) select n from x;\n' > "$T/oku.sql"
+printf 'create table public.ki23_yazma_denemesi (x int);\n' > "$T/yaz.sql"
+opts=$(grep -oE "^export PGOPTIONS='[^']+'" scripts/ki23-canli-denetim.sh | sed -E "s/^export PGOPTIONS='(.*)'$/\1/")
+
+wrap "$T/oku.sql" > "$T/r10.sql"
+PGOPTIONS='' psql "$URL" -X -q -A -t -F'|' -v ON_ERROR_STOP=1 -f "$T/r10.sql" > "$T/o10" 2> "$T/e10" || fail "T10 psql"
+grep -qx 'KONTROL|off|on|[0-9]*' "$T/o10" && grep -qx 'KONTROL|DENETIM GONDERILMEDI' "$T/o10" && ! grep -qx '1' "$T/o10" || { cat "$T/o10" >&2; fail "T10"; }
+echo "  ✓ T10 havuz PGOPTIONS'ı yok sayarsa: aynı işlemde kontrol off → denetim dahil edilmedi"
+
+wrap "$T/yaz.sql" > "$T/r11.sql"
+if PGOPTIONS="$opts" psql "$URL" -X -q -A -t -F'|' -v ON_ERROR_STOP=1 -f "$T/r11.sql" > "$T/o11" 2> "$T/e11"; then fail "T11: yazma başarılı oldu"; fi
+grep -q '25006' "$T/e11" || { cat "$T/e11" >&2; fail "T11: 25006 beklenirdi"; }
+[ "$(psql "$ADMIN" -X -At -c "select to_regclass('public.ki23_yazma_denemesi') is null")" = t ] || fail "T11: tablo oluştu"
+echo "  ✓ T11 bekçiyi atlatmış yazma: aynı işlemde 25006, hiçbir şey oluşmadı"
+
+sed 's/^\\if :ro_tamam$/\\if true/' "$T/r11.sql" > "$T/r12.sql"
+grep -qx '\\if true' "$T/r12.sql" || fail "T12 hazırlık"
+if PGOPTIONS='' psql "$URL" -X -q -A -t -F'|' -v ON_ERROR_STOP=1 -f "$T/r12.sql" > "$T/o12" 2> "$T/e12"; then fail "T12: yazma başarılı oldu"; fi
+grep -q '25006' "$T/e12" && [ "$(psql "$ADMIN" -X -At -c "select to_regclass('public.ki23_yazma_denemesi') is null")" = t ] || fail "T12"
+echo "  ✓ T12 yalnız BEGIN READ ONLY (PGOPTIONS yok): yazma yine 25006"
+
+printf 'with x as (select 1 / 0 as n) select n from x;\n' > "$T/hata.sql"
+c=$(run DENETIM_DB_URL="$URL" DENETIM_SQL="$T/hata.sql" DENETIM_SQL_SHA256="$(sha256sum "$T/hata.sql" | cut -d' ' -f1)")
+[ "$c" = 3 ] && grep -q 'Denetim çalışmadı (işlem geri alındı): SQL hatası (SQLSTATE 22012)' "$T/log" && ! grep -q '1 / 0\|division' "$T/log" \
+  || { cat "$T/log" >&2; fail "T13 (çıkış $c)"; }
+clean T13; echo "  ✓ T13 denetim yarıda hata: çıkış 3, işlem geri alındı, yalnız SQLSTATE"
+echo "✓ KI-23 canlı denetim betiği sentetik testleri tamam (13/13)"

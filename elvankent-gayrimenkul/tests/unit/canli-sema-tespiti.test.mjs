@@ -13,7 +13,7 @@
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, writeFileSync, rmSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, rmSync, mkdtempSync, mkdirSync } from 'node:fs';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -275,8 +275,11 @@ describe('KT-09 canlı denetim iş akışı (elvankent-ki23-canli-denetim.yml) v
   test('tetik: yalnız workflow_dispatch + istek dosyası (çalışma dalı); sahip; geliştirme commit\'i değil; CALISTIR=evet', () => {
     const on = wf.slice(wf.indexOf('\non:\n'), wf.indexOf('\npermissions:'));
     assert.equal(on, "\non:\n  workflow_dispatch: {}\n  push:\n    branches: ['claude/karays-mission-control-vn8g65']\n    paths: ['elvankent-gayrimenkul/ops-requests/ki23-canli-denetim.request']\n");
-    assert.match(wf, /if: \$\{\{ github\.actor == github\.repository_owner && \(github\.event_name == 'workflow_dispatch' \|\| !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\)\) \}\}/);
-    assert.match(wf, /grep -qx 'CALISTIR=evet' ops-requests\/ki23-canli-denetim\.request/);
+    assert.match(wf, /if: \$\{\{ github\.actor == github\.repository_owner && github\.run_attempt == 1 && \(github\.event_name == 'workflow_dispatch' \|\| !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\)\) \}\}/);
+    // Tek kullanımlık: push'ta önceki ↔ yeni commit karşılaştırması (tam geçmiş, kimlik bilgisi saklanmaz)
+    assert.match(wf, /fetch-depth: 0\n {10}persist-credentials: false/);
+    assert.match(wf, /if: \$\{\{ github\.event_name == 'push' \}\}\n {8}env:\n {10}ONCEKI: \$\{\{ github\.event\.before \}\}\n {10}YENI: \$\{\{ github\.sha \}\}\n {8}run: bash scripts\/ki23-tetik-kontrol\.sh "\$ONCEKI" "\$YENI"/);
+    assert.ok(wf.indexOf('ki23-tetik-kontrol.sh') < wf.indexOf('secrets.SUPABASE_DB_URL'), 'tetik kontrolü sırdan önce');
     // Depodaki istek dosyasında çalıştırma satırı KAPALI (geliştirme oturumu çalıştırmaz)
     const req = read('ops-requests/ki23-canli-denetim.request');
     assert.ok(!req.split('\n').includes('CALISTIR=evet'), 'istek dosyası kapalı');
@@ -298,14 +301,21 @@ describe('KT-09 canlı denetim iş akışı (elvankent-ki23-canli-denetim.yml) v
   test('betik: salt okunur başlangıç, doğrulama, maske, ham hata yok, yalnız sayılar', () => {
     const c = code(sh);
     assert.match(c, /export PGOPTIONS='-c default_transaction_read_only=on -c statement_timeout=\d+ -c lock_timeout=\d+ -c idle_in_transaction_session_timeout=\d+'/);
-    assert.match(c, /\[ "\$dro" = on \] && \[ "\$tro" = on \] \|\| die 3/);
+    assert.match(c, /if \[ "\$dro" != on \] \|\| \[ "\$tro" != on \] \|\| grep -q '\^KONTROL\|DENETIM GONDERILMEDI'/);
+    // Tek bağlantı, tek işlem: yalnız BİR psql çağrısı; BEGIN READ ONLY → kontrol → \if → \i → ROLLBACK
+    assert.equal((c.match(/^\s*psql "\$DENETIM_DB_URL"/gm) ?? []).length, 1, 'tek psql bağlantısı');
+    const w = sh.slice(sh.indexOf('# SARMALAYICI-BAS'), sh.indexOf('# SARMALAYICI-SON'));
+    const order = ['\\set ON_ERROR_STOP 1', 'BEGIN READ ONLY;', "current_setting('transaction_read_only') = 'on' AS ro_tamam", '\\gset', '\\if :ro_tamam', "\\i '$1'", '\\else', '\\endif', 'ROLLBACK;'];
+    let at = -1;
+    for (const o of order) { const i = w.indexOf(o); assert.ok(i > at, `sarmalayıcı sırası: ${o}`); at = i; }
+    assert.doesNotMatch(w, /\bCOMMIT\b|\bEND\b;/);
     assert.match(c, /printf '::add-mask::%s\\n' "\$DENETIM_DB_URL"/);
     assert.match(c, /-v VERBOSITY=sqlstate/);
     assert.doesNotMatch(c, /set -x|cat "\$T\/err"|cat "\$T\/out"|tee |\$DENETIM_DB_URL"? *>>|echo "\$DENETIM_DB_URL/);
     // günlüğe giden her satır say/die üzerinden; ham çıktı satırı (nesne adı) yazdırılmaz
     assert.doesNotMatch(c, /awk[^\n]*print \$2/);
-    assert.ok(c.indexOf('node scripts/ki23-denetim-guard.mjs') < c.indexOf('if ! q -c'), 'bekçi bağlantıdan önce');
-    assert.ok(c.indexOf('[ "$actual" = "$DENETIM_SQL_SHA256" ]') < c.indexOf('if ! q -c'), 'SHA bağlantıdan önce');
+    assert.ok(c.indexOf('node scripts/ki23-denetim-guard.mjs') < c.indexOf('psql "$DENETIM_DB_URL"'), 'bekçi bağlantıdan önce');
+    assert.ok(c.indexOf('[ "$actual" = "$DENETIM_SQL_SHA256" ]') < c.indexOf('psql "$DENETIM_DB_URL"'), 'SHA bağlantıdan önce');
     assert.equal(spawnSync('bash', ['-n', 'scripts/ki23-canli-denetim.sh'], { cwd: root }).status, 0);
   });
   test('bekçi: bugünkü dosya geçer; yazma / çoklu ifade / dolar gövdesi / ayar / meta komut reddedilir', () => {
@@ -327,5 +337,36 @@ describe('KT-09 canlı denetim iş akışı (elvankent-ki23-canli-denetim.yml) v
       assert.doesNotMatch(r.stderr + r.stdout, /leads|drop table/, `${name}: SQL metni yazılmaz`);
     }
     rmSync(tmp, { force: true });
+  });
+});
+
+describe('KT-10 tek kullanımlık tetik (scripts/ki23-tetik-kontrol.sh)', () => {
+  test('yalnız kapalı → açık geçişi çalıştırır; açık → açık, kapanış, bilinmeyen geçmiş ve geçersiz girdi çalıştırmaz', () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'ki23-tetik-'));
+    const git = (...a) => spawnSync('git', a, { cwd: dir, encoding: 'utf8', env: { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' } });
+    git('init', '-q');
+    const f = path.join(dir, 'elvankent-gayrimenkul/ops-requests');
+    mkdirSync(f, { recursive: true });
+    const commit = (body) => { writeFileSync(path.join(f, 'ki23-canli-denetim.request'), body); git('add', '-A'); git('commit', '-qm', 'x'); return git('rev-parse', 'HEAD').stdout.trim(); };
+    const c0 = commit('# açıklama\n# CALISTIR=evet\n');
+    const c1 = commit('# açıklama\nCALISTIR=evet\n');
+    const c2 = commit('# açıklama (düzenlendi)\nCALISTIR=evet\n');
+    const c3 = commit('# açıklama\n# CALISTIR=evet\n');
+    const c4 = commit('# açıklama\nCALISTIR=evet\n');
+    const c5 = commit('# açıklama\nCALISTIR=evet  \n');
+    const zero = '0'.repeat(40);
+    const run = (b, a) => spawnSync('bash', [path.join(root, 'scripts/ki23-tetik-kontrol.sh'), b, a], { cwd: dir, encoding: 'utf8' }).status;
+    assert.equal(run(c0, c1), 0, 'kapalı → açık: çalıştır');
+    assert.equal(run(c1, c2), 1, 'açık → açık (sıradan düzenleme): çalıştırma');
+    assert.equal(run(c2, c3), 1, 'açık → kapalı: çalıştırma');
+    assert.equal(run(c3, c4), 0, 'kapat → yeniden aç: açık yeniden tetikleme');
+    assert.equal(run(c4, c5), 1, 'açık → açık (boşluk eklenmiş, satır artık tam eşleşmiyor): çalıştırma');
+    assert.equal(run(c0, c2), 0, 'çok commit\'li gönderim: önceki kapalı, son açık');
+    assert.equal(run(zero, c1), 0, 'yeni dal: önceki kapalı sayılır');
+    assert.equal(run(zero, c0), 1, 'yeni dal, satır kapalı');
+    assert.equal(run('f'.repeat(40), c1), 1, 'önceki commit geçmişte yok: güvenli taraf');
+    assert.equal(run('abc', c1), 1, 'geçersiz önceki');
+    assert.equal(run(c0, 'xyz'), 1, 'geçersiz yeni');
+    rmSync(dir, { recursive: true, force: true });
   });
 });

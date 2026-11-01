@@ -5,9 +5,10 @@
 # Günlüğe yalnız G1–G4 sonucu ve AYNI/FARKLI/EKSİK/FAZLA sayıları yazılır (scripts/ki23-canli-denetim.sh).
 #
 # NE ZAMAN ÇALIŞIR — yalnız sahibin elle tetiklemesiyle:
-#   a) ops-requests/ki23-canli-denetim.request dosyasında "CALISTIR=evet" satırı açık iken sahibin GitHub web'den yaptığı
-#      düzenleme (çalışma dalında). Geliştirme oturumunun commit'leri ("Claude-Session:") tetiklemez; satır kapalıysa
-#      bağlanmadan durur.
+#   a) Sahibin GitHub web'den ops-requests/ki23-canli-denetim.request dosyasında "# CALISTIR=evet" satırını AÇTIĞI gönderim
+#      (çalışma dalında). TEK KULLANIMLIK: yalnız satırın kapalıdan açığa geçtiği gönderim çalışır (scripts/ki23-tetik-kontrol.sh);
+#      satır açıkken yapılan sıradan düzenlemeler ve Actions'taki "Re-run" yeni denetim başlatamaz. Yeniden çalıştırmak için
+#      sahip satırı kapatıp (commit) yeniden açar (commit). Geliştirme oturumunun commit'leri ("Claude-Session:") tetiklemez.
 #   b) workflow_dispatch (Actions › Run workflow) — GitHub bu düğmeyi yalnız iş akışı VARSAYILAN dalda bulunduğunda gösterir.
 #      Varsayılan dal production dalıdır; oraya bu dosya bu iş kapsamında GÖNDERİLMEZ (ayrı karar: KI23 belgesi §7).
 #   İsteğe bağlı ek kapı: GitHub › Settings › Environments › "ki23-canli-denetim" › Required reviewers: sahip.
@@ -17,6 +18,7 @@
 #   - Denetim dosyası SHA-256 ile sabit (DENETIM_SQL_SHA256): dosya değişirse bu iş akışı da açıkça güncellenmeli.
 #   - Bekçi (scripts/ki23-denetim-guard.mjs): tek ifade, WITH … SELECT, yazma/DDL/ayar/dosya/süreç komutu yok.
 #   - Bağlantı adresi ve parçaları ::add-mask:: ile maskelenir; set -x yok; ham hata metni yazılmaz (yalnız güvenli sınıf).
+#   - Denetim TEK bağlantıda, TEK işlemde: BEGIN READ ONLY → aynı işlemde salt okunur kontrolü → denetim → ROLLBACK.
 #   - upload-artifact yok; çıktı çalıştırıcının geçici klasöründe kalır ve silinir.
 #   - checkout kimlik bilgisini saklamaz (persist-credentials: false); action'lar tam commit SHA'sıyla sabit (LR-11).
 name: elvankent-ki23-canli-denetim
@@ -36,7 +38,8 @@ concurrency:
 
 jobs:
   denetim:
-    if: ${{ github.actor == github.repository_owner && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, 'Claude-Session:')) }}
+    # Re-run (run_attempt > 1) yeni bir canlı denetim başlatamaz: tek kullanımlık
+    if: ${{ github.actor == github.repository_owner && github.run_attempt == 1 && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, 'Claude-Session:')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: ki23-canli-denetim
@@ -48,16 +51,15 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # Tek kullanımlık tetik önceki commit'teki istek dosyasını okur (git geçmişi); kimlik bilgisi saklanmaz
+          fetch-depth: 0
           persist-credentials: false
-      - name: İstek onayı (CALISTIR=evet satırı açık mı)
+      - name: Tek kullanımlık tetik (CALISTIR=evet bu gönderimde kapalıdan açığa mı geçti)
         if: ${{ github.event_name == 'push' }}
-        run: |
-          set -euo pipefail
-          if ! grep -qx 'CALISTIR=evet' ops-requests/ki23-canli-denetim.request; then
-            echo "İstek dosyasında 'CALISTIR=evet' satırı açık değil: veritabanına bağlanılmadı."
-            exit 1
-          fi
-          echo "İstek onaylı: sahibin düzenlemesi, CALISTIR=evet"
+        env:
+          ONCEKI: ${{ github.event.before }}
+          YENI: ${{ github.sha }}
+        run: bash scripts/ki23-tetik-kontrol.sh "$ONCEKI" "$YENI"
       - name: PostgreSQL istemcisi
         run: |
           set -euo pipefail
