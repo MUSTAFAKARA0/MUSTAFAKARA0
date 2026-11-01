@@ -294,23 +294,73 @@ describe('BK-02b PostgreSQL 17 istemcisi (Backup #39: pg_dump 16.15 ↔ sunucu 1
   });
 });
 
-describe('BK-02d rclone sabit sürüm (Backup #43: 1.60.1 → R2 HEAD 501)', () => {
+describe('BK-02d rclone sabit sürüm (Backup #43: 1.60.1 → R2 HEAD 501; Backup #44: RCLONE_VERSION çakışması)', () => {
   const wf = read('../.github/workflows/elvankent-backup.yml');
   const diag = read('../.github/workflows/elvankent-r2-diagnose.yml');
   const install = wf.slice(wf.indexOf('- name: Araçları kur (pg_dump 17, rclone sabit sürüm)'), wf.indexOf('- name: PostgreSQL istemci sürümü'));
-  test('Ubuntu paketi kurulmaz; sürüm ve özet iş düzeyinde sabit; teşhisle doğrulanan sürümle aynı', () => {
+  const backupJob = wf.slice(wf.indexOf('\n  backup:\n'));
+  // İş düzeyindeki sabit (sır/değişken olmayan) ortam değerleri: "      AD: değer"
+  const jobEnv = Object.fromEntries(
+    [...backupJob.slice(backupJob.indexOf('\n    env:\n'), backupJob.indexOf('\n    steps:\n')).matchAll(/^ {6}([A-Z0-9_]+): (.+)$/gm)]
+      .filter((m) => !m[2].includes('${{'))
+      .map((m) => [m[1], m[2].replace(/^'(.*)'$/, '$1')]),
+  );
+  test('Ubuntu paketi kurulmaz; sürüm ve özet iş düzeyinde sabit, değerler değişmedi; teşhisle doğrulanan sürümle aynı', () => {
     assert.doesNotMatch(install, /apt-get install[^\n]*\brclone\b/);
-    const ver = wf.match(/\n {6}RCLONE_VERSION: (v\d+\.\d+\.\d+)\n/)?.[1];
-    assert.ok(ver, 'RCLONE_VERSION');
-    assert.match(wf, /\n {6}RCLONE_SHA256: [0-9a-f]{64}\n/);
-    assert.equal(diag.match(/RCLONE_NEW: (v\d+\.\d+\.\d+)/)?.[1], ver, 'teşhis iş akışında doğrulanan sürüm');
+    assert.equal(jobEnv.BACKUP_RCLONE_VERSION, 'v1.75.2');
+    assert.equal(jobEnv.BACKUP_RCLONE_SHA256, '349ac8fba6ff65d6247043f1750cdcb518ec5d500ef91463a10d37c0ccdf3702');
+    assert.equal(diag.match(/RCLONE_NEW: (v\d+\.\d+\.\d+)/)?.[1], jobEnv.BACKUP_RCLONE_VERSION, 'teşhis iş akışında doğrulanan sürüm');
   });
-  test('resmî sürümden indirilir, SHA-256 denetlenir, /usr/local/bin\'e kurulur, sürüm tam eşleşmezse yedek başlamaz', () => {
-    assert.match(install, /https:\/\/github\.com\/rclone\/rclone\/releases\/download\/\$RCLONE_VERSION\/\$zip/);
-    assert.match(install, /echo "\$RCLONE_SHA256 {2}\$zip" \| sha256sum -c --quiet -/);
-    assert.match(install, /sudo install -m 0755 "rclone-\$RCLONE_VERSION-linux-amd64\/rclone" \/usr\/local\/bin\/rclone/);
-    assert.match(install, /\[ "\$got" = "rclone \$RCLONE_VERSION" \]/);
+  test('resmî sürümden indirilir, SHA-256 denetlenir, /usr/local/bin\'e kurulur, sürüm komutu başarısız ya da farklıysa yedek başlamaz', () => {
+    assert.match(install, /https:\/\/github\.com\/rclone\/rclone\/releases\/download\/\$BACKUP_RCLONE_VERSION\/\$zip/);
+    assert.match(install, /echo "\$BACKUP_RCLONE_SHA256 {2}\$zip" \| sha256sum -c --quiet -/);
+    assert.match(install, /sudo install -m 0755 "rclone-\$BACKUP_RCLONE_VERSION-linux-amd64\/rclone" \/usr\/local\/bin\/rclone/);
+    assert.match(install, /if ! out=\$\(rclone version 2>&1\); then/);
+    assert.match(install, /\[ "\$got" = "rclone \$BACKUP_RCLONE_VERSION" \]/);
     assert.ok(install.indexOf('sha256sum -c') < install.indexOf('sudo install -m 0755'), 'özet kurulumdan önce');
+  });
+  test('regresyon (Backup #44): iş akışında RCLONE_CONFIG_* dışında RCLONE_ önekli ortam değişkeni yok', () => {
+    // rclone, RCLONE_<SEÇENEK> değişkenlerini kendi seçenekleri sayar (RCLONE_VERSION → --version); iş/adım env'i taranır
+    const offenders = [...wf.matchAll(/^\s+(RCLONE_[A-Z0-9_]+):/gm)].map((m) => m[1]).filter((n) => !n.startsWith('RCLONE_CONFIG_'));
+    assert.deepEqual(offenders, []);
+    assert.doesNotMatch(wf, /\$\{?RCLONE_(VERSION|SHA256)\b/, 'eski adlara kabukta başvuru kalmadı');
+  });
+  // Gerçek rclone gibi davranan sahte ikili: RCLONE_<seçenek> ortam değişkeni seçenek değerine çevrilir; --version
+  // boolean olduğundan "v1.75.2" geçersizdir ve HER komut çıkış 1 verir (Backup #44'teki hata metniyle aynı).
+  const FAKE = `#!/usr/bin/env bash
+if [ -n "\${RCLONE_VERSION+x}" ]; then
+  case "$RCLONE_VERSION" in true|false|1|0|"") ;; *)
+    echo "Invalid value when setting --version from environment variable RCLONE_VERSION=\\"$RCLONE_VERSION\\": invalid argument \\"$RCLONE_VERSION\\" for \\"--version\\" flag: strconv.ParseBool: parsing \\"$RCLONE_VERSION\\": invalid syntax" >&2
+    exit 1 ;; esac
+fi
+if [ "$1" = version ]; then printf 'rclone v1.75.2\\n- os/version: ubuntu 24.04\\n'; exit 0; fi
+exit 0
+`;
+  const gate = (() => {
+    const from = install.indexOf('if ! out=$(rclone version 2>&1); then');
+    const to = install.indexOf('echo "$got (SHA-256 doğrulandı)"');
+    const lines = install.slice(from, to + 'echo "$got (SHA-256 doğrulandı)"'.length).split('\n');
+    const indent = lines[1].match(/^ */)[0].length - 2;
+    return lines.map((l, i) => (i === 0 ? l : l.slice(indent))).join('\n');
+  })();
+  const runGate = (t, extraEnv = {}) => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'karay-rclone-env-'));
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    writeFileSync(path.join(dir, 'rclone'), FAKE, { mode: 0o755 });
+    return spawnSync('bash', ['--noprofile', '--norc', '-e', '-c', gate], {
+      env: { PATH: `${dir}:/usr/bin:/bin`, ...jobEnv, ...extraEnv },
+      encoding: 'utf8',
+    });
+  };
+  test('sürüm denetimi iş akışının GERÇEK iş ortamıyla çalışır: rclone version başarılı ve v1.75.2', (t) => {
+    const r = runGate(t);
+    assert.equal(r.status, 0, r.stdout + r.stderr);
+    assert.match(r.stdout, /^rclone v1\.75\.2 \(SHA-256 doğrulandı\)$/m);
+  });
+  test('regresyon (Backup #44): RCLONE_VERSION ortamda olsaydı denetim yedekten önce durdururdu', (t) => {
+    const r = runGate(t, { RCLONE_VERSION: jobEnv.BACKUP_RCLONE_VERSION });
+    assert.equal(r.status, 1);
+    assert.match(r.stdout, /::error title=rclone çalışmıyor::'rclone version' başarısız: Invalid value when setting --version from environment variable RCLONE_VERSION/);
   });
   test('yükleme sonrası doğrulama (HEAD) korunur: --s3-no-head kullanılmaz', () => {
     assert.doesNotMatch(wf, /--s3-no-head/);
