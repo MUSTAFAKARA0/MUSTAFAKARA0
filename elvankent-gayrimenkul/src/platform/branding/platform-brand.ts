@@ -12,8 +12,10 @@ import { buildTheme, themeCss } from '@/platform/branding/theme';
  * markası ise yalnızca /platform (süper admin) alanında kullanılır. İkisi birbirini
  * etkilemez: kiracı tema değişikliği platformu, platform teması kiracıyı değiştirmez.
  *
- * Logo ve renkler KARAY logo paketinden alınmıştır (public/platform/). Logo dosyaları
+ * Logo ve renkler KARAY logo paketinden alınmıştır (public/brand/karay/). Logo dosyaları
  * düzenlenmez, yeniden çizilmez; oranları ve renkleri değiştirilmez (paket kuralları).
+ * Dosyalar /platform altında tutulmaz: o yol konsol rotasıdır ve proxy oturumsuz isteği
+ * giriş sayfasına yönlendirir (giriş ekranında ve /karay'da logo ile simgeler kırılırdı).
  */
 export const PLATFORM_BRAND = {
   /** Platform sahibi şirket */
@@ -24,20 +26,22 @@ export const PLATFORM_BRAND = {
   consoleName: 'Platform yönetimi',
   logos: {
     /** Açık zemin, sloganlı (ana versiyon; en küçük genişlik 200 px) */
-    light: '/platform/karay-logo-yatay.svg',
+    light: '/brand/karay/karay-logo-yatay.svg',
     /** Koyu zemin, sloganlı */
-    dark: '/platform/karay-logo-yatay-koyu-zemin.svg',
+    dark: '/brand/karay/karay-logo-yatay-koyu-zemin.svg',
     /** Açık zemin, slogansız (küçük alanlar; en küçük genişlik 110 px) */
-    lightCompact: '/platform/karay-logo-yatay-sade.svg',
+    lightCompact: '/brand/karay/karay-logo-yatay-sade.svg',
     /** Koyu zemin, slogansız */
-    darkCompact: '/platform/karay-logo-yatay-sade-koyu-zemin.svg',
+    darkCompact: '/brand/karay/karay-logo-yatay-sade-koyu-zemin.svg',
   },
   /** Logo en-boy oranı (SVG viewBox 718.57 × 192) */
   logoAspect: 718.57 / 192,
   icons: {
-    ico: '/platform/favicon.ico',
-    svg: '/platform/favicon.svg',
-    apple: '/platform/apple-touch-icon.png',
+    ico: '/brand/karay/favicon.ico',
+    svg: '/brand/karay/favicon.svg',
+    apple: '/brand/karay/apple-touch-icon.png',
+    /** 512 px uygulama ikonu (KARAY sayfasının yapılandırılmış verisindeki logo) */
+    app: '/brand/karay/uygulama-ikonu-512.png',
   },
   /** Paket renkleri: KARAY Lacivert, Sinyal Mavisi, Turkuaz, Arduvaz, Bulut */
   colors: { navy: '#0b1b3a', signal: '#2f6bff', turquoise: '#1cc8b6', slate: '#5b6b85', cloud: '#f4f7fb' },

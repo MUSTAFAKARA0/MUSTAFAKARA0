@@ -23,8 +23,14 @@ import { ThemeShowcase } from '@/components/karay/theme-showcase';
 import { Button } from '@/components/ui/button';
 import { karaySiteUrl } from '@/modules/karay/site';
 import { getKarayProfile } from '@/modules/karay/profile';
+import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 import { parseSiteConfig } from '@/site-config/schema';
 import { THEME_LIST } from '@/theme-engine/themes';
+// Ekran görüntüleri statik import edilir: /karay/ yolu proxy'de alan adına göre korunur ve görsel
+// iyileştiricinin Host başlığı taşımayan iç isteği orada 404 alır (P3-F1). Statik görsel
+// /_next/static/media altından okunur (proxy'den geçmez).
+import ekranKontrolMerkezi from './_images/ekran-kontrol-merkezi.png';
+import ekranRenkler from './_images/ekran-renkler.png';
 
 /*
  * KARAY şirket/ürün sayfası. İçerik yalnızca platformda GERÇEKTEN var olan özellikleri
@@ -89,7 +95,7 @@ export default async function KarayPage() {
     name: profile.companyName,
     description: 'Gayrimenkul teknolojileri ve SaaS platformu',
     url: `${base.origin}${base.path('/')}`,
-    logo: `${base.origin}/platform/uygulama-ikonu-512.png`,
+    logo: `${base.origin}${PLATFORM_BRAND.icons.app}`,
     ...(profile.email ? { email: profile.email } : {}),
     ...(profile.phone ? { telephone: profile.phone } : {}),
     ...(profile.socials.length ? { sameAs: profile.socials.map((s) => s.href) } : {}),
@@ -136,10 +142,8 @@ export default async function KarayPage() {
                 <span className="ml-3 truncate text-[11.5px] text-[#5b6b85]">KARAY · Site Kontrol Merkezi</span>
               </div>
               <Image
-                src="/karay/ekran-kontrol-merkezi.png"
+                src={ekranKontrolMerkezi}
                 alt="KARAY Site Kontrol Merkezi: bir emlak ofisi sitesinin tema galerisi, canlı ve taslak durumu"
-                width={1440}
-                height={900}
                 sizes="(min-width: 1024px) 600px, 100vw"
                 priority
                 className="h-auto w-full"
@@ -243,10 +247,8 @@ export default async function KarayPage() {
           <figure className="min-w-0">
             <div className="overflow-hidden rounded-2xl border border-[#e3e8f0] shadow-[0_24px_60px_-30px_rgb(11_27_58/0.35)]">
               <Image
-                src="/karay/ekran-renkler.png"
+                src={ekranRenkler}
                 alt="Site Kontrol Merkezi Renkler sekmesi: hazır paletler ve gerçek tema motoruyla canlı önizleme"
-                width={1440}
-                height={900}
                 sizes="(min-width: 1024px) 640px, 100vw"
                 className="h-auto w-full"
               />

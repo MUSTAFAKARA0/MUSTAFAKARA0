@@ -158,6 +158,17 @@ async function open(browser: Browser, target: string, viewport?: { width: number
   return { page, res, close: () => ctx.close() };
 }
 
+/** Sayfanın simgeleri (favicon, apple-touch) yönlendirmesiz görsel olarak sunulur */
+async function expectIconsServed(page: Page) {
+  const icons = await page.locator('link[rel="icon"], link[rel="apple-touch-icon"]').evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
+  expect(icons.length).toBeGreaterThan(0);
+  for (const href of icons) {
+    const res = await page.request.get(href, { maxRedirects: 0 });
+    expect(res.status(), href).toBe(200);
+    expect(res.headers()['content-type'] ?? '', href).toMatch(/^image\//);
+  }
+}
+
 async function scrollThrough(page: Page) {
   const h = await page.evaluate(() => document.documentElement.scrollHeight);
   for (let y = 0; y < h; y += 700) await page.evaluate((v) => window.scrollTo(0, v), y);
@@ -172,10 +183,12 @@ test('KARAY-01: KARAY şirket sayfası açılır (kendi header, menü, bölümle
   for (const name of ['Platform', 'Özellikler', 'Temalar', 'Nasıl çalışır?', 'Hakkımızda', 'İletişim']) await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
   for (const id of ['platform', 'ozellikler', 'temalar', 'nasil-calisir', 'hakkimizda', 'iletisim']) await expect(page.locator(`#${id}`), id).toBeAttached();
   await expect(page.getByRole('contentinfo')).toContainText('KARAY');
-  // Gerçek ürün ekran görüntüleri yüklenir (kırık görsel yok)
+  // Gerçek ürün ekran görüntüleri, header/footer logoları ve simgeler oturumsuz ziyaretçide yüklenir
+  // (kırık görsel yok; K-15: logolar /platform altındayken giriş sayfasına yönleniyordu)
   await scrollThrough(page);
-  const broken = await page.locator('main img').evaluateAll((imgs) => (imgs as HTMLImageElement[]).filter((i) => i.complete && i.naturalWidth === 0).map((i) => i.alt));
+  const broken = await page.locator('img').evaluateAll((imgs) => (imgs as HTMLImageElement[]).filter((i) => i.complete && i.naturalWidth === 0).map((i) => i.alt));
   expect(broken).toEqual([]);
+  await expectIconsServed(page);
   // Kiracı (Elvankent) markası ve demo bandı KARAY sayfasında yok
   await expect(page.locator('main')).not.toContainText(S.elvName!);
   await expect(page.locator('.demo-notice')).toBeHidden();
@@ -500,4 +513,13 @@ test('KARAY-18: platform kullanıcısı yetkisiz olarak kiracı verisine erişem
   // KARAY talepleri ekranı kiracı talebini listelemez
   await page.goto('/platform/talepler?durum=tumu');
   await expect(page.getByText(TENANT_LEAD_NAME)).toHaveCount(0);
+});
+
+test('KARAY-19: platform giriş sayfasının logosu ve simgeleri oturumsuz ziyaretçide yüklenir', async ({ page }) => {
+  // K-15: logo ve simgeler /platform altındayken proxy onları da konsol rotası sayıp girişe yönlendiriyordu
+  await page.goto('/platform/giris');
+  const logo = page.getByRole('img', { name: 'KARAY', exact: true });
+  await expect(logo).toBeVisible();
+  await expect.poll(() => logo.evaluate((img: HTMLImageElement) => (img.complete ? img.naturalWidth : 0))).toBeGreaterThan(0);
+  await expectIconsServed(page);
 });
