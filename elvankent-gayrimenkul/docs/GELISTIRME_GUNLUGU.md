@@ -23,6 +23,19 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 (4) · K-28: O-4 A YAYINLANDI (yalnız güvenlik yaması)
+
+**Onay:** sahibin yazılı ve açık onayı ("O-4 A production yayını için açık onay"). GitHub entegrasyonu üzerinden deneme "Resource not accessible by integration" ile olmamıştı.
+
+**Ön koşullar (push'tan hemen önce):** uzak production dalı `ff2f7da` ✓ · yayın commit'i `650fd4e` ağacı `29f81af` ✓, tek ebeveyn `ff2f7da` ✓, fast-forward ✓, `913b7c0` dahil değil ✓, değişen 4 dosya ✓ · A1 manuel yedek: Backup #47 (10:36 UTC, çalışma dalından) success.
+
+**Yayın:** `git push origin 650fd4e…:refs/heads/claude/elvankent-real-estate-platform-vxq9dj` → `ff2f7da..650fd4e` (zorla push yok). Migration, canlı SQL, PR #3 merge, başka kod değişikliği yok.
+
+**Doğrulama:** Vercel production dağıtımı (GitHub dağıtım kaydı, vercel[bot]) **success** 10:52 UTC. Vercel API'si bu oturumda dağıtım/hata uçlarını 403 ile reddediyor; container ağ politikası `vercel.app`'e izin vermiyor → kontroller GitHub çalıştırıcısından, yalnız GET (`elvankent-uretim-saglik`). #4 yeşil: `/api/health` 200, status ok, **db ok**; ana sayfa 200, görseller 5/5; `/satilik` 200; ilan ayrıntısı 200, görseller 6/6; `/karay` 200 (bilinen KARAY-01 logoları yayın öncesinden). **Alias'ın sunduğu sürüm:** istemci JS'inde `"16.4.3"` var, `"16.3.6"` yok → production `650fd4e` derlemesini sunuyor. Benzersiz dağıtım adresleri Vercel korumasında (iki adres aynı koruma sayfası) → bu karşılaştırma sonuçsuz.
+Sağlık iş akışının ilk üç koşusu betik hatalarıyla kırmızıydı (bash -e'de bulunamayan desen; yanlış varlık deseni; korumalı adresler) — production hatası değil, her biri yerelde sahte sunucuyla yeniden üretilip düzeltildi.
+
+**Açık:** kontrol listesi D2–D5 (giriş/MFA, görsel yükleme ve SVG reddi, iletişim formu, önizleme) yazma/giriş gerektirdiği için sahibin elle teyidi; Vercel panelinde "Current" = `650fd4e` görsel teyidi; PR #3 sırası (O4_YAYIN_KONTROL_LISTESI §5).
+
 ### 01.11.2026 (3) · K-27: O-4 yayın öncesi son kontroller — YAYINA HAZIR (teknik)
 
 **Başlangıç:** `e8710eb` (CI #126 yeşil). Production `ff2f7da`; PR #3 taslak; merge, production push, migration yok; gerçek veri provası kapalı. Sahip bildirimi: Backup #46, varsayılan daldaki eski iş akışının PG 16.15 istemcisi yüzünden (sunucu 17.6) düştü; PR #3 giderir, taslak kalır.
@@ -33,7 +46,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 - **Kontrol listesi:** [O4_YAYIN_KONTROL_LISTESI.md](O4_YAYIN_KONTROL_LISTESI.md) (manuel yedek çalışma dalından, Vercel teyidi, fast-forward push, sağlık, temel senaryolar, Instant Rollback ölçütü ve adımları, PR #3 sırası).
 - **Testler:** O4-01…03; LR-09/LR-11 aynı depodaki yeniden kullanılabilir iş akışı çağrılarını kabul eder (yalnız `./.github/workflows/elvankent-*.yml`) ve depodaki her iş akışının LR-09 listesinde olmasını ister. Birim 711/711, ESLint temiz.
 
-**CI:** [#127](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41294282135) = `cea98cf` yeşil; o4-onkontrol #1 yeşil. Bu commit'in koşusu sahibe verilen raporda.
+**CI:** [#127](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41294282135) = `cea98cf` yeşil; o4-onkontrol #1 yeşil; #128 = `e40a52d` yeşil.
 
 ### 01.11.2026 (2) · K-26: KI-24 canlının gerçek durumu (sürüm fonksiyonu yok), K6 Storage doğrulaması; O-4 hazırlık dalı
 
