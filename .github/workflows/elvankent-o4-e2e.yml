@@ -1,0 +1,144 @@
+# Elvankent Gayrimenkul — O-4 ön kontrol: TEK kod ağacında E2E, DÜZELTİLMİŞ TEST DÜZENEĞİYLE (uygulama kodu aynen).
+# Yalnız elvankent-o4-onkontrol.yml çağırır. Amaç: taban (ff2f7da) ve yayın commit'indeki E2E başarısızlıklarının ürün
+# hatası mı, ff2f7da dönemindeki test düzeneği eksiği mi olduğunu ayırmak. Uygulanan düzenek düzeltmeleri, çalışma dalında
+# daha sonra yapılan YALNIZ TEST değişiklikleridir:
+#   - playwright.config.ts: use.channel 'chromium' (a052a7e, K-14: Headless Shell, http test alan adlarında Secure önizleme
+#     çerezlerini reddediyordu; uygulama ve çerez öznitelikleri değişmedi)
+#   - tests/e2e/.fixtures/kabul-logo.png önceden üretilir (ff2f7da'da bu dosyayı yalnız mobil projede koşan acceptance.spec
+#     üretir; masaüstü OBR-A/SEO-A ona bağımlı kalıyordu; a052a7e test içinde üretir)
+# Başka hiçbir dosya değişmez (iş denetler). Testler yalnız CI içinde kurulan yerel Supabase'e bağlanır; sır yok; artifact yok.
+name: elvankent-o4-e2e
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+      variant:
+        type: string
+        required: true
+    outputs:
+      e2e:
+        description: 'base64 JSON: { total, failed: [test adı] }'
+        value: ${{ jobs.e2e.outputs.e2e }}
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: elvankent-gayrimenkul
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  e2e:
+    name: e2e-${{ inputs.variant }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      e2e: ${{ steps.e2e.outputs.e2e }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - name: Kod ağacı
+        working-directory: .
+        env:
+          REF: ${{ inputs.ref }}
+        run: |
+          [ "$(git rev-parse HEAD)" = "$REF" ] || { echo "::error::checkout $REF değil"; exit 1; }
+          echo "Commit $REF · ağaç $(git rev-parse 'HEAD^{tree}')"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: elvankent-gayrimenkul/package-lock.json
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.121.0
+      - run: npm ci
+      - name: Test düzeneği düzeltmesi (yalnız playwright.config.ts + yok sayılan fixture; uygulama kodu aynen)
+        run: |
+          set -euo pipefail
+          if ! grep -q "channel: 'chromium'" playwright.config.ts; then
+            sed -i "0,/^    userAgent,\$/s//    userAgent,\n    channel: 'chromium',/" playwright.config.ts
+          fi
+          [ "$(grep -c "channel: 'chromium'" playwright.config.ts)" = 1 ] || { echo "::error::kanal ayarı eklenemedi"; exit 1; }
+          mkdir -p tests/e2e/.fixtures
+          node -e "require('sharp')({ create: { width: 600, height: 200, channels: 4, background: { r: 16, g: 80, b: 70, alpha: 1 } } }).png().toFile('tests/e2e/.fixtures/kabul-logo.png')"
+          changed=$(git status --porcelain --untracked-files=all | grep -v '^?? elvankent-gayrimenkul/tests/e2e/.fixtures/' || true)
+          ignored=$(git check-ignore tests/e2e/.fixtures/kabul-logo.png || true)
+          [ -n "$ignored" ] || { echo "::error::fixture git tarafından yok sayılmıyor"; exit 1; }
+          [ "$changed" = " M elvankent-gayrimenkul/playwright.config.ts" ] || { echo "::error::düzenek düzeltmesi başka dosyaya dokundu: $changed"; exit 1; }
+          git diff
+      - name: Yerel Supabase (migration'lar sıfırdan uygulanır)
+        run: |
+          set -euo pipefail
+          mv supabase/seed.sql /tmp/seed.sql
+          [ -f supabase/config.toml ] || supabase init --force
+          sed -i '/^\[auth.mfa.totp\]/,/^\[/ { s/enroll_enabled = false/enroll_enabled = true/; s/verify_enabled = false/verify_enabled = true/ }' supabase/config.toml
+          supabase start -x studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor
+          supabase status -o env > /tmp/supa.env
+          set -a; . /tmp/supa.env; set +a
+          PGOPTIONS='-c app.allow_demo_seed=on' psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/seed.sql
+          env_line() {
+            case "$2" in *"'"* | *$'\n'* | *$'\r'*) echo "::error::.env.local: $1 değeri tek tırnakla yazılamaz" >&2; return 1 ;; esac
+            printf "%s='%s'\n" "$1" "$2"
+          }
+          {
+            env_line NEXT_PUBLIC_SUPABASE_URL "$API_URL"
+            env_line NEXT_PUBLIC_SUPABASE_ANON_KEY "$ANON_KEY"
+            env_line SUPABASE_SERVICE_ROLE_KEY "$SERVICE_ROLE_KEY"
+            env_line NEXT_PUBLIC_SITE_URL http://localhost:3000
+            env_line IP_HASH_SALT "ci-$(openssl rand -hex 16)"
+            env_line CRON_SECRET "ci-$(openssl rand -hex 32)"
+            env_line NEXT_IMAGE_ALLOW_LOCAL_IP 1
+            env_line SITE_ENV demo
+            env_line EMAIL_PROVIDER resend
+            env_line RESEND_API_KEY ci-test-key
+            env_line RESEND_API_BASE http://127.0.0.1:4010
+            env_line EMAIL_FROM 'KARAY CI <davet@example.test>'
+            env_line DOMAIN_DNS_RESOLVER_URL http://127.0.0.1:4011/dns-query
+            env_line DOMAIN_TARGET_CNAME sites.karay.test
+            env_line DOMAIN_TARGET_A 203.0.113.10
+          } > .env.local
+      - name: E2E hazırlık (yönetici hesabı, build, sunucu)
+        run: |
+          set -euo pipefail
+          npm run create-admin -- e2e-admin@example.test 'E2e-Password-12345' --role=owner --super-admin
+          npx playwright install --with-deps chromium
+          set -a; . ./.env.local; set +a
+          npm run build
+          (npm start > /tmp/next.log 2>&1 &)
+          timeout 60 bash -c 'until curl -fs -o /dev/null http://localhost:3000/api/health; do sleep 1; done'
+      - name: Playwright E2E
+        id: e2e
+        env:
+          E2E_ADMIN_EMAIL: e2e-admin@example.test
+          E2E_ADMIN_PASSWORD: E2e-Password-12345
+          PLAYWRIGHT_JSON_OUTPUT_NAME: /tmp/e2e.json
+        run: |
+          set -uo pipefail
+          code=0
+          npx playwright test --reporter=json,list || code=$?
+          echo "Playwright çıkış kodu: $code (karşılaştırma işi tabanla kıyaslar)"
+          test -s /tmp/e2e.json || { echo "::error::E2E sonuç dosyası yok"; exit 1; }
+          summary=$(node -e '
+            const d = JSON.parse(require("fs").readFileSync("/tmp/e2e.json", "utf8"));
+            const failed = []; let total = 0;
+            const walk = (s, trail) => {
+              for (const sp of s.specs ?? []) for (const t of sp.tests ?? []) {
+                total += 1;
+                if (t.status === "unexpected") failed.push(`${sp.file} › ${[...trail, sp.title].join(" › ")} [${t.projectName}]`);
+              }
+              for (const c of s.suites ?? []) walk(c, c.title && !/\.(ts|js)$/.test(c.title) ? [...trail, c.title] : trail);
+            };
+            for (const s of d.suites ?? []) walk(s, []);
+            console.error(`E2E: ${total} test, ${failed.length} başarısız`);
+            process.stdout.write(Buffer.from(JSON.stringify({ total, failed: failed.sort() })).toString("base64"));
+          ')
+          echo "e2e=$summary" >> "$GITHUB_OUTPUT"

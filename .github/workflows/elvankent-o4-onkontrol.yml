@@ -1,0 +1,162 @@
+# Elvankent Gayrimenkul — O-4 YAYIN ÖNCESİ SON KONTROLLER (yalnız güvenlik yaması, yayın commit'i 650fd4e)
+#
+# Production'a, hazırlık dalına ve PR #3'e DOKUNMAZ: yayın commit'ini ve tabanı salt okunur checkout eder; hiçbir şey push
+# etmez, dağıtım açmaz, sır kullanmaz, artifact yüklemez. Testler yalnız CI içinde kurulan yerel Supabase'e bağlanır.
+#   node      yayın commit'i Node 22 ve 24'te: npm ci, typecheck, ESLint, birim (SP-01…06 güvenlik yaması testleri dahil),
+#             production build, npm audit (yüksek/kritik; BASTIRILMAZ), yerel Supabase'de RLS / MFA / kiracı izolasyonu.
+#   e2e-*     taban (ff2f7da) ve yayın commit'i, ff2f7da dönemindeki test düzeneği eksikleri düzeltilmiş hâlde (yalnız
+#             playwright.config.ts kanal ayarı + yok sayılan fixture; uygulama kodu aynen; elvankent-o4-e2e.yml).
+#   compare   adayın E2E başarısızlıkları tabanınkilerin alt kümesi olmalı; kalanlar ürün hatası olarak listelenir.
+name: elvankent-o4-onkontrol
+
+on:
+  push:
+    branches: ['claude/karays-mission-control-vn8g65']
+    paths: ['.github/workflows/elvankent-o4-onkontrol.yml', '.github/workflows/elvankent-o4-e2e.yml']
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elvankent-o4-onkontrol
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: elvankent-gayrimenkul
+
+env:
+  RELEASE_SHA: 650fd4e1f217234b40c0560dbe7dd8a365b4039e
+  RELEASE_TREE: 29f81af937b1f211c04b1d25db6e396c8b59a146
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  node:
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+    name: node-${{ matrix.node }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+          persist-credentials: false
+      - name: Yayın commit'i
+        working-directory: .
+        run: |
+          [ "$(git rev-parse HEAD)" = "$RELEASE_SHA" ] || { echo "::error::checkout yayın commit'i değil"; exit 1; }
+          [ "$(git rev-parse 'HEAD^{tree}')" = "$RELEASE_TREE" ] || { echo "::error::ağaç $RELEASE_TREE değil"; exit 1; }
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: elvankent-gayrimenkul/package-lock.json
+      - name: Node sürümü
+        env:
+          WANT: ${{ matrix.node }}
+        run: |
+          v=$(node --version); echo "node $v · npm $(npm --version)"
+          case "$v" in "v$WANT".*) ;; *) echo "::error::beklenen Node $WANT, bulunan $v"; exit 1 ;; esac
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          version: 2.121.0
+      - run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: ESLint
+        run: npm run lint
+      - name: Birim testleri (SP-01…06 güvenlik yaması dahil)
+        run: npm run test:unit
+      - name: Production build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+          NEXT_PUBLIC_SITE_URL: https://ci.example.com
+          SITE_ENV: development
+        run: npm run build
+      - name: Bağımlılık güvenlik taraması (yüksek/kritik; bastırma yok)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Yerel Supabase (migration'lar sıfırdan uygulanır)
+        run: |
+          set -euo pipefail
+          mv supabase/seed.sql /tmp/seed.sql
+          [ -f supabase/config.toml ] || supabase init --force
+          sed -i '/^\[auth.mfa.totp\]/,/^\[/ { s/enroll_enabled = false/enroll_enabled = true/; s/verify_enabled = false/verify_enabled = true/ }' supabase/config.toml
+          supabase start -x studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor
+          supabase status -o env > /tmp/supa.env
+          set -a; . /tmp/supa.env; set +a
+          PGOPTIONS='-c app.allow_demo_seed=on' psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/seed.sql
+          env_line() {
+            case "$2" in *"'"* | *$'\n'* | *$'\r'*) echo "::error::.env.local: $1 değeri tek tırnakla yazılamaz" >&2; return 1 ;; esac
+            printf "%s='%s'\n" "$1" "$2"
+          }
+          {
+            env_line NEXT_PUBLIC_SUPABASE_URL "$API_URL"
+            env_line NEXT_PUBLIC_SUPABASE_ANON_KEY "$ANON_KEY"
+            env_line SUPABASE_SERVICE_ROLE_KEY "$SERVICE_ROLE_KEY"
+            env_line NEXT_PUBLIC_SITE_URL http://localhost:3000
+            env_line IP_HASH_SALT "ci-$(openssl rand -hex 16)"
+            env_line CRON_SECRET "ci-$(openssl rand -hex 32)"
+            env_line NEXT_IMAGE_ALLOW_LOCAL_IP 1
+            env_line SITE_ENV demo
+            env_line EMAIL_PROVIDER resend
+            env_line RESEND_API_KEY ci-test-key
+            env_line RESEND_API_BASE http://127.0.0.1:4010
+            env_line EMAIL_FROM 'KARAY CI <davet@example.test>'
+            env_line DOMAIN_DNS_RESOLVER_URL http://127.0.0.1:4011/dns-query
+            env_line DOMAIN_TARGET_CNAME sites.karay.test
+            env_line DOMAIN_TARGET_A 203.0.113.10
+          } > .env.local
+      - name: Kritik güvenlik testleri (birim + RLS / MFA / kiracı izolasyonu)
+        run: npm test
+
+  e2e-baseline:
+    uses: ./.github/workflows/elvankent-o4-e2e.yml
+    with:
+      ref: ff2f7da5444b39b837cf36af7d04526ba44e92e7
+      variant: baseline
+
+  e2e-candidate:
+    uses: ./.github/workflows/elvankent-o4-e2e.yml
+    with:
+      ref: 650fd4e1f217234b40c0560dbe7dd8a365b4039e
+      variant: candidate
+
+  compare:
+    needs: [e2e-baseline, e2e-candidate]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Taban ↔ aday E2E (düzeltilmiş test düzeneği) karşılaştırması
+        working-directory: .
+        env:
+          BASE_E2E: ${{ needs.e2e-baseline.outputs.e2e }}
+          CAND_E2E: ${{ needs.e2e-candidate.outputs.e2e }}
+        run: |
+          node - <<'JS'
+          const fs = require('fs');
+          const env = process.env;
+          const fail = (m) => { console.log(`::error::${m}`); process.exit(1); };
+          if (!env.BASE_E2E || !env.CAND_E2E) fail('E2E özeti eksik (taban ya da aday işi E2E\'ye ulaşamadı)');
+          const parse = (b64) => JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
+          const base = parse(env.BASE_E2E); const cand = parse(env.CAND_E2E);
+          const bset = new Set(base.failed);
+          const added = cand.failed.filter((x) => !bset.has(x));
+          const fixed = base.failed.filter((x) => !cand.failed.includes(x));
+          const lines = [
+            '### O-4 ön kontrol · E2E (düzeltilmiş test düzeneği)', '| | Taban (ff2f7da) | Aday (650fd4e) |', '| --- | --- | --- |',
+            `| Test | ${base.total} | ${cand.total} |`, `| Başarısız | ${base.failed.length} | ${cand.failed.length} |`, '',
+            'Tabanda başarısız (ürün hatası adayları):', ...base.failed.map((x) => `- ${x}`),
+            `Adayda YENİ başarısızlık: ${added.length}`, ...added.map((x) => `- ${x}`),
+            `Adayda düzelen: ${fixed.length}`, ...fixed.map((x) => `- ${x}`),
+          ];
+          fs.appendFileSync(env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          console.log(lines.join('\n'));
+          if (cand.total < base.total) fail('adayda daha az E2E testi koştu');
+          if (added.length) fail('aday tabanda olmayan E2E başarısızlığı getiriyor');
+          JS

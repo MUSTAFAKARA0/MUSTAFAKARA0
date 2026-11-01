@@ -380,13 +380,22 @@ describe('LR-08 CI E2E ortamı', () => {
 describe('LR-09 sabit çalıştırıcı imajı (K-16)', () => {
   // ubuntu-latest 19.10.2026'dan itibaren Ubuntu 26'ya taşınıyor. CI'nin doğruladığı ortam ubuntu-24.04'tür;
   // yeni imaj, CI'da doğrulanıp ayrı bir commit'le seçilir (etiket kendiliğinden kaymaz).
-  for (const [file, minJobs] of [['elvankent-ci.yml', 2], ['elvankent-backup.yml', 2], ['elvankent-security-candidate.yml', 1], ['elvankent-r2-diagnose.yml', 1], ['elvankent-restore-drill.yml', 1]]) {
+  const LR09 = [['elvankent-ci.yml', 2], ['elvankent-backup.yml', 2], ['elvankent-security-candidate.yml', 1], ['elvankent-r2-diagnose.yml', 1], ['elvankent-restore-drill.yml', 1], ['elvankent-o4-onkontrol.yml', 1], ['elvankent-o4-e2e.yml', 1]];
+  const LR09_FILES = LR09.map(([f]) => f);
+  test('depodaki her iş akışı LR-09 listesinde', () => {
+    const all = readdirSync(new URL('../.github/workflows/', root)).filter((f) => /^elvankent-.*\.yml$/.test(f));
+    assert.deepEqual(all.filter((f) => !LR09_FILES.includes(f)), []);
+  });
+  for (const [file, minJobs] of LR09) {
     test(`${file}: her iş ubuntu-24.04 üzerinde çalışır`, () => {
       const jobs = read(`../.github/workflows/${file}`).split(/\njobs:\n/)[1] ?? '';
       const names = [...jobs.matchAll(/^ {2}([a-z][\w-]*):$/gm)].map((m) => m[1]);
       const runners = [...jobs.matchAll(/^ {4}runs-on:(.*)$/gm)].map((m) => m[1].trim());
+      // Aynı depodaki yeniden kullanılabilir iş akışını çağıran iş runs-on taşımaz; çağrılan dosya bu listede denetlenir
+      const calls = [...jobs.matchAll(/^ {4}uses: \.\/\.github\/workflows\/(elvankent-[\w-]+\.yml)$/gm)].map((m) => m[1]);
+      for (const called of calls) assert.ok(LR09_FILES.includes(called), `${file}: çağrılan ${called} LR-09 listesinde`);
       assert.ok(names.length >= minJobs, `${file}: işler bulundu`);
-      assert.equal(runners.length, names.length, `${file}: her işte runs-on var (${names.join(', ')})`);
+      assert.equal(runners.length + calls.length, names.length, `${file}: her işte runs-on var (${names.join(', ')})`);
       assert.deepEqual([...new Set(runners)], ['ubuntu-24.04']);
     });
   }
@@ -462,12 +471,15 @@ describe('LR-10 KARAYS migration runbook (K-17)', () => {
 describe('LR-11 CI tedarik zinciri (K-18)', () => {
   // Etiket (@v4) ve dal (@v1) taşınabilir: ele geçirilen bir etiket depodaki her iş akışında kod çalıştırır.
   // Tam commit SHA'sı çalışan kodu sabitler; yorumdaki sürüm güncelleme için okunur.
-  const workflows = ['elvankent-ci.yml', 'elvankent-backup.yml', 'elvankent-security-candidate.yml', 'elvankent-r2-diagnose.yml', 'elvankent-restore-drill.yml'].map((f) => [f, read(`../.github/workflows/${f}`)]);
+  const workflows = ['elvankent-ci.yml', 'elvankent-backup.yml', 'elvankent-security-candidate.yml', 'elvankent-r2-diagnose.yml', 'elvankent-restore-drill.yml', 'elvankent-o4-onkontrol.yml', 'elvankent-o4-e2e.yml'].map((f) => [f, read(`../.github/workflows/${f}`)]);
   test('her action tam commit SHA ile sabit ve sürüm yorumu taşır', () => {
     for (const [f, wf] of workflows) {
       const uses = [...wf.matchAll(/^\s*(?:-\s+)?uses:\s*(\S+)(.*)$/gm)].map((m) => [m[1], m[2].trim()]);
       assert.ok(uses.length > 0, `${f}: action bulundu`);
       for (const [ref, comment] of uses) {
+        // Aynı depodaki yeniden kullanılabilir iş akışı: çağıranla AYNI commit'ten okunur (sabitlenecek dış kod yok).
+        // Yalnız bu biçim muaf; başka depodan iş akışı çağrısı (owner/repo/.github/workflows/x.yml@ref) yine SHA ister.
+        if (/^\.\/\.github\/workflows\/elvankent-[\w-]+\.yml$/.test(ref)) { assert.equal(comment, '', `${f}: ${ref}`); continue; }
         assert.match(ref, /^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/, `${f}: ${ref} SHA ile sabit değil`);
         assert.match(comment, /^# v\d+\.\d+\.\d+$/, `${f}: ${ref} sürüm yorumu yok`);
       }
