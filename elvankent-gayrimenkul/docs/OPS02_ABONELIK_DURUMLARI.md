@@ -1,5 +1,8 @@
 # OPS-02 · Abonelik ve organizasyon durumları (teknik tasarım)
 
+> **01.11.2026 (K-33): Sahip kararları D-04 ve D-05 verildi** (§5). Kod ve bayrak durumu değişmedi: bekleyen dosyalar canlıda değil,
+> bayrak varsayılan kapalı; canlıda bayrak AÇILMADI. Henüz kararlaştırılmamış ayrıntılar §5.3'te açık karar olarak listelenir.
+
 > **Durum (24.10.2026, K-19):** Uygulama hazır, canlıda değil. İki bekleyen migration (`supabase/pending/`) yerel Supabase'de ve CI'da sınanıyor; bayrak varsayılan kapalı. Canlıya alınması O-5 onayına, bayrağın açılması D-04/D-05 kararına bağlı (§3).
 >
 > Önceki durum: Tasarım. Kod değişmedi. Kalıcı çözüm D-05 (iptal, veri saklama) ve D-04 kararlarını bekliyor; o zamana kadar [operations/README.md](operations/README.md)'deki geçici kural geçerlidir: abonelik iptal edilmez, organizasyon askıya alınır.
@@ -86,3 +89,51 @@ Her iki dosya `migrations/` klasörüne taşınırken `karay_schema_version()` g
 | D-05d Dışa aktarma | Yalnız tablo · görseller dahil | Tablo (bugün var); görseller talep üzerine elle | Ek geliştirme gerektirmez |
 | D-04 `past_due` ek süresi | Yok · N gün | 7 gün ek süre, sonra `expired` | Ödeme gecikmesi müşteriyi hemen kesmez |
 | Bayrağın açılışı | Hemen · ilk iptalde | Migration canlıya çıktıktan ve ön kontrol temizken | Aboneliksiz kayıtları önce görmek |
+
+## 5. Sahip kararları D-04 / D-05 (01.11.2026) ve risk analizi (K-33)
+
+### 5.1 Kararlar (sahibin metni)
+- **D-04 · Ödeme gecikmesi:** 7 takvim günü ek süre. Bu sürede site ve panel çalışmaya devam eder; hatırlatmalar gönderilir.
+  Sonrasında kısıtlama **uygulanabilir**; otomatik veri silinmez.
+- **D-05 · İptal:** müşteri ücretini ödediği dönemin sonuna kadar tam erişimi korur; ardından **14 gün salt okunur** erişim;
+  sonra hesap askıya alınır.
+- **Veri saklama ve nihai silme** süreleri hukuki değerlendirmeye bağlı. **Otomatik veri silme yapılmaz.**
+
+### 5.2 Kararların sistemdeki karşılığı
+
+| Aşama | Abonelik / organizasyon durumu | Bugün canlıda (bayrak yok) | OPS-02 bayrağı açıkken (bekleyen dosyalar) |
+| --- | --- | --- | --- |
+| Ödeme gecikti, ilk 7 gün (D-04) | `past_due`, org `active` | Tam erişim ✓ (karara uygun) | Tam erişim ✓ — **SL-08** ile test edildi |
+| 7 gün sonrası (D-04) | Karar: "kısıtlama uygulanabilir" — türü açık (§5.3) | Kendiliğinden hiçbir şey olmaz; `past_due` tam yetkilidir | Aynı (bayrak `past_due`'yu kısıtlamaz) |
+| İptal bildirildi, ödenmiş dönem sürüyor (D-05) | `active` (+ isteğe bağlı `cancelled_at`), org `active` | Tam erişim ✓ | Tam erişim ✓ — **SL-08** |
+| Dönem bitti → 14 gün salt okunur (D-05) | `cancelled` ya da `expired`, org `active` | ⚠ **Fail-open:** limitler kalkar (sınırsız) | Yeni ilan/üye/yükleme reddedilir; **mevcut kayıt düzenlenebilir** (SL-02) — tam "salt okunur" DEĞİL (§5.3 #3) |
+| 14 gün sonrası (D-05) | org `suspended` | Site ve panel kapanır, veri silinmez ✓ | Aynı ✓ |
+
+### 5.3 Açık kararlar (sahip adına doldurulmadı)
+1. **Hatırlatmalar (D-04):** kaç adet, hangi günlerde/saatlerde, hangi kanaldan (e-posta, telefon), metni. Bugün otomatik hatırlatma yok; elle yapılır.
+2. **7 gün sonrası kısıtlamanın türü (D-04):** bakım modu (site bilgi sayfası, panel çalışır) mı, yeni kayıt engeli (`expired` + bayrak) mı,
+   askı mı; ne zaman (8. gün mü, ek bir süre mi). Otomatik geçiş mi, KARAY elle mi uygular.
+3. **"Salt okunur"un kapsamı (D-05):** mevcut ilan/müşteri/talep düzenlenebilir mi, site yayında mı kalır (bugün kalır), yeni talepler
+   (site formu) kabul edilir mi, dışa aktarma açık mı (öneri: açık). Bayrak bugün yalnız **yeni** ilan/üye/yüklemeyi engeller; düzenlemenin de
+   engellenmesi ayrı geliştirme ve testtir.
+4. **Askıdaki sitenin görünümü:** bugün 404 (sert). Bilgi sayfası istenirse ayrı geliştirme.
+5. **Veri saklama süresi ve nihai silme yöntemi:** hukuki değerlendirme (D-10) sonrası; silme her durumda elle ve kayıtlı yapılır.
+6. **İptalin dönem sonunda geçerli olması için kayıt:** KARAY konsolu `cancelled_at` alanını doldurmaz; dönem sonu tarihi bugün
+   KARAY notuna elle yazılır. Konsola alan eklenmesi ayrı iş.
+7. **Deneme süresinin bitişi (D-03 ile ilgili):** `trialing` süresi geçince kendiliğinden değişmez; tam erişim sürer.
+
+### 5.4 Risk analizi: `cancelled` / `expired` limitleri sınırsızlaştırıyor mu?
+- **Evet, canlıda (bayrak ve bekleyen dosyalar yok):** etkin (`trialing`/`active`/`past_due`) aboneliği olmayan, `active` organizasyonda
+  `org_plan()` boş döner; ilan, kullanıcı ve depolama tetikleyicileri bunu **sınırsız** sayar (§1).
+- **Tetiklenme yolu sınırlı:** KARAY konsolu abonelik durumu olarak yalnız `trialing`/`active`/`past_due` seçtirir
+  (`src/app/actions/platform.ts:77`, production `a0f0a67`'de de aynı). `cancelled`/`expired` ancak doğrudan SQL ile ya da gelecekteki bir
+  ödeme entegrasyonuyla (D-08/D-09) oluşur. Organizasyonu "kapatıldı/askıda" yapmak paneli ve siteyi kapatır (güvenli yön).
+- **Düzeltme hazır, canlıda değil:** `20261025000002_ops02_subscription_limits.sql` (bayrak varsayılan `false`). Bayrak açıkken
+  aboneliksiz organizasyon sıfır limit alır (SL-02/03); D-04 ek süresi ve D-05 ödenmiş dönemi bozulmaz (**SL-08**, 01.11; mutasyon:
+  `org_plan`'dan `past_due` çıkarılınca SL-08 düşüyor).
+- **Bayrak açılmadan önce:** canlıya O-5 ile `20261025000001` (kilit) + `20261025000002` (bayrak kapalı) gelmeli; ön kontrol:
+  etkin aboneliği olmayan aktif organizasyon listesi (bayrak açılınca kapanacaklar). Açma kararı sahibindir; §5.3 #3 netleşmeden açmak,
+  dönem sonu müşterilerinde düzenlemeye izin veren "kısmi salt okunur" davranış verir.
+- **Bugünkü geçici işletim kuralı** (operations/README.md) güncellendi: dönem sonunda `cancelled`/`expired` yapılmaz; 14 günlük süre
+  bitince organizasyon askıya alınır.
+

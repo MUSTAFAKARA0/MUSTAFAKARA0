@@ -114,3 +114,36 @@ Prova yerel yığının süper kullanıcısıyla (`supabase_admin`, yalnız çal
 
 - Canlıya geri yükleme (asla bu iş akışıyla yapılmaz; BACKUP_RESTORE.md "Tam geri yükleme" elle ve ayrı onayla).
 - Yeni bir Supabase **bulut** projesine geri yükleme (Supabase'in rol/şema/veri ayrı döküm yöntemi) — ayrı iş.
+
+## 8. Gerçek R2 yedeğiyle prova — kontrol listesi (K-33, 01.11; henüz BAŞLATILMADI)
+
+Yeniden denetim (01.11, yalnız yerel, gerçek veri yok):
+
+- Sentetik prova yeniden koşturuldu: A (güncel şema), B (geride şema = BİLGİ), C1 (bozuk dump reddedildi), C2 (uzak hedef: YALITIM),
+  D1–D4 (canlının gerçek durumu; RLS/politika/yetki hataları gizlenmiyor), S1 (25/25 SHA-256 aynı), S2 (uzak Storage: YALITIM) — hepsi beklenen sonuç.
+- Kapılar: `elvankent-restore-drill` iş akışının tek çalışması (#1, 01.11) **skipped**; iş koşulu
+  `vars.RESTORE_DRILL_REAL_DATA_APPROVED == 'true'` + ortam `restore-drill` + geliştirme commit'i tetiklemez (`Claude-Session:`);
+  izin `contents: read`; canlı Supabase sırrı yok; R2 yalnız `rclone copy` (sync/delete yok); artifact yok (RD-03 denetler).
+- Değişken **açılmadı**, iş akışı **başlatılmadı**, R2'den hiçbir şey indirilmedi.
+
+Sahip "başla" dediğinde, sırayla (her kutu işaretlenmeden sonrakine geçilmez):
+
+| # | Adım | Kim | Kanıt |
+| --- | --- | --- | --- |
+| 1 | Yazılı onay: "Müşteri verisinin GitHub'ın geçici çalıştırıcısında (yalnız yerel veritabanı, iş sonunda silinir) işlenmesini kabul ediyorum" | Sahip | Mesaj |
+| 2 | En az bir **zamanlanmış** gece yedeğinin başarılı olduğu (A aşamasının kapanışı); yedek seçimi: en yeni ya da istek dosyasına `STAMP=` | Sahip + geliştirici | Backup iş akışı koşu no. |
+| 3 | R2 › Manage API tokens › **yalnız Object Read**, yalnız `karays-yedek` kovası, süreli (ör. 7 gün) yeni anahtar | Sahip | Ekran (anahtar değeri paylaşılmaz) |
+| 4 | GitHub › Settings › Secrets › Actions: `RESTORE_S3_ACCESS_KEY_ID`, `RESTORE_S3_SECRET_ACCESS_KEY` | Sahip | Sır adları listede |
+| 5 | GitHub › Settings › Environments › `restore-drill` › **Required reviewers: sahip**; "Prevent self-review" kapalı (sahip kendisi onaylayacak) | Sahip | Ekran |
+| 6 | GitHub › Settings › Variables › `RESTORE_DRILL_REAL_DATA_APPROVED = true` | Sahip | Ekran |
+| 7 | Tetik: `ops-requests/restore-drill.request` dosyasına bir satır (GitHub web arayüzünden, çalışma dalında) ya da Actions › Run workflow | Sahip | Koşu no. |
+| 8 | Actions › Review deployments › **Approve** | Sahip | — |
+| 9 | Sonuç okuma: BÜTÜNLÜK = TAMAM (zorunlu); ŞEMA = BİLGİ beklenir (canlı geride; `SEMA_ILK_EKSIK` KI-23 tespitiyle aynı olmalı); ŞEMA = HATA ise gerçek güvenlik bulgusu → durulur, incelenir; K6 STORAGE = TAMAM | Geliştirici | Özet satırları (ham veri yok) |
+| 10 | Kapanış: değişkeni `false` yap, R2 okuma anahtarını **sil**, sırları sil (ya da süre dolsun) | Sahip | Ekran |
+| 11 | Kayıt: KALAN_ISLER KI-24, BACKUP_RESTORE.md "Doğrulama kaydı", GELISTIRME_GUNLUGU | Geliştirici | Commit |
+
+Durdurma ölçütleri: iş 45 dakikayı aşarsa iptal; BÜTÜNLÜK HATA → yedek iş akışı incelenir (O-5 bu yedeğe güvenerek başlatılmaz);
+günlükte yol/e-posta/kayıt içeriği görülürse koşu günlüğü silinir ve iş akışı düzeltilir.
+
+Bu provanın O-5 için önemi: Supabase Free planında panelden yedek geri yükleme/PITR'a güvenilemez; O-5'in son çare geri dönüşü
+R2 yedeğidir. Bu yüzden O-5'in ilk migration'ından önce gerçek prova en az bir kez **TAMAM** olmalıdır (O5_YAYIN_PLANI.md §0).

@@ -20,6 +20,10 @@
  *   SL-07  Yetkisiz ekleme başka kurumun kota kilidini BEKLEMEZ: kurum B'nin kilidi ayrı bir psql oturumunda
  *          tutulurken üye olmayanın eklemesi hemen RLS hatası alır; kurumun kendi sahibi kilidi bekler (kontrol).
  *          DB_URL (yerel) gerekir; yoksa yerelde atlanır, CI'da hata verir.
+ *   SL-08  Sahip kararları D-04/D-05 (01.11.2026) bayrak AÇIKKEN de korunur: ödeme gecikmesi (`past_due`, 7 gün ek süre)
+ *          ve iptali bildirilmiş ama ödenmiş dönemi süren abonelik (`active` + `cancelled_at`) plan limitleriyle TAM
+ *          çalışır (yeni ilan, üye, yükleme, mevcut düzenleme). Kısıtlama yalnız dönem bitip abonelik `cancelled`/
+ *          `expired` olduğunda başlar (SL-02).
  *
  * Bekleyen migration uygulanmamış bir veritabanında testler atlanır; CI'da (CI=true) atlanmaz, hata verir.
  */
@@ -413,3 +417,45 @@ describe('SL-07 yetkisiz ekleme başka kurumun kota kilidini beklemez', { skip: 
     }
   });
 });
+
+describe('SL-08 D-04/D-05: ek süre ve ödenmiş dönem bayrak açıkken de tam erişim', { skip }, () => {
+  before(async () => {
+    if (skip) return;
+    O.pastDue = await makeOrg('pastdue', { plan: PLAN, status: 'past_due' });
+    O.pending = await makeOrg('cancelpending', { plan: PLAN, status: 'active' });
+    // İptal bildirildi, ödenmiş dönem sürüyor: durum active kalır, yalnız cancelled_at dolar (OPS-02 ad eşlemesi)
+    assert.ifError((await service.from('subscriptions').update({ cancelled_at: new Date().toISOString() }).eq('organization_id', O.pending.id)).error);
+    await setFlag(true);
+  });
+  after(async () => {
+    if (!skip) await setFlag(false);
+  });
+
+  for (const [key, status] of [['pastDue', 'past_due'], ['pending', 'active']]) {
+    test(`${status}${key === 'pending' ? ' + cancelled_at' : ''}: plan limitleri; yeni ilan, üye, yükleme ve düzenleme serbest`, async () => {
+      const [row, ...rest] = await plan(O[key].id, O[key].owner.client);
+      assert.equal(rest.length, 0);
+      assert.equal(row.plan_id, PLAN, 'plan satırı yerine sıfır limit döndü');
+      assert.equal(row.subscription_status, status);
+      assert.equal(row.max_properties, 3);
+      const add = await addListing(O[key].owner.client, O[key].id, `Abonelik testi ${key}`);
+      assert.ifError(add.error);
+      const edit = await O[key].owner.client.from('properties').update({ title: `Abonelik testi ${key} düzenlendi` }).eq('id', add.data.id).select('id');
+      assert.ifError(edit.error);
+      assert.equal(edit.data?.length, 1);
+      assert.ifError((await addMember(O[key].id, `${key}-agent`)).error);
+      const upload = await O[key].owner.client.rpc('media_upload_allowed', { p_org: O[key].id, p_bytes: 1024 });
+      assert.ifError(upload.error);
+      assert.equal(upload.data, true);
+    });
+  }
+
+  test('ödenmiş dönem bitip abonelik cancelled olunca kısıtlama başlar (yeni ilan reddedilir, mevcut düzenlenir)', async () => {
+    assert.ifError((await service.from('subscriptions').update({ status: 'cancelled' }).eq('organization_id', O.pending.id)).error);
+    const [row] = await plan(O.pending.id, O.pending.owner.client);
+    assert.equal(row.max_properties, 0);
+    const add = await addListing(O.pending.owner.client, O.pending.id, 'Abonelik testi dönem sonu');
+    assert.match(add.error?.message ?? '', /plan_limit_properties/);
+  });
+});
+

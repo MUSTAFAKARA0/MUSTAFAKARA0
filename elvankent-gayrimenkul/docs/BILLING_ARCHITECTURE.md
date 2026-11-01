@@ -41,8 +41,11 @@ Subscription 1──* PaymentEvent (provider_event_id UNIQUE, type, payload_hash
 - Erişim kararı (`site açık mı, panel açık mı`) yine `organizations.status` + abonelik durumundan
   türetilir; ödeme sağlayıcısına istek anında bağımlılık olmaz.
 - Durum geçişleri: `trialing → active` (ilk tahsilat), `active → past_due` (başarısız tahsilat),
-  `past_due → active` (yeniden deneme başarılı), `past_due → suspended` (ek süre sonunda; KARAY
-  politikası, ör. N gün — karar bekliyor), `* → cancelled` (dönem sonunda), `cancelled → expired`.
+  `past_due → active` (yeniden deneme başarılı), ek süre sonunda kısıtlama (D-04, 01.11.2026: **7 takvim
+  günü** ek süre, bu sürede site ve panel açık; sonraki kısıtlamanın türü açık karar), `* → cancelled` (**ödenmiş
+  dönemin sonunda**; D-05: ardından 14 gün salt okunur, sonra organizasyon askıya alınır), `cancelled → expired`.
+  Otomatik veri silme yok (D-04/D-05). Ödeme sağlayıcısının yeniden deneme takvimi 7 günlük ek süreyle uyumlu
+  seçilmeli (D-08). Ayrıntı: [OPS02_ABONELIK_DURUMLARI.md §5](OPS02_ABONELIK_DURUMLARI.md).
 - Mevcut `subscriptions` tablosu genişletilir; yeni tablo yalnızca `invoices` ve `payment_events`.
 - Sağlayıcı bağımlılığı tek dosyada (`BillingProvider` arayüzü), e-posta ve alan adı adaptörleriyle
   aynı desen.

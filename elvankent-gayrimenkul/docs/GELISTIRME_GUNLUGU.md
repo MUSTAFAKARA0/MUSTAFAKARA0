@@ -23,6 +23,27 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 (9) · K-33: D-04/D-05 kararları, KI-23 şema tespiti, KI-24 yeniden denetim, O-5 planı (canlıya dokunulmadı)
+
+**Kapsam:** yalnız çalışma dalı. Production push, migration, canlı SQL, Vercel/R2/ayar değişikliği, bayrak açma yok;
+`RESTORE_DRILL_REAL_DATA_APPROVED` açılmadı, gerçek prova başlatılmadı.
+
+- **D-04/D-05 (sahip kararı 01.11):** PHASE2_DECISION_REGISTER, OPS02_ABONELIK_DURUMLARI §5 (eşleme tablosu, 7 açık alt karar,
+  risk analizi), operations/README, BILLING_ARCHITECTURE, KALAN_ISLER KI-29/30/21. Açık bırakılanlar: hatırlatma zamanları,
+  7 gün sonrası kısıtın türü, "salt okunur"un kapsamı, askıdaki sitenin görünümü, saklama/silme (hukuki).
+- **cancelled/expired riski:** canlıda bugün `org_plan()` bu durumlarda satır döndürmüyor = sınırsız (yalnız SQL ya da gelecekteki
+  ödeme webhook'uyla tetiklenebilir; konsol bu durumları sunmuyor). Düzeltme mevcut bekleyen dosyada (bayrak, varsayılan kapalı).
+  Yeni test SL-08: bayrak açıkken `past_due` ve iptal edilmiş-ama-dönemi-süren abonelik tam erişim; `cancelled` olunca kısıt.
+  Mutasyon denetimi: `org_plan`'dan `past_due` çıkarılınca SL-08 kırmızı. 18/18.
+- **KI-23:** `supabase/ops/canli_sema_tespiti.sql` (tek SELECT, 31+8 dosya VAR/YOK, ilk eksik, TUTARLILIK) + birim testi KT-01…03.
+  Bilinenlerden alt sınır `20261008000001` (5 dosya), olası `20260930000002` (12). docs/KI23_CANLI_SEMA_ON_KONTROL.md.
+- **O-5 provası:** `scripts/o5-upgrade-rehearsal.sh` (yalnız yerel). Canlı benzeri yığında 12 ve 5 eksikten 39/39'a, postflight 0 HATA,
+  8 runbook 01→05→01→03→04; ardından `test:rls` **201/201** (iki başlangıç). Bulgu: `live-like-stack.sh` TOTP'yi kapalı açıyordu
+  (ilk koşuda 4 MFA testi ortam yüzünden düştü) → CI ile aynı ayar; ayrıca `start` çalışan yığını önce durduruyor (eski veritabanı
+  yeniden kullanılıyordu, kesim uygulanmıyordu). docs/O5_YAYIN_PLANI.md (ön koşullar, 4 aşama, her aşamada yedek/kontrol/geri dönüş/onay).
+- **KI-24:** sentetik prova A/B/C1/C2/D1–D4/S1–S2 yerelde yeniden yeşil; gerçek iş akışının tek koşusu skipped; plan §8'e 11 adımlı
+  gerçek prova kontrol listesi.
+
 ### 01.11.2026 (8) · K-32: PR #3 YAYINLANDI; varsayılan daldan elle yedek başarılı
 
 **Onay:** sahibin yazılı onayı (yalnız `74013a5` → `a0f0a67` fast-forward). Zorla push, yeni merge commit'i, migration, canlı SQL, yeni özellik yok.

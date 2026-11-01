@@ -37,6 +37,8 @@ esac
 [[ "$CUTOFF" =~ ^[0-9]{14}$ ]] || { echo "✗ KESİM 14 haneli olmalı" >&2; exit 1; }
 [ -s "$SEED" ] || { echo "✗ Demo verisi dosyası yok: $SEED (LIVE_LIKE_SEED)" >&2; exit 1; }
 
+# Önceki yığın çalışıyorsa önce durdurulur: aksi halde "start" eski veritabanını yeniden kullanır, kesim uygulanmaz
+if [ -d "$DIR" ]; then (cd "$DIR" && $SB stop --no-backup > /dev/null 2>&1) || true; fi
 rm -rf "$DIR"
 mkdir -p "$DIR"
 cd "$DIR"
@@ -44,6 +46,9 @@ $SB init --force > /dev/null
 # Ayrı proje adı ve portlar: ana yığınla (543xx) çakışmaz
 sed -i -E 's/^project_id = .*/project_id = "karay-canli-benzeri"/; s/= 543([0-9]{2})$/= 553\1/' supabase/config.toml
 grep -qE '^port = 55322$' supabase/config.toml || { echo "✗ Veritabanı portu 55322'ye çevrilemedi" >&2; exit 1; }
+# Canlı Supabase'de TOTP (MFA) açık; CI ile aynı ayar (aksi halde MFA güvenlik testleri ortam yüzünden düşer)
+sed -i '/^\[auth.mfa.totp\]/,/^\[/ { s/enroll_enabled = false/enroll_enabled = true/; s/verify_enabled = false/verify_enabled = true/ }' supabase/config.toml
+grep -A1 '^\[auth.mfa.totp\]' supabase/config.toml | grep -q 'enroll_enabled = true' || { echo "✗ TOTP açılamadı" >&2; exit 1; }
 mkdir -p supabase/migrations
 n=0
 for f in "$ROOT"/supabase/migrations/[0-9]*_*.sql; do

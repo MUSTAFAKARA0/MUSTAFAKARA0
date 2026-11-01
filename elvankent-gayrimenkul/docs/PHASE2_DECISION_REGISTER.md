@@ -30,8 +30,8 @@
    - Standart sözleşme bildirimi.
 7. **D-12 — Depo görünürlüğü.**
    - Profil deposu public; KARAY'ı ayrı private depoya taşımak önerilir.
-8. **D-05 + D-04 — İptal / süre bitimi ve ödeme gecikmesi.**
-   - Kod boşluğu var; geçici işletim kuralı hemen geçerli.
+8. **D-05 + D-04 — İptal / süre bitimi ve ödeme gecikmesi.** — **Karar verildi (01.11.2026)**; alt kararlar açık (aşağıda).
+   - Kod boşluğu canlıda sürüyor (bayraklı düzeltme bekliyor); işletim kuralı operations/README.md'de güncellendi.
 
 ## 1. Özet tablo
 
@@ -40,8 +40,8 @@
 | D-01 | Plan yapısı ve kapsamı | P0 | İlk teklif | — | Bekliyor |
 | D-02 | Fiyatlandırma modeli | P0 | İlk teklif | D-01 | Bekliyor |
 | D-03 | Deneme süresi | P0 | İlk müşteri kaydı | D-01 | Bekliyor |
-| D-04 | Başarısız ödeme, ek süre, askı | P1 | İlk geciken ödeme | D-08 | Bekliyor |
-| D-05 | İptal ve süre bitimi (veri saklama dahil) | P1 | İlk iptal (geçici kural hemen) | OPS-02 | Bekliyor |
+| D-04 | Başarısız ödeme, ek süre, askı | P1 | İlk geciken ödeme | D-08 | **Karar verildi (01.11.2026)** — 7 gün ek süre; alt kararlar açık |
+| D-05 | İptal ve süre bitimi (veri saklama dahil) | P1 | İlk iptal (geçici kural hemen) | OPS-02 | **Karar verildi (01.11.2026)** — dönem sonu + 14 gün salt okunur + askı; saklama süresi hukuki görüşe bağlı |
 | D-06 | Yükseltme / düşürme | P1 | İlk plan değişikliği | D-01 | Bekliyor |
 | D-07 | Faturalama ve e-belge | P0 | İlk fatura | OPS-03 | Bekliyor |
 | D-08 | Tahsilat yöntemi ve ödeme sağlayıcısı | P0 (ilk müşterilerde yöntem) / P2 (sağlayıcı) | İlk tahsilat | D-07 | Bekliyor |
@@ -186,6 +186,12 @@ Karar verildikçe ilgili maddeye **"Karar: … (tarih)"** satırı eklenir ve ta
 
 ### D-04 · Başarısız ödeme, ek süre ve askı
 
+- **Karar:** Ödeme gecikmesinde **7 takvim günü** ek süre. Bu sürede site ve panel çalışmaya devam eder;
+  hatırlatmalar gönderilir. Sonrasında kısıtlama uygulanabilir; **otomatik veri silinmez.** (01.11.2026)
+  - **Açık alt kararlar:** hatırlatma sayısı, gün/saat ve kanalı; 7 gün sonrası kısıtlamanın türü (bakım modu / yeni kayıt engeli /
+    askı) ve zamanı; otomatik mi elle mi; askıdan dönüşte ek ücret. Ayrıntı ve sistem karşılığı:
+    [OPS02_ABONELIK_DURUMLARI.md §5](OPS02_ABONELIK_DURUMLARI.md), işletim adımları: [operations/README.md](operations/README.md).
+
 - **ID:** D-04
 - **Mevcut durum:**
   - `past_due` durumu var, ama otomatik geçiş yok.
@@ -220,6 +226,15 @@ Karar verildikçe ilgili maddeye **"Karar: … (tarih)"** satırı eklenir ve ta
   - Adımlar operasyon belgesinde.
 
 ### D-05 · İptal ve süre bitimi (veri saklama ve dışa aktarma dahil)
+
+- **Karar:** İptal eden müşteri ödediği **dönemin sonuna kadar tam erişim** hakkını korur; ardından **14 gün salt
+  okunur** erişim; sonra hesap **askıya alınır**. Veri saklama ve nihai silme süreleri **hukuki değerlendirmeye bağlıdır**;
+  **otomatik veri silme yapılmaz.** (01.11.2026) (Seçenek A'nın "→ silme" adımı karar dışında; silme ayrı ve elle.)
+  - **Açık alt kararlar:** "salt okunur"un kapsamı (mevcut kayıt düzenleme, site yayını, yeni talepler); askıdaki sitenin görünümü
+    (bugün 404); veri saklama süresi ve silme yöntemi (D-10); dışa aktarmanın görselleri kapsayıp kapsamayacağı; müşteri alan adının
+    yönlendirmesi. Sistem karşılığı ve canlıdaki sınır: [OPS02_ABONELIK_DURUMLARI.md §5](OPS02_ABONELIK_DURUMLARI.md).
+  - **Kod durumu:** canlıda `cancelled`/`expired` hâlâ fail-open (konsol bu durumları seçtirmez). Düzeltme bekleyen
+    `20261025000002` (bayrak kapalı); karar değişmezleri SL-08 ile testli. Bayrağın açılması ayrı sahip kararı.
 
 - **ID:** D-05
 - **Mevcut durum:**
