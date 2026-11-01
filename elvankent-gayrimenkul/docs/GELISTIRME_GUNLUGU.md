@@ -23,6 +23,17 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 (6) · K-30: A seçeneği — KARAY-01 düzeltmesi ve PR #3 tamamen yeşil
+
+**Onay:** "A seçeneği onaylandı (teknik hazırlık için)". Production push ve PR merge yok (ayrı onaylar); production `650fd4e`; PR #3 taslak.
+
+- **KARAY-01 dalı `claude/karay01-duzeltme`** (`650fd4e` tabanı, PR #3'ten ayrı): `30c038a` CI onarımı (`fea4e01` ile aynı içerik; `.env.local` hatası giderilmiş) + `74013a5` KARAY-01. Kök neden: proxy `/karay/*` ve `/platform/*`'u uzantıdan bağımsız yakalıyor → ekran görüntüleri görsel iyileştiricide 404, logolar oturumsuz ziyaretçide girişe yönleniyor. Düzeltme: ekran görüntüleri statik import (P3-F1, baytlar aynı), marka dosyaları `public/brand/karay/` (`09e935b` çakışmasız, testleriyle; marka KARAY kaldı). Proxy kuralı, migration, başka özellik değişmedi.
+- **Doğrulama:** yerel birim 391/391, build, audit 0. [CI #136](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41306682162) yeşil: birim 391, RLS/MFA 105, **E2E 202 / 0 başarısız** / 4 atlandı; KARAY-01, KARAY-02…18 (önceden çalışmıyordu) ve yeni KARAY-19 geçti.
+- **PR #3** `a0f0a67` = PR #3 + KARAY-01 dalının merge'ü (çakışmasız); KARAY-01 dalına göre fark yalnız 7 yedek dosyası. [#137](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41308555131)/[#138](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41308559532) yeşil: birim 409, RLS/MFA 105, E2E 202/0. **PR #3 merge'e hazır.**
+- **Sıra (ayrı onaylar):** (1) production `650fd4e` → `74013a5` (KARAY-01 yayını, fast-forward) + sağlık kontrolü; (2) production `74013a5` → `a0f0a67` (PR #3, fast-forward). Arada gece yedeği yerine çalışma dalından elle yedek.
+
+**CI (çalışma dalı):** #139 = `64969cc` sahibe verilen raporda; bu commit'in koşusu da.
+
 ### 01.11.2026 (5) · K-29: PR #3 production tabanında; production CI onarımı
 
 **Başlangıç:** `9eef002`. **CI #132 = `9eef002` yeşil** (quality, database, database-legacy-schema; #131 = `40f1304` yeşil). Production `650fd4e` (O-4 A; sahip bağımsız doğruladı: Vercel Production READY, Backup #47, sağlık #4). PR #3 taslak; merge, production push, migration yok.
@@ -33,7 +44,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 **Doğrulama:** yerel birim 406/406, `npm audit` 0, typecheck ✓, ESLint 0 hata. [CI #133](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41302169798) (push) ve [#134](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41302173738) (pull_request): quality ✓ (audit dahil), RLS/MFA/kiracı ✓, E2E hazırlık ✓ (hata giderildi), E2E **183 geçti / 1 başarısız (KARAY-01)** / 4 atlandı / 17 çalışmadı (seri dosya). KARAY-01: `/karay`'da 2 kırık ekran görüntüsü (`public/karay/*.png`), production'da önceden var; çalışma dalında uygulama koduyla düzeltildi (statik import + `09e935b`).
 
-**Karar:** PR #3 **HAZIR DEĞİL** (CI kırmızı, neden PR değil). Seçenekler A (önce KARAY-01 düzeltmesi, ayrı onay) / B (yazılı istisna ile merge): [PR3_HAZIRLIK_PLANI.md](PR3_HAZIRLIK_PLANI.md). Bu commit'in CI'ı sahibe verilen raporda.
+**Karar:** PR #3 **HAZIR DEĞİL** (CI kırmızı, neden PR değil). Seçenekler A (önce KARAY-01 düzeltmesi, ayrı onay) / B (yazılı istisna ile merge): [PR3_HAZIRLIK_PLANI.md](PR3_HAZIRLIK_PLANI.md). CI #135 = `9e0618a` yeşil.
 
 ### 01.11.2026 (4) · K-28: O-4 A YAYINLANDI (yalnız güvenlik yaması)
 

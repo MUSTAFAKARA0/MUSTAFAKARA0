@@ -48,7 +48,7 @@ olarak taşınarak (ve platform logoları `09e935b` ile `public/brand/karay/`'e)
 **"17 çalışmadı":** `karay-site.spec.ts` seri çalışır; KARAY-01 düşünce aynı dosyadaki KARAY-02…18 koşmaz. Bu testlerin production
 kodunda bugün doğrulanmamış olması ayrı bir kapsama boşluğudur.
 
-## 4. Karar: PR #3 — **HAZIR DEĞİL** (CI kırmızı; neden PR'ın kendisi değil)
+## 4. Karar (ilk tur, `fea4e01`): PR #3 — HAZIR DEĞİL (CI kırmızı; neden PR'ın kendisi değil) → §5'te A ile giderildi
 
 Yedek değişikliği ve CI onarımı hazır ve doğrulandı. Ancak "her birleştirme yeşil CI ile" kuralına göre PR #3 CI'ı, production'da zaten
 var olan KARAY-01 yüzünden kırmızı. Test bastırılmadı, atlanmadı.
@@ -89,7 +89,7 @@ ilk gece yedeği 01:23 UTC varsayılan daldan **yeşil** olmalı.
 
 ### 5.2 PR #3 güncel taban üzerinde (`claude/backup-workflow-default-branch`, taslak; zorla push yok)
 `a0f0a67` = PR #3 dalı + KARAY-01 dalının merge'ü (çakışmasız; iki CI onarımı commit'i aynı içerik). PR'ın KARAY-01 dalına göre farkı
-**yalnız yedek değişiklikleri** (7 dosya). Yerel birim 409/409, ESLint 0 hata. CI: <!-- PR3-CI -->
+**yalnız yedek değişiklikleri** (7 dosya). Yerel birim 409/409, ESLint 0 hata. CI: [#137](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41308555131) (push) ve [#138](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41308559532) (pull_request) **yeşil**: quality (typecheck, ESLint, birim, build, `npm audit`, gitleaks) ✓; database: birim 409/409, RLS/MFA/kiracı 105/105, E2E **202 geçti, 0 başarısız**, 4 atlandı. **PR #3: MERGE'E HAZIR** (KARAY-01 yayınından sonra; ayrı onayla).
 
 ### 5.3 Onay sırası (her biri ayrı yazılı onay)
 1. **KARAY-01 yayını:** production `650fd4e` → `74013a5` (fast-forward; `30c038a` CI onarımı + `74013a5`). Uygulama değişikliği yalnız
