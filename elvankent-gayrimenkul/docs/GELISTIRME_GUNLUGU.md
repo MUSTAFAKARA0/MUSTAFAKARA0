@@ -38,7 +38,11 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 **Doğrulama (yerel):** birim **702/702**, ESLint temiz. Sentetik prova A, B, C1, C2, D1–D4, S1–S2 **10/10** (yerel PostgreSQL 17.11 yığınları, gerçek yerel Storage). Gerçek iş akışının K6 adımı sahte rclone + gerçek yerel Storage ile 22/22; geçici kova kalmadı.
 
-**CI:** sahibe verilen raporda (ve aşağıdaki O-4 bölümünde).
+**CI:** #124 = `46746c0` **kırmızı**: sentetik prova adımında canlı benzeri yığın demo verisi dosyasını bulamadı (CI, ana yığından önce `supabase/seed.sql`'i `/tmp/seed.sql`'e taşıyor; yerelde bu taşıma yoktu). Hiçbir senaryo koşmadı. Düzeltme `025e68e` (`LIVE_LIKE_SEED`, önden denetim; yerelde dosya taşınmış hâlde yeniden üretildi). [#125](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41289627206) = `025e68e` (`e7652af` dahil) **yeşil**: quality, database (A, B, C1, C2, D1–D4, S1–S2 hepsi ✓; D1 "ilk eksik migration 20261010000001", S1 25/25), database-legacy-schema.
+
+**O-4 hazırlık dalı** `claude/karays-guvenlik-yamasi`: yayın commit'i `650fd4e` (`ff2f7da` + yama, ağaç `29f81af`), hazırlık commit'i `913b7c0` (bu dal için Vercel dağıtımı kapalı, production CI'ı bu dalda atlanır, doğrulama iş akışları; production'a gitmez). [elvankent-o4-hazirlik #1](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41289097024) **yeşil**: kimlik ✓; taban ve aday aynı tam test kümesi (typecheck, ESLint, birim, build, RLS/MFA/kiracı izolasyonu) ✓; adayda `npm audit` ✓ (bastırma yok); E2E taban 205 test / 8 başarısız, aday 205 / 8 — **yeni başarısızlık 0** (8'i bilinen canlı işlev hataları, B ile kapanır). Push'ta dağıtım açılmadı (deployments 0); production `ff2f7da`. Yerelde kimlik denetimi iki bozuk varyantı reddetti; karşılaştırma mantığı sentetik Playwright sonuçlarıyla denendi. İlk taslakta `download-artifact` için doğrulanmamış bir SHA yazılmıştı; gönderilmeden fark edildi, artifact'siz (iş çıktısı) tasarıma geçildi.
+
+**Bu commit'in CI'ı:** sahibe verilen raporda.
 
 ### 01.11.2026 · K-25: KI-24 iş akışı ve sentetik kuru prova; O-4 + PR #3 yayın sırası
 
