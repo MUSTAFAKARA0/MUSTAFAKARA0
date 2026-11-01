@@ -168,7 +168,8 @@ jobs:
           set -a; . ./.env.local; set +a
           # D: canlının gerçek durumu (karay_schema_version yok, son migration'lar eksik) — AYRI portlu ikinci yerel yığın
           trap 'bash scripts/live-like-stack.sh stop' EXIT
-          bash scripts/live-like-stack.sh start
+          # Demo verisi "Yerel Supabase" adımında /tmp/seed.sql'e taşındı
+          LIVE_LIKE_SEED=/tmp/seed.sql bash scripts/live-like-stack.sh start
           # Yerel yığının süper kullanıcısı: tam Supabase dump'ı (realtime şeması) yalnız süper kullanıcıyla yüklenebilir
           DRILL_URL=postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres
           # S: K6 Storage gidiş-dönüş, ana yerel yığının Storage'ı (geçici kova; sentetik dosyalar)

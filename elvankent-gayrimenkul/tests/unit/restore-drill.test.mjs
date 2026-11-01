@@ -264,7 +264,9 @@ describe('RD-03 iş akışları', () => {
     const step = db.slice(db.indexOf('- name: KI-24 sentetik geri yükleme provası'));
     assert.ok(step.length > 40, 'adım var');
     assert.match(step, /DRILL_URL=postgresql:\/\/supabase_admin:postgres@127\.0\.0\.1:54322\/postgres/);
-    assert.match(step, /bash scripts\/live-like-stack\.sh start\n/);
+    assert.match(step, /LIVE_LIKE_SEED=\/tmp\/seed\.sql bash scripts\/live-like-stack\.sh start\n/);
+    // CI ana yığından önce supabase/seed.sql'i /tmp/seed.sql'e taşır (CI #124: canlı benzeri yığın tohumu bulamadı)
+    assert.match(db, /mv supabase\/seed\.sql \/tmp\/seed\.sql/);
     assert.match(step, /trap 'bash scripts\/live-like-stack\.sh stop' EXIT/);
     assert.match(step, /LIVE_DRILL_URL=postgresql:\/\/supabase_admin:postgres@127\.0\.0\.1:55322\/postgres REQUIRE_LIVE_LIKE=1/);
     assert.match(step, /REQUIRE_STORAGE=1/);
