@@ -23,6 +23,16 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 (14) · K-38: KI-23 canlı #4 — havuz PGOPTIONS'ı iletmedi; kapı = gerçek işlemin transaction_read_only'si
+
+- **#4 (sahip):** tetik başarılı, bağlantı kuruldu, `default_transaction_read_only=off`, `transaction_read_only=on`; betik denetimi
+  göndermeden çıkış 3 (eski kural ikisini istiyordu). Canlıda hiçbir şey çalışmadı/yazılmadı. #3: satır başında boşluk → tetikte durdu.
+- **Düzeltme:** kapı = aynı bağlantı/aynı işlemde `transaction_read_only` (BEGIN READ ONLY sonrası); off → denetim kesinlikle yok;
+  varsayılan ayar yalnız bilgi; tek işlem + ROLLBACK aynen. Sentetik T14 (varsayılan off/işlem on, uçtan uca), T15 (işlem off → yok),
+  T10 güncellendi → 15/15. KT-09: istek dosyası açık/kapalı kabul (CI #154 kırmızısı); KT-10 tek kullanımlık kural aynen.
+  İstek dosyası yeniden kapalı. Kapsam (828 + G1–G4), günlük gizliliği, SHA-256 sabitlemesi değişmedi.
+- CI: K-37 `19e6901` → elvankent-ci **#152 yeşil**; sahip commit'leri `bdc9f3a` → **#153** ve `f7bebb6` → **#154 kırmızı** (ikisi de KT-09: istek dosyası kapalı bekleniyordu).
+
 ### 01.11.2026 (13) · K-37: KI-23 canlı denetim — tek işlem (BEGIN READ ONLY) ve tek kullanımlık tetik (ÇALIŞTIRILMADI)
 
 - **Tek bağlantı/tek işlem:** `scripts/ki23-canli-denetim.sh` tek `psql` çağrısı: BEGIN READ ONLY → aynı işlemde ayar kontrolü

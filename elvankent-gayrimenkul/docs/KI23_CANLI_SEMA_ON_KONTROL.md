@@ -246,3 +246,19 @@ Kapsam (828 nesne + G1–G4), günlük gizliliği ve SHA-256 sabitlemesi değiş
 Yeni sentetik testler: T10 havuz PGOPTIONS'ı yok sayarsa denetim dahil edilmez · T11 bekçiyi atlatmış yazma aynı işlemde 25006 ·
 T12 yalnız BEGIN READ ONLY ile de 25006 · T13 yarıda hata → çıkış 3, yalnız SQLSTATE. Birim KT-10: tetik kuralı geçici git
 deposunda 11 durumla (kapalı→açık, açık→açık, kapanış, kapat-yeniden aç, çok commit'li gönderim, yeni dal, bilinmeyen geçmiş, geçersiz girdi).
+
+### 7.2 Canlı çalışma #4 ve düzeltme (K-38)
+
+**#4 (sahip tetikledi, sahibin bağımsız günlük incelemesi):** tek kullanımlık tetik başarılı; bağlantı kuruldu;
+`default_transaction_read_only=off`, `transaction_read_only=on`; betik denetim SQL'ini GÖNDERMEDEN çıkış 3 ile durdu (eski kural
+ikisini birden istiyordu). Yani Supabase bağlantı havuzu `PGOPTIONS` başlangıç ayarını iletmiyor; `BEGIN READ ONLY` ise
+işlemi salt okunur yapıyor. Canlıda hiçbir şey yazılmadı, denetim çalışmadı. CI #154: KT-09 istek dosyasını kapalı beklediği için
+kırmızıydı (sahibin açması normal kullanım).
+
+**Düzeltme:** güvenlik kapısı artık aynı bağlantıdaki gerçek işlemin `transaction_read_only` değeridir (`BEGIN READ ONLY` sonrası,
+aynı işlemde okunur). `on` ise denetim aynı işlemde çalışır ve `ROLLBACK` ile biter; `off` ise denetim kesinlikle dahil edilmez
+(çıkış 3). `default_transaction_read_only` yalnız bilgi olarak yazılır ("havuz başlangıç ayarını iletmedi; koruma BEGIN READ ONLY").
+`PGOPTIONS` yine gönderilir (iletilirse ikinci katman). Yeni sentetik testler: T14 uçtan uca varsayılan off / işlem on (havuz
+davranışı bağlantı adresindeki `options` ile taklit edildi) → denetim çalışır, 828 AYNI · T15 işlem salt okunur değil → denetim dahil
+edilmez, hiçbir şey oluşmaz · T10 güncellendi. KT-09: istek dosyası açık ya da kapalı olabilir (tek CALISTIR satırı, sır yok);
+tek kullanımlık kural (KT-10) ve geliştirme commit'lerinin dışlanması aynen. İstek dosyası yeniden **kapalı**.

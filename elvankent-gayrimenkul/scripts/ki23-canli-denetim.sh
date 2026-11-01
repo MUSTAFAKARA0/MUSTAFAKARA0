@@ -9,9 +9,11 @@
 #   1 Bağlantı adresi ve parçaları (kullanıcı, parola, ana makine, port) GitHub günlüğünde maskelenir (::add-mask::).
 #   2 Denetim dosyasının SHA-256'sı iş akışında sabitlenen onaylı özetle aynı olmalı (dosya değişirse iş akışı da güncellenmeli).
 #   3 scripts/ki23-denetim-guard.mjs: tek ifade, WITH … SELECT, yazma/DDL/ayar/dosya/süreç komutu yok.
-#   4 Oturum BAŞLANGIÇTA salt okunur: PGOPTIONS="-c default_transaction_read_only=on …" (+ zaman aşımları).
+#   4 Oturumun başlangıçta salt okunur açılması İSTENİR: PGOPTIONS="-c default_transaction_read_only=on …" (+ zaman aşımları);
+#     Supabase havuzu bunu iletmeyebilir (canlı #4) — asıl kapı 5. adımdaki gerçek işlemdir.
 #   5 TEK bağlantı, TEK işlem: BEGIN READ ONLY → aynı işlemde default_transaction_read_only ve transaction_read_only okunur →
-#     ikisi de "on" ise denetim dosyası (tek SELECT) aynı işlemde çalışır, değilse hiç dahil edilmez → ROLLBACK. Herhangi bir hata
+#     transaction_read_only (GÜVENLİK KAPISI) "on" ise denetim dosyası (tek SELECT) aynı işlemde çalışır, değilse hiç dahil
+#     edilmez → ROLLBACK. default_transaction_read_only yalnız bilgi (havuz PGOPTIONS'ı iletmeyebilir). Herhangi bir hata
 #     (ON_ERROR_STOP) işlemi bırakır ve betik çıkış 3 ile durur. Çıktı geçici dosyaya yazılır, günlüğe YAZILMAZ.
 #   6 Günlüğe ve özet sayfasına yalnız: PostgreSQL ana sürümü, G1–G4 kural başına sayı, P kategori başına AYNI/FARKLI/EKSİK/FAZLA
 #     sayıları ve genel sonuç. Nesne adı, fonksiyon gövdesi, kayıt içeriği, bağlantı adresi, kimlik bilgisi YAZILMAZ.
@@ -78,7 +80,9 @@ classify() { # ham hata metnini YAZMADAN güvenli sınıf
     esac
   else echo "bilinmeyen hata (ayrıntı güvenlik nedeniyle yazılmadı)"; fi
 }
-# TEK BAĞLANTI, TEK İŞLEM: BEGIN READ ONLY → aynı işlemde ayar kontrolü → yalnız ikisi de "on" ise denetim (\i) → ROLLBACK.
+# TEK BAĞLANTI, TEK İŞLEM: BEGIN READ ONLY → AYNI işlemde transaction_read_only okunur → yalnız "on" ise denetim (\i) → ROLLBACK.
+# GÜVENLİK KAPISI = gerçek işlemin transaction_read_only değeri. default_transaction_read_only yalnız bilgi olarak yazılır:
+# Supabase bağlantı havuzu PGOPTIONS'ı iletmeyebilir (canlı #4: default=off, işlem=on); işlem yine BEGIN READ ONLY ile salt okunurdur.
 # ON_ERROR_STOP: herhangi bir hata işlemi ve bağlantıyı bırakır (çıkış 3); işlem salt okunur olduğundan hiçbir şey yazılamaz.
 # Sarmalayıcı metni testte birebir kullanılır (scripts/ki23-canli-denetim-test.sh, T10/T11): işaretler arasını değiştirmeyin.
 wrapper() { # $1 = denetim dosyasının yolu (SHA'sı ve bekçisi yukarıda doğrulandı)
@@ -87,7 +91,7 @@ wrapper() { # $1 = denetim dosyasının yolu (SHA'sı ve bekçisi yukarıda doğ
 \set ON_ERROR_STOP 1
 \set VERBOSITY sqlstate
 BEGIN READ ONLY;
-SELECT current_setting('default_transaction_read_only') = 'on' AND current_setting('transaction_read_only') = 'on' AS ro_tamam,
+SELECT current_setting('transaction_read_only') = 'on' AS ro_tamam,
        current_setting('default_transaction_read_only') AS ro_varsayilan, current_setting('server_version_num') AS surum \gset
 SELECT 'KONTROL|' || :'ro_varsayilan' || '|' || current_setting('transaction_read_only') || '|' || :'surum';
 \if :ro_tamam
@@ -105,11 +109,14 @@ psql "$DENETIM_DB_URL" -X -q -A -t -F'|' -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstat
   || die 3 "Denetim çalışmadı (işlem geri alındı): $(classify "$T/err")"
 IFS='|' read -r tag dro tro ver < <(grep -m1 '^KONTROL|' "$T/out" || true)
 [ "${tag:-}" = KONTROL ] || die 3 "Oturum kontrol satırı okunamadı; denetim sonucu kullanılmadı"
-if [ "$dro" != on ] || [ "$tro" != on ] || grep -q '^KONTROL|DENETIM GONDERILMEDI' "$T/out"; then
-  die 3 "Oturum salt okunur başlamadı (default_transaction_read_only=$dro, işlem salt okunur=$tro); denetim gönderilmedi"
+if [ "$tro" != on ] || grep -q '^KONTROL|DENETIM GONDERILMEDI' "$T/out"; then
+  die 3 "İşlem salt okunur değil (transaction_read_only=$tro); denetim gönderilmedi"
 fi
-say "• Tek bağlantı, tek işlem: BEGIN READ ONLY; default_transaction_read_only=on ve işlem salt okunur=on; PostgreSQL ana sürüm $((ver / 10000))"
+# Kapı geçildiyse denetim aynı işlemde çalışmış olmalı (çıktının son satırları)
 grep -q '^ÖZET|P beklenen değer sayısı|' "$T/out" || die 3 "Denetim çıktısı beklenen biçimde değil"
+if [ "$dro" = on ]; then dro_not="on"; else dro_not="$dro (bağlantı havuzu başlangıç ayarını iletmedi; koruma BEGIN READ ONLY)"; fi
+say "• Tek bağlantı, tek işlem: BEGIN READ ONLY → işlem salt okunur=on (güvenlik kapısı) → denetim → ROLLBACK"
+say "• Varsayılan salt okunur ayar (bilgi): $dro_not; PostgreSQL ana sürüm $((ver / 10000))"
 
 # 6 Güvenli özet (yalnız sayılar)
 expected=$(awk -F'|' '$1 == "ÖZET" && $2 == "P beklenen değer sayısı" { print $3 }' "$T/out")

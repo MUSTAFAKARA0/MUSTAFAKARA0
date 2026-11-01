@@ -280,10 +280,13 @@ describe('KT-09 canlı denetim iş akışı (elvankent-ki23-canli-denetim.yml) v
     assert.match(wf, /fetch-depth: 0\n {10}persist-credentials: false/);
     assert.match(wf, /if: \$\{\{ github\.event_name == 'push' \}\}\n {8}env:\n {10}ONCEKI: \$\{\{ github\.event\.before \}\}\n {10}YENI: \$\{\{ github\.sha \}\}\n {8}run: bash scripts\/ki23-tetik-kontrol\.sh "\$ONCEKI" "\$YENI"/);
     assert.ok(wf.indexOf('ki23-tetik-kontrol.sh') < wf.indexOf('secrets.SUPABASE_DB_URL'), 'tetik kontrolü sırdan önce');
-    // Depodaki istek dosyasında çalıştırma satırı KAPALI (geliştirme oturumu çalıştırmaz)
-    const req = read('ops-requests/ki23-canli-denetim.request');
-    assert.ok(!req.split('\n').includes('CALISTIR=evet'), 'istek dosyası kapalı');
-    assert.ok(req.split('\n').includes('# CALISTIR=evet'));
+    // İstek dosyasını sahip açabilir ya da kapatabilir (açmak normal kullanımdır, CI #154): tam bir CALISTIR satırı vardır.
+    // Koruma dosyanın o anki hâli değil, tetik kuralıdır (kapalı → açık geçişi, KT-10) ve geliştirme commit'lerinin dışlanması.
+    const req = read('ops-requests/ki23-canli-denetim.request').split('\n');
+    const lines = req.filter((l) => /CALISTIR=evet/.test(l) && !/^#\s{2,}/.test(l) && !/"# CALISTIR=evet"/.test(l));
+    assert.equal(lines.length, 1, 'tek CALISTIR satırı');
+    assert.match(lines[0], /^(# )?CALISTIR=evet$|^\s+CALISTIR=evet\s*$/, 'satır açık ya da kapalı, başka içerik yok');
+    assert.doesNotMatch(req.join('\n'), /postgres(ql)?:\/\/|SUPABASE_DB_URL=|password|parola=/i, 'istek dosyasında sır yok');
   });
   test('izin ve sırlar: contents: read; yalnız SUPABASE_DB_URL; artifact/cache/set -x yok; kimlik bilgisi saklanmaz', () => {
     assert.match(wf, /\npermissions:\n  contents: read\n\n/);
@@ -301,7 +304,9 @@ describe('KT-09 canlı denetim iş akışı (elvankent-ki23-canli-denetim.yml) v
   test('betik: salt okunur başlangıç, doğrulama, maske, ham hata yok, yalnız sayılar', () => {
     const c = code(sh);
     assert.match(c, /export PGOPTIONS='-c default_transaction_read_only=on -c statement_timeout=\d+ -c lock_timeout=\d+ -c idle_in_transaction_session_timeout=\d+'/);
-    assert.match(c, /if \[ "\$dro" != on \] \|\| \[ "\$tro" != on \] \|\| grep -q '\^KONTROL\|DENETIM GONDERILMEDI'/);
+    // Güvenlik kapısı = gerçek işlemin transaction_read_only değeri (aynı bağlantı, aynı işlem); varsayılan ayar yalnız bilgi
+    assert.match(c, /if \[ "\$tro" != on \] \|\| grep -q '\^KONTROL\|DENETIM GONDERILMEDI' "\$T\/out"; then\n {2}die 3 "İşlem salt okunur değil/);
+    assert.doesNotMatch(c, /"\$dro" != on/, 'varsayılan ayar kapı değil');
     // Tek bağlantı, tek işlem: yalnız BİR psql çağrısı; BEGIN READ ONLY → kontrol → \if → \i → ROLLBACK
     assert.equal((c.match(/^\s*psql "\$DENETIM_DB_URL"/gm) ?? []).length, 1, 'tek psql bağlantısı');
     const w = sh.slice(sh.indexOf('# SARMALAYICI-BAS'), sh.indexOf('# SARMALAYICI-SON'));
@@ -309,6 +314,8 @@ describe('KT-09 canlı denetim iş akışı (elvankent-ki23-canli-denetim.yml) v
     let at = -1;
     for (const o of order) { const i = w.indexOf(o); assert.ok(i > at, `sarmalayıcı sırası: ${o}`); at = i; }
     assert.doesNotMatch(w, /\bCOMMIT\b|\bEND\b;/);
+    assert.match(w, /SELECT current_setting\('transaction_read_only'\) = 'on' AS ro_tamam,\n/, 'kapı yalnız işlemin değeri');
+    assert.doesNotMatch(w, /default_transaction_read_only'\) = 'on'/, 'varsayılan ayar kapıya girmez');
     assert.match(c, /printf '::add-mask::%s\\n' "\$DENETIM_DB_URL"/);
     assert.match(c, /-v VERBOSITY=sqlstate/);
     assert.doesNotMatch(c, /set -x|cat "\$T\/err"|cat "\$T\/out"|tee |\$DENETIM_DB_URL"? *>>|echo "\$DENETIM_DB_URL/);
