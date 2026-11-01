@@ -188,3 +188,44 @@ düşmüştü. Canlıda TOTP açık olduğundan betik artık CI ile aynı ayarı
 İki salt okunur sorgu, SQL Editor'de, birer kez: `supabase/ops/canli_kayit_kokeni.sql` ve `supabase/ops/canli_sema_denetimi.sql`
 (ikincisi uzun bir dosyadır; tamamı yapıştırılır). Çıktılar CSV olarak. Migration uygulamak ya da kayıt defterini düzeltmek
 ayrı ve açık onay gerektirir; bu çıktılar gelmeden ve §2.7 sağlanmadan O-5a önerilmez.
+
+## 7. Telefonsuz çalıştırma: GitHub Actions salt okunur denetimi (K-36, 01.11.2026; HENÜZ ÇALIŞTIRILMADI)
+
+`canli_sema_denetimi.sql` ≈ 84 KB; Android'de Supabase SQL Editor yapıştırınca donuyor. Aynı denetim (kapsam aynı: 828 nesne
++ G1–G4) GitHub Actions'ta çalışacak şekilde hazırlandı:
+
+| Parça | Görev |
+| --- | --- |
+| `.github/workflows/elvankent-ki23-canli-denetim.yml` | Yalnız sahibin elle tetiklemesi (aşağıda); `contents: read`; tek sır `SUPABASE_DB_URL`; denetim dosyası SHA-256 ile sabit; `persist-credentials: false`; artifact yok |
+| `scripts/ki23-canli-denetim.sh` | Maskeleme (adres, kullanıcı, parola, ana makine, port) → SHA kontrolü → bekçi → oturum `PGOPTIONS=-c default_transaction_read_only=on` (+ statement/lock/idle zaman aşımları) ile AÇILIR, ilk sorgu yalnız ayarları okur, `on` değilse denetim gönderilmez → denetim → günlüğe yalnız sayılar |
+| `scripts/ki23-denetim-guard.mjs` | Bağlanmadan önce: tek ifade, WITH … SELECT; yazma/DDL/ayar/işlem/dosya/süreç komutu, dolar gövdesi, satır içi yorum, psql meta komutu yok |
+| `ops-requests/ki23-canli-denetim.request` | Tetik dosyası; depoda `# CALISTIR=evet` (kapalı) |
+
+**Günlükte görünen (yalnız):** onaylı dosya özeti (ilk 12 hane), "oturum salt okunur başladı", PostgreSQL ana sürümü, search_path
+SQL Editor ile aynı mı (evet/hayır), G1–G4 kural başına TAMAM / "HATA — n nesne", 10 kategori için AYNI/FARKLI/EKSİK/FAZLA sayısı,
+toplam ve SONUÇ. Hata olursa yalnız sınıf: kimlik doğrulama / ana makine / zaman aşımı / bağlantı / havuzun PGOPTIONS reddi /
+SQLSTATE. **Görünmeyen:** nesne adları, fonksiyon gövdeleri, kayıt içeriği, bağlantı adresi, kullanıcı, parola, ham hata metni.
+Çıkış: 0 TAMAM · 4 bulgu var · 2 dosya/bekçi reddi · 3 bağlantı/oturum/SQL hatası.
+
+**Tetikleme (yalnız sahip):** iş akışı yalnız (a) sahibin GitHub web'den `ops-requests/ki23-canli-denetim.request` dosyasında
+`CALISTIR=evet` satırını açarak yaptığı düzenlemeyle (çalışma dalı) ya da (b) workflow_dispatch ile başlar; işi yapan koşul
+`github.actor == repository_owner` ve commit mesajında `Claude-Session:` olmaması. Geliştirme oturumunun gönderimleri (bu dosyayı
+ekleyen gönderim dahil) "skipped" olur; istek dosyası kapalıyken iş bağlanmadan durur. İsteğe bağlı ek kapı: Settings ›
+Environments › `ki23-canli-denetim` › Required reviewers (tanımlanmazsa GitHub ortamı ilk çalışmada korumasız oluşturur).
+
+**Varsayılan dal sorusu:** (a) yolu varsayılan dala almadan çalışır (aynı desen: `elvankent-restore-drill` çalışma dalındaki
+gönderimle tetiklendi, #1 skipped). "Run workflow" düğmesi (b) ise GitHub'da yalnız iş akışı **varsayılan dalda** iken görünür;
+varsayılan dal = production dalı ve oraya gönderim Vercel production dağıtımını tetikler → bu iş kapsamında YAPILMADI; ayrı onay
+konusudur. Alternatifler: (1) istek dosyası (önerilen; şimdi hazır), (2) iş akışını ileride production'a alınacak bir sürümle
+birlikte varsayılan dala almak (ayrı yayın onayı), (3) GitHub API ile dispatch — o da varsayılan dalda dosya ister.
+
+**Sentetik doğrulama (yerel + CI, `scripts/ki23-canli-denetim-test.sh`, `canli-denetim-prova.sh` 4b. adım):** tarihî demo
+paketleriyle kurulmuş canlı benzeri yığında, ayrı test rolüyle: T1 temiz → 0, G1–G4 TAMAM, 828 AYNI, günlükte parola/rol/adres/
+port/fonksiyon gövdesi/nesne adı yok · T2 RLS kapalı + koşulsuz anon politika → 4, G1/G2 sayıları, ad yok · T3 onaysız dosya → 2,
+bağlantı yok · T4 yazma komutlu kopya → bekçi 2 · T5 yanlış parola → 3 "kimlik doğrulama", parola yok · T6 kapalı port → 3, adres
+yok · T7 betiğin PGOPTIONS'ıyla yazma → SQLSTATE 25006 · T8 GitHub maskeleri · T9 RLS'i aşamayan rol → `storage.buckets` görünmez,
+kova EKSİK ayrıca "görünmüyor olabilir" diye işaretlenir.
+
+**Bilinen risk:** Supabase bağlantı havuzunun (pooler) `options` başlangıç parametresini kabul edip etmediği yerelde sınanamaz.
+Kabul etmezse ya da sessizce yok sayarsa iş, denetimi GÖNDERMEDEN "oturum salt okunur başlamadı / havuz PGOPTIONS'ı kabul etmedi"
+ile durur (çıkış 3). Bu durumda farklı bir yöntem (ör. oturum içinde ayarla salt okunur) ayrı onayla değerlendirilir.

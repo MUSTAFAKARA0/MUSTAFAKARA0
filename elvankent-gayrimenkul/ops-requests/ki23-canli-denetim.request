@@ -1,0 +1,13 @@
+# KI-23 canlı şema ve güvenlik denetimi isteği (.github/workflows/elvankent-ki23-canli-denetim.yml)
+# Denetim SALT OKUNURDUR: canlı veritabanında yalnız sistem kataloğunu okuyan tek bir SELECT çalışır; hiçbir şey yazılmaz.
+# Günlüğe yalnız G1–G4 sonucu ve AYNI/FARKLI/EKSİK/FAZLA sayıları yazılır (nesne adı, kayıt, adres, parola yazılmaz).
+#
+# ÇALIŞTIRMAK İÇİN (telefondan, GitHub web):
+#   1) Bu dosyayı claude/karays-mission-control-vn8g65 dalında açın › kalem simgesi (Edit).
+#   2) En alttaki "# CALISTIR=evet" satırının başındaki "# " işaretini silin (satır "CALISTIR=evet" olsun).
+#   3) "Commit changes" deyin (aynı dala). İş akışı başlar; "restore-drill" gibi bir onay ortamı tanımladıysanız
+#      Actions › ilgili çalışma › "Review deployments" › Approve.
+#   4) Sonraki çalıştırmada satırı yeniden "# " ile kapatıp tekrar açmanız gerekmez: her düzenleme (ör. tarih satırı) yeni bir
+#      çalıştırmadır; satır açık kaldıkça her düzenleme çalıştırır. Bitince satırı yeniden "# CALISTIR=evet" yapın.
+# Bu dosyaya sır, anahtar, adres YAZMAYIN. Geliştirme oturumunun commit'leri ("Claude-Session:" satırlı) bu iş akışını çalıştırmaz.
+# CALISTIR=evet

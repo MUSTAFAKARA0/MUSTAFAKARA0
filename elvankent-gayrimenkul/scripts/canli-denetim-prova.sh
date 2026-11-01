@@ -16,6 +16,7 @@
 #    şema denetimi: G TAMAM, P hepsi AYNI (başvuru: Supabase CLI ile kurulmuş yığın)
 # 4  Negatif (geri alınan işlemlerde): RLS kapatma, kiracı tablosuna koşulsuz anon politika, fonksiyon gövdesi değişikliği,
 #    sabitsiz SECURITY DEFINER, uygulamasız elle geçmiş kaydı → hepsi yakalanmalı
+# 4b scripts/ki23-canli-denetim-test.sh: canlı denetim iş akışının betiği (salt okunur oturum, maskeleme, yalnız sayılar) T1–T8
 # 5  (DRILL_URL) yedek → scripts/restore-drill.sh: 9. adım denetimi geri yüklenen kopyada G TAMAM / P AYNI; RLS'i kapatılmış
 #    kopyanın yedeği ŞEMA HATA (çıkış 3)
 # =============================================================================
@@ -94,6 +95,9 @@ neg 'fonksiyon gövdesi değişti' "create or replace function public.session_aa
 neg 'sabitsiz SECURITY DEFINER' 'create function public.x_definer() returns int language sql security definer as $$ select 1 $$;' canli_sema_denetimi.sql '^G3\|x_definer\(\)\|HATA'
 neg 'anon yetkisi genişledi' 'grant insert on public.audit_logs to anon;' canli_sema_denetimi.sql '^P tablo-yetki\|audit_logs\|FARKLI'
 neg 'uygulamasız elle geçmiş kaydı' "insert into supabase_migrations.schema_migrations (version, name) values ('20261002000001', 'karay_platform');" canli_kayit_kokeni.sql '^K4\|.*20261002000001.*\|BELİRSİZ'
+
+echo "== 4b/5 GitHub Actions denetim betiği (scripts/ki23-canli-denetim.sh) sentetik testleri"
+bash scripts/ki23-canli-denetim-test.sh | sed 's/^/ /'
 
 if [ -n "${DRILL_URL:-}" ]; then
   echo "== 5/5 KI-24 yolu: bu veritabanının yedeği → yerel geçici veritabanı → restore-drill 9. adım (denetim)"

@@ -23,6 +23,23 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 (12) · K-36: KI-23 canlı denetimi GitHub Actions'ta (salt okunur) — hazır, ÇALIŞTIRILMADI
+
+**İstek:** 84 KB `canli_sema_denetimi.sql` Android SQL Editor'ü donduruyor; kapsam azaltmadan, mevcut `SUPABASE_DB_URL` ile,
+`default_transaction_read_only=on` başlangıçlı, yalnız SELECT, günlükte yalnız sayılar; yalnız sahibin elle tetiklemesi.
+
+- **Yeni:** `.github/workflows/elvankent-ki23-canli-denetim.yml` (tetik: istek dosyası düzenlemesi + workflow_dispatch; koşul sahip +
+  `Claude-Session:` yok; `CALISTIR=evet` satırı açık değilse bağlanmaz; `contents: read`; tek sır; SHA-256 sabit; artifact yok),
+  `scripts/ki23-canli-denetim.sh` (maskeleme, SHA, bekçi, PGOPTIONS ile salt okunur oturum + doğrulama, yalnız sayılar, güvenli
+  hata sınıfı), `scripts/ki23-denetim-guard.mjs`, `ops-requests/ki23-canli-denetim.request` (kapalı).
+- **Sentetik:** `scripts/ki23-canli-denetim-test.sh` T1–T9 (CI'da `canli-denetim-prova.sh` 4b): temiz/bozuk şema, onaysız dosya, bekçi,
+  yanlış parola, kapalı port, salt okunur oturumda yazma 25006, maskeler, RLS'i aşamayan rol. Bulgular: (1) RLS'i aşamayan rolle
+  `storage.buckets` görünmüyor → kova EKSİK; betik bunu ayrıca işaretler; (2) test rolünün search_path'i farklıydı → betik bunu yazar.
+- **Güvenlik incelemesi:** sır yalnız son adımda; günlüğe giden her satır sabit metin ya da sayı; ham psql çıktısı/hatası yazılmaz;
+  bekçi ve SHA bağlantıdan önce; birim KT-09; LR-09/LR-11 listelerine eklendi.
+- **Varsayılan dal:** istek dosyası yolu varsayılan dal olmadan çalışır; "Run workflow" düğmesi için varsayılan dal (= production)
+  gerekir → yapılmadı, ayrı onay. Bilinen risk: havuzun PGOPTIONS desteği; desteklemezse iş denetimi göndermeden durur.
+
 ### 01.11.2026 (11) · K-35: KI-23 İÇERİKSİZ migration geçmişi — kök neden, köken ve şema/güvenlik denetimleri (canlıya dokunulmadı)
 
 **Kaynak:** sahibin `canli_migration_gecmisi.sql` canlı çıktısı (CSV): `İÇERİKSİZ=21, KAYITSIZ=10`, `AYNI=0`; 21 kayıt · en yeni

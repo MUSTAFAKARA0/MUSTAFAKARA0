@@ -13,7 +13,8 @@
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, rmSync } from 'node:fs';
+import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
@@ -264,5 +265,67 @@ describe('KT-08 gitleaks yok sayma listesi yalnız CI #147 yanlış alarmları',
     const ci = read('../.github/workflows/elvankent-ci.yml');
     assert.match(ci, /\.\/gitleaks git \. --log-opts="-- elvankent-gayrimenkul" --no-banner --redact --exit-code 1\n/);
     assert.doesNotMatch(ci, /gitleaks[^\n]*(--config|--baseline|--ignore-gitleaks-allow|--max-target|--log-level error)/);
+  });
+});
+
+describe('KT-09 canlı denetim iş akışı (elvankent-ki23-canli-denetim.yml) ve betiği', () => {
+  const wf = read('../.github/workflows/elvankent-ki23-canli-denetim.yml');
+  const sh = read('scripts/ki23-canli-denetim.sh');
+  const code = (t) => t.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+  test('tetik: yalnız workflow_dispatch + istek dosyası (çalışma dalı); sahip; geliştirme commit\'i değil; CALISTIR=evet', () => {
+    const on = wf.slice(wf.indexOf('\non:\n'), wf.indexOf('\npermissions:'));
+    assert.equal(on, "\non:\n  workflow_dispatch: {}\n  push:\n    branches: ['claude/karays-mission-control-vn8g65']\n    paths: ['elvankent-gayrimenkul/ops-requests/ki23-canli-denetim.request']\n");
+    assert.match(wf, /if: \$\{\{ github\.actor == github\.repository_owner && \(github\.event_name == 'workflow_dispatch' \|\| !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\)\) \}\}/);
+    assert.match(wf, /grep -qx 'CALISTIR=evet' ops-requests\/ki23-canli-denetim\.request/);
+    // Depodaki istek dosyasında çalıştırma satırı KAPALI (geliştirme oturumu çalıştırmaz)
+    const req = read('ops-requests/ki23-canli-denetim.request');
+    assert.ok(!req.split('\n').includes('CALISTIR=evet'), 'istek dosyası kapalı');
+    assert.ok(req.split('\n').includes('# CALISTIR=evet'));
+  });
+  test('izin ve sırlar: contents: read; yalnız SUPABASE_DB_URL; artifact/cache/set -x yok; kimlik bilgisi saklanmaz', () => {
+    assert.match(wf, /\npermissions:\n  contents: read\n\n/);
+    const secrets = [...code(wf).matchAll(/secrets\.([A-Z_]+)/g)].map((m) => m[1]);
+    assert.deepEqual([...new Set(secrets)], ['SUPABASE_DB_URL']);
+    assert.doesNotMatch(code(wf), /upload-artifact|actions\/cache|set -x|ACTIONS_STEP_DEBUG|echo "\$DENETIM_DB_URL|\$\{\{ secrets\.[A-Z_]+ \}\}[^\n]*run:/);
+    assert.match(wf, /persist-credentials: false/);
+    assert.match(wf, /DENETIM_DB_URL: \$\{\{ secrets\.SUPABASE_DB_URL \}\}\n {8}run: bash scripts\/ki23-canli-denetim\.sh\n/);
+  });
+  test('denetim dosyası SHA-256 ile sabit ve bugünkü dosyayla aynı', () => {
+    const pinned = wf.match(/DENETIM_SQL_SHA256: ([0-9a-f]{64})/)?.[1];
+    const actual = createHash('sha256').update(readFileSync(path.join(root, 'supabase/ops/canli_sema_denetimi.sql'))).digest('hex');
+    assert.equal(pinned, actual);
+  });
+  test('betik: salt okunur başlangıç, doğrulama, maske, ham hata yok, yalnız sayılar', () => {
+    const c = code(sh);
+    assert.match(c, /export PGOPTIONS='-c default_transaction_read_only=on -c statement_timeout=\d+ -c lock_timeout=\d+ -c idle_in_transaction_session_timeout=\d+'/);
+    assert.match(c, /\[ "\$dro" = on \] && \[ "\$tro" = on \] \|\| die 3/);
+    assert.match(c, /printf '::add-mask::%s\\n' "\$DENETIM_DB_URL"/);
+    assert.match(c, /-v VERBOSITY=sqlstate/);
+    assert.doesNotMatch(c, /set -x|cat "\$T\/err"|cat "\$T\/out"|tee |\$DENETIM_DB_URL"? *>>|echo "\$DENETIM_DB_URL/);
+    // günlüğe giden her satır say/die üzerinden; ham çıktı satırı (nesne adı) yazdırılmaz
+    assert.doesNotMatch(c, /awk[^\n]*print \$2/);
+    assert.ok(c.indexOf('node scripts/ki23-denetim-guard.mjs') < c.indexOf('if ! q -c'), 'bekçi bağlantıdan önce');
+    assert.ok(c.indexOf('[ "$actual" = "$DENETIM_SQL_SHA256" ]') < c.indexOf('if ! q -c'), 'SHA bağlantıdan önce');
+    assert.equal(spawnSync('bash', ['-n', 'scripts/ki23-canli-denetim.sh'], { cwd: root }).status, 0);
+  });
+  test('bekçi: bugünkü dosya geçer; yazma / çoklu ifade / dolar gövdesi / ayar / meta komut reddedilir', () => {
+    const g = (file) => spawnSync('node', ['scripts/ki23-denetim-guard.mjs', file], { cwd: root, encoding: 'utf8' });
+    assert.equal(g('supabase/ops/canli_sema_denetimi.sql').status, 0);
+    const base = read('supabase/ops/canli_sema_denetimi.sql');
+    const tmp = path.join(os.tmpdir(), `ki23-bekci-${process.pid}.sql`);
+    for (const [name, text] of [
+      ['ikinci ifade', base.replace(/order by 1, 2;\s*$/, 'order by 1, 2; select 1;')],
+      ['delete', base.replace(/order by 1, 2;\s*$/, 'order by 1, 2; delete from public.leads;')],
+      ['dolar gövdesi', base.replace('with\n', "with x as (select $q$ drop table t $q$),\n")],
+      ['set_config', base.replace("current_setting('search_path')", "set_config('search_path', '', false)")],
+      ['meta komut', '\\! id\n' + base],
+      ['satır içi yorum', base.replace('select ', 'select /* x */ ')],
+    ]) {
+      writeFileSync(tmp, text);
+      const r = g(tmp);
+      assert.equal(r.status, 2, name);
+      assert.doesNotMatch(r.stderr + r.stdout, /leads|drop table/, `${name}: SQL metni yazılmaz`);
+    }
+    rmSync(tmp, { force: true });
   });
 });
