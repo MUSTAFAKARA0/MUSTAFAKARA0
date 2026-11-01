@@ -23,6 +23,29 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 (10) · K-34: KI-23 canlı tespit sonucu, migration geçmişi incelemesi, O-5a dosyaları (canlıya dokunulmadı)
+
+**Kaynak:** sahibin `canli_sema_tespiti.sql` çıktısı (CSV, 01.11): 21 VAR / 10 YOK, ilk eksik `20261002000001_karay_platform.sql`,
+`schema_migrations` 21 kayıt · en yeni `20261001000001`, `karay_schema_version()` yok, TUTARLILIK TAMAM, 8 bekleyen YOK.
+K-33'teki "kesin 5 / olası 12" tahmini düzeltildi (10).
+
+- **Geçmiş incelemesi:** nesne kontrolü kesin kanıt sayılmadı. Kayıt defteri özeti nesne sonucuyla birebir (21 = 21, en yeni aynı);
+  depo tam geçmişi indirildi (klon sığdı): 21 dosyanın her biri tek commit, sonradan değişmemiş. Sürüm sürüm içerik için
+  `supabase/ops/canli_migration_gecmisi.sql` (tek SELECT; ifade sayısı + MD5, beklenenler CLI 2.122.0 ile yerelden). Canlı benzeri
+  yığın (kesim `20261002000000`) sahibin CSV'sini birebir verdi ve geçmiş sorgusu `AYNI=21, KAYITSIZ=10`; geri alınan işlemde
+  negatif kontroller FARKLI / İÇERİKSİZ / DEPODA YOK yakaladı.
+- **O-5a dosyaları:** `supabase/ops/o5a/01…09` = migration birebir + aynı işlemde `schema_migrations` kaydı (KARAYS runbook'unun
+  emsali). `scripts/o5a-build.sh` üretir / `--check`; birim testleri KT-04, O5A-01. İkinci uygulama `duplicate key` ile reddedildi,
+  hiçbir şey değişmedi. O-5a sonrası (KARAYS öncesi) postflight'ta yalnız 27. satır HATA, `karay_schema_version()` = `20261011000001`,
+  KARAYS 01 DUR yok.
+- **Prova:** `o5-upgrade-rehearsal.sh` 7. adım (geçmiş) eklendi; canlı durumdan 39/39, geçmiş 31 tutarlı (`AYNI=21`, `O-5a=9`,
+  `KARAYS runbook=1`), ardından `test:rls` **201/201**.
+- **Bulgu (canlı, bugün):** KARAYS "Bilgi al / Demo talep et" formu `submit_platform_lead` olmadığından gönderilemiyor; KARAY konsolu
+  ana sayfası ve müşteri listesi `platform_customer_overview` olmadığından hata veriyor. Düzeltmesi O-5a (onay bekliyor).
+- Belgeler: KI23_CANLI_SEMA_ON_KONTROL (yeniden yazıldı), O5_YAYIN_PLANI (ön koşul 0.3 yapıldı, 0.4 geçmiş sorgusu, Aşama 1 = 9 dosya),
+  KALAN_ISLER KI-23 (doğrulanıyor) / KI-27.
+- CI: K-33 commit'i `48886df` → elvankent-ci #145 (sonuç aşağıda raporlanır).
+
 ### 01.11.2026 (9) · K-33: D-04/D-05 kararları, KI-23 şema tespiti, KI-24 yeniden denetim, O-5 planı (canlıya dokunulmadı)
 
 **Kapsam:** yalnız çalışma dalı. Production push, migration, canlı SQL, Vercel/R2/ayar değişikliği, bayrak açma yok;
