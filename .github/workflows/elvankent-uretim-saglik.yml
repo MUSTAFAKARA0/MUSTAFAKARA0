@@ -143,6 +143,13 @@ jobs:
           # Ekran görüntüleri statik import ile /_next/static/media altından gelmeli (74013a5); eski yol /karay/ekran-*.png.
           # next/image adresi URL-kodludur (/_next/image?url=%2F_next%2Fstatic%2Fmedia%2F…): iki yazım da kabul (ilk koşu yanlış negatif)
           r=$(get "$PROD/karay")
-          if grep -qiE '_next(/|%2F)static(/|%2F)media(/|%2F)ekran-kontrol-merkezi' "$T/body"; then row "/karay ekran görüntüsü kaynağı" "/_next/static/media (KARAY-01 düzeltmesi yayında)"; else row "/karay ekran görüntüsü kaynağı" "eski /karay/ yolu (düzeltme yayında değil)"; fi
+          # Kesin ölçüt: eski yol (/karay/ekran-*.png, düz ya da URL-kodlu) sayfada HİÇ geçmemeli; görselin dizin biçimi bilgi olarak yazılır
+          # (koşu #6/#7: Turbopack medya dizini /_next/static/media değil; yanlış negatif)
+          shape=$(grep -oiE '(/|%2F)[A-Za-z0-9_./%-]*ekran-kontrol-merkezi[A-Za-z0-9._-]*\.png' "$T/body" | head -1 | sed -E 's/%2F/\//gI; s#[^/]+$#…#')
+          if grep -qiE '(^|[^a-z])(/|%2F)karay(/|%2F)ekran-' "$T/body"; then
+            row "/karay ekran görüntüsü kaynağı" "eski /karay/ yolu (düzeltme yayında değil)"; bad "/karay ekran görüntüleri eski yoldan"
+          else
+            row "/karay ekran görüntüsü kaynağı" "eski /karay/ yolu YOK; derleme içi dosya (${shape:-?}) — KARAY-01 düzeltmesi yayında"
+          fi
           rm -rf "$T"
           exit "$fail"
