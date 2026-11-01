@@ -44,7 +44,7 @@ K-33'teki "kesin 5 / olası 12" tahmini düzeltildi (10).
   ana sayfası ve müşteri listesi `platform_customer_overview` olmadığından hata veriyor. Düzeltmesi O-5a (onay bekliyor).
 - Belgeler: KI23_CANLI_SEMA_ON_KONTROL (yeniden yazıldı), O5_YAYIN_PLANI (ön koşul 0.3 yapıldı, 0.4 geçmiş sorgusu, Aşama 1 = 9 dosya),
   KALAN_ISLER KI-23 (doğrulanıyor) / KI-27.
-- CI: K-33 commit'i `48886df` → elvankent-ci #145 (sonuç aşağıda raporlanır).
+- CI: K-33 commit'i `48886df` → elvankent-ci **#145 yeşil** (quality, database, database-legacy-schema; E2E dahil).
 
 ### 01.11.2026 (9) · K-33: D-04/D-05 kararları, KI-23 şema tespiti, KI-24 yeniden denetim, O-5 planı (canlıya dokunulmadı)
 
