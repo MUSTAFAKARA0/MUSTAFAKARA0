@@ -23,6 +23,18 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 (7) · K-31: KARAY-01 YAYINLANDI
+
+**Onay:** sahibin yazılı onayı ("KARAY-01 düzeltmesinin canlıya alınmasını onaylıyorum"; yalnız `650fd4e` → `74013a5` fast-forward). PR #3 merge, migration, canlı SQL, zorla push, başka özellik yok.
+
+**Ön koşullar:** production `650fd4e` ✓ · `74013a5` ← `30c038a` (CI onarımı) ← `650fd4e` ✓ · 19 dosya, migration/`vercel.json`/`next.config` yok ✓ · geri dönüş: `650fd4e` production dağıtımı (success) · son yedek #47 (10:36 UTC; veritabanı değişikliği yok).
+
+**Yayın:** `git push origin 74013a5…:refs/heads/claude/elvankent-real-estate-platform-vxq9dj` → `650fd4e..74013a5`. Vercel production dağıtımı success 15:06:32 UTC.
+
+**Canlı kontrol** (`elvankent-uretim-saglik`, KARAY-01 denetimleri eklendi; yerelde sahte sunucuyla iki yönde denendi): önce #5 `/karay` 2/7, `/platform/giris` 0/4 (307 → giriş); sonra #8 `/karay` **7/7**, `/platform/giris` **4/4**, `/api/health` 200 db ok, ana sayfa 5/5, `/satilik`, ilan 6/6; ekran görüntüleri `/_next/static/immutable/media/…`'dan, eski yol yok. #6/#7'deki "eski yol" satırı denetimin yanlış negatifiydi (URL-kodlu adres + Turbopack medya dizini) — düzeltildi.
+
+**Sıradaki:** PR #3 merge (`74013a5` → `a0f0a67`), ayrı onay. Arada gece yedeği yerine çalışma dalından elle yedek.
+
 ### 01.11.2026 (6) · K-30: A seçeneği — KARAY-01 düzeltmesi ve PR #3 tamamen yeşil
 
 **Onay:** "A seçeneği onaylandı (teknik hazırlık için)". Production push ve PR merge yok (ayrı onaylar); production `650fd4e`; PR #3 taslak.
@@ -32,7 +44,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 - **PR #3** `a0f0a67` = PR #3 + KARAY-01 dalının merge'ü (çakışmasız); KARAY-01 dalına göre fark yalnız 7 yedek dosyası. [#137](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41308555131)/[#138](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41308559532) yeşil: birim 409, RLS/MFA 105, E2E 202/0. **PR #3 merge'e hazır.**
 - **Sıra (ayrı onaylar):** (1) production `650fd4e` → `74013a5` (KARAY-01 yayını, fast-forward) + sağlık kontrolü; (2) production `74013a5` → `a0f0a67` (PR #3, fast-forward). Arada gece yedeği yerine çalışma dalından elle yedek.
 
-**CI (çalışma dalı):** #139 = `64969cc` sahibe verilen raporda; bu commit'in koşusu da.
+**CI (çalışma dalı):** #139 = `64969cc` **iptal** (sonraki push `cancel-in-progress` ile durdurdu; dikkatsizlik); #140 = `524dc3f` (içeriği kapsar) yeşil.
 
 ### 01.11.2026 (5) · K-29: PR #3 production tabanında; production CI onarımı
 

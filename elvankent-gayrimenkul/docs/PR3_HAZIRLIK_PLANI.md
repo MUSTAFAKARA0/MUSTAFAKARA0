@@ -96,3 +96,12 @@ ilk gece yedeği 01:23 UTC varsayılan daldan **yeşil** olmalı.
    `/karay` görselleri ve platform logo yolları. Sonra `elvankent-uretim-saglik` + `/karay` ve `/platform/giris` gözle kontrol.
 2. **PR #3 merge:** production `74013a5` → `a0f0a67` (fast-forward). Uygulama kodu değişmez; ilk gece yedeği 01:23 UTC varsayılan daldan yeşil olmalı.
 Arada: gece yedeği düşmeye devam eder → çalışma dalından elle yedek (Backup #47 yöntemi).
+
+## 6. KARAY-01 YAYINLANDI (01.11.2026 15:06 UTC, K-31) — sahibin yazılı onayıyla
+
+- Ön koşullar: production `650fd4e` ✓; hedef `74013a5` (ebeveyn zinciri `30c038a` → `650fd4e`, fast-forward) ✓; migration/`vercel.json`/`next.config` değişikliği yok ✓; geri dönüş hedefi `650fd4e` dağıtımı (success).
+- Push: `650fd4e..74013a5` (zorla push yok). PR #3 merge edilmedi; migration, canlı SQL, başka özellik yok.
+- Vercel production dağıtımı (GitHub dağıtım kaydı) **success** 15:06:32 UTC.
+- Canlı kontrol `elvankent-uretim-saglik` — **önce** (#5, `650fd4e`): `/karay` 2/7, `/platform/giris` 0/4 görsel+simge (5 + 4 yanıt 307 → giriş sayfası). **Sonra** ([#8](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41319713644), `74013a5`): `/api/health` 200, db ok; ana sayfa 5/5, `/satilik`, ilan 6/6; **`/karay` 7/7**, **`/platform/giris` 4/4** yönlendirmesiz `200 image/*`; ekran görüntüleri derleme içi dosyadan (`/_next/static/immutable/media/…`), eski `/karay/` yolu yok; alias varlık özeti değişti (yeni derleme sunuluyor). #6/#7'deki "eski yol" satırı denetimin yanlış negatifiydi (URL-kodlu adres, Turbopack medya dizini); düzeltildi.
+- Sıradaki: PR #3 merge (production `74013a5` → `a0f0a67`) — ayrı onay.
+
