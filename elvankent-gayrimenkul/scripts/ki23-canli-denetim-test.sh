@@ -40,7 +40,9 @@ psql "$SUPER" -X -q -v ON_ERROR_STOP=1 -c "set client_min_messages = warning" -c
   -c "grant usage on schema storage to $ROLE" -c "grant select on storage.buckets to $ROLE" > /dev/null
 run() { # çıkış kodunu döndürür; günlük $T/log
   local code=0
-  env -u GITHUB_STEP_SUMMARY DENETIM_SSLMODE=disable "$@" bash scripts/ki23-canli-denetim.sh > "$T/log" 2>&1 || code=$?
+  # CI'da GITHUB_ACTIONS=true gelir: T1–T7 yerelle aynı koşsun diye kaldırılır (::add-mask:: satırları test parolasını içerir;
+  # GitHub bunları günlükte göstermez). T8 değişkeni açıkça verir.
+  env -u GITHUB_STEP_SUMMARY -u GITHUB_ACTIONS DENETIM_SSLMODE=disable "$@" bash scripts/ki23-canli-denetim.sh > "$T/log" 2>&1 || code=$?
   echo "$code"
 }
 clean() { # günlükte sır / adres / gövde / nesne adı yok (::add-mask:: satırları GitHub'da görünmez, hariç)

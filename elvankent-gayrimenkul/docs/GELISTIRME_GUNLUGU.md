@@ -39,6 +39,10 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
   bekçi ve SHA bağlantıdan önce; birim KT-09; LR-09/LR-11 listelerine eklendi.
 - **Varsayılan dal:** istek dosyası yolu varsayılan dal olmadan çalışır; "Run workflow" düğmesi için varsayılan dal (= production)
   gerekir → yapılmadı, ayrı onay. Bilinen risk: havuzun PGOPTIONS desteği; desteklemezse iş denetimi göndermeden durur.
+- **CI #150 kırmızı (`62aa6fe`, database › KI-23 canlı denetim provası, T5):** CI'da `GITHUB_ACTIONS=true` olduğundan betik yanlış
+  test parolasını da `::add-mask::` satırına yazdı; testin "parola günlükte yok" denetimi bu satırı buldu (GitHub bu satırları
+  göstermez — #150 günlüğünde de görünmüyor). Düzeltme: T1–T7 değişken olmadan (yereldeki gibi), T8 açıkça verir; `GITHUB_ACTIONS=true`
+  ile yerelde 9/9. Yeni iş akışının ilk tetiklenmesi (#1, `62aa6fe`, push) **skipped** — geliştirme gönderimi canlıya bağlanmadı.
 
 ### 01.11.2026 (11) · K-35: KI-23 İÇERİKSİZ migration geçmişi — kök neden, köken ve şema/güvenlik denetimleri (canlıya dokunulmadı)
 
