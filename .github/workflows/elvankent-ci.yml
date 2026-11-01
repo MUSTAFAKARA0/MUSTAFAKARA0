@@ -14,6 +14,9 @@ name: elvankent-ci
 
 on:
   push:
+    # O-4 hazırlık dalı kendi doğrulamasını (elvankent-o4-hazirlik.yml: taban ↔ aday karşılaştırması) çalıştırır.
+    # Bu değişiklik yalnız hazırlık commit'indedir; production'a giden yayın commit'inde yoktur.
+    branches-ignore: ['claude/karays-guvenlik-yamasi']
     paths: ['elvankent-gayrimenkul/**', '.github/workflows/elvankent-ci.yml']
   pull_request:
     paths: ['elvankent-gayrimenkul/**', '.github/workflows/elvankent-ci.yml']

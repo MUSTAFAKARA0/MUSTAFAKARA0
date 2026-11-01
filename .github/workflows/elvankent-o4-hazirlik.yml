@@ -1,0 +1,138 @@
+# Elvankent Gayrimenkul — O-4 HAZIRLIK DALI doğrulaması (yalnız güvenlik yaması, A seçeneği)
+#
+# Bu dal production'a DOKUNMAZ ve dağıtım açmaz. Yapısı:
+#   ff2f7da (production) ── YAYIN commit'i (HEAD^: ff2f7da + güvenlik yaması, ağaç 29f81af) ── HAZIRLIK commit'i (HEAD)
+# Hazırlık commit'i production'a GİTMEZ; yalnız (1) bu dal için Vercel dağıtımını kapatır (vercel.json), (2) production'ın
+# eski CI'ını bu dalda atlar, (3) bu iş akışını ekler. Onaydan sonra production YALNIZ yayın commit'ine ilerletilir:
+#   git push origin <yayın-sha>:claude/elvankent-real-estate-platform-vxq9dj   (fast-forward; ayrıca O-4 onayı gerekir)
+#
+# İşler:
+#   kimlik      yayın commit'inin ebeveyni ff2f7da, ağacı 29f81af; tabana göre yalnız 4 yama dosyası değişmiş; hazırlık
+#               commit'i yalnız izinli dosyalara dokunuyor; yayın commit'inin vercel.json'ı production'la aynı (dağıtım
+#               kapatma ayarı production'a sızmaz).
+#   baseline /  taban (ff2f7da) ve aday (yayın commit'i) AYNI test kümesiyle (elvankent-o4-dogrula.yml): typecheck, ESLint,
+#   candidate   birim, build, yerel Supabase'de RLS/MFA/kiracı izolasyonu, Playwright E2E. Aday için ayrıca npm audit
+#               (yüksek/kritik) — BASTIRILMAZ. Artifact yok: E2E özeti iş çıktısıyla aktarılır.
+#   compare     adayın E2E başarısızlıkları tabanınkilerin alt kümesi olmalı (yama gerileme getirmez). Tabanda bilinen
+#               başarısızlıklar (canlıdaki işlev hataları, K19 §3) B sürümüyle kapanır; aday onlara yenisini eklememeli.
+# Testler yalnız CI içinde kurulan yerel Supabase'e bağlanır; hiçbir sır kullanılmaz.
+name: elvankent-o4-hazirlik
+
+on:
+  push:
+    branches: [claude/karays-guvenlik-yamasi]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elvankent-o4-hazirlik
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: elvankent-gayrimenkul
+
+env:
+  BASE_SHA: ff2f7da5444b39b837cf36af7d04526ba44e92e7
+  RELEASE_TREE: 29f81af937b1f211c04b1d25db6e396c8b59a146
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  kimlik:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      release_sha: ${{ steps.k.outputs.release_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Yayın commit'i ve hazırlık commit'i denetimi
+        id: k
+        working-directory: .
+        run: |
+          set -euo pipefail
+          err() { echo "::error title=O-4 hazırlık::$1"; exit 1; }
+          REL=$(git rev-parse HEAD^)
+          [ "$(git rev-list --count "$BASE_SHA..HEAD")" = 2 ] || err "tabanın üstünde tam 2 commit olmalı (yayın + hazırlık)"
+          [ "$(git rev-list --parents -n 1 "$REL")" = "$REL $BASE_SHA" ] || err "yayın commit'inin tek ebeveyni ff2f7da olmalı"
+          [ "$(git rev-parse "$REL^{tree}")" = "$RELEASE_TREE" ] || err "yayın commit'inin ağacı $RELEASE_TREE değil"
+          want=$'elvankent-gayrimenkul/package-lock.json\nelvankent-gayrimenkul/package.json\nelvankent-gayrimenkul/src/modules/media/processing.ts\nelvankent-gayrimenkul/tests/unit/security-patch.test.mjs'
+          [ "$(git diff --name-only "$BASE_SHA" "$REL" | sort)" = "$want" ] || err "yayın commit'i yalnız 4 yama dosyasını değiştirmeli"
+          allowed='^(vercel\.json|elvankent-gayrimenkul/vercel\.json|\.github/workflows/elvankent-ci\.yml|\.github/workflows/elvankent-o4-(hazirlik|dogrula)\.yml)$'
+          bad=$(git diff --name-only "$REL" HEAD | grep -Ev "$allowed" || true)
+          [ -z "$bad" ] || err "hazırlık commit'i izinli olmayan dosyaya dokunuyor: $bad"
+          git diff --quiet "$BASE_SHA" "$REL" -- elvankent-gayrimenkul/vercel.json .github || err "yayın commit'inde vercel.json / iş akışı değişikliği olmamalı"
+          [ -z "$(git ls-tree "$REL" vercel.json)" ] || err "yayın commit'inde kök vercel.json olmamalı"
+          for f in vercel.json elvankent-gayrimenkul/vercel.json; do
+            grep -q '"claude/karays-guvenlik-yamasi": false' "$f" || err "$f bu dal için Vercel dağıtımını kapatmıyor"
+          done
+          echo "release_sha=$REL" >> "$GITHUB_OUTPUT"
+          {
+            echo "### O-4 hazırlık dalı"
+            echo "| Denetim | Sonuç |"
+            echo "| --- | --- |"
+            echo "| Yayın commit'i | \`$REL\` |"
+            echo "| Ebeveyn | \`$BASE_SHA\` (production) |"
+            echo "| Ağaç | \`$RELEASE_TREE\` (beklenen) |"
+            echo "| Değişen dosyalar (tabana göre) | 4 yama dosyası |"
+            echo "| Hazırlık commit'i | yalnız vercel.json ×2, CI tetik istisnası, bu iş akışı |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  baseline:
+    needs: kimlik
+    uses: ./.github/workflows/elvankent-o4-dogrula.yml
+    with:
+      ref: ff2f7da5444b39b837cf36af7d04526ba44e92e7
+      variant: baseline
+
+  candidate:
+    needs: kimlik
+    uses: ./.github/workflows/elvankent-o4-dogrula.yml
+    with:
+      ref: ${{ needs.kimlik.outputs.release_sha }}
+      variant: candidate
+      expected_tree: 29f81af937b1f211c04b1d25db6e396c8b59a146
+      audit: true
+
+  compare:
+    needs: [baseline, candidate]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Aday ↔ taban E2E karşılaştırması (yeni başarısızlık olmamalı)
+        working-directory: .
+        env:
+          BASE_RESULT: ${{ needs.baseline.result }}
+          CAND_RESULT: ${{ needs.candidate.result }}
+          BASE_E2E: ${{ needs.baseline.outputs.e2e }}
+          CAND_E2E: ${{ needs.candidate.outputs.e2e }}
+        run: |
+          node - <<'JS'
+          const fs = require('fs');
+          const env = process.env;
+          const fail = (m) => { console.log(`::error::${m}`); process.exit(1); };
+          // Aday: E2E dışındaki her adım (typecheck, lint, birim, build, audit, RLS) yeşil olmalı → iş sonucu success
+          if (env.CAND_RESULT !== 'success') fail(`aday işi başarısız (${env.CAND_RESULT}): E2E dışı bir kontrol kırmızı`);
+          if (!env.BASE_E2E) fail(`taban E2E özeti yok (taban işi: ${env.BASE_RESULT})`);
+          if (!env.CAND_E2E) fail('aday E2E özeti yok');
+          const parse = (b64) => JSON.parse(Buffer.from(b64, 'base64').toString('utf8'));
+          const base = parse(env.BASE_E2E); const cand = parse(env.CAND_E2E);
+          const bset = new Set(base.failed);
+          const added = cand.failed.filter((x) => !bset.has(x));
+          const fixed = base.failed.filter((x) => !cand.failed.includes(x));
+          const lines = [
+            '### O-4 aday ↔ taban E2E', '| | Taban (ff2f7da) | Aday (yayın commit\'i) |', '| --- | --- | --- |',
+            `| Test | ${base.total} | ${cand.total} |`, `| Başarısız | ${base.failed.length} | ${cand.failed.length} |`, '',
+            `Adayda YENİ başarısızlık: ${added.length}`, ...added.map((x) => `- ${x}`),
+            `Adayda düzelen: ${fixed.length}`, ...fixed.map((x) => `- ${x}`),
+          ];
+          fs.appendFileSync(env.GITHUB_STEP_SUMMARY, lines.join('\n') + '\n');
+          console.log(lines.join('\n'));
+          if (cand.total < base.total) fail('adayda daha az E2E testi koştu');
+          if (added.length) fail('aday tabanda olmayan E2E başarısızlığı getiriyor');
+          JS
