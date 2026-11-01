@@ -64,3 +64,35 @@ var olan KARAY-01 yüzünden kırmızı. Test bastırılmadı, atlanmadı.
 **Birleştirme sırası (onaydan sonra):** (A ise önce KARAY-01 düzeltmesi) → PR #3 CI yeşil (ya da B istisnası) → sahip onayı → PR #3
 "Ready for review" → merge (fast-forward) → Vercel yeniden dağıtır (uygulama kodu aynı; sağlık kontrolü `elvankent-uretim-saglik`) →
 ilk gece yedeği 01:23 UTC varsayılan daldan **yeşil** olmalı.
+
+## 5. A seçeneği uygulandı (01.11.2026, K-30) — sahip onayı: "A seçeneği onaylandı (teknik hazırlık için)"
+
+### 5.1 KARAY-01 düzeltmesi — ayrı dal `claude/karay01-duzeltme` (PR #3'ten bağımsız; production'a push YOK)
+```
+650fd4e (production) ── 30c038a  CI onarımı (fea4e01 ile aynı içerik; production CI'ının .env.local hatası burada da giderildi)
+                     ── 74013a5  fix(karay): KARAY-01
+```
+- **Kök neden:** proxy `matcher`'ı `/karay/:path*` ve `/platform/:path*` yollarını uzantıdan bağımsız yakalar (SURF-10, bilerek).
+  `/karay/ekran-*.png` görsel iyileştiricinin iç isteğinde 404 aldı (KARAY-01'in yakaladığı 2 kırık ekran görüntüsü);
+  `/platform/*.svg|png|ico` oturumsuz ziyaretçide giriş sayfasına yönlendi (logo ve simgeler).
+- **Düzeltme (B sürümündeki hazır düzeltmeler, marka KARAY olarak kaldı):** iki ekran görüntüsü `src/app/karay/_images/`'e taşındı ve
+  statik import edildi (P3-F1; baytlar aynı); platform marka dosyaları değişmeden `public/brand/karay/`'e taşındı, yollar
+  `PLATFORM_BRAND`'de (`09e935b` çakışmasız cherry-pick, testleriyle). Proxy kuralı değişmedi. Migration, başka özellik yok.
+- **Değişen dosyalar (74013a5):** `src/app/karay/page.tsx`, `src/platform/branding/platform-brand.ts`, 9 marka dosyası
+  (`public/platform/` → `public/brand/karay/`, içerik aynı), 2 ekran görüntüsü (`public/karay/` → `src/app/karay/_images/`, içerik aynı),
+  testler: `tests/e2e/karay-site.spec.ts` (KARAY-01 tüm görseller + simgeler, yeni KARAY-19), `karay-branding.spec.ts`
+  (TEST-KARAY-01/06), `owner-separation.spec.ts` (TEST-OWNER-08), yeni `tests/unit/platform-brand-assets.test.mjs`.
+- **Doğrulama:** yerel typecheck ✓, ESLint 0 hata, birim 391/391, build ✓, `npm audit` 0. [CI #136](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41306682162)
+  (`74013a5`) **yeşil**: quality (audit dahil) ✓; database: birim 391/391, RLS/MFA/kiracı 105/105, E2E hazırlık ✓ (`.env.local`),
+  **E2E 202 geçti, 0 başarısız**, 4 atlandı (önceki koşularla aynı tasarım gereği atlananlar), çalışmayan yok — KARAY-01, KARAY-02…18
+  ve KARAY-19 dahil.
+
+### 5.2 PR #3 güncel taban üzerinde (`claude/backup-workflow-default-branch`, taslak; zorla push yok)
+`a0f0a67` = PR #3 dalı + KARAY-01 dalının merge'ü (çakışmasız; iki CI onarımı commit'i aynı içerik). PR'ın KARAY-01 dalına göre farkı
+**yalnız yedek değişiklikleri** (7 dosya). Yerel birim 409/409, ESLint 0 hata. CI: <!-- PR3-CI -->
+
+### 5.3 Onay sırası (her biri ayrı yazılı onay)
+1. **KARAY-01 yayını:** production `650fd4e` → `74013a5` (fast-forward; `30c038a` CI onarımı + `74013a5`). Uygulama değişikliği yalnız
+   `/karay` görselleri ve platform logo yolları. Sonra `elvankent-uretim-saglik` + `/karay` ve `/platform/giris` gözle kontrol.
+2. **PR #3 merge:** production `74013a5` → `a0f0a67` (fast-forward). Uygulama kodu değişmez; ilk gece yedeği 01:23 UTC varsayılan daldan yeşil olmalı.
+Arada: gece yedeği düşmeye devam eder → çalışma dalından elle yedek (Backup #47 yöntemi).
