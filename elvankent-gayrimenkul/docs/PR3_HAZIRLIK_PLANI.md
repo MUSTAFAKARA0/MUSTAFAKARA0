@@ -105,3 +105,12 @@ Arada: gece yedeği düşmeye devam eder → çalışma dalından elle yedek (Ba
 - Canlı kontrol `elvankent-uretim-saglik` — **önce** (#5, `650fd4e`): `/karay` 2/7, `/platform/giris` 0/4 görsel+simge (5 + 4 yanıt 307 → giriş sayfası). **Sonra** ([#8](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41319713644), `74013a5`): `/api/health` 200, db ok; ana sayfa 5/5, `/satilik`, ilan 6/6; **`/karay` 7/7**, **`/platform/giris` 4/4** yönlendirmesiz `200 image/*`; ekran görüntüleri derleme içi dosyadan (`/_next/static/immutable/media/…`), eski `/karay/` yolu yok; alias varlık özeti değişti (yeni derleme sunuluyor). #6/#7'deki "eski yol" satırı denetimin yanlış negatifiydi (URL-kodlu adres, Turbopack medya dizini); düzeltildi.
 - Sıradaki: PR #3 merge (production `74013a5` → `a0f0a67`) — ayrı onay.
 
+## 7. PR #3 YAYINLANDI (01.11.2026 15:47 UTC, K-32) — sahibin yazılı onayıyla
+
+- Ön koşullar: production `74013a5fe204…` ✓; hedef `a0f0a67c5de7…` = PR #3 dal ucu, fast-forward ✓; net fark yalnız 7 yedek dosyası (uygulama kodu, migration, paket yok) ✓; CI #137/#138 yeşil ✓; geri dönüş: `74013a5` production dağıtımı.
+- Push: `74013a5..a0f0a67` (zorla push yok, yeni merge commit'i yok). **GitHub PR #3'ü kendiliğinden "merged" olarak kapattı** (15:47:13 UTC; dal ucu production'a ulaştığı için); ikinci merge commit'i oluşturulmadı.
+- Vercel production dağıtımı (GitHub dağıtım kaydı) **success** 15:47:42 UTC.
+- Canlı kontrol [#9](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41323071627): `/api/health` 200 db ok; ana sayfa 5/5; `/satilik`; ilan 6/6; `/karay` 7/7; `/platform/giris` 4/4; Next.js 16.4.3.
+- **Elle yedek, varsayılan daldan:** [Backup #48](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41323114921) (`a0f0a67`, workflow_dispatch) **success**: PG 17.11 istemcisi; `db-2026-11-01T1549Z` dump + parmak izi + tablo sayıları + `.sha256` R2'ye yazıldı ve `rclone check` ile yerel kopyayla doğrulandı (hata yok); Storage 4 kova (media-originals, media, branding, property-images) "hata yok"; saklama süresi adımı başarılı. Uyarı: "Parmak izinde bulunamayan tablo var (eski şema?)" — canlı şema migration'ların gerisinde (beklenen). R2: `karays-yedek` kovası mevcut (Cloudflare API); nesne listesi bu oturumdan okunamıyor.
+- **İlk otomatik gece yedeği HENÜZ ÇALIŞMADI.** Varsayılan dal artık yeni iş akışını taşıyor; ilk zamanlanmış koşu 02.11.2026 01:23 UTC (GitHub gecikmesi gözlenen 5–6 saat). Son zamanlanmış koşu #46 (`ff2f7da`, eski iş akışı) başarısızdı. **A aşaması ilk başarılı zamanlanmış koşu görülmeden kapatılmaz.**
+

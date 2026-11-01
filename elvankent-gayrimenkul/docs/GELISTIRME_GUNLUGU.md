@@ -23,6 +23,18 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 01.11.2026 (8) · K-32: PR #3 YAYINLANDI; varsayılan daldan elle yedek başarılı
+
+**Onay:** sahibin yazılı onayı (yalnız `74013a5` → `a0f0a67` fast-forward). Zorla push, yeni merge commit'i, migration, canlı SQL, yeni özellik yok.
+
+**Yayın:** ön kontroller ✓ (production `74013a5`, hedef PR #3 ucu, fark 7 yedek dosyası, CI #137/#138 yeşil) · `74013a5..a0f0a67` · GitHub PR #3'ü kendiliğinden merged kapattı (15:47:13) · Vercel production success 15:47:42.
+
+**Canlı kontrol #9:** health 200 db ok, ana sayfa 5/5, `/satilik`, ilan 6/6, `/karay` 7/7, `/platform/giris` 4/4.
+
+**Elle yedek (varsayılan daldan, GitHub API workflow_dispatch):** Backup #48 success — DB `db-2026-11-01T1549Z` (4 dosya, `rclone check` temiz), Storage 4/4 kova hata yok, saklama ✓. Uyarı: parmak izinde canlıda olmayan tablo (eski şema; beklenen).
+
+**Açık:** ilk zamanlanmış gece yedeği 02.11 01:23 UTC'de (henüz çalışmadı); A aşaması onu görmeden kapanmaz.
+
 ### 01.11.2026 (7) · K-31: KARAY-01 YAYINLANDI
 
 **Onay:** sahibin yazılı onayı ("KARAY-01 düzeltmesinin canlıya alınmasını onaylıyorum"; yalnız `650fd4e` → `74013a5` fast-forward). PR #3 merge, migration, canlı SQL, zorla push, başka özellik yok.
