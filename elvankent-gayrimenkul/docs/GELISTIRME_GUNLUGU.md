@@ -37,7 +37,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 - Sır, ortam, Vercel ve canlı veritabanı değiştirilmedi.
 
 - CI: #194 (`9105aad`) yeşil. #195 (`b9db067`) kırmızı: canlı benzeri yığın 55324 portunu bağlayamadı ("address already in use");
-  #184 ile aynı. Kök neden: 543xx/553xx Linux geçici port aralığında (32768–60999). CI'da bu portlar geçici aralıktan ayrıldı (test).
+  #184 ile aynı. Kök neden: 543xx/553xx Linux geçici port aralığında (32768–60999). CI'da bu portlar geçici aralıktan ayrıldı (test). **#196 (`4d688b6`, bu oturumun tüm değişiklikleri) yeşil.**
 
 **Açık (sahip):** KI-41 Aşama 0 (ortamı elle kur) ve Aşama 1 PR'ı · medya düzeltmelerinin yayını · Aşama 6 kararı.
 
