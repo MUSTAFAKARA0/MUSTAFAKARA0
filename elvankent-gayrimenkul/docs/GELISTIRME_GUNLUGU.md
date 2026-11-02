@@ -8,9 +8,9 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 | Konu | Durum |
 | --- | --- |
-| Production dalı | `6b698e9` (02.11.2026 16:32 TR, PR #4: tam KARAYS kodu). Vercel production READY; geri dönüş adayı `a0f0a67`. Önceki: `a0f0a67` (PR #3), `74013a5` (KARAY-01), `650fd4e` (O-4 güvenlik yaması) |
+| Production dalı | `2eeb5e1` (02.11.2026 18:23 TR, PR #5: tanıtım videosu + Aşama 4 iş akışı). Vercel production READY, `SENTRY_DSN` tanımlı; geri dönüş adayı `6b698e9`. Önceki: `6b698e9` (PR #4), `a0f0a67` (PR #3), `74013a5` (KARAY-01), `650fd4e` (O-4 güvenlik yaması) |
 | Çalışma dalı | `claude/karays-mission-control-vn8g65`, production ile aynı noktadan devam ediyor (02.11 fast-forward) |
-| Son kod commit'i | `6b698e9` (production'daki kod; çalışma dalında üstüne yalnız belge commit'leri) |
+| Son kod commit'i | `2eeb5e1` (production'daki kod) |
 | Canlı veritabanı | 35 migration: 21 temel + O-5a (9, 02.11) + KARAYS marka (02.11) + Aşama 3 (quota_lock, ops02_limits, media_quota_lock, company_name; 02.11). `enforce_subscription_limits` = false. Bekleyen: Aşama 4 medya (4 dosya) |
 | CI | Son yeşil: #181 (`666d515`), #179 (`236ef1c`), #177 (`1d79589`, production birleştirmesi). Her push sonrası koşu bu günlüğe yazılır |
 | Yedek | Gece yedeği (R2) çalışıyor: zamanlanmış #49; O-5 öncesi elle #50–#52. Gerçek geri yükleme provası KI-24 #2 başarılı |
@@ -23,6 +23,17 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 **Sıradaki adım:** Aşama 4 medya migration'ları için plan ve sahip onayı (yeni medya kodu production'da; 4e ön koşulu sağlandı); ardından özel alan adı.
 
 ## Girişler
+
+### 02.11.2026 (32) · K-56: tanıtım videosu production'da (PR #5 → `2eeb5e1`)
+
+- Sahip PR #5'i birleştirdi (18:23 TR). Vercel production `dpl_37Z1…` READY; çalışma zamanı hatası son 40 dk 0. Geri dönüş adayı `6b698e9`.
+  `SENTRY_DSN` bu dağıtımda da etkin (değişken production'a 17:31'de eklendi).
+- CI: #185 (`3aabbec`, video kodu) ve #187 (`219be14`) yeşil.
+- Çalışma dalı production'a fast-forward edildi.
+
+**CI:** #187 (`219be14`) yeşil; production birleştirmesi `2eeb5e1` yalnız bu commit'leri içerir.
+
+**Açık (sahip):** /karay'da videoyu kontrol · Aşama 4 (önce fotoğraf yükle/döndür/sil denemesi, sonra onay) · özel alan adı · Sentry deneme olayı (sonra) · karar paketi.
 
 ### 02.11.2026 (31) · K-55: Sentry bağlandı; KARAYS tanıtım videosu onaylandı; Mission Control panosu doğru
 

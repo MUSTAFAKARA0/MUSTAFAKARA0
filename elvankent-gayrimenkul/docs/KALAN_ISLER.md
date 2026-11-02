@@ -1,6 +1,6 @@
 # KARAYS · Kalan işler (tek liste)
 
-> 02.11.2026 · son güncelleme K-53 (tam kod yayını production'da; O-5 Aşama 1–3 canlıda) (çalışma dalı `claude/karays-mission-control-vn8g65`) · production `6b698e9` (02.11, PR #4); canlı veritabanına yalnız sahibin onaylı O-5a iş akışı (9 migration) ve KARAYS marka runbook'u (sahip, SQL Editor) yazdı.
+> 02.11.2026 · son güncelleme K-53 (tam kod yayını production'da; O-5 Aşama 1–3 canlıda) (çalışma dalı `claude/karays-mission-control-vn8g65`) · production `2eeb5e1` (02.11, PR #5); canlı veritabanına yalnız sahibin onaylı O-5a iş akışı (9 migration) ve KARAYS marka runbook'u (sahip, SQL Editor) yazdı.
 > Kaynaklar: K-19 durum raporu (PDF, 25.10, 12 s.), K-21 bağımsız inceleme (26.10), [K19_YAYIN_HAZIRLIK.md](K19_YAYIN_HAZIRLIK.md), [GELISTIRME_GUNLUGU.md](GELISTIRME_GUNLUGU.md), [K17_KARAYS_RELEASE.md](K17_KARAYS_RELEASE.md), [OPS02_ABONELIK_DURUMLARI.md](OPS02_ABONELIK_DURUMLARI.md), [PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md), [drafts/wpa2/README.md](drafts/wpa2/README.md).
 > Liste `ecc:planner` tarafından çıkarıldı, koordinatör tarafından düzeltildi. Her oturum durumu ve kanıtı günceller; kapanan madde yeniden açılmaz.
 
