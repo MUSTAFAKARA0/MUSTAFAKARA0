@@ -3,8 +3,9 @@ import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 /**
  * KARAYS ürün tanıtım videosu. Kendiliğinden oynamaz (hareket azaltma tercihi olan ziyaretçi dahil kimse için);
  * ziyaretçi oynat'a basana kadar video dosyası indirilmez (preload="none", yalnızca poster yüklenir). Oran sabittir
- * (16:9, width/height + aspect-video): yüklenirken sayfa kaymaz. Ses yoktur; ekran yazıları videoda, Türkçe altyazı
- * ayrıca metin izi (VTT) olarak verilir. Dosyalar public/brand/karays/video/ altındadır (proxy önekleri dışında).
+ * (16:9, width/height + aspect-video): yüklenirken sayfa kaymaz. Ses: KARAYS için sentezlenmiş özgün, telifsiz arka plan müziği
+ * (konuşma yok); oynat'a basınca duyulur (otomatik oynatma olmadığından sessiz başlatma gerekmez). Ekran yazıları videoda,
+ * Türkçe altyazı ayrıca metin izi (VTT) olarak verilir. Dosyalar public/brand/karays/video/ altındadır (proxy önekleri dışında).
  */
 export function KarayTourVideo() {
   const v = PLATFORM_BRAND.video;
@@ -12,7 +13,6 @@ export function KarayTourVideo() {
     <div className="overflow-hidden rounded-2xl border border-[#e3e8f0] bg-[#0b1b3a] shadow-[0_24px_60px_-30px_rgb(11_27_58/0.45)]">
       <video
         controls
-        muted
         playsInline
         preload="none"
         poster={v.poster}

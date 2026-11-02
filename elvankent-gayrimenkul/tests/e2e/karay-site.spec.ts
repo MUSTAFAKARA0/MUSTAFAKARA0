@@ -210,7 +210,8 @@ test('KARAY-24: tanıtım videosu (poster, altyazı, oynatma ayarları) oturumsu
   await expect(video).toHaveAttribute('playsinline', '');
   await expect(video).toHaveAttribute('preload', 'none');
   await expect(video).not.toHaveAttribute('autoplay');
-  expect(await video.evaluate((v: HTMLVideoElement) => v.muted)).toBe(true);
+  // Sesli (özgün müzik); kendiliğinden oynamadığı için sessiz başlatılmaz
+  expect(await video.evaluate((v: HTMLVideoElement) => v.muted)).toBe(false);
   const poster = (await video.getAttribute('poster')) ?? '';
   const track = video.locator('track[kind="captions"]');
   await expect(track).toHaveAttribute('srclang', 'tr');
