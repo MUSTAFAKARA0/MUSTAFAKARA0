@@ -23,6 +23,18 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (25) · K-49: O-5 Aşama 3 canlıya uygulandı (o5b #2 "SONUÇ: TAMAM")
+
+- Sahip onayı (sohbette): "O-5 Aşama 3: quota_lock, ops02_limits, media_quota_lock ve company_name runbook'larının iş akışıyla
+  canlıya uygulanmasını onaylıyorum." Taze yedek: backup #52 (11:27–11:29 UTC) başarılı.
+- `elvankent-o5b-uygula` #2 (`655ba3d`, 11:30–11:31 UTC): paket SHA `dfecc802…`; ön kontrol 31 VAR, TUTARLILIK TAMAM; quota_lock,
+  ops02_limits, media_quota_lock, company_name (+03b doğrulandı) — her birinde 01 DUR yok, 04 DUR/HATA yok. Son kontrol: 35/35 VAR,
+  medya 4/4 YOK, sürüm 20261018000001, postflight_v2 HATA yok, `enforce_subscription_limits` = false, geçmiş 31 kayıt.
+- Not: çalıştırma "Review deployments" onayı beklemeden başladı (sahip ekranında onay düğmesi görünmedi; onay kaydı yok) →
+  `o5a-uygula` ortamında "Required reviewers" kuralı etkin görünmüyor. Tek kullanımlık tetik ve yedek kapısı çalıştı. Sahibe ortam
+  ayarını kontrol etmesi önerildi.
+- İstek satırı kapatıldı. Sıradaki: duman testi (ilan ekleme/düzenleme, fotoğraf yükleme), sonra kod yayını (ayrı onay).
+
 ### 02.11.2026 (24) · K-48: KI-39 D süpürmesi sayfalı (bekleyen 20261031000001; canlıda değil)
 
 - Ajan `b997c5b` → `f84381b`. Yeni `media_stray_cursor` (kova başına kalıcı imleç; RLS açık, service_role yalnız okur) ve

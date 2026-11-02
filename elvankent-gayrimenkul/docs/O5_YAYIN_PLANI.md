@@ -75,7 +75,7 @@ Sıra (değişmez): `20261002000001_karay_platform` → `20261004000001_design_f
 - **Duman:** KARAYS sayfası alt bilgisi "KARAYS" (elle girilmiş ad varsa korunur).
 - **Geri dönüş:** saklanan `02` çıktısı ya da `05_rollback.sql`. Tek satır, veri kaybı yok.
 
-### Aşama 3 — O-5b/b'/c: kilitler ve OPS-02 dosyası (bayrak KAPALI)
+### Aşama 3 — O-5b/b'/c: kilitler ve OPS-02 dosyası (bayrak KAPALI) — uygulandı 02.11.2026 (K-49)
 
 **Uygulama yöntemi (K-47, hazır, çalıştırılmadı):** `elvankent-o5b-uygula.yml` + `scripts/o5b-uygula.sh` — O-5a ile aynı kapılar;
 istek dosyası `ops-requests/o5b-uygula.request`. Alternatif: SQL Editor'den elle (aşağıdaki sıra).

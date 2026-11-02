@@ -7,4 +7,4 @@
 #   3) "Commit changes" (aynı dala). Actions › elvankent-o5b-uygula › "Review deployments" › Approve.
 #   4) Bitince satırı yeniden "# CALISTIR=evet" yapıp kaydedin. Satır açıkken yapılan düzenlemeler ve "Re-run" tekrar çalıştırmaz.
 # Bu dosyaya sır, anahtar, adres YAZMAYIN.
-CALISTIR=evet
+# CALISTIR=evet
