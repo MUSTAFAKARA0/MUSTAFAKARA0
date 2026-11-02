@@ -1,0 +1,10 @@
+# O-5 Aşama 3 uygulama isteği (.github/workflows/elvankent-o5b-uygula.yml) — BU İŞ CANLI VERİTABANINA YAZAR.
+# AYRI SAHİP ONAYI GEREKİR (O5_YAYIN_PLANI Aşama 3); onaydan önce satırı açmayın. Çalıştırmadan önce: son 3 saatte başarılı bir elvankent-backup koşusu olmalı.
+#
+# ÇALIŞTIRMAK İÇİN (TEK KULLANIMLIK):
+#   1) Bu dosyayı claude/karays-mission-control-vn8g65 dalında açın › kalem simgesi (Edit).
+#   2) En alttaki "# CALISTIR=evet" satırını tam olarak "CALISTIR=evet" yapın (başında/sonunda boşluk yok).
+#   3) "Commit changes" (aynı dala). Actions › elvankent-o5b-uygula › "Review deployments" › Approve.
+#   4) Bitince satırı yeniden "# CALISTIR=evet" yapıp kaydedin. Satır açıkken yapılan düzenlemeler ve "Re-run" tekrar çalıştırmaz.
+# Bu dosyaya sır, anahtar, adres YAZMAYIN.
+# CALISTIR=evet

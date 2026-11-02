@@ -26,7 +26,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: elvankent-o5a-uygula
+  group: elvankent-o5-canli-yazma
   cancel-in-progress: false
 
 jobs:

@@ -191,6 +191,9 @@ jobs:
           export PATH=/usr/lib/postgresql/17/bin:$PATH
           trap 'bash scripts/live-like-stack.sh stop' EXIT
           DRILL_URL=postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres bash scripts/canli-denetim-prova.sh
+          # O-5 Aşama 3 uygulama betiği (scripts/o5b-uygula.sh) sentetik testi: canlının 02.11 hâli (O-5a + KARAYS) üzerinde
+          # onaysız paket, uzun kilit (yeniden deneme + dur), kısa kilit (yeniden denemeyle geçer), tekrar; günlükte SQL/adres yok
+          LIVE_LIKE_SEED=/tmp/seed.sql bash scripts/o5b-uygula-test.sh
       - name: E2E hazırlık (yönetici hesabı, build, sunucu)
         run: |
           set -euo pipefail

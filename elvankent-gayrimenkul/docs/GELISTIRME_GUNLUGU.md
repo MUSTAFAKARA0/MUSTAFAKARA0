@@ -23,6 +23,25 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (23) · K-47: kod yayını incelemesi, Aşama 3 uygulama iş akışı (çalıştırılmadı), KI-21 şerit durumları
+
+- **Kod yayını incelemesi** (bağımsız ajan, salt okunur; production `a0f0a67` → çalışma dalı, `src` 96 dosya): yayın engeli yok —
+  bekleyen migration'lara (20261027+, 20261031) giden 6 RPC'nin dördü fonksiyon yoksa eski davranışa düşüyor (`isMissingRpc`, PGRST202
+  + ad), ikisi (cron) atlanıyor; yeni tablo/sütun okunmuyor; güvenlik bulgusu yok (CRON_SECRET, kurum yolu denetimi, remotePatterns
+  daraldı). Bulgu (orta): deneme süresi biten ofiste şerit kalıcı "bugün bitiyor" + görünür "Taslak metin · D-05" rozeti → KI-21'de düzeltildi.
+  Görünür değişiklikler: KARAYS adı ve logosu, ikonlar, maskotlar, gömülü yazı tipleri, abonelik şeridi.
+- **O-5 Aşama 3 provası** (yerel, `o5-upgrade-rehearsal.sh`, canlının 01.11 hâli → O-5a → KARAYS → 8 bekleyen runbook): 7/7 TAMAM.
+- **Aşama 3 uygulama iş akışı** `.github/workflows/elvankent-o5b-uygula.yml` + `scripts/o5b-uygula.sh` (hazır, ÇALIŞTIRILMADI; ayrı
+  onay): O-5a ile aynı kapılar (tek kullanımlık tetik `ops-requests/o5b-uygula.request`, ortam onayı, çalışan yedek yok + ≤3 saat
+  yedek, paket SHA-256 13 dosya); sırayla quota_lock → ops02_limits → media_quota_lock → company_name: 01 salt okunur (DUR'da 3
+  deneme) → 03 (55P03'te 3 deneme) → 03b → 04 salt okunur; son kontrol 35 VAR, medya 4 YOK, sürüm 20261018000001, postflight HATA
+  yok, bayrak false, geçmiş 31 kayıt. 02 çalıştırılmaz (fonksiyon tanımları günlüğe yazılmaz). O-5a ve O-5b aynı eşzamanlılık
+  grubunda (`elvankent-o5-canli-yazma`). Sentetik test `scripts/o5b-uygula-test.sh` V1–V5 yerelde yeşil; CI'da KI-23 provası adımında.
+  Birim KT-13 (757→764 toplam, KI-21 testleriyle).
+- **KI-21** (ajan, `4249327` → `d918d4a`): şerit durumları deneme / deneme bitti / ödeme gecikti (7 gün ek süre) / ek süre doldu /
+  iptal planlandı / salt okunur (14 gün) / salt okunur bitti; "Verilerinizi indirin" yalnız yetkili kullanıcıya, mevcut dışa aktarma
+  rotasına. Yalnız gösterim (bayrak kapalı). Açık: metinler sahip onayı; tarihler yaklaşık (gecikme başlangıcı sütunu yok).
+
 ### 02.11.2026 (22) · K-46: KARAYS marka runbook'u canlıya uygulandı (Aşama 2) — O-5 Aşama 1–2 tamam
 
 - Sahip onayı (sohbette): "KARAYS marka: supabase/ops/karays_brand runbook'unun (01→04) canlıya uygulanmasını onaylıyorum."

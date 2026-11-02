@@ -77,6 +77,9 @@ Sıra (değişmez): `20261002000001_karay_platform` → `20261004000001_design_f
 
 ### Aşama 3 — O-5b/b'/c: kilitler ve OPS-02 dosyası (bayrak KAPALI)
 
+**Uygulama yöntemi (K-47, hazır, çalıştırılmadı):** `elvankent-o5b-uygula.yml` + `scripts/o5b-uygula.sh` — O-5a ile aynı kapılar;
+istek dosyası `ops-requests/o5b-uygula.request`. Alternatif: SQL Editor'den elle (aşağıdaki sıra).
+
 Sıra ve runbook: `quota_lock` (20261025000001) → `ops02_limits` (20261025000002) → `media_quota_lock` (20261026000001) →
 `company_name` (20261026000002). Her biri: `01` (DUR yok) → `02` çıktısını sakla → `03` → `04` (DUR/HATA yok) → tespit `VAR`.
 `company_name` ayrıca `03b_validate.sql` (NOT VALID kısıtın doğrulanması) içerir; README'sindeki sırayla.

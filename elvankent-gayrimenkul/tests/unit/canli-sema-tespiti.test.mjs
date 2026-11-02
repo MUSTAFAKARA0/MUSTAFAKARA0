@@ -461,3 +461,46 @@ describe('KT-12 O-5a uygulama iş akışı (elvankent-o5a-uygula.yml) ve betiği
     assert.equal(spawnSync('bash', ['-n', 'scripts/o5a-uygula.sh'], { cwd: root }).status, 0);
   });
 });
+
+describe('KT-13 O-5 Aşama 3 uygulama iş akışı (elvankent-o5b-uygula.yml) ve betiği', () => {
+  const wf = read('../.github/workflows/elvankent-o5b-uygula.yml');
+  const wfa = read('../.github/workflows/elvankent-o5a-uygula.yml');
+  const sh = read('scripts/o5b-uygula.sh');
+  const code = (t) => t.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+  const RB = ['quota_lock', 'ops02_limits', 'media_quota_lock', 'company_name'];
+  test('tetik: yalnız sahip, tek kullanımlık, Re-run yok, geliştirme commit\'i yok, onay ortamı; O-5a ile aynı anda çalışmaz', () => {
+    const on = wf.slice(wf.indexOf('\non:\n'), wf.indexOf('\npermissions:'));
+    assert.equal(on, "\non:\n  workflow_dispatch: {}\n  push:\n    branches: ['claude/karays-mission-control-vn8g65']\n    paths: ['elvankent-gayrimenkul/ops-requests/o5b-uygula.request']\n");
+    assert.match(wf, /if: \$\{\{ github\.actor == github\.repository_owner && github\.run_attempt == 1 && \(github\.event_name == 'workflow_dispatch' \|\| !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\)\) \}\}/);
+    assert.match(wf, /environment: o5a-uygula\n/);
+    assert.match(wf, /TETIK_DOSYA: elvankent-gayrimenkul\/ops-requests\/o5b-uygula\.request\n {8}run: bash scripts\/ki23-tetik-kontrol\.sh "\$ONCEKI" "\$YENI"/);
+    for (const w of [wf, wfa]) assert.match(w, /concurrency:\n  group: elvankent-o5-canli-yazma\n  cancel-in-progress: false\n/);
+    const req = read('ops-requests/o5b-uygula.request').split('\n').filter((l) => /CALISTIR=evet/.test(l) && !/"# CALISTIR=evet"|"CALISTIR=evet"/.test(l));
+    assert.deepEqual(req, ['# CALISTIR=evet'], 'istek satırı kapalı teslim edilir');
+  });
+  test('kapılar sırayla: tetik → çalışan yedek yok → taze yedek → istemci → uygulama; sır yalnız son adımda; izinler dar', () => {
+    const order = ['ki23-tetik-kontrol.sh', 'Taze yedek kapısı', '[ "$suren" -eq 0 ]', '[ "$yas" -le 10800 ]', 'PostgreSQL istemcisi', 'secrets.SUPABASE_DB_URL', 'bash scripts/o5b-uygula.sh'];
+    let at = -1;
+    for (const o of order) { const i = wf.indexOf(o); assert.ok(i > at, `sıra: ${o}`); at = i; }
+    assert.match(wf, /\npermissions:\n  contents: read\n  actions: read\n\n/);
+    assert.deepEqual([...new Set([...code(wf).matchAll(/secrets\.([A-Z_]+)/g)].map((m) => m[1]))], ['SUPABASE_DB_URL']);
+    assert.doesNotMatch(code(wf), /upload-artifact|actions\/cache|set -x/);
+    assert.match(wf, /persist-credentials: false/);
+  });
+  test('paket SHA-256 sabit ve bugünkü runbook dosyalarıyla aynı (01/03/03b/04; 02 ve 05 hariç)', () => {
+    const files = RB.flatMap((rb) => readdirSync(path.join(root, 'supabase/ops', rb)).filter((f) => /^0[134].*\.sql$/.test(f)).sort().map((f) => `supabase/ops/${rb}/${f}`));
+    assert.equal(files.length, 13);
+    const list = files.map((f) => createHash('sha256').update(readFileSync(path.join(root, f))).digest('hex') + '\n').join('');
+    assert.equal(wf.match(/O5B_PAKET_SHA256: ([0-9a-f]{64})/)?.[1], createHash('sha256').update(list).digest('hex'));
+  });
+  test('betik: sıra, salt okunur kontroller, 02 çalıştırılmaz, son kontrolde bayrak false ve medya YOK, günlükte SQL/adres yok', () => {
+    assert.match(sh, /RUNBOOKS=\(quota_lock ops02_limits media_quota_lock company_name\)/);
+    assert.doesNotMatch(code(sh), /\$rb\/0[25]|02_save_state\.sql"|set -x/);
+    assert.deepEqual([...code(sh).matchAll(/\$OPS\/\$rb\/(0\w+\.sql)/g)].map((m) => m[1]), ['01_preflight.sql', '03_apply.sql', '03b_validate.sql', '03b_validate.sql', '04_postflight.sql']);
+    assert.match(sh, /BEGIN READ ONLY;/);
+    assert.match(sh, /current_setting\('transaction_read_only'\) = 'on'/);
+    for (const k of ['[ "$bayrak" = false ] || fail=1', '[ "$medya" = 4 ] || fail=1', '[ "$surum" = 20261018000001 ] || fail=1', '[ "$var" = 35 ] || fail=1']) assert.ok(sh.includes(k), k);
+    assert.match(sh, /::add-mask::/);
+    assert.doesNotMatch(code(sh), /cat "\$T\/(ro|uygula)\.(out|err)"/, 'ham çıktı/hata yazdırılmaz');
+  });
+});
