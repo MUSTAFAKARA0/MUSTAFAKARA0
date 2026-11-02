@@ -23,6 +23,15 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (18) · K-42: KI-24 GERÇEK PROVA BAŞARILI; KI-23 kapandı; O-5a engeli kalktı
+
+- **restore-drill #2 (sahip tetikledi + ortam onayı, 07:01–07:04 UTC):** yedek `db-2026-11-01T1549Z` (#48); BÜTÜNLÜK TAMAM (SHA, parmak izi 17/17,
+  tablo satır sayıları 72/72); şema BİLGİ (10 tutarlı gecikme, 0 HATA); 9. adım G1–G4 TAMAM, fonksiyon teşhisi başlık 77/77, CR'siz 77/77 → BICIM;
+  K6 media-originals 20 + branding 3 (kovada 3) = 23/23 SHA-256 aynı; ≈2 dk; temizlik tamam.
+- **KI-23 §2.7:** köken ✓ + canlı #8 ✓ + KI-24 9. adım ✓ → O-5a engeli kalktı (O-5a ayrı onay). KI-23 ve KI-24 kapandı.
+- Not: 9. adım FARKLI fonksiyon adlarını günlüğe yazıyor (şema adları; müşteri verisi değil) — sayıya indirgenebilir (öneri).
+- CI: sahibin istek commit'i `cb61a1a` CI #161'i iptal etti (cancel-in-progress); #162 aynı içerikle.
+
 ### 02.11.2026 (17) · K-41: KI-23 köken canlıda — 21 migration eksiksiz; KI-24 sahip onayı
 
 - **Köken (sahip, SQL Editor, query 7):** K1 demo işareti VAR (kurulum 2026-09-27); 21 kayıt statements NULL; 4 işlem grubu (1212, 1222, 1223, 2431)

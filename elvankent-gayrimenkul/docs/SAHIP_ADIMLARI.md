@@ -25,7 +25,7 @@ O-5a engelinin (İÇERİKSİZ geçmiş) üç koşulundan biri. Dosya küçük (�
 2. Supabase › **elvankent-demo** › SQL Editor › New query › yapıştırın › Run.
 3. Sonucu CSV olarak (ya da ekran görüntüsüyle) gönderin. İçinde kişisel veri yok (yalnız sürüm numaraları, VAR/YOK, işlem sayıları).
 
-### 2. KI-24 gerçek geri yükleme provası — yazılı onay VERİLDİ (02.11); kalan: değişken + istek dosyası + Approve
+### 2. ✓ KI-24 gerçek geri yükleme provası — BAŞARILI (02.11, #2). Kalan tek iş: `RESTORE_DRILL_REAL_DATA_APPROVED` → `false`
 Müşteri verisi GitHub'ın geçici makinesinde, yalnız oradaki yerel veritabanına yüklenir; iş bitince silinir; canlıya dokunulmaz.
 1. Bana yazılı onay: **"KI-24 gerçek prova: müşteri verisinin GitHub'ın geçici çalıştırıcısında işlenmesini onaylıyorum."**
 2. GitHub › Settings › Secrets and variables › Actions › **Variables** › `RESTORE_DRILL_REAL_DATA_APPROVED` = `true`.

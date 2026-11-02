@@ -1,6 +1,6 @@
 # O-5 · Canlı veritabanı migration planı (sıralı, geri dönüşü tanımlı) — K-33, güncelleme K-34 (01.11.2026)
 
-**Durum: PLAN — O-5a ENGELLİ (K-35).** Hiçbir aşama başlatılmadı. Ön koşul 0.4 (İÇERİKSİZ geçmiş) çözülmeden hiçbir aşama
+**Durum: PLAN — O-5a engeli KALKTI (K-42, 02.11): §2.7 üç koşulu sağlandı; O-5a ayrı onay bekliyor.** (Önceki: ENGELLİ, K-35.) Hiçbir aşama başlatılmadı. Ön koşul 0.4 (İÇERİKSİZ geçmiş) çözülmeden hiçbir aşama
 önerilmez. Her aşama **ayrı, açık, yazılı sahip onayı** ister; bir aşamanın onayı sonrakini
 kapsamaz. OPS-02 bayrağı (`enforce_subscription_limits`) bu planın hiçbir aşamasında açılmaz (ayrı karar, K19 §8 birim 5b).
 
@@ -28,9 +28,9 @@ medya, davet, alan adı):
 | # | Koşul | Neden | Kanıt |
 | --- | --- | --- | --- |
 | 0.1 | Faz A kapanışı: en az bir **zamanlanmış** gece yedeği başarılı | Elle yedeğe ek olarak otomatik zincir çalışıyor | Backup koşu no. |
-| 0.2 | KI-24 gerçek prova **TAMAM** (BÜTÜNLÜK TAMAM, K6 TAMAM; ŞEMA BİLGİ ve `SEMA_ILK_EKSIK = 20261002000001` beklenir) | Free planda son çare geri dönüş R2 yedeğidir; ayrıca uygulanmış 21 dosyanın RLS/yetki içeriği canlıya dokunmadan orada denetlenir | KI-24 kaydı |
+| 0.2 | ✓ **Sağlandı (02.11):** KI-24 gerçek prova #2 — BÜTÜNLÜK TAMAM (17/17, 72/72), K6 23/23 | Free planda son çare geri dönüş R2 yedeğidir; geri yüklenebildiği kanıtlandı | KI24 §11 |
 | 0.3 | ✓ **Yapıldı (01.11):** `canli_sema_tespiti.sql` → 21 VAR / 10 YOK, TUTARLILIK TAMAM | Eksik liste kesin | Sahibin CSV'si |
-| 0.4 | ✗ **ENGEL AÇIK (K-35):** `canli_migration_gecmisi.sql` canlı sonucu `İÇERİKSİZ=21, KAYITSIZ=10` (beklenen `AYNI=21` doğrulanmadı). Engel ancak KI23 §2.7'deki üç koşulla kalkar: köken sorgusu (`canli_kayit_kokeni.sql`), şema/güvenlik denetimi (`canli_sema_denetimi.sql`: G TAMAM, P'de açıklanmamış fark yok) ve KI-24 gerçek provasının 9. adımı (`DENETIM_G=TAMAM`, `DENETIM_P=AYNI`) | Nesne kontrolü tek başına "dosya eksiksiz uygulandı" kanıtı değildir; kayıtların içeriksiz olması uygulanmış 21 dosyanın bütünlüğünü kanıtsız bırakıyor | Üç çıktı |
+| 0.4 | ✓ **Sağlandı (02.11, K-42):** köken (21 migration atomik/eksiksiz), canlı denetim #8 (G TAMAM, fark yalnız CRLF), KI-24 gerçek prova 9. adım (G TAMAM, BICIM) | Kayıt defteri içeriksiz olsa da uygulamanın eksiksizliği üç bağımsız kaynaktan kanıtlandı | KI23 §8.2–8.3, KI24 §11 |
 | 0.5 | Vercel production = beklenen commit (bugün `a0f0a67`) ve önceki dağıtımda Instant Rollback | Kod geri dönüşü hazır | Ekran |
 | 0.6 | Sakin saat seçimi (müşteri trafiği az), sahip ve geliştirici aynı anda erişilebilir | İlk 30 dk yoğun kontrol | — |
 

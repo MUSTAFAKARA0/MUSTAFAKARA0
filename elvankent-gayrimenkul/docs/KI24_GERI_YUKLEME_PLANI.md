@@ -170,3 +170,23 @@ Gerçek prova için kalan tek şey sahibin yazılı veri işleme onayı ve ardı
 Sahibin yazılı onayı (sohbette, 02.11.2026): **"KI-24 gerçek prova: müşteri verisinin GitHub'ın geçici çalıştırıcısında işlenmesini
 onaylıyorum."** Sahibe değişken (`RESTORE_DRILL_REAL_DATA_APPROVED=true`), istek dosyası düzenlemesi, ortam onayı ve bitince değişkeni
 `false` yapma bağlantıları verildi. Geliştirici değişkeni açmaz ve provayı başlatmaz; sonucu Actions özetinden okur.
+
+## 11. GERÇEK PROVA SONUCU — elvankent-restore-drill #2 (02.11.2026 07:01–07:04 UTC, sahip tetikledi ve onayladı) — BAŞARILI
+
+| Ölçüt | Sonuç |
+| --- | --- |
+| Yedek | `db-2026-11-01T1549Z` (elle yedek #48, varsayılan daldan), R2'den yalnız okuma anahtarıyla 4 dosya; rclone "hata yok" |
+| K1 SHA-256 · K2 dump okunabilir · K3 geçici yerel veritabanı · K4 tek işlemde geri yükleme | TAMAM |
+| K5 parmak izi | **17 / 17** satır aynı |
+| K7 tablo satır sayıları | **72 / 72** tablo aynı |
+| **BÜTÜNLÜK** | **TAMAM** — yedek sağlam ve eksiksiz geri yüklendi |
+| Şema (postflight_v2) | **BİLGİ**: 13 TAMAM, 4 karşılaştırma, 10 migration gecikmesi (18–27; ilk eksik `20261002000001`, tutarlı), **0 HATA** |
+| 9. adım KI-23 denetimi (geri yüklenen kopyada) | G1–G4 **TAMAM**; P 751 AYNI, fonksiyon FARKLI 77; fonksiyon teşhisi başlık 77/77, CR'siz gövde 77/77 → **BICIM** (canlı #8 ile aynı) |
+| K6 Storage | media-originals 20 / 43 dosyadan örnek, branding 3 / 3 (kovada 3 dosya var) → hedef 23; **23 / 23 SHA-256 aynı**; geçici kova silindi |
+| Süre (RTO ölçümü) | ≈ 2 dk (iş 07:01:57–07:04:00; geri yükleme + doğrulama birkaç saniye, demo boyutunda veri) |
+| Temizlik | dump, örnekler ve yerel yığın silindi; artifact yok |
+
+**Notlar:** (1) Hedef 25 değil 23: branding kovasında yalnız 3 dosya var; kural "kovada azsa hepsi" (K-39) doğru çalıştı. (2) 9. adım
+FARKLI fonksiyonların **adlarını** günlüğe yazdı (restore-drill.sh tasarımı; şema nesnesi adları, müşteri verisi değil). KI-23 iş
+akışındaki gibi yalnız sayı yazacak şekilde sadeleştirilebilir (öneri). (3) `RESTORE_DRILL_REAL_DATA_APPROVED` sahip tarafından
+yeniden `false` yapılmalı; bir sonraki prova 3 ay sonra (KI-24 kabul ölçütü: düzenli tekrar).

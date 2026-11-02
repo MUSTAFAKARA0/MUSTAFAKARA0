@@ -324,3 +324,9 @@ ve kayıt satırı paketin sonunda olduğu için, kaydın varlığı paketteki b
 yazan kurulum paketleriyle kurulmuş (`elvankent_demo.environment` tablosu canlıda var; proje adı `elvankent-demo`). Bu paketler
 04 (12 demo ilan) ve 05 (demo yönetici) adımlarını da içerir; canlıda demo ilan/hesap kalıp kalmadığı veri okumadan bilinmiyor.
 Teknik sorun değil (şema doğru), ama "demo" etiketli bir projenin production olarak kullanılması ayrıca değerlendirilmeli.
+
+### 8.3 §2.7 tamam — O-5a engeli KALKTI (02.11.2026)
+
+(1) köken ✓ (§8.2) · (2) canlı şema/güvenlik denetimi ✓ (#8) · (3) KI-24 gerçek provası 9. adım ✓ (restore-drill #2: `DENETIM_G=TAMAM`,
+fonksiyon teşhisi BICIM; KI24 §11). Uygulanmış 21 migration'ın eksiksiz ve güvenli olduğu üç bağımsız kaynaktan doğrulandı. O-5a'nın
+kendisi (9 dosya + KARAYS runbook) **ayrı yazılı onay** ister; uygulama yöntemi (dosyalar 7–44 KB) ayrıca seçilecek.
