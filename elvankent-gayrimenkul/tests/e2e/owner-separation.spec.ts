@@ -271,8 +271,10 @@ test("TEST-OWNER-08: Elvankent kendi markasını değiştirir; tema yalnızca o 
   await loginPlatform(k.page);
   expect(await cssVar(k.page, '--primary')).toBe(PLATFORM_PRIMARY);
   await expect(k.page.locator('img[src*="branding"]')).toHaveCount(0);
-  const icons = await k.page.locator('link[rel="icon"], link[rel="apple-touch-icon"]').evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
-  expect(icons.length).toBeGreaterThan(0);
+  // Simge <link>'leri akışla (streaming metadata) gelebilir; görünene kadar bekle
+  const iconLinks = k.page.locator('link[rel="icon"], link[rel="apple-touch-icon"]');
+  await expect.poll(() => iconLinks.count(), { timeout: 15_000 }).toBeGreaterThan(0);
+  const icons = await iconLinks.evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
   for (const href of icons) expect(href, 'platform simgesi').toMatch(/^\/brand\/karays\//);
   await expect(k.page.getByRole('img', { name: 'KARAYS', exact: true }).first()).toBeVisible();
   await k.ctx.close();
