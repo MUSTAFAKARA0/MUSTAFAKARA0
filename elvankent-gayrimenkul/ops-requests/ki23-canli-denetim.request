@@ -11,4 +11,4 @@
 #   5) Yeniden çalıştırmak için: önce satırı "# CALISTIR=evet" yapıp kaydedin (kapat), sonra yeniden açıp kaydedin (aç).
 #      İş bittikten sonra satırı kapatmanız önerilir.
 # Bu dosyaya sır, anahtar, adres YAZMAYIN. Geliştirme oturumunun commit'leri ("Claude-Session:" satırlı) bu iş akışını çalıştırmaz.
-# CALISTIR=evet
+CALISTIR=evet
