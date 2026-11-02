@@ -19,6 +19,7 @@
 # 4b scripts/ki23-canli-denetim-test.sh: canlı denetim iş akışının betiği (salt okunur oturum, maskeleme, yalnız sayılar) T1–T8
 # 6  CRLF: aynı paketler CRLF satır sonlarıyla → denetimde yalnız fonksiyon FARKLI=77 (canlı #6 deseni); teşhis başlık 77,
 #    CR'siz gövde 77 → "TAMAM (biçim farkı)"; gövde ya da başlık değişikliği → çıkış 4
+# 7  O-5a uygulama betiği (scripts/o5a-uygula-test.sh): onaysız paket, kilit zaman aşımı + tutarlı kısmi şema, devam, tekrar
 # 5  (DRILL_URL) yedek → scripts/restore-drill.sh: 9. adım denetimi geri yüklenen kopyada G TAMAM / P AYNI; RLS'i kapatılmış
 #    kopyanın yedeği ŞEMA HATA (çıkış 3)
 # =============================================================================
@@ -33,7 +34,7 @@ ro() { PGOPTIONS='-c default_transaction_read_only=on' psql "$DB" -X -v ON_ERROR
 
 BUNDLES=(f760625:01_v1_schema f760625:02_v2_enums f760625:03_v2_stage3 f760625:04_demo_seed
          62c0614:06_platform_updates 86cd928:06_platform_updates e1f64f4:06_platform_updates d721428:06_platform_updates)
-echo "== 1/6 Tarihî demo paketleri ↔ bugünkü migration dosyaları"
+echo "== 1/7 Tarihî demo paketleri ↔ bugünkü migration dosyaları"
 for b in "${BUNDLES[@]}"; do
   git show "${b%%:*}:elvankent-gayrimenkul/supabase/demo/${b#*:}.sql" > "$T/$b.sql" || fail "git geçmişi eksik (${b%%:*}); fetch-depth: 0 gerekli"
 done
@@ -53,7 +54,7 @@ for (const b of names) {
 console.log(`   ${n} migration bölümü bugünkü dosyalarla birebir aynı`);
 ' "$T" "${BUNDLES[@]}"
 
-echo "== 2/6 Boş yığın + demo paketleri (her biri tek işlem)"
+echo "== 2/7 Boş yığın + demo paketleri (her biri tek işlem)"
 echo 'select 1;' > "$T/bos.sql"
 LIVE_LIKE_SEED="$T/bos.sql" bash scripts/live-like-stack.sh start 19000101000000 | sed 's/^/   /'
 for b in "${BUNDLES[@]}"; do
@@ -61,7 +62,7 @@ for b in "${BUNDLES[@]}"; do
 done
 echo "   ${#BUNDLES[@]} paket uygulandı"
 
-echo "== 3/6 Denetimler (salt okunur)"
+echo "== 3/7 Denetimler (salt okunur)"
 ro -f "$OPS/canli_sema_tespiti.sql" > "$T/tespit"
 [ "$(awk -F'|' '$1 <= 31 && $3 == "VAR"' "$T/tespit" | wc -l)" = 21 ] || fail "tespit: 21 VAR bekleniyordu"
 grep -q '^102|İLK EKSİK migration|20261002000001_karay_platform.sql|' "$T/tespit" || fail "tespit: ilk eksik"
@@ -84,7 +85,7 @@ grep -q '^ÖZET|G mutlak güvenlik kuralları|TAMAM' "$T/denetim" || fail "denet
 [ "$(awk -F'|' '$1 ~ /^P / ' "$T/denetim" | wc -l)" = 0 ] || { awk -F'|' '$1 ~ /^P /' "$T/denetim" | head -20 >&2; fail "denetim: P'de AYNI olmayan nesne"; }
 echo "   şema denetimi: G TAMAM, $(grep '^ÖZET|P beklenen' "$T/denetim" | cut -d'|' -f3) nesnenin hepsi AYNI"
 
-echo "== 4/6 Negatif kontroller (geri alınan işlemlerde)"
+echo "== 4/7 Negatif kontroller (geri alınan işlemlerde)"
 neg() { # ad, sql, denetim dosyası, beklenen desen
   local out
   out=$(psql "$DB" -X -q -A -t -F'|' -c "begin;" -c "$2" -f "$OPS/$3" -c "rollback;" 2>&1) || true
@@ -98,11 +99,11 @@ neg 'sabitsiz SECURITY DEFINER' 'create function public.x_definer() returns int 
 neg 'anon yetkisi genişledi' 'grant insert on public.audit_logs to anon;' canli_sema_denetimi.sql '^P tablo-yetki\|audit_logs\|FARKLI'
 neg 'uygulamasız elle geçmiş kaydı' "insert into supabase_migrations.schema_migrations (version, name) values ('20261002000001', 'karay_platform');" canli_kayit_kokeni.sql '^K4\|.*20261002000001.*\|BELİRSİZ'
 
-echo "== 4b/6 GitHub Actions denetim betiği (scripts/ki23-canli-denetim.sh) sentetik testleri"
+echo "== 4b/7 GitHub Actions denetim betiği (scripts/ki23-canli-denetim.sh) sentetik testleri"
 bash scripts/ki23-canli-denetim-test.sh | sed 's/^/ /'
 
 if [ -n "${DRILL_URL:-}" ]; then
-  echo "== 5/6 KI-24 yolu: bu veritabanının yedeği → yerel geçici veritabanı → restore-drill 9. adım (denetim)"
+  echo "== 5/7 KI-24 yolu: bu veritabanının yedeği → yerel geçici veritabanı → restore-drill 9. adım (denetim)"
   SUPABASE_DB_URL="$DB" OUT_DIR="$T/y1" STAMP=denetim-1 bash scripts/backup-db.sh > "$T/y1.log" 2>&1 || { tail -5 "$T/y1.log" >&2; fail "yedek alınamadı"; }
   code=0; ADMIN_DB_URL="$DRILL_URL" DRILL_RESULT="$T/y1.res" bash scripts/restore-drill.sh "$T/y1" denetim-1 > "$T/y1.drill" 2>&1 || code=$?
   for want in BUTUNLUK=TAMAM SEMA=BILGI DENETIM_G=TAMAM DENETIM_P=AYNI DENETIM_FONKSIYON=AYNI; do
@@ -116,7 +117,7 @@ if [ -n "${DRILL_URL:-}" ]; then
   { [ "$code" = 3 ] && grep -qx SEMA=HATA "$T/y2.res"; } || { tail -15 "$T/y2.drill" >&2; fail "RLS kapalı yedek ŞEMA HATA (çıkış 3) vermeli; çıkış $code"; }
   echo "   ✓ RLS'i kapalı tablo içeren yedek: ŞEMA HATA, çıkış 3 (gizlenmedi)"
 fi
-echo "== 6/6 KI-23 #6 açıklaması: aynı tarihî paketler CRLF satır sonlarıyla (SQL Editor'ün Windows'ta gönderebileceği biçim)"
+echo "== 6/7 KI-23 #6 açıklaması: aynı tarihî paketler CRLF satır sonlarıyla (SQL Editor'ün Windows'ta gönderebileceği biçim)"
 LIVE_LIKE_SEED="$T/bos.sql" bash scripts/live-like-stack.sh start 19000101000000 > /dev/null
 for b in "${BUNDLES[@]}"; do
   sed 's/$/\r/' "$T/$b.sql" > "$T/crlf.sql"
@@ -157,5 +158,12 @@ psql "$DB" -X -q -v ON_ERROR_STOP=1 -c "alter function $fn volatile" > /dev/null
 c=$(teshis_run)
 [ "$c" = 4 ] && grep -q 'başlık AYNI=76' "$T/t.log" || { cat "$T/t.log" >&2; fail "başlık değişikliği yakalanmadı (çıkış $c)"; }
 echo "   ✓ negatif: bir fonksiyonun başlığı (oynaklık) değişince → başlık 76/77, çıkış 4"
+echo "== 7/7 O-5a uygulama betiği: canlının kopyası gibi kurulmuş yığında (tarihî paketler, CRLF) 9 dosya"
+LIVE_LIKE_SEED="$T/bos.sql" bash scripts/live-like-stack.sh start 19000101000000 > /dev/null
+for b in "${BUNDLES[@]}"; do
+  sed 's/$/\r/' "$T/$b.sql" > "$T/crlf.sql"
+  psql "$DB" -X -v ON_ERROR_STOP=1 -q -1 -f "$T/crlf.sql" > /dev/null 2>&1 || fail "O-5a yığını: $b uygulanamadı"
+done
+bash scripts/o5a-uygula-test.sh | sed 's/^/ /'
 bash scripts/live-like-stack.sh stop > /dev/null
 echo "✓ Canlı denetim provası tamam"

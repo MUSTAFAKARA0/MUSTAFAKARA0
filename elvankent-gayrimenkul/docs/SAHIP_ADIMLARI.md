@@ -33,7 +33,7 @@ Müşteri verisi GitHub'ın geçici makinesinde, yalnız oradaki yerel veritaban
 4. Actions › elvankent-restore-drill › "Review deployments" › Approve.
 5. Bitince değişkeni `false` yapın. Ben özetini okurum (BÜTÜNLÜK, Storage 25/25, DENETIM_G, DENETIM_FONKSIYON).
 
-### 3. Vercel kontrolü — 2 dk (yalnız bakın, değiştirmeyin)
+### 3. ✓ Vercel kontrolü — YAPILDI (02.11): `VERCEL_API_TOKEN` ve `VERCEL_PROJECT_ID` YOK → özel alan adı için sonra eklenmeli (ayrı adım)
 Vercel › production projesi › Settings › Environment Variables: **`VERCEL_API_TOKEN`** ve **`VERCEL_PROJECT_ID`** adları var mı?
 (Değerleri değil, yalnız "var / yok".) Özel alan adı özelliği bunlar olmadan çalışmaz.
 
@@ -41,7 +41,7 @@ Vercel › production projesi › Settings › Environment Variables: **`VERCEL_
 Zamanlanmış koşu GitHub'da 5–6 saat gecikmeli başlıyor (önceki koşular 06:15–07:38 UTC). Ben izliyorum; bir şey yapmanız gerekmez.
 Bugün akşama kadar başlamazsa size "Run workflow" (varsayılan dal) ile elle yedek almanızı söyleyeceğim.
 
-### 5. O-5a onayı — 1, 2 ve 4 bitince
+### 5. ✓ O-5a onayı VERİLDİ (02.11) — uygulama: aşağıdaki "O-5a çalıştırma" adımları
 Satış ve müşteri açma akışlarını (demo formu, yeni ofis, davet, KARAY konsolu, alan adı) açan 9 migration. Onay cümlesi:
 "O-5a: supabase/ops/o5a altındaki 9 dosyanın sırayla canlıya uygulanmasını onaylıyorum." Uygulama yöntemi birlikte seçilecek
 (dosyalar 7–44 KB; telefonda SQL Editor zorlanabilir — bilgisayardan ya da ayrı onaylı bir yazma iş akışıyla).
@@ -57,3 +57,14 @@ Satış ve müşteri açma akışlarını (demo formu, yeni ofis, davet, KARAY k
 - O-5a için uygulama yöntemini hazırlamak: telefonda donmayan, onaylı ve geri dönüşü tanımlı bir yol (bilgisayar adımları ya da
   sahip tetiklemeli yazma iş akışı) — taslak, çalıştırılmadan sunulur.
 - KALAN_ISLER ve günlüğü güncel tutmak.
+
+## O-5a çalıştırma (onay verildi; iş akışı CI'dan geçince)
+
+1. Taze yedek (son 3 saat içinde olmalı): https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/workflows/elvankent-backup.yml
+   › Run workflow (varsayılan dal) › yeşil olmasını bekleyin.
+2. İstek dosyası: https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/edit/claude/karays-mission-control-vn8g65/elvankent-gayrimenkul/ops-requests/o5a-uygula.request
+   › son satırı tam olarak `CALISTIR=evet` yapın › Commit changes.
+3. https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/workflows/elvankent-o5a-uygula.yml › en üstteki çalışma › Review deployments › Approve.
+4. Sonuç "SONUÇ: TAMAM" olmalı; bana iletin. Ardından satırı yeniden `# CALISTIR=evet` yapıp kaydedin.
+5. Duman testi (tarayıcıdan): KARAYS sayfasında "Bilgi al" formuyla kendinize bir deneme talebi → KARAY konsolu › Talepler; konsol
+   ana sayfası ve Müşteriler listesi açılıyor mu; bir kiracı sitesi ve ofis paneli açılıyor mu.

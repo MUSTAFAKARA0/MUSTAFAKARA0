@@ -1,6 +1,6 @@
 # O-5 · Canlı veritabanı migration planı (sıralı, geri dönüşü tanımlı) — K-33, güncelleme K-34 (01.11.2026)
 
-**Durum: PLAN — O-5a engeli KALKTI (K-42, 02.11): §2.7 üç koşulu sağlandı; O-5a ayrı onay bekliyor.** (Önceki: ENGELLİ, K-35.) Hiçbir aşama başlatılmadı. Ön koşul 0.4 (İÇERİKSİZ geçmiş) çözülmeden hiçbir aşama
+**Durum: O-5a ONAYLANDI (sahip, 02.11.2026) — uygulama iş akışı hazır, sahibin tetiklemesini bekliyor (K-43).** §2.7 üç koşulu sağlandı (K-42). (Önceki: ENGELLİ, K-35.) Hiçbir aşama başlatılmadı. Ön koşul 0.4 (İÇERİKSİZ geçmiş) çözülmeden hiçbir aşama
 önerilmez. Her aşama **ayrı, açık, yazılı sahip onayı** ister; bir aşamanın onayı sonrakini
 kapsamaz. OPS-02 bayrağı (`enforce_subscription_limits`) bu planın hiçbir aşamasında açılmaz (ayrı karar, K19 §8 birim 5b).
 
@@ -103,3 +103,30 @@ Sıra ve runbook: `quota_lock` (20261025000001) → `ops02_limits` (202610250000
 
 KALAN_ISLER (KI-23 / KI-27), GELISTIRME_GUNLUGU (tarih, uygulanan dosyalar, tespit/postflight özeti, yedek koşu no.), bu belgede
 aşama satırına "uygulandı (tarih)".
+
+## O-5a uygulama yöntemi (K-43, 02.11.2026)
+
+Sahip onayı (sohbette, 02.11.2026): **"O-5a: supabase/ops/o5a altındaki 9 dosyanın sırayla canlıya uygulanmasını onaylıyorum."**
+Dosyalar 7–44 KB olduğundan (telefonda SQL Editor 84 KB'de donmuştu) ve SQL Editor'ün CRLF sorunu olmadan uygulamak için
+**GitHub Actions iş akışı** seçildi: `.github/workflows/elvankent-o5a-uygula.yml` + `scripts/o5a-uygula.sh`.
+
+| Kapı / adım | Ayrıntı |
+| --- | --- |
+| Tetik | Sahibin `ops-requests/o5a-uygula.request` dosyasında `CALISTIR=evet` satırını **kapalıdan açığa** geçirdiği gönderim; tek kullanımlık; Re-run ve geliştirme commit'leri çalıştırmaz |
+| Onay ortamı | `o5a-uygula` (sahip: Required reviewers) → "Review deployments › Approve" |
+| Taze yedek | Son 3 saatte başarılı `elvankent-backup` yoksa bağlanmadan durur (GitHub API, `actions: read`) |
+| Paket bütünlüğü | 9 dosyanın sıralı SHA-256 özeti iş akışında sabit; dosyalar üreticiyle birebir (`o5a-build.sh --check`) |
+| Ön kontrol (salt okunur) | 21 temel migration VAR, TUTARLILIK TAMAM; eksikler listenin son kısmı (kesintiden sonra kalan yerden devam) |
+| Uygulama | Her dosya ayrı **tek işlem** (`lock_timeout` 10 sn, `statement_timeout` 300 sn; gövde + geçmiş kaydı); hata → geri alınır, sonrakine geçilmez |
+| Ara kontrol | Her dosyadan sonra salt okunur tespit: o dosya VAR |
+| Son kontrol | 30/30 VAR · `karay_schema_version()` = `20261011000001` · postflight_v2'de yalnız 27. satır (KARAYS, ayrı adım) · geçmişte 9 "AYNI (O-5a kaydı)" → "SONUÇ: TAMAM"; aksi çıkış 4 (geri dönüş kararı sahibin) |
+| Günlük | Yalnız dosya adı, durum, sayılar, güvenli hata sınıfı; adres/parola maskeli; artifact yok |
+
+**Sentetik doğrulama** (canlının kopyası gibi kurulmuş yığın: tarihî paketler, CRLF; `scripts/o5a-uygula-test.sh`, CI'da
+`canli-denetim-prova.sh` 7. adım): U1 onaysız paket → hiçbir şey uygulanmadı · U2 `organizations` başka oturumda kilitliyken →
+55P03, kısmi şema tutarlı, kalanlar uygulanmadı · U3 kilit kalkınca → kalan 8 dosya, son kontrol temiz (30 VAR, sürüm
+20261011000001, yalnız 27 HATA, 9 O-5a kaydı) · U4 tekrar → "hepsi zaten uygulanmış", hiçbir şey yapılmadı.
+
+**Sonrası:** duman testleri (Aşama 1 listesi) → KARAYS marka runbook'u (Aşama 2, ayrı onay). Özel alan adı için ayrıca Vercel'de
+`VERCEL_API_TOKEN` ve `VERCEL_PROJECT_ID` gerekli — sahibin ekran görüntüsünde (02.11) **yok**; O-5a'dan sonra alan adı ekranı
+"sağlayıcı yapılandırılmamış" durumunda kalır (ayrı adım, sahip).

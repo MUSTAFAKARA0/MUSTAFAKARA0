@@ -23,6 +23,18 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (19) · K-43: O-5a onaylandı — uygulama iş akışı hazır (çalıştırılmadı); gece yedeği #49 başarılı
+
+- **Gece yedeği:** zamanlanmış koşu #49 (varsayılan dal) 07:46 UTC'de başladı, başarılı (≈6 saat GitHub gecikmesi). Faz A kapanabilir.
+- **O-5a onayı (sahip, sohbette):** "O-5a: supabase/ops/o5a altındaki 9 dosyanın sırayla canlıya uygulanmasını onaylıyorum."
+- **Uygulama yöntemi:** `.github/workflows/elvankent-o5a-uygula.yml` + `scripts/o5a-uygula.sh` (O5_YAYIN_PLANI "O-5a uygulama yöntemi"):
+  tek kullanımlık tetik (`ki23-tetik-kontrol.sh` artık `TETIK_DOSYA` alır), ortam `o5a-uygula`, son 3 saatte başarılı yedek kapısı, paket
+  SHA-256 + üretici kontrolü, salt okunur ön/ara/son kontrol, her dosya tek işlem (lock 10 sn / statement 300 sn), günlükte yalnız durum.
+- **Sentetik:** `scripts/o5a-uygula-test.sh` (prova 7. adım, CRLF kurulumu): U1 onaysız paket · U2 kilit 55P03 + tutarlı kısmi şema · U3 devam,
+  son kontrol temiz · U4 tekrar → hiçbir şey. Birim KT-12; LR-09/LR-11 listeleri.
+- **Vercel (sahip ekranı):** `VERCEL_API_TOKEN`, `VERCEL_PROJECT_ID` yok → alan adı özelliği O-5a sonrası da sağlayıcısız; ayrı adım.
+- Sahip adımları: değişken kapatıldı, `o5a-uygula` ortamı kuruldu (sahibin beyanı; API'den okunamıyor).
+
 ### 02.11.2026 (18) · K-42: KI-24 GERÇEK PROVA BAŞARILI; KI-23 kapandı; O-5a engeli kalktı
 
 - **restore-drill #2 (sahip tetikledi + ortam onayı, 07:01–07:04 UTC):** yedek `db-2026-11-01T1549Z` (#48); BÜTÜNLÜK TAMAM (SHA, parmak izi 17/17,

@@ -418,3 +418,46 @@ describe('KT-11 fonksiyon farkı teşhisi (canli_fonksiyon_teshis.sql) ve KI-24 
     assert.match(d, /result "DENETIM_FONKSIYON=\$\(\[ "\$tha" = "\$tb" \] && echo AYNI \|\| echo BICIM\)"/);
   });
 });
+
+describe('KT-12 O-5a uygulama iş akışı (elvankent-o5a-uygula.yml) ve betiği', () => {
+  const wf = read('../.github/workflows/elvankent-o5a-uygula.yml');
+  const sh = read('scripts/o5a-uygula.sh');
+  const code = (t) => t.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+  test('tetik: yalnız sahip, tek kullanımlık (kapalı → açık), Re-run yok, geliştirme commit\'i yok, onay ortamı', () => {
+    const on = wf.slice(wf.indexOf('\non:\n'), wf.indexOf('\npermissions:'));
+    assert.equal(on, "\non:\n  workflow_dispatch: {}\n  push:\n    branches: ['claude/karays-mission-control-vn8g65']\n    paths: ['elvankent-gayrimenkul/ops-requests/o5a-uygula.request']\n");
+    assert.match(wf, /if: \$\{\{ github\.actor == github\.repository_owner && github\.run_attempt == 1 && \(github\.event_name == 'workflow_dispatch' \|\| !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\)\) \}\}/);
+    assert.match(wf, /environment: o5a-uygula\n/);
+    assert.match(wf, /TETIK_DOSYA: elvankent-gayrimenkul\/ops-requests\/o5a-uygula\.request\n {8}run: bash scripts\/ki23-tetik-kontrol\.sh "\$ONCEKI" "\$YENI"/);
+    const req = read('ops-requests/o5a-uygula.request').split('\n').filter((l) => /CALISTIR=evet/.test(l) && !/"# CALISTIR=evet"|"CALISTIR=evet"/.test(l));
+    assert.equal(req.length, 1);
+    assert.match(req[0], /^(# )?CALISTIR=evet$/);
+  });
+  test('sırayla kapılar: tetik → taze yedek (≤ 3 saat) → istemci → uygulama; sır yalnız son adımda; izinler dar', () => {
+    const order = ['ki23-tetik-kontrol.sh', 'Taze yedek kapısı', '[ "$yas" -le 10800 ]', 'PostgreSQL istemcisi', 'secrets.SUPABASE_DB_URL'];
+    let at = -1;
+    for (const o of order) { const i = wf.indexOf(o); assert.ok(i > at, `sıra: ${o}`); at = i; }
+    assert.match(wf, /\npermissions:\n  contents: read\n  actions: read\n\n/);
+    assert.deepEqual([...new Set([...code(wf).matchAll(/secrets\.([A-Z_]+)/g)].map((m) => m[1]))], ['SUPABASE_DB_URL']);
+    assert.doesNotMatch(code(wf), /upload-artifact|actions\/cache|set -x/);
+    assert.match(wf, /persist-credentials: false/);
+  });
+  test('paket SHA-256 sabit ve bugünkü 9 dosyayla aynı', () => {
+    const files = readdirSync(path.join(root, 'supabase/ops/o5a')).filter((f) => /^\d\d_.*\.sql$/.test(f)).sort();
+    assert.equal(files.length, 9);
+    const list = files.map((f) => createHash('sha256').update(readFileSync(path.join(root, 'supabase/ops/o5a', f))).digest('hex') + '\n').join('');
+    assert.equal(wf.match(/O5A_PAKET_SHA256: ([0-9a-f]{64})/)?.[1], createHash('sha256').update(list).digest('hex'));
+  });
+  test('betik: paket + üretici kontrolü bağlantıdan önce; salt okunur ön/son kontrol; her dosya tek işlem; kilit/zaman sınırı; KARAYS yok', () => {
+    const c = code(sh);
+    assert.ok(c.indexOf('bash scripts/o5a-build.sh --check') < c.indexOf('psql "$O5A_DB_URL"'));
+    assert.ok(c.indexOf('[ "$paket" = "$O5A_PAKET_SHA256" ]') < c.indexOf('psql "$O5A_DB_URL"'));
+    assert.match(sh, /BEGIN READ ONLY;\nSELECT current_setting\('transaction_read_only'\) = 'on' AS ro_tamam \\gset/);
+    assert.match(sh, /BEGIN;\nSET LOCAL lock_timeout = '10s';\nSET LOCAL statement_timeout = '300s';\n\\i '\$f'\nCOMMIT;/);
+    assert.match(c, /\[ "\$hata_satir" = 27 \] \|\| fail=1/);
+    assert.match(c, /grep -q 'AYNI \(O-5a kaydı\)=9'/);
+    assert.doesNotMatch(c, /karays_brand|20261018000001/);
+    assert.doesNotMatch(c, /cat "\$T\/[a-z.]*err"|set -x|echo "\$O5A_DB_URL/);
+    assert.equal(spawnSync('bash', ['-n', 'scripts/o5a-uygula.sh'], { cwd: root }).status, 0);
+  });
+});

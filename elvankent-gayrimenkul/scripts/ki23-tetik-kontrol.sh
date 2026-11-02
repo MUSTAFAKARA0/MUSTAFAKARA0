@@ -14,7 +14,9 @@
 # ayrıca engellidir (github.run_attempt == 1).
 # =============================================================================
 set -euo pipefail
-FILE=elvankent-gayrimenkul/ops-requests/ki23-canli-denetim.request
+# İstek dosyası (depo köküne göre); başka iş akışları kendi dosyasını TETIK_DOSYA ile verir (ör. O-5a)
+FILE=${TETIK_DOSYA:-elvankent-gayrimenkul/ops-requests/ki23-canli-denetim.request}
+[[ "$FILE" =~ ^elvankent-gayrimenkul/ops-requests/[a-z0-9-]+\.request$ ]] || { echo "Tetik: istek dosyası yolu geçersiz — çalıştırılmadı"; exit 1; }
 BEFORE=${1:-}; AFTER=${2:-}
 [[ "$AFTER" =~ ^[0-9a-f]{40}$ ]] || { echo "Tetik: yeni commit kimliği geçersiz — çalıştırılmadı"; exit 1; }
 [[ "$BEFORE" =~ ^[0-9a-f]{40}$ ]] || { echo "Tetik: önceki commit kimliği geçersiz — çalıştırılmadı"; exit 1; }
