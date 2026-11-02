@@ -23,6 +23,15 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (29) · K-53: KARAYS tam kod yayını production'da (PR #4 → `6b698e9`)
+
+- Sahip PR #4'ü birleştirdi (16:32 TR). Vercel production dağıtımı `dpl_A4MN…` (`6b698e9`) READY, takma ad `mustafakara-0-7hh3.vercel.app`;
+  geri dönüş adayı `a0f0a67` (`dpl_8CQW…`). Vercel çalışma zamanı hatası: son 30 dk 0.
+- Sahip duman testi: KARAYS sayfası (yeni logo), konsol, ofis paneli ve kiracı sitesi açılıyor.
+- Çalışma dalı production'a fast-forward edildi (iki dal aynı noktada).
+- Kalan (ayrı onaylar): Aşama 4 medya migration'ları (`media_finalize_rpc` → `media_privileges` → `media_storage_slots` → `media_stray_sweep`;
+  yeni kod artık production'da — 4e ön koşulu sağlandı), özel alan adı (Vercel'e alan adı + `VERCEL_*` değişkenleri), hata bildirimi.
+
 ### 02.11.2026 (28) · K-52: Vercel takım erişimi verildi; KI-25 kapandı; PR #4 açıldı
 
 - Sahip Vercel takım (`kara-6892`) erişimini onayladı. Okuma: production dağıtımı `a0f0a67` READY; geri dönüş adayı `74013a5`
