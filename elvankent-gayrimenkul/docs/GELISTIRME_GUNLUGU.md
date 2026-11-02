@@ -23,6 +23,17 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (24) · K-48: KI-39 D süpürmesi sayfalı (bekleyen 20261031000001; canlıda değil)
+
+- Ajan `b997c5b` → `f84381b`. Yeni `media_stray_cursor` (kova başına kalıcı imleç; RLS açık, service_role yalnız okur) ve
+  `media_stray_objects(p_limit, p_scan)`: kova başına imleçten sonraki en çok `p_scan` nesne (`(bucket_id, name COLLATE "C")`
+  indeksi), pay dolunca imleç son listelenende durur, kova sonunda başa döner (`passes` +1), imleç satırı FOR UPDATE.
+  Cron (`src/modules/media/stray-sweep.ts`): en çok 20 çağrı / 25 sn. Zaman aşımı (57014) → `MediaStraySweepTimeout`, diğer liste
+  hataları → `MediaStraySweepFailed`, 7 günü aşan tur → `MediaStraySweepStalled` (reportError ile izlemeye).
+- Runbook `media_stray_sweep` 01–05 ve README güncel (04 yeni md5 `2723d177…`). Doğrulama (koordinatör, yerel): birim 782/782;
+  yerel yığın sıfırlandı + 8 runbook provası (01→05→01→03→04) temiz; güvenlik testleri 206/206 (SW-01…SW-09 dahil).
+- Açık: canlı Storage'da C sıralı indeks yoksa her sayfa kovayı sıralar (01 8. satır BİLGİ). Medya birimleri (Aşama 4) ayrı karar.
+
 ### 02.11.2026 (23) · K-47: kod yayını incelemesi, Aşama 3 uygulama iş akışı (çalıştırılmadı), KI-21 şerit durumları
 
 - **Kod yayını incelemesi** (bağımsız ajan, salt okunur; production `a0f0a67` → çalışma dalı, `src` 96 dosya): yayın engeli yok —
