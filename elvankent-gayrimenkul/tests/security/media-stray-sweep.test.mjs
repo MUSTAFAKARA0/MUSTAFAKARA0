@@ -8,6 +8,11 @@
  *   SW-04  C bir kez yazar: bekleyen satırda da var olan orijinalin üzerine yazılamaz (oturum, upsert imzası); yeni yükleme çalışır
  *   SW-05  D kendini korur: A yokken 'apply A first'; dosya sırası
  *   SW-06  media_finalize orijinal ve varyant nesnelerini FOR SHARE kilitler: eşzamanlı silme/değiştirme sonlandırmayla yarışamaz
+ *   SW-07  KI-39 sayfalama: p_scan kadar nesneye bakılır, imleç kalıcı ve sıralı ilerler, pay dolunca atlanan yok, sonda başa döner
+ *   SW-08  media_stray_cursor: RLS açık; anon/authenticated erişemez; service_role yalnız okur
+ *   SW-09  imleç kilitliyken (süren süpürme) çağrı statement_timeout ile düşer ve imleç değişmez
+ *
+ * D sayfalıdır: listeleme testleri imleci test kurumunun klasörünün önüne alır; imleç test sonunda eski konumuna döner.
  *
  * Nesnelerin yaşını geri almak için storage.objects.created_at psql ile değiştirilir (bakım penceresi altında, yalnız yerel).
  * CI'da (CI=true) atlanmaz, hata verir.
@@ -100,11 +105,20 @@ insert into public.media_overwrite_window (id, open_until) values (true, now() +
 update storage.objects set created_at = now() - interval '${interval}' where bucket_id = '${bucket}' and name = '${path}';
 delete from public.media_overwrite_window;
 commit`);
+/** İki kovanın imlecini bir kurumun klasörünün hemen önüne koyar ('organizations/<id>' tüm alt yollardan önce gelir; yalnız yerel) */
+const cursorAt = (name) => psql(`update public.media_stray_cursor set last_name = '${name.replace(/'/g, "''")}'`);
+const cursorOf = async (bucket) => {
+  const [last, passes] = (await psql(`select last_name || '|' || passes from public.media_stray_cursor where bucket = '${bucket}'`)).trim().split('|');
+  return { last, passes: Number(passes) };
+};
+/** D sayfalıdır (KI-39): imleç test kurumunun önüne alınır, tek sayfa test kurumunun bütün nesnelerini kapsar */
 const stray = async () => {
-  const r = await service.rpc('media_stray_objects', { p_limit: 1000 });
+  await cursorAt(`organizations/${O.a.id}`);
+  const r = await service.rpc('media_stray_objects', { p_limit: 1000, p_scan: 10000 });
   assert.ifError(r.error);
   return r.data.filter((x) => createdOrgs.includes(x.org_id));
 };
+let savedCursor = null;
 const has = (list, bucket, path) => list.some((x) => x.bucket === bucket && x.path === path);
 
 async function pendingRow(org) {
@@ -137,10 +151,16 @@ before(async () => {
   taxonomy = { typeId: type.data.id, districtId: district.data.id, cityId: district.data.city_id };
   assert.ifError((await service.from('plans').insert({ id: PLAN, name: 'Süpürme', max_users: 5, max_properties: 5, max_storage_mb: 500, is_public: false })).error);
   O.a = await makeOrg('a');
+  // Ortak yerel yığında imleç test sonunda eski konumuna döner
+  savedCursor = (await psql('select coalesce(json_agg(c), \'[]\')::text from public.media_stray_cursor c')).trim();
 });
 
 after(async () => {
   if (skip) return;
+  if (savedCursor) {
+    await psql(`update public.media_stray_cursor c set last_name = s.last_name, passes = s.passes, pass_started_at = s.pass_started_at, last_pass_at = s.last_pass_at, updated_at = s.updated_at
+from json_populate_recordset(null::public.media_stray_cursor, '${savedCursor.replace(/'/g, "''")}') s where c.bucket = s.bucket`);
+  }
   for (const id of createdOrgs) await service.from('organizations').delete().eq('id', id);
   for (let i = 0; i < 20; i += 1) {
     const r = await service.rpc('media_queue_claim', { p_limit: 1000 });
@@ -205,10 +225,16 @@ describe('SW-03 yetki ve sınır', { skip }, () => {
   test('yalnız service_role çağırır; sınır 0 boş, 1000 üstü 1000 ile sınırlı', async () => {
     assert.ok((await anon.rpc('media_stray_objects', { p_limit: 10 })).error);
     assert.ok((await O.a.client.rpc('media_stray_objects', { p_limit: 10 })).error);
+    await cursorAt(`organizations/${O.a.id}`);
     assert.deepEqual((await service.rpc('media_stray_objects', { p_limit: 0 })).data, []);
-    const priv = await psql(`select has_function_privilege('anon', 'public.media_stray_objects(integer)', 'execute')::text || '/' || has_function_privilege('authenticated', 'public.media_stray_objects(integer)', 'execute')::text || '/' || has_function_privilege('service_role', 'public.media_stray_objects(integer)', 'execute')::text`);
+    assert.equal((await cursorOf('media')).last, `organizations/${O.a.id}`, 'p_limit 0 imleci oynatmaz');
+    const sig = 'public.media_stray_objects(integer,integer)';
+    const priv = await psql(`select has_function_privilege('anon', '${sig}', 'execute')::text || '/' || has_function_privilege('authenticated', '${sig}', 'execute')::text || '/' || has_function_privilege('service_role', '${sig}', 'execute')::text`);
     assert.equal(priv.trim(), 'false/false/true');
-    assert.match(await psql("select prosrc from pg_proc where oid = 'public.media_stray_objects(integer)'::regprocedure"), /least\(coalesce\(p_limit, 0\), 1000\)/);
+    assert.equal((await psql("select to_regprocedure('public.media_stray_objects(integer)') is null")).trim(), 't', 'sayfasız eski imza kalmadı');
+    const src = await psql(`select prosrc from pg_proc where oid = '${sig}'::regprocedure`);
+    assert.match(src, /least\(coalesce\(p_limit, 0\), 1000\)/);
+    assert.match(src, /least\(coalesce\(p_scan, 2000\), 10000\)/);
   });
 });
 
@@ -279,5 +305,92 @@ describe('SW-06 sonlandırma nesneleri kilitler (K-23 güvenlik MEDIUM: sil + ye
     const src = await psql("select prosrc from pg_proc where oid = 'public.media_finalize(uuid,text,text,smallint[],integer,integer,text)'::regprocedure");
     assert.match(src, /bucket_id = 'media-originals' and o\.name = r\.original_path\s+for share/);
     assert.match(src, /for share of o/);
+  });
+});
+
+describe('SW-07 sayfalı tarama ve kalıcı imleç (KI-39)', { skip }, () => {
+  let orphans;
+  before(async () => {
+    if (skip) return;
+    O.b = await makeOrg('b');
+    orphans = [];
+    for (let i = 0; i < 3; i += 1) {
+      const p = `organizations/${O.b.id}/content/${randomUUID()}/original`;
+      uploaded['media-originals'].add(p);
+      assert.ifError((await service.storage.from('media-originals').upload(p, Buffer.alloc(10, 1), { contentType: 'image/jpeg' })).error);
+      await age('media-originals', p, '25 hours');
+      orphans.push(p);
+    }
+    orphans.sort((x, y) => Buffer.compare(Buffer.from(x), Buffer.from(y))); // COLLATE "C" = bayt sırası
+  });
+  const mine = (data) => data.filter((x) => x.org_id === O.b.id && x.bucket === 'media-originals').map((x) => x.path);
+
+  test('p_scan 1: her çağrı imleçten sonraki tek nesneye bakar; imleç kalıcıdır ve sırayla ilerler', async () => {
+    await cursorAt(`organizations/${O.b.id}`);
+    for (const expected of orphans) {
+      const r = await service.rpc('media_stray_objects', { p_limit: 1000, p_scan: 1 });
+      assert.ifError(r.error);
+      assert.deepEqual(mine(r.data), [expected]);
+      assert.equal((await cursorOf('media-originals')).last, expected);
+    }
+  });
+
+  test('pay dolunca imleç son listelenen nesnede durur; atlanan nesne yok', async () => {
+    await cursorAt(`organizations/${O.b.id}`);
+    const seen = [];
+    for (let i = 0; i < orphans.length; i += 1) {
+      const r = await service.rpc('media_stray_objects', { p_limit: 2, p_scan: 100 }); // kova başına 1
+      assert.ifError(r.error);
+      assert.equal(r.data.filter((x) => x.bucket === 'media-originals').length, 1);
+      seen.push(...mine(r.data));
+      assert.equal((await cursorOf('media-originals')).last, seen.at(-1));
+    }
+    assert.deepEqual(seen, orphans);
+  });
+
+  test('kovanın sonunda imleç başa döner, tur sayısı artar', async () => {
+    const before0 = await cursorOf('media');
+    const before1 = await cursorOf('media-originals');
+    await psql('update public.media_stray_cursor set last_name = chr(1114111)'); // her addan sonra (C sırası)
+    const r = await service.rpc('media_stray_objects', { p_limit: 1000, p_scan: 10 });
+    assert.ifError(r.error);
+    assert.deepEqual(r.data, []);
+    const after0 = await cursorOf('media');
+    const after1 = await cursorOf('media-originals');
+    assert.deepEqual([after0.last, after1.last], ['', '']);
+    assert.equal(after0.passes, before0.passes + 1);
+    assert.equal(after1.passes, before1.passes + 1);
+    assert.equal((await psql("select count(*) from public.media_stray_cursor where last_pass_at > now() - interval '1 minute' and pass_started_at > now() - interval '1 minute'")).trim(), '2');
+  });
+});
+
+describe('SW-08 imleç tablosu yalnız fonksiyonla yazılır', { skip }, () => {
+  test('anon/authenticated okuyamaz; service_role yalnız okur; RLS açık', async () => {
+    assert.ok((await anon.from('media_stray_cursor').select('bucket')).error);
+    assert.ok((await O.a.client.from('media_stray_cursor').select('bucket')).error);
+    const s = await service.from('media_stray_cursor').select('bucket, passes, pass_started_at').order('bucket');
+    assert.ifError(s.error);
+    assert.deepEqual(s.data.map((x) => x.bucket), ['media', 'media-originals']);
+    assert.ok((await service.from('media_stray_cursor').update({ last_name: '' }).eq('bucket', 'media')).error, 'service_role yazamaz');
+    assert.equal((await psql("select relrowsecurity::text from pg_class where oid = 'public.media_stray_cursor'::regclass")).trim(), 'true');
+  });
+});
+
+describe('SW-09 zaman aşımı imleci bozmaz; eşzamanlı süpürme sıraya girer', { skip }, () => {
+  test('imleç satırı kilitliyken çağrı statement_timeout (57014) ile düşer, imleç değişmez', async () => {
+    await cursorAt(`organizations/${O.a.id}`);
+    assert.ok(dbUrlLocal);
+    // Süren bir süpürmeyi taklit: imleç satırlarını 3 sn kilitleyen ayrı psql oturumu (yalnız yerel)
+    const holder = spawn('psql', [dbUrl, '-X', '-q', '-v', 'ON_ERROR_STOP=1', '-c',
+      'begin; select 1 from public.media_stray_cursor for update; select pg_sleep(3); commit;']);
+    const done = new Promise((resolve) => holder.on('exit', resolve));
+    await new Promise((r) => setTimeout(r, 500));
+    await assert.rejects(
+      () => psql("begin; set local statement_timeout = '500ms'; select count(*) from public.media_stray_objects(1000, 10); commit"),
+      (err) => /statement timeout/.test(String(err.stderr)),
+    );
+    await done;
+    assert.equal((await cursorOf('media')).last, `organizations/${O.a.id}`);
+    assert.equal((await cursorOf('media-originals')).last, `organizations/${O.a.id}`);
   });
 });

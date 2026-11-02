@@ -708,6 +708,33 @@ export type Database = {
           },
         ]
       }
+      media_stray_cursor: {
+        Row: {
+          bucket: string
+          last_name: string
+          last_pass_at: string | null
+          pass_started_at: string
+          passes: number
+          updated_at: string
+        }
+        Insert: {
+          bucket: string
+          last_name?: string
+          last_pass_at?: string | null
+          pass_started_at?: string
+          passes?: number
+          updated_at?: string
+        }
+        Update: {
+          bucket?: string
+          last_name?: string
+          last_pass_at?: string | null
+          pass_started_at?: string
+          passes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       neighborhoods: {
         Row: {
           id: number
@@ -2449,6 +2476,7 @@ export type Database = {
       media_stray_objects: {
         Args: {
           p_limit: number
+          p_scan?: number
         }
         Returns: {
           bucket: string

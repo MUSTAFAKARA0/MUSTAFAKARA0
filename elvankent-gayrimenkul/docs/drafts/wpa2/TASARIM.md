@@ -215,7 +215,7 @@ B `20261027000002_media_column_privileges.sql`, C `20261027000003_media_storage_
   boyutla yarışamaz (güvenlik incelemesi MEDIUM). Sahibin `storage.objects` UPDATE hakkı A'nın 04'ünde denetlenir.
 - **D** `20261031000001_media_stray_sweep.sql`: `media_stray_objects` (service_role) güncel taban dışındaki 1 saatten eski
   varyantları ve satırsız 24 saatten eski orijinalleri listeler (kova başına yarı pay); günlük cron siler; `MEDIA_STRAY_SWEEP=off`
-  geri yükleme sırasında kapatır. Ölçek sınırı KI-39.
+  geri yükleme sırasında kapatır. Ölçek: KI-39 ile sayfalı tarama (kalıcı imleç `media_stray_cursor`, `p_scan`), zaman aşımı ve 7 günü aşan tur izlemeye bildirilir.
 - **İncelemeler (genel amaçlı ajanlar, ecc yok):** güvenlik: açık CRITICAL/HIGH yok; MEDIUM (sil + yeniden yükle yarışı) →
   FOR SHARE; LOW (yalnız-DB geri yükleme sonrası süpürme) → kapatma anahtarı. Veritabanı: D onay; C koşullu → #1 düzeltildi
   (+ test SW-04b); #3 kova payı; #4 `x-upsert`; #5/#6 README; #7 sürümleme denetimi (C 01 14. satır); #2 → KI-39.

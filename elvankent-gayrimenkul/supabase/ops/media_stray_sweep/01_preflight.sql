@@ -34,17 +34,27 @@ select sira, kontrol, deger, durum from (
                 and to_regprocedure('public.media_finalize(uuid,text,text,smallint[],integer,integer,text)') is not null
               then 'TAMAM' else 'DUR: apply A first — media_finalize_rpc/03_apply.sql uygulanmamış' end
   union all
-  select 5, 'D uygulanmış mı — media_stray_objects  [KAYDET]',
-         (to_regprocedure('public.media_stray_objects(integer)') is not null)::text,
-         case when to_regprocedure('public.media_stray_objects(integer)') is null then 'TAMAM (henüz yok)' else 'BİLGİ: zaten var; 03 yeniden kurar (zararsız)' end
+  select 5, 'D uygulanmış mı — media_stray_objects / media_stray_cursor  [KAYDET]',
+         (to_regprocedure('public.media_stray_objects(integer,integer)') is not null)::text || ' / ' || (to_regclass('public.media_stray_cursor') is not null)::text,
+         case when to_regprocedure('public.media_stray_objects(integer,integer)') is null and to_regclass('public.media_stray_cursor') is null
+                   and to_regprocedure('public.media_stray_objects(integer)') is null then 'TAMAM (henüz yok)'
+              else 'BİLGİ: zaten var (ya da sayfasız eski sürüm); 03 yeniden kurar, imleç korunur (zararsız)' end
   union all
   select 6, 'media / media-originals kovalarındaki nesne sayısı (yalnızca sayı)  [KAYDET]',
          (select count(*)::text from storage.objects where bucket_id in ('media', 'media-originals')),
-         'BİLGİ: D yalnız okur; silmeyi günlük cron yapar (yeni kodla)'
+         'BİLGİ: D dosyalara dokunmaz; silmeyi günlük cron yapar (yeni kodla)'
   union all
   select 7, '1 dakikadan uzun açık işlem',
          (select count(*)::text from pg_stat_activity where backend_type = 'client backend' and xact_start < now() - interval '1 minute' and pid <> pg_backend_pid()),
          case when (select count(*) from pg_stat_activity where backend_type = 'client backend' and xact_start < now() - interval '1 minute' and pid <> pg_backend_pid()) = 0
               then 'TAMAM' else 'DUR: uzun işlem bekletebilir; bitmesini bekleyin' end
+  union all
+  select 8, 'storage.objects (bucket_id, name COLLATE "C") indeksi (sayfalama, KI-39)',
+         (exists (select 1 from pg_indexes i where i.schemaname = 'storage' and i.tablename = 'objects'
+                   and i.indexdef ~* '\(bucket_id, name COLLATE "C"\)'))::text,
+         case when exists (select 1 from pg_indexes i where i.schemaname = 'storage' and i.tablename = 'objects'
+                            and i.indexdef ~* '\(bucket_id, name COLLATE "C"\)')
+              then 'TAMAM (her sayfa indeksle okunur)'
+              else 'BİLGİ: indeks yok (eski Storage sürümü); sayfalama doğru çalışır ama her sayfa kovayı sıralar — sahip ve KI-39 notu' end
 ) kontroller
 order by sira;

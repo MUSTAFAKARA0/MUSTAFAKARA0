@@ -6,6 +6,8 @@ import { serverEnv } from '@/lib/server-env';
 import { isMissingRpc } from '@/modules/media/finalize';
 import { mediaFolderOf, pathsOwnedByOrg, queueItemIsSafe, removeMediaFiles, removeMediaFolder } from '@/modules/media/server';
 import { MEDIA_BUCKETS } from '@/modules/media/variants';
+import { sweepStray, type StraySweepDeps } from '@/modules/media/stray-sweep';
+import { reportError } from '@/modules/monitoring/report';
 import type { DB } from '@/lib/supabase/server';
 
 export const maxDuration = 60;
@@ -80,54 +82,20 @@ async function drainFileQueue(service: DB): Promise<{ skipped?: boolean; claimed
   return { claimed, removed, failed, unsafe: skipped };
 }
 
-const STRAY_BATCH = 500;
-const STRAY_MAX_BATCHES = 4;
-
 /**
- * KI-38: başıboş dosyalar (bekleyen D, `media_stray_objects`): satırın güncel tabanında olmayan 1 saatten eski
- * varyantlar ve satırı olmayan 24 saatten eski orijinaller. Yalnız kendi kurum ön ekindeki güvenli yollar silinir.
- * RPC yoksa (D uygulanmamış şema) atlanır.
+ * KI-38 / KI-39: başıboş dosyalar (bekleyen D). Sayfalı tarama, süre bütçesi ve izleme: src/modules/media/stray-sweep.ts.
+ * RPC yoksa (D uygulanmamış şema) atlanır. Kapatma anahtarı: yalnız veritabanı geri yüklemesinden sonra (satırlar geri
+ * gitmiş, dosyalar yeni) süpürme hâlâ gerekli dosyaları silebilir. BACKUP_RESTORE.md: geri yüklemeden önce MEDIA_STRAY_SWEEP=off.
  */
-async function sweepStray(service: DB): Promise<{ skipped?: boolean; removed: number; failed: number; unsafe: number; error?: string }> {
-  let removed = 0;
-  let failed = 0;
-  let unsafe = 0;
-  // Kapatma anahtarı: yalnız veritabanı geri yüklemesinden sonra (satırlar geri gitmiş, dosyalar yeni) süpürme
-  // hâlâ gerekli dosyaları silebilir. BACKUP_RESTORE.md: geri yüklemeden önce MEDIA_STRAY_SWEEP=off.
-  if (process.env.MEDIA_STRAY_SWEEP === 'off') return { skipped: true, removed, failed, unsafe };
-  for (let batch = 0; batch < STRAY_MAX_BATCHES; batch += 1) {
-    const { data, error } = await service.rpc('media_stray_objects', { p_limit: STRAY_BATCH });
-    if (error) {
-      if (isMissingRpc(error, 'media_stray_objects')) return { skipped: true, removed, failed, unsafe };
-      console.error('[media-cleanup] stray list failed', { code: error.code, message: error.message });
-      return { removed, failed, unsafe, error: 'stray_list_failed' };
-    }
-    const byBucket = new Map<string, string[]>();
-    for (const item of data ?? []) {
-      if (!ALLOWED_BUCKETS.has(item.bucket) || !queueItemIsSafe(item)) {
-        unsafe += 1;
-        continue;
-      }
-      byBucket.set(item.bucket, [...(byBucket.get(item.bucket) ?? []), item.path]);
-    }
-    let progressed = false;
-    for (const [bucket, paths] of byBucket) {
-      const { error: removeError } = await service.storage.from(bucket).remove(paths);
-      if (removeError) {
-        failed += paths.length;
-        console.error('[media-cleanup] stray remove failed', { bucket, count: paths.length, message: removeError.message });
-      } else {
-        removed += paths.length;
-        progressed = true;
-      }
-    }
-    // Her kova en çok yarı pay alır: hiçbir kova payını doldurmadıysa ya da hiçbir şey silinemediyse dur (sonsuz döngü yok)
-    const list = data ?? [];
-    const variants = list.filter((x) => x.bucket === MEDIA_BUCKETS.public).length;
-    const originals = list.length - variants;
-    if (!progressed || (variants < Math.ceil(STRAY_BATCH / 2) && originals < Math.floor(STRAY_BATCH / 2))) break;
-  }
-  return { removed, failed, unsafe };
+function strayDeps(service: DB): StraySweepDeps {
+  return {
+    disabled: process.env.MEDIA_STRAY_SWEEP === 'off',
+    list: (limit, scan) => service.rpc('media_stray_objects', { p_limit: limit, p_scan: scan }),
+    remove: (bucket, paths) => service.storage.from(bucket).remove(paths),
+    cursor: () => service.from('media_stray_cursor').select('bucket, passes, pass_started_at'),
+    isSafe: (item) => queueItemIsSafe(item),
+    report: ({ name, message }) => reportError({ kind: 'server', name, message, path: '/api/cron/media-cleanup', method: 'GET', routePath: '/api/cron/media-cleanup', routeType: 'route', source: 'cron' }),
+  };
 }
 
 /**
@@ -172,7 +140,7 @@ export async function GET(request: Request) {
   for (const orgId of orgs) revalidateTag(cacheTags.properties(orgId), 'max');
 
   const queue = await drainFileQueue(service);
-  const stray = await sweepStray(service);
+  const stray = await sweepStray(strayDeps(service));
 
   const { data: purgedAudit } = await service.rpc('purge_old_audit_logs', { p_days: 730 });
 
