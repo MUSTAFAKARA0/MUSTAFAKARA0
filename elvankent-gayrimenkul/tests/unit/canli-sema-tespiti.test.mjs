@@ -433,8 +433,8 @@ describe('KT-12 O-5a uygulama iş akışı (elvankent-o5a-uygula.yml) ve betiği
     assert.equal(req.length, 1);
     assert.match(req[0], /^(# )?CALISTIR=evet$/);
   });
-  test('sırayla kapılar: tetik → taze yedek (≤ 3 saat) → istemci → uygulama; sır yalnız son adımda; izinler dar', () => {
-    const order = ['ki23-tetik-kontrol.sh', 'Taze yedek kapısı', '[ "$yas" -le 10800 ]', 'PostgreSQL istemcisi', 'secrets.SUPABASE_DB_URL'];
+  test('sırayla kapılar: tetik → çalışan yedek yok → taze yedek (≤ 3 saat) → istemci → uygulama; sır yalnız son adımda; izinler dar', () => {
+    const order = ['ki23-tetik-kontrol.sh', 'Taze yedek kapısı', 'for d in queued in_progress waiting requested pending', '[ "$suren" -eq 0 ]', '[ "$yas" -le 10800 ]', 'PostgreSQL istemcisi', 'secrets.SUPABASE_DB_URL'];
     let at = -1;
     for (const o of order) { const i = wf.indexOf(o); assert.ok(i > at, `sıra: ${o}`); at = i; }
     assert.match(wf, /\npermissions:\n  contents: read\n  actions: read\n\n/);

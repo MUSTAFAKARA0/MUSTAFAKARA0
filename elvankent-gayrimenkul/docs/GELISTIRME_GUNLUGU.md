@@ -23,6 +23,19 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (21) · K-45: O-5a canlıya uygulandı (#4 "SONUÇ: TAMAM"); #2 yarıda kaldı, yedek kapısı sıkılaştırıldı
+
+- **O-5a #2** (`282c872`, 08:45 UTC): 01 `karay_platform` ve 02 `design_family_access` uygulandı (her biri tek işlem, geçmiş kaydıyla);
+  03 `office_site_management` `lock_timeout` ile durdu (SQLSTATE 55P03), işlem geri alındı, sonrası uygulanmadı. Neden: sahibin elle başlattığı
+  backup #50 (08:44:42–08:47:04) aynı anda çalışıyordu; `pg_dump`'ın tablo kilitleri `site_config_revisions` üzerindeki `DROP/CREATE POLICY`'yi
+  bekletti. Kapı yalnız "son başarılı yedek ≤ 3 saat"e bakıyordu, çalışan yedeğe bakmıyordu.
+- **O-5a #3** (`07c6313`): sahibin satırı kapattığı commit; tetik "satır açık değil" diyerek beklendiği gibi reddetti (kırmızı görünür, iş yapılmadı).
+- **O-5a #4** (`b40fbf0`, 08:53 UTC, 43 sn): ön kontrol 21 temel VAR, TUTARLILIK TAMAM, zaten var 2 → 03…09 (7 dosya) uygulandı. Son kontrol:
+  migration 1–30 VAR 30/30, `karay_schema_version()` = `20261011000001`, postflight_v2 yalnız 27 (KARAYS, ayrı adım), geçmiş
+  `AYNI (O-5a kaydı)=9 · İÇERİKSİZ=21 · KAYITSIZ=1` → **SONUÇ: TAMAM**.
+- **Sıkılaştırma:** iş akışının yedek kapısı artık çalışan/sırada bir `elvankent-backup` koşusu varsa da durur (KT-12 sırası güncellendi);
+  istek dosyası yeniden kapatıldı (`# CALISTIR=evet`). Sıradaki: duman testleri (sahip), ardından KARAYS marka runbook'u (ayrı onay).
+
 ### 02.11.2026 (20) · K-44: ilk zamanlanmış gece yedeği doğrulandı — Faz A kapanabilir
 
 - **Backup #49** (`schedule`, varsayılan dal `a0f0a67`; cron 01:23 UTC, başlangıç 07:46 UTC — GitHub kuyruğu ≈6 saat): sürüm kapısı geçti

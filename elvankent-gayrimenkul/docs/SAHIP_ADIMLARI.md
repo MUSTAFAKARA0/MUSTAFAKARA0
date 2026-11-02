@@ -41,7 +41,7 @@ Vercel › production projesi › Settings › Environment Variables: **`VERCEL_
 Zamanlanmış koşu GitHub'da 5–6 saat gecikmeli başlıyor (önceki koşular 06:15–07:38 UTC). Ben izliyorum; bir şey yapmanız gerekmez.
 Bugün akşama kadar başlamazsa size "Run workflow" (varsayılan dal) ile elle yedek almanızı söyleyeceğim.
 
-### 5. ✓ O-5a onayı VERİLDİ (02.11) — uygulama: aşağıdaki "O-5a çalıştırma" adımları
+### 5. ✓ O-5a CANLIDA (02.11, #4 "SONUÇ: TAMAM") — kalan: aşağıdaki 5. adım (duman testi)
 Satış ve müşteri açma akışlarını (demo formu, yeni ofis, davet, KARAY konsolu, alan adı) açan 9 migration. Onay cümlesi:
 "O-5a: supabase/ops/o5a altındaki 9 dosyanın sırayla canlıya uygulanmasını onaylıyorum." Uygulama yöntemi birlikte seçilecek
 (dosyalar 7–44 KB; telefonda SQL Editor zorlanabilir — bilgisayardan ya da ayrı onaylı bir yazma iş akışıyla).
@@ -60,7 +60,7 @@ Satış ve müşteri açma akışlarını (demo formu, yeni ofis, davet, KARAY k
 
 ## O-5a çalıştırma (onay verildi; iş akışı CI'dan geçince)
 
-1. Taze yedek (son 3 saat içinde olmalı): https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/workflows/elvankent-backup.yml
+1. Taze yedek (son 3 saat içinde olmalı; yedek **bitip yeşil olmadan** O-5a'yı tetiklemeyin): https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/workflows/elvankent-backup.yml
    › Run workflow (varsayılan dal) › yeşil olmasını bekleyin.
 2. İstek dosyası: https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/edit/claude/karays-mission-control-vn8g65/elvankent-gayrimenkul/ops-requests/o5a-uygula.request
    › son satırı tam olarak `CALISTIR=evet` yapın › Commit changes.

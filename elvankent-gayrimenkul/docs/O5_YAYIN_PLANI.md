@@ -1,6 +1,6 @@
 # O-5 · Canlı veritabanı migration planı (sıralı, geri dönüşü tanımlı) — K-33, güncelleme K-34 (01.11.2026)
 
-**Durum: O-5a ONAYLANDI (sahip, 02.11.2026) — uygulama iş akışı hazır, sahibin tetiklemesini bekliyor (K-43).** §2.7 üç koşulu sağlandı (K-42). (Önceki: ENGELLİ, K-35.) Hiçbir aşama başlatılmadı. Ön koşul 0.4 (İÇERİKSİZ geçmiş) çözülmeden hiçbir aşama
+**Durum: O-5a CANLIYA UYGULANDI (02.11.2026, iş akışı #4 "SONUÇ: TAMAM", K-45). Sıradaki aşama KARAYS marka runbook'u — ayrı onay.** §2.7 üç koşulu sağlandı (K-42). (Önceki: ENGELLİ, K-35.) Hiçbir aşama başlatılmadı. Ön koşul 0.4 (İÇERİKSİZ geçmiş) çözülmeden hiçbir aşama
 önerilmez. Her aşama **ayrı, açık, yazılı sahip onayı** ister; bir aşamanın onayı sonrakini
 kapsamaz. OPS-02 bayrağı (`enforce_subscription_limits`) bu planın hiçbir aşamasında açılmaz (ayrı karar, K19 §8 birim 5b).
 

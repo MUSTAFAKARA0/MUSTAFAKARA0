@@ -6,7 +6,8 @@
 #     gönderim (çalışma dalı). Satır açıkken başka düzenleme, Actions'taki "Re-run" ve geliştirme commit'leri ("Claude-Session:")
 #     çalıştırmaz (scripts/ki23-tetik-kontrol.sh, run_attempt == 1).
 #   - Ortam "o5a-uygula" (sahip: Required reviewers) — her çalıştırma "Review deployments › Approve" ister.
-#   - Taze yedek kapısı: son 3 saatte başarıyla biten bir elvankent-backup koşusu yoksa veritabanına bağlanmadan durur.
+#   - Taze yedek kapısı: son 3 saatte başarıyla biten bir elvankent-backup koşusu yoksa ya da şu an çalışan/sırada bir yedek
+#     varsa veritabanına bağlanmadan durur.
 # Ne yapar (scripts/o5a-uygula.sh): paket SHA-256 + üretici kontrolü → salt okunur ön kontrol → her dosya AYRI ve TEK işlemde
 # (lock_timeout 10 sn, statement_timeout 300 sn; gövde + geçmiş kaydı) → her dosyadan sonra salt okunur tespit → son kontrol
 # (30 VAR, karay_schema_version, postflight_v2 yalnız 27, geçmişte 9 O-5a kaydı). Hata → işlem geri alınır, sonraki dosyaya geçilmez.
@@ -54,11 +55,18 @@ jobs:
           YENI: ${{ github.sha }}
           TETIK_DOSYA: elvankent-gayrimenkul/ops-requests/o5a-uygula.request
         run: bash scripts/ki23-tetik-kontrol.sh "$ONCEKI" "$YENI"
-      - name: Taze yedek kapısı (son 3 saatte başarılı elvankent-backup)
+      - name: Taze yedek kapısı (son 3 saatte başarılı elvankent-backup; çalışan yedek yok)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # Çalışan/sırada bir yedek varsa durur: pg_dump tablolarda kilit tutar, DDL kilit beklemesine düşer (O-5a #2, 55P03)
+          suren=$(for d in queued in_progress waiting requested pending; do
+            curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/elvankent-backup.yml/runs?status=$d&per_page=1" \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin)["total_count"])'
+          done | awk '{t+=$1} END {print t+0}')
+          [ "$suren" -eq 0 ] || { echo "::error::Şu an çalışan/sırada bir elvankent-backup var: bitip yeşil olmasını bekleyin, sonra yeniden tetikleyin"; exit 1; }
           son=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/elvankent-backup.yml/runs?status=success&per_page=1" \
             | python3 -c 'import json,sys; r=json.load(sys.stdin)["workflow_runs"]; print(r[0]["updated_at"] if r else "")')
