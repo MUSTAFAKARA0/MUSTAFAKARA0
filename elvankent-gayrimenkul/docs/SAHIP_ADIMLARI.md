@@ -41,7 +41,7 @@ Vercel › production projesi › Settings › Environment Variables: **`VERCEL_
 Zamanlanmış koşu GitHub'da 5–6 saat gecikmeli başlıyor (önceki koşular 06:15–07:38 UTC). Ben izliyorum; bir şey yapmanız gerekmez.
 Bugün akşama kadar başlamazsa size "Run workflow" (varsayılan dal) ile elle yedek almanızı söyleyeceğim.
 
-### 5. ✓ O-5a CANLIDA (02.11, #4 "SONUÇ: TAMAM") — kalan: aşağıdaki 5. adım (duman testi)
+### 5. ✓ O-5a CANLIDA (02.11, #4 "SONUÇ: TAMAM") — duman testi geçti; kalan: ofis paneline ofis hesabıyla giriş denemesi
 Satış ve müşteri açma akışlarını (demo formu, yeni ofis, davet, KARAY konsolu, alan adı) açan 9 migration. Onay cümlesi:
 "O-5a: supabase/ops/o5a altındaki 9 dosyanın sırayla canlıya uygulanmasını onaylıyorum." Uygulama yöntemi birlikte seçilecek
 (dosyalar 7–44 KB; telefonda SQL Editor zorlanabilir — bilgisayardan ya da ayrı onaylı bir yazma iş akışıyla).

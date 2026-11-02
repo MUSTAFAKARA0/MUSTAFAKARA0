@@ -35,6 +35,10 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
   `AYNI (O-5a kaydı)=9 · İÇERİKSİZ=21 · KAYITSIZ=1` → **SONUÇ: TAMAM**.
 - **Sıkılaştırma:** iş akışının yedek kapısı artık çalışan/sırada bir `elvankent-backup` koşusu varsa da durur (KT-12 sırası güncellendi);
   istek dosyası yeniden kapatıldı (`# CALISTIR=evet`). Sıradaki: duman testleri (sahip), ardından KARAYS marka runbook'u (ayrı onay).
+- **Duman testi (sahip, 12:51–12:52 yerel saat, ekran görüntüleri):** KARAY sayfası "Bilgi al" formu → "Talebiniz alındı"; talep KARAY
+  konsolu › KARAY talepleri'nde "Yeni" olarak göründü (`karay_platform` canlıda çalışıyor). Konsol Genel bakış, Organizasyonlar (1 müşteri,
+  Yayında, kurulum 5/8), Web Siteleri (Elvankent, Yayında, sürüm 6) açıldı; kiracı sitesi (1 yayında ilan) açıldı; ofis paneli giriş
+  sayfası açıldı (ofis hesabıyla giriş ayrıca denenecek).
 
 ### 02.11.2026 (20) · K-44: ilk zamanlanmış gece yedeği doğrulandı — Faz A kapanabilir
 
