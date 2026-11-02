@@ -24,6 +24,16 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (34) · K-58: Aşama 4 duman testi geçti; yazılı onay; medya maddeleri canlıda doğrulandı
+
+- **Sahip onayı (sohbette, uygulama sonrası teyit):** "O-5 Aşama 4: media_finalize_rpc, media_privileges, media_storage_slots ve
+  media_stray_sweep runbook'larının iş akışıyla canlıya uygulanmasını onaylıyorum." (İş akışını sahip 20:22'de kendisi tetiklemişti.)
+- **Duman testi (sahip):** canlıda bir ilana fotoğraf yükleme, döndürme ve silme sorunsuz. KI-03…09, KI-36…39 → canlıda doğrulandı.
+- Sahip: yedek tamam, Mission Control APK #13 kuruldu; tanıtım videosu seslendirmesi beklemede (sahip kararı).
+- Özel alan adı: `www.elvankentgayrimenkul.com` müşteriye ait; bağlanması müşterinin onayı ve DNS erişimi gerektirir (D-13 ile birlikte).
+
+**Açık (sahip):** müşteriyle alan adı görüşmesi · karar paketi (D-11 öncelikli) · Sentry deneme olayı (sonra) · seslendirme (beklemede).
+
 ### 02.11.2026 (33) · K-57: O-5 Aşama 4 (medya) canlıya uygulandı (o5c #2 "SONUÇ: TAMAM")
 
 - Sahip istek satırını açtı (`353302e`, 20:22 TR) ve ortam onayını verdi; taze yedek #53 (20:20 TR) başarılı.

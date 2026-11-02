@@ -31,10 +31,10 @@ Redeploy. Bana "eklendi" yazın; deneme hatasıyla e-postayı birlikte doğrular
 ### 4. ✓ Mission Control PR #5 birleştirildi (02.11) — APK #13'ü kurun
 https://github.com/MUSTAFAKARA0/ecc-mission-control/pull/5 (pano: Yapılanlar / Yapılacaklar / Sahibin yapacakları; Bugün ne oldu; Oturum karnesi).
 
-### 5. Aşama 4 (medya) onayı
+### 5. ✓ Aşama 4 (medya) uygulandı ve duman testi geçti (02.11)
 Önce yeni kodla bir ilanda fotoğraf yükleme + döndürme + silme denemesi; sonra onay cümlesi (iş akışı `elvankent-o5c-uygula`, hazır).
 
-### 6. Özel alan adı — sonra
+### 6. Özel alan adı — önce müşteriyle görüşün (alan adı ve DNS müşterinin)
 Vercel'e `www.elvankentgayrimenkul.com` eklemek + `VERCEL_API_TOKEN` (1 yıl), `VERCEL_PROJECT_ID`, `VERCEL_TEAM_ID` (Production).
 
 ### 7. Açık kararlar — araştırma paketi hazır
