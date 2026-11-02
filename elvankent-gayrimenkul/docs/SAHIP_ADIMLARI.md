@@ -1,4 +1,4 @@
-# Sahibin yapacakları · güncel sıra (02.11.2026, K-40)
+# Sahibin yapacakları · güncel sıra (02.11.2026, K-50)
 
 > Değerleri (anahtar, şifre, bağlantı adresi) **kimseye yazmayın**, bana da göndermeyin. Bana "tamam", çıktı özeti ya da değer
 > görünmeyen ekran görüntüsü yeter. Önceki sürüm (31.10) git geçmişinde; oradaki A bölümü (gece yedeği kurulumu) ve O-4 / PR #3
@@ -16,40 +16,28 @@
 | KI-24 hazırlığı | R2 okuma anahtarı (`RESTORE_S3_*`) ve `restore-drill` ortam onayı tanımlandı |
 | PR #2 | Kapalı |
 
-## Sizin yapacaklarınız (sırayla)
+## Sizin yapacaklarınız (güncel, 02.11 K-50)
 
-### 1. ✓ Köken sorgusu — YAPILDI (02.11): 21 migration eksiksiz uygulanmış (KI23 §8.2)
-O-5a engelinin (İÇERİKSİZ geçmiş) üç koşulundan biri. Dosya küçük (≈ 5 KB), telefonda SQL Editor'ü dondurmaz.
-1. https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/blob/claude/karays-mission-control-vn8g65/elvankent-gayrimenkul/supabase/ops/canli_kayit_kokeni.sql
-   › "Raw" › tümünü kopyalayın.
-2. Supabase › **elvankent-demo** › SQL Editor › New query › yapıştırın › Run.
-3. Sonucu CSV olarak (ya da ekran görüntüsüyle) gönderin. İçinde kişisel veri yok (yalnız sürüm numaraları, VAR/YOK, işlem sayıları).
+Tamamlananlar (02.11): köken sorgusu · KI-24 gerçek prova · gece yedeği · O-5a (9 migration) · KARAYS marka · O-5 Aşama 3
+(4 runbook, bayrak KAPALI) · duman testleri · `o5a-uygula` ve `ki23-canli-denetim` ortamlarına onay kuralı · şerit metinleri onayı.
 
-### 2. ✓ KI-24 gerçek geri yükleme provası — BAŞARILI (02.11, #2). Kalan tek iş: `RESTORE_DRILL_REAL_DATA_APPROVED` → `false`
-Müşteri verisi GitHub'ın geçici makinesinde, yalnız oradaki yerel veritabanına yüklenir; iş bitince silinir; canlıya dokunulmaz.
-1. Bana yazılı onay: **"KI-24 gerçek prova: müşteri verisinin GitHub'ın geçici çalıştırıcısında işlenmesini onaylıyorum."**
-2. GitHub › Settings › Secrets and variables › Actions › **Variables** › `RESTORE_DRILL_REAL_DATA_APPROVED` = `true`.
-3. `elvankent-gayrimenkul/ops-requests/restore-drill.request` dosyasına (çalışma dalında) bir satır ekleyip "Commit changes".
-4. Actions › elvankent-restore-drill › "Review deployments" › Approve.
-5. Bitince değişkeni `false` yapın. Ben özetini okurum (BÜTÜNLÜK, Storage 25/25, DENETIM_G, DENETIM_FONKSIYON).
+### 1. O-6 geri alma kararı (kod yayınından önce)
+Öneri: "O-6: Yayından sonra site/panel açılmazsa ya da girişte hata olursa Vercel'de önceki sürüme dönülür; dönmeyi ben yaparım,
+Claude önerir." Yer: Vercel › mustafakara-0-7hh3 › Deployments › en üstteki Production › ⋯ › Instant Rollback (yalnız görün).
 
-### 3. ✓ Vercel kontrolü — YAPILDI (02.11): `VERCEL_API_TOKEN` ve `VERCEL_PROJECT_ID` YOK → özel alan adı için sonra eklenmeli (ayrı adım)
-Vercel › production projesi › Settings › Environment Variables: **`VERCEL_API_TOKEN`** ve **`VERCEL_PROJECT_ID`** adları var mı?
-(Değerleri değil, yalnız "var / yok".) Özel alan adı özelliği bunlar olmadan çalışmaz.
+### 2. Kod yayını PR'ını birleştirmek
+CI yeşil olunca PR linki gelir; birleştirme production dağıtımını başlatır. Sonra duman testi (KARAYS sayfası, konsol, ofis paneli).
 
-### 4. ✓ Gece yedeği — İLK ZAMANLANMIŞ KOŞU BAŞARILI (#49, 02.11); Faz A kapanabilir. (Aşağıdaki not geçmiş bilgi.)
-Zamanlanmış koşu GitHub'da 5–6 saat gecikmeli başlıyor (önceki koşular 06:15–07:38 UTC). Ben izliyorum; bir şey yapmanız gerekmez.
-Bugün akşama kadar başlamazsa size "Run workflow" (varsayılan dal) ile elle yedek almanızı söyleyeceğim.
+### 3. Özel alan adı değişkenleri (ikinci müşteriden önce)
+Vercel › Settings › Environment Variables (yalnız Production): `VERCEL_API_TOKEN` (https://vercel.com/account/settings/tokens,
+Sensitive), `VERCEL_PROJECT_ID` (Settings › General), takım altındaysa `VERCEL_TEAM_ID`. Değerleri bana göndermeyin.
 
-### 5. ✓ O-5a CANLIDA (02.11, #4 "SONUÇ: TAMAM") — duman testi geçti (ofis paneli dahil). KARAYS marka da canlıda (K-46)
-Satış ve müşteri açma akışlarını (demo formu, yeni ofis, davet, KARAY konsolu, alan adı) açan 9 migration. Onay cümlesi:
-"O-5a: supabase/ops/o5a altındaki 9 dosyanın sırayla canlıya uygulanmasını onaylıyorum." Uygulama yöntemi birlikte seçilecek
-(dosyalar 7–44 KB; telefonda SQL Editor zorlanabilir — bilgisayardan ya da ayrı onaylı bir yazma iş akışıyla).
+### 4. İsteğe bağlı: hata bildirimi
+`SENTRY_DSN` ya da `ERROR_WEBHOOK_URL` (şu an yok; hatalar yalnız Vercel kayıtlarında).
 
-### 6. Açık kararlar — acelesi yok
-- D-04 alt kararları: hatırlatma zamanları; 7 gün sonra hangi kısıt.
-- D-05 alt kararları: "salt okunur"un kapsamı, askıdaki sitenin görünümü; **saklama/silme süresi (hukukçu görüşü)**.
-- KI-34: D-01…D-03, D-06…D-14, D-16…D-18 (karar kaydında).
+### 5. Açık kararlar — acelesi yok
+- D-04 / D-05 alt kararları (hatırlatma zamanları, salt okunurun kapsamı, saklama süresi — hukukçu görüşü).
+- KI-34: D-01…D-03, D-06…D-14, D-16…D-18. Medya aşaması (Aşama 4) kod yayınından sonra ayrı onay.
 
 ## Benim yapacaklarım (onay gerektirmeyen)
 - Gece yedeğini izlemek ve sonucu yazmak.
