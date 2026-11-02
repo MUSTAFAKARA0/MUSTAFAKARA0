@@ -11,7 +11,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 | Production dalı | `2eeb5e1` (02.11.2026 18:23 TR, PR #5: tanıtım videosu + Aşama 4 iş akışı). Vercel production READY, `SENTRY_DSN` tanımlı; geri dönüş adayı `6b698e9`. Önceki: `6b698e9` (PR #4), `a0f0a67` (PR #3), `74013a5` (KARAY-01), `650fd4e` (O-4 güvenlik yaması) |
 | Çalışma dalı | `claude/karays-mission-control-vn8g65`, production ile aynı noktadan devam ediyor (02.11 fast-forward) |
 | Son kod commit'i | `2eeb5e1` (production'daki kod) |
-| Canlı veritabanı | 35 migration: 21 temel + O-5a (9, 02.11) + KARAYS marka (02.11) + Aşama 3 (quota_lock, ops02_limits, media_quota_lock, company_name; 02.11). `enforce_subscription_limits` = false. Bekleyen: Aşama 4 medya (4 dosya) |
+| Canlı veritabanı | 39 migration: 21 temel + O-5a (9) + KARAYS marka + Aşama 3 (4) + Aşama 4 medya (4) — hepsi 02.11. `enforce_subscription_limits` = false. Bekleyen migration yok |
 | CI | Son yeşil: #181 (`666d515`), #179 (`236ef1c`), #177 (`1d79589`, production birleştirmesi). Her push sonrası koşu bu günlüğe yazılır |
 | Yedek | Gece yedeği (R2) çalışıyor: zamanlanmış #49; O-5 öncesi elle #50–#52. Gerçek geri yükleme provası KI-24 #2 başarılı |
 | Güvenlik | Canlıya yazan iş akışları sahip onaylı ortamda (`o5a-uygula`, `ki23-canli-denetim`: Required reviewers). O-6: geri dönüşü Claude önerir, sahip onaylar, Claude Vercel'de uygular |
@@ -23,6 +23,17 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 **Sıradaki adım:** Aşama 4 medya migration'ları için plan ve sahip onayı (yeni medya kodu production'da; 4e ön koşulu sağlandı); ardından özel alan adı.
 
 ## Girişler
+
+### 02.11.2026 (33) · K-57: O-5 Aşama 4 (medya) canlıya uygulandı (o5c #2 "SONUÇ: TAMAM")
+
+- Sahip istek satırını açtı (`353302e`, 20:22 TR) ve ortam onayını verdi; taze yedek #53 (20:20 TR) başarılı.
+- `elvankent-o5c-uygula` #2: paket SHA `086e4c7a…`; ön kontrol 35 VAR; media_finalize_rpc, media_privileges, media_storage_slots,
+  media_stray_sweep — her birinde 01 DUR yok, 04 DUR/HATA yok. Son kontrol: 39/39 VAR, sürüm 20261018000001, postflight_v2 HATA yok,
+  `enforce_subscription_limits` = false, geçmiş 31 kayıt. C (storage.objects tetikleyicisi) canlıda yetki sorunu olmadan uygulandı.
+- CI #191 (`353302e`) kırmızı: KT-14 "istek satırı kapalı teslim edilir" — satır açık commit'te beklenen; satır kapatıldı.
+- Tanıtım videosuna özgün sentez müzik eklendi (`6ebf384`, çalışma dalında; yayın PR'ı seslendirmeyle birlikte).
+
+**Açık (sahip):** Aşama 4 duman testi (fotoğraf yükle/döndür/sil) · seslendirme kaydı · özel alan adı · Sentry deneme olayı · karar paketi.
 
 ### 02.11.2026 (32) · K-56: tanıtım videosu production'da (PR #5 → `2eeb5e1`)
 
