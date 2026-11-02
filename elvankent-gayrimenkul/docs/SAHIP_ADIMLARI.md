@@ -16,18 +16,16 @@
 | KI-24 hazırlığı | R2 okuma anahtarı (`RESTORE_S3_*`) ve `restore-drill` ortam onayı tanımlandı |
 | PR #2 | Kapalı |
 
-## Sizin yapacaklarınız (güncel, 02.11 K-59)
+## Sizin yapacaklarınız (güncel, 02.11 K-60)
 
 Tamamlananlar (02.11): O-5 Aşama 1–4 canlıda ve doğrulandı · tam kod (PR #4) ve tanıtım videosu (PR #5) yayında · Sentry bağlandı ·
 `VERCEL_API_TOKEN` / `VERCEL_PROJECT_ID` / `VERCEL_TEAM_ID` tanımlandı · onay kuralları · O-6 · D-13 (müşteri siteleri kendi alan adlarıyla) ·
 Mission Control PR #4/#5 ve APK #13
 
-### 1. KARAYS'in kendi alan adı (en önemli; e-posta buna bağlı)
-Örn. `karays.com.tr` — https://www.isimtescil.net veya https://www.natro.com. Alınan adı Claude'a yazın.
+### 1. KARAYS alan adı ✓ alındı (`karays.com`) — siteye bağlamak için onayınız bekleniyor
+Bağlanınca alan adının kökünde KARAYS tanıtım sayfası, `/platform`'da konsol açılır; eski `…vercel.app/karay` adresi kapanır.
 
-### 2. E-posta gönderimi (alan adından sonra) — şu an davet, şifre sıfırlama ve talep e-postaları GİTMİYOR
-https://resend.com/signup › Domains › Add Domain (Ireland) › DNS kayıtları › API Key (Sending access) › Vercel Production:
-`RESEND_API_KEY` (Secret), `EMAIL_FROM` = `KARAYS <bildirim@alan-adi>`, `EMAIL_PROVIDER` = `resend`.
+### 2. E-posta gönderimi ✓ (02.11 K-60) — Resend doğrulandı, şifre sıfırlama e-postası test edildi
 
 ### 3. Elvankent alan adı — önce müşteriyle görüşün
 Onay sonrası konsol › Web Siteleri › Elvankent › Domain ekranındaki DNS kayıtları müşteriye iletilir.
