@@ -24,6 +24,20 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (31) · K-55: Sentry bağlandı; KARAYS tanıtım videosu onaylandı; Mission Control panosu doğru
+
+- **Sentry:** sahip AB bölgesinde `karays` projesini açtı; Claude Vercel production'a `SENTRY_DSN` ekledi ve production'ı aynı kodla
+  yeniden dağıttı (`dpl_Dx3D…`, `6b698e9`). Bu ortamdan sentry.io'ya çıkış kapalı olduğu için deneme olayı sahibin tarayıcısından gönderilecek.
+- **Tanıtım videosu** (`3aabbec`, ajan): 59 sn, sessiz, Türkçe altyazılı (VTT), WebM 2,8 MB + MP4 1,7 MB + afiş; /karay `#tanitim` bölümü;
+  `/brand/karays/video/` proxy dışı (matcher'a webm/mp4/vtt). Gerçek müşteri adı videoda "Örnek Gayrimenkul" ile gizlendi, DEMO şeridi
+  yerine kapanışta "örnek (demo) veriler" notu. **Sahip onayı (sohbette): "Karays içinde hepsi olmuş onaylıyorum".** Birim 828, KARAY E2E 24/24.
+- **Mission Control:** PR #5 birleşti; eşitleme #12: production `6b698e9`, CI success (verified #182), yapılanlar 32, yapılacaklar 3,
+  engelli 4, sahip adımları 5 açık / 22 tamam, uyarı 0. APK #13 yeşil.
+- **Karar paketi:** [KARAR_ARASTIRMA_PAKETI.md](KARAR_ARASTIRMA_PAKETI.md) (web özetlerine dayalı; fiyatlar canlı sayfadan teyit edilmeli).
+- CI #184 (`0b69629`) kırmızı: runner'da 55324 portu dolu (canlı benzeri yığın başlamadı) — altyapı kaynaklı; #185 aynı kodla.
+
+**Açık (sahip):** Sentry deneme olayı · video yayın PR'ını birleştirmek · Aşama 4 onayı · özel alan adı · karar paketi (D-11 öncelikli).
+
 ### 02.11.2026 (30) · K-54: O-5 Aşama 4 (medya) uygulama iş akışı hazır (çalıştırılmadı); Mission Control geliştirmeleri
 
 - `elvankent-o5c-uygula.yml` + `scripts/o5c-uygula.sh` (o5b'den türetildi): media_finalize_rpc → media_privileges → media_storage_slots →

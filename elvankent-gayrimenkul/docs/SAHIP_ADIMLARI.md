@@ -24,11 +24,11 @@ Tamamlananlar (02.11): köken sorgusu · KI-24 gerçek prova · gece yedeği · 
 
 ### 2. ✓ Kod yayını PR #4 birleştirildi (02.11, production `6b698e9`, duman testi geçti)
 
-### 3. Hata bildirimi (Sentry) — şimdi
+### 3. ✓ Hata bildirimi (Sentry) bağlandı (02.11) — kalan: tarayıcıdan bir deneme olayı
 sentry.io (AB veri bölgesi) › Next.js projesi `karays` › DSN › Vercel › Settings › Environment Variables › `SENTRY_DSN` (Production) ›
 Redeploy. Bana "eklendi" yazın; deneme hatasıyla e-postayı birlikte doğrularız.
 
-### 4. Mission Control PR #5'i birleştirmek
+### 4. ✓ Mission Control PR #5 birleştirildi (02.11) — APK #13'ü kurun
 https://github.com/MUSTAFAKARA0/ecc-mission-control/pull/5 (pano: Yapılanlar / Yapılacaklar / Sahibin yapacakları; Bugün ne oldu; Oturum karnesi).
 
 ### 5. Aşama 4 (medya) onayı
