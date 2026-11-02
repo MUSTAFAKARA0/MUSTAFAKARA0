@@ -23,6 +23,14 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (16) · K-40: KI-23 canlı #8 TAMAM (biçim farkı); sahip adımları yenilendi
+
+- **Canlı #8 (sahip, 05:24 UTC):** G1–G4 TAMAM; 751 AYNI, 77 FARKLI yalnız fonksiyon; teşhis: başlık 77/77, CR'siz gövde 77/77, CR içeren 77
+  → farkın yalnız CRLF olduğu canlıda kanıtlandı. #9 kapanış commit'i tetikte durdu (beklenen). #6/#7 (03:11/03:14) önceki kural.
+- **SAHIP_ADIMLARI.md** 02.11 durumuna göre yeniden yazıldı (tamamlananlar + sıradaki 6 adım). PR #2 kapalı → KI-33 kapandı.
+- Gece yedeği: 06:47 UTC itibarıyla zamanlanmış koşu henüz başlamadı (gecikme deseni 06:15–07:38).
+- CI: K-39 `8277ea7` → elvankent-ci **#158 yeşil**.
+
 ### 02.11.2026 (15) · K-39: dört bağımsız çalışma — KI-23 fonksiyon farkı, gece yedeği, KI-24 hazırlık, müşteri yolculuğu
 
 - **KI-23 #6 (77 fonksiyon FARKLI):** yerelde tarihî demo paketleri CRLF ile kurulunca canlı #6 deseni birebir üretildi (751 AYNI,

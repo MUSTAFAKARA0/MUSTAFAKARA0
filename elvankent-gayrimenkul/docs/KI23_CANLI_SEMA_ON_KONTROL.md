@@ -291,3 +291,13 @@ LF kurulumu → hepsi AYNI; CRLF → başlık 77, ham 0, CR'siz 77 → TAMAM (bi
 bir başlık (oynaklık) değişince başlık 76 → çıkış 4. KI-24 gerçek provasında da aynı teşhis 9. adımda çalışır
 (`DENETIM_FONKSIYON=AYNI|BICIM|ACIKLANAMAZ`). Fonksiyonlar otomatik değiştirilmez; CRLF "düzeltmesi" gerekmiyor (davranış aynı) —
 istenirse O-5 sırasında fonksiyonlar LF ile yeniden oluşturulabilir (ayrı karar).
+
+### 8.1 Canlı sonuç — Actions #8 (02.11.2026 05:24 UTC, sahip tetikledi)
+
+`SONUÇ: TAMAM (biçim farkı)`. G1–G4 TAMAM; P: 751 AYNI, 77 FARKLI (yalnız fonksiyon), EKSİK/FAZLA 0; search_path SQL Editor ile aynı;
+PostgreSQL 17; varsayılan salt okunur ayar off (havuz iletmiyor), işlem salt okunur on. **Fonksiyon teşhisi:** beklenen 77, eşleşen imza
+77, başlık AYNI 77, gövde ham AYNI 0, **CR çıkarılınca AYNI 77**, CR içeren gövde 77, beklenmeyen 0. → Canlıdaki 77 fonksiyon farkının
+yalnız satır sonu biçimi (CRLF) olduğu artık **canlıda kanıtlandı**; tanımlar ve davranış başvuruyla aynı.
+
+**§2.7 karar kuralının durumu:** (2) şema/güvenlik denetimi ✓ (G TAMAM; tüm P farkları açıklandı). (1) köken sorgusu — bekliyor.
+(3) KI-24 gerçek provası 9. adım — bekliyor (sahip onayı). O-5a engeli bu ikisi gelene kadar açık.
