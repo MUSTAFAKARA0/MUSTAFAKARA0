@@ -2,6 +2,7 @@
 
 > **Tarih:** 11.10.2026 · **Denetlenen commit:** `6055693` · **Tür:** denetim ve plan; kod değişikliği yok.
 > **Eş belge:** [PHASE2_PRODUCTION_PREFLIGHT.md](PHASE2_PRODUCTION_PREFLIGHT.md) — teknik bulgular (`PF`, `SEC`, `OPS`), preflight akışı ve hazırlık sonucu.
+> **Araştırma paketi (02.11.2026):** [KARAR_ARASTIRMA_PAKETI.md](KARAR_ARASTIRMA_PAKETI.md) — her açık karar için seçenekler, öneri, uzman (hukukçu / mali müşavir) teyidi ve kaynaklar; tek sayfa özet tablo. Karar durumlarını değiştirmez.
 >
 > **Bu belge karar vermez; seçenekleri ve önerileri sunar.** "Önerilen seçenek" bir öneridir, kesinleşmiş değildir.
 >

@@ -1,4 +1,4 @@
-# Sahibin yapacakları · güncel sıra (02.11.2026, K-50)
+# Sahibin yapacakları · güncel sıra (02.11.2026, K-54)
 
 > Değerleri (anahtar, şifre, bağlantı adresi) **kimseye yazmayın**, bana da göndermeyin. Bana "tamam", çıktı özeti ya da değer
 > görünmeyen ekran görüntüsü yeter. Önceki sürüm (31.10) git geçmişinde; oradaki A bölümü (gece yedeği kurulumu) ve O-4 / PR #3
@@ -16,26 +16,30 @@
 | KI-24 hazırlığı | R2 okuma anahtarı (`RESTORE_S3_*`) ve `restore-drill` ortam onayı tanımlandı |
 | PR #2 | Kapalı |
 
-## Sizin yapacaklarınız (güncel, 02.11 K-50)
+## Sizin yapacaklarınız (güncel, 02.11 K-54)
 
-Tamamlananlar (02.11): köken sorgusu · KI-24 gerçek prova · gece yedeği · O-5a (9 migration) · KARAYS marka · O-5 Aşama 3
-(4 runbook, bayrak KAPALI) · duman testleri · `o5a-uygula` ve `ki23-canli-denetim` ortamlarına onay kuralı · şerit metinleri onayı.
+Tamamlananlar (02.11): köken sorgusu · KI-24 gerçek prova · gece yedeği · O-5a (9 migration) · KARAYS marka · O-5 Aşama 3 · duman testleri · `o5a-uygula` ve `ki23-canli-denetim` onay kuralı · şerit metinleri · O-6 kararı · Vercel takım erişimi · tam kod yayını (PR #4) · Mission Control ajan düzeltmesi (MC PR #4)
 
 ### 1. ✓ O-6 kararı verildi (02.11): Claude söyler, siz onaylarsınız, Claude Vercel'de önceki sürüme döner
 
-### 2. Kod yayını PR'ını birleştirmek
-CI yeşil olunca PR linki gelir; birleştirme production dağıtımını başlatır. Sonra duman testi (KARAYS sayfası, konsol, ofis paneli).
+### 2. ✓ Kod yayını PR #4 birleştirildi (02.11, production `6b698e9`, duman testi geçti)
 
-### 3. Özel alan adı değişkenleri (ikinci müşteriden önce)
-Vercel › Settings › Environment Variables (yalnız Production): `VERCEL_API_TOKEN` (https://vercel.com/account/settings/tokens,
-Sensitive), `VERCEL_PROJECT_ID` (Settings › General), ve `VERCEL_TEAM_ID` (proje bir takım altında: Team Settings › Team ID). Değerleri bana göndermeyin.
+### 3. ✓ Hata bildirimi (Sentry) bağlandı (02.11) — deneme olayı sonra (sahip kararı)
+sentry.io (AB veri bölgesi) › Next.js projesi `karays` › DSN › Vercel › Settings › Environment Variables › `SENTRY_DSN` (Production) ›
+Redeploy. Bana "eklendi" yazın; deneme hatasıyla e-postayı birlikte doğrularız.
 
-### 4. İsteğe bağlı: hata bildirimi
-`SENTRY_DSN` ya da `ERROR_WEBHOOK_URL` (şu an yok; hatalar yalnız Vercel kayıtlarında).
+### 4. ✓ Mission Control PR #5 birleştirildi (02.11) — APK #13'ü kurun
+https://github.com/MUSTAFAKARA0/ecc-mission-control/pull/5 (pano: Yapılanlar / Yapılacaklar / Sahibin yapacakları; Bugün ne oldu; Oturum karnesi).
 
-### 5. Açık kararlar — acelesi yok
-- D-04 / D-05 alt kararları (hatırlatma zamanları, salt okunurun kapsamı, saklama süresi — hukukçu görüşü).
-- KI-34: D-01…D-03, D-06…D-14, D-16…D-18. Medya aşaması (Aşama 4) kod yayınından sonra ayrı onay.
+### 5. Aşama 4 (medya) onayı
+Önce yeni kodla bir ilanda fotoğraf yükleme + döndürme + silme denemesi; sonra onay cümlesi (iş akışı `elvankent-o5c-uygula`, hazır).
+
+### 6. Özel alan adı — sonra
+Vercel'e `www.elvankentgayrimenkul.com` eklemek + `VERCEL_API_TOKEN` (1 yıl), `VERCEL_PROJECT_ID`, `VERCEL_TEAM_ID` (Production).
+
+### 7. Açık kararlar — araştırma paketi hazır
+[KARAR_ARASTIRMA_PAKETI.md](KARAR_ARASTIRMA_PAKETI.md): her karar için seçenek, öneri, kaynak ve avukat/mali müşavir soruları.
+En acil: D-11 (Supabase/Vercel ücretli plan: Vercel Hobby ticari kullanıma kapalı; Supabase Free'de platform yedeği yok).
 
 ## Benim yapacaklarım (onay gerektirmeyen)
 - Gece yedeğini izlemek ve sonucu yazmak.

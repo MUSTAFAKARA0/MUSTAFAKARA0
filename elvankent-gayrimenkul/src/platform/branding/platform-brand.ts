@@ -48,6 +48,19 @@ export const PLATFORM_BRAND = {
    */
   ogImage: { url: '/karay/og-karays.png', width: 1200, height: 630 },
   /**
+   * KARAYS sayfasındaki ürün tanıtım videosu (1280 × 720, ~1 dk, sessiz; ekran yazıları ve Türkçe altyazı).
+   * Yerel derlemede örnek (demo) verilerle kaydedildi. public/brand/karays/video/ altındadır: /karay ve /platform
+   * proxy önekleri dışında, uzantıları (webm, mp4, vtt, webp) proxy'nin statik dosya olarak geçirdiği uzantılardır.
+   */
+  video: {
+    webm: '/brand/karays/video/karays-tanitim.webm',
+    mp4: '/brand/karays/video/karays-tanitim.mp4',
+    poster: '/brand/karays/video/karays-tanitim-poster.webp',
+    captions: '/brand/karays/video/karays-tanitim.tr.vtt',
+    width: 1280,
+    height: 720,
+  },
+  /**
    * Platform renkleri: lacivert, sinyal mavisi, turkuaz, arduvaz, bulut. Sinyal mavisi küçük metinde AA
    * kontrastını (4,5:1) karşılamaz (beyazda 4,49, bulutta 4,19); küçük metin aynı tonun koyusuyla
    * (#265fe8: beyazda 5,4, bulutta 5,0) yazılır (KARAYS sayfası bölüm başlıkları, K-19).

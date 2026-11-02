@@ -136,8 +136,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Statik dosyalar ve Next.js iç kaynakları hariç her istek (robots.txt, sitemap.xml, manifest dahil)
-    '/((?!_next/static|_next/image|__nextjs|.*\\.(?:ico|png|jpe?g|gif|webp|avif|svg|css|js|map|woff2?|ttf|otf)$).*)',
+    // Statik dosyalar ve Next.js iç kaynakları hariç her istek (robots.txt, sitemap.xml, manifest dahil).
+    // webm/mp4/vtt: KARAYS tanıtım videosu, altyazısı (public/brand/karays/video/); aşağıdaki önekler yine proxy'den geçer
+    '/((?!_next/static|_next/image|__nextjs|.*\\.(?:ico|png|jpe?g|gif|webp|avif|svg|css|js|map|woff2?|ttf|otf|webm|mp4|vtt)$).*)',
     // Uygulama rotaları dosya uzantısıyla bitse bile (ör. /platform/x.png) proxy'den geçer:
     // yüzey ayrımı ve kiracı başlığı uzantı hilesiyle atlatılamaz
     '/platform/:path*',
