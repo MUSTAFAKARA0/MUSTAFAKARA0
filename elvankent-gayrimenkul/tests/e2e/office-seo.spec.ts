@@ -1,6 +1,5 @@
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
-import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
@@ -36,7 +35,6 @@ const PASSWORD = `Seo-${randomBytes(6).toString('hex')}-8k`;
 const OLD_TITLE = `Eski SEO ${RUN}`;
 const NEW_TITLE = `Yeni Nesil Gayrimenkul ${RUN}`;
 const B_DRAFT = `B Taslak SEO ${RUN}`;
-const ogFile = path.join(__dirname, '.fixtures', 'kabul-logo.png');
 
 test.use({
   launchOptions: {
@@ -282,9 +280,12 @@ test('SEO-E: editör SEO taslağını yazar ama yayınlayamaz', async ({ page })
   await expect(page.getByText('Yayınlama yetkisi ofis yöneticisindedir', { exact: false })).toBeVisible();
   await page.goto('/admin/site');
   await expect(page).toHaveURL(/\/admin\/yetkisiz\?izin=settings\.manage/);
-  // Marka görseli (logo) yükleyemez; paylaşım görseli yükleyebilir
+  // Marka görseli (logo) yükleyemez; paylaşım görseli yükleyebilir. Logo bellekte üretilir
+  // (başka bir spec'in diske bıraktığı dosyaya bağlı kalınmaz)
+  const sharp = (await import('sharp')).default;
+  const logoPng = await sharp({ create: { width: 600, height: 200, channels: 4, background: { r: 16, g: 80, b: 70, alpha: 1 } } }).png().toBuffer();
   const logo = await page.request.post('/api/admin/branding', {
-    multipart: { kind: 'logo', file: { name: 'logo.png', mimeType: 'image/png', buffer: readFileSync(ogFile) } },
+    multipart: { kind: 'logo', file: { name: 'logo.png', mimeType: 'image/png', buffer: logoPng } },
     headers: { origin: baseURL },
   });
   expect(logo.status()).toBe(403);

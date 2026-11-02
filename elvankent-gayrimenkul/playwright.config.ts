@@ -10,6 +10,12 @@ try {
 } catch {
   // dosya yoksa ortam değişkenleri dışarıdan verilmiştir
 }
+// CI'da (GitHub Actions, CI=true) yalnızca işin kendi geçici yerel Supabase'i kullanılır: testler service_role
+// ile kiracı ve kullanıcı oluşturup siler; production veya paylaşılan bir projeye yönelirse hiç başlamaz
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+if (process.env.CI && supabaseUrl && !/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(supabaseUrl)) {
+  throw new Error("CI: NEXT_PUBLIC_SUPABASE_URL yerel değil; E2E CI'da yalnızca geçici yerel Supabase ile çalışır");
+}
 
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined;
 // Headless tarayıcı kullanıcı ajanı istatistikte "bot" sayılmasın diye normal Chrome UA kullanılır
@@ -29,9 +35,10 @@ export default defineConfig({
     locale: 'tr-TR',
     timezoneId: 'Europe/Istanbul',
     userAgent,
-    // Headless'ta da tam Chromium (çalışma dalı a052a7e, K-14): varsayılan Chrome Headless Shell
-    // --unsafely-treat-insecure-origin-as-secure bayrağını uygulamaz; önizleme testlerinin Secure çerezleri http test
-    // alan adlarında reddedilir. launchOptions'ın dışında durur (testler launchOptions'ı test.use ile değiştirir).
+    // Headless'ta da tam Chromium: varsayılan Chrome Headless Shell --unsafely-treat-insecure-origin-as-secure
+    // bayrağını uygulamaz, önizleme testlerinin Secure çerezleri http test alan adlarında reddedilir.
+    // launchOptions'ın dışında durur; testler test.use ile launchOptions'ı bütünüyle değiştirir.
+    // PLAYWRIGHT_CHROMIUM_PATH verilirse executablePath önceliklidir.
     channel: 'chromium',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

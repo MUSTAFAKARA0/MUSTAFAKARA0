@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from '@/components/common/intent-link';
 import { Building2, HardDrive, Home, Inbox, Plus, Users } from 'lucide-react';
 import { AdminPageHeader, Panel, StatCard } from '@/components/panel/ui';
@@ -11,6 +12,7 @@ import { listAuditLogs } from '@/modules/audit/queries';
 import { AuditList } from '@/components/panel/audit-list';
 import { requireSuperAdminPage } from '@/platform/auth/session';
 import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
+import emblem from '@/platform/branding/assets/karays-amblem.webp';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Genel bakış' };
@@ -41,7 +43,7 @@ export default async function PlatformOverviewPage() {
     { label: 'Dikkat', value: m.attention, href: '/platform/organizasyonlar?durum=attention', hint: 'süresi dolan davet, ödeme, bekleyen alan adı…', warn: m.attention > 0 },
     { label: 'Davet bekliyor', value: m.pendingInvitations, href: '/platform/organizasyonlar?durum=invited', hint: 'sahip hesabı etkinleşmedi' },
     { label: 'Kurulumda', value: m.setup, href: '/platform/organizasyonlar?durum=setup', hint: 'kurulum adımları eksik' },
-    { label: 'Yayına hazır', value: m.ready, href: '/platform/organizasyonlar?durum=ready', hint: 'KARAY teslimi bekliyor' },
+    { label: 'Yayına hazır', value: m.ready, href: '/platform/organizasyonlar?durum=ready', hint: 'KARAYS teslimi bekliyor' },
     { label: 'Yayında', value: m.live, href: '/platform/organizasyonlar?durum=live', hint: `${formatNumber(m.publishedSites)} yayınlanmış site açık` },
     { label: 'Alan adı bekliyor', value: m.domainsWaiting, href: '/platform/siteler', hint: 'doğrulama veya yönlendirme' },
     { label: 'Askıda', value: m.suspended, href: '/platform/organizasyonlar?durum=suspended', hint: 'askıda veya kapatılmış' },
@@ -64,8 +66,8 @@ export default async function PlatformOverviewPage() {
       <section aria-label="Platform yapısı" className="mb-6 overflow-hidden rounded-2xl border border-border bg-surface shadow-xs">
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element -- KARAY simgesi (logo paketi) */}
-            <img src={PLATFORM_BRAND.icons.svg} alt="" width={40} height={40} className="size-10" />
+            {/* KARAYS amblemi (01_LOGOLAR/karays-amblem.webp, 633 × 681) */}
+            <Image src={emblem} alt="" width={37} height={40} sizes="37px" className="h-10 w-auto" />
             <div>
               <p className="text-[15px] font-bold text-foreground">{PLATFORM_BRAND.name}</p>
               <p className="text-[12.5px] text-muted-foreground">Platform sahibi · {PLATFORM_BRAND.product}</p>
@@ -158,7 +160,7 @@ export default async function PlatformOverviewPage() {
             </ul>
           )}
         </Panel>
-        <Panel title="KARAY talepleri" description="KARAY sayfasındaki formdan gelen emlak ofisi adayları">
+        <Panel title="KARAYS talepleri" description="KARAYS sayfasındaki formdan gelen emlak ofisi adayları">
           {newLeads === null ? (
             <p className="text-sm text-muted-foreground">Talep kaydı henüz kurulmamış (migration 20261002000001).</p>
           ) : (

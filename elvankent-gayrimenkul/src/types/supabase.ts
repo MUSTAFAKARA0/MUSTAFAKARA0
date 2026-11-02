@@ -708,6 +708,33 @@ export type Database = {
           },
         ]
       }
+      media_stray_cursor: {
+        Row: {
+          bucket: string
+          last_name: string
+          last_pass_at: string | null
+          pass_started_at: string
+          passes: number
+          updated_at: string
+        }
+        Insert: {
+          bucket: string
+          last_name?: string
+          last_pass_at?: string | null
+          pass_started_at?: string
+          passes?: number
+          updated_at?: string
+        }
+        Update: {
+          bucket?: string
+          last_name?: string
+          last_pass_at?: string | null
+          pass_started_at?: string
+          passes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       neighborhoods: {
         Row: {
           id: number
@@ -2403,6 +2430,59 @@ export type Database = {
           p_ip_hash: string
         }
         Returns: undefined
+      }
+      media_finalize: {
+        Args: {
+          p_media: string
+          p_expected_base: string
+          p_public_base: string
+          p_variant_widths: number[]
+          p_width: number
+          p_height: number
+          p_blur: string
+        }
+        Returns: Json
+      }
+      media_mark_failed: {
+        Args: {
+          p_media: string
+          p_error: string
+        }
+        Returns: boolean
+      }
+      media_queue_claim: {
+        Args: {
+          p_limit: number
+        }
+        Returns: {
+          id: number
+          org_id: string
+          bucket: string
+          path: string
+        }[]
+      }
+      media_queue_done: {
+        Args: {
+          p_ids: number[]
+        }
+        Returns: number
+      }
+      media_storage_report: {
+        Args: {
+          p_org: string
+        }
+        Returns: Json
+      }
+      media_stray_objects: {
+        Args: {
+          p_limit: number
+          p_scan?: number
+        }
+        Returns: {
+          bucket: string
+          path: string
+          org_id: string
+        }[]
       }
       media_upload_allowed: {
         Args: {

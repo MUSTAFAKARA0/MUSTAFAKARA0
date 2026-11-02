@@ -42,7 +42,7 @@ export default async function DesignCatalogPage() {
     <>
       <AdminPageHeader
         title="Tasarım kataloğu"
-        description="KARAY'ın tasarım aileleri. Kapatılan aile yeni sitelerde ve ofis panellerinde seçenek olarak görünmez; o aileyi kullanan sitelerin yayındaki görünümü değişmez."
+        description="KARAYS'ın tasarım aileleri. Kapatılan aile yeni sitelerde ve ofis panellerinde seçenek olarak görünmez; o aileyi kullanan sitelerin yayındaki görünümü değişmez."
         back={{ href: '/platform/siteler', label: 'Web Siteleri' }}
       />
       <FamilyCatalogAdmin available={global.available} families={families} />

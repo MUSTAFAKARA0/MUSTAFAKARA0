@@ -209,7 +209,7 @@ test('E1 + E9 + E2 + E3 + E4: ofis A alan adını ekler → bekliyor (site açı
 
   // E3: yönlendirme yokken aktif olmaz
   await r.getByRole('button', { name: 'Bağlantıyı kontrol et' }).click();
-  await expect(page.getByText('henüz KARAY', { exact: false }).first()).toBeVisible();
+  await expect(page.getByText('henüz KARAYS', { exact: false }).first()).toBeVisible();
   await expect(r).toHaveAttribute('data-status', 'verified');
   setRecord(DOM_A, 'CNAME', `${TARGET_CNAME}.`);
   await r.getByRole('button', { name: 'Bağlantıyı kontrol et' }).click();

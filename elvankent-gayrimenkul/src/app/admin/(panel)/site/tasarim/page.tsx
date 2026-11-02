@@ -35,7 +35,7 @@ export default async function Page() {
         </div>
       ) : (
         <p className="rounded-2xl border border-border bg-surface px-5 py-4 text-[13.5px] text-muted-foreground" data-testid="no-families">
-          Ofisiniz için açılmış bir tasarım ailesi yok. Yeni tasarımlar için KARAY ile iletişime geçin. Tema ve varyantları aşağıdan düzenleyebilirsiniz.
+          Ofisiniz için açılmış bir tasarım ailesi yok. Yeni tasarımlar için KARAYS ile iletişime geçin. Tema ve varyantları aşağıdan düzenleyebilirsiniz.
         </p>
       )}
       <ThemeForm key={formKey} draft={site.draft} brand={brand} darkAllowed={site.overrides.dark_mode === true} name={site.brand.display_name} />

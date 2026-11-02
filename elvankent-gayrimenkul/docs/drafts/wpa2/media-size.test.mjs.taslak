@@ -1,0 +1,93 @@
+/**
+ * Medya boyutu eşlemesi (K-20) · kaynak düzeyinde denetimler (veritabanı gerektirmez).
+ * Veritabanı davranışı: tests/security/subscription-limits.test.mjs SL-06.
+ *
+ *  MS-01  processMedia gerçek boyutu media_record_sizes RPC'siyle kaydeder; RPC yoksa (eski veritabanı)
+ *         önceki davranışa düşer; kota aşımında dosyaları siler, kaydı başarısız işaretler
+ *  MS-02  Bekleyen migration'lar: boyut koruma tetikleyicisi, search_path='', yetki daraltma, geri dönüş
+ */
+import { describe, test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const root = new URL('../../', import.meta.url);
+const read = (p) => readFileSync(new URL(p, root), 'utf8');
+
+describe('MS-01 processMedia', () => {
+  const src = read('src/app/actions/media.ts');
+
+  test('RPC çağrılır ve final güncelleme variants_byte_size yazmaz', () => {
+    assert.match(src, /rpc\('media_record_sizes', \{ p_media: media\.id \}\)/);
+    const final = src.slice(src.indexOf("status: 'ready'"), src.indexOf('.select(ADMIN_MEDIA_FIELDS)', src.indexOf("status: 'ready'")));
+    assert.doesNotMatch(final, /variants_byte_size/);
+  });
+
+  test('RPC yoksa (PGRST202 / 42883) önceki davranışa düşülür', () => {
+    assert.match(src, /PGRST202/);
+    assert.match(src, /isMissingRpc\(sizeError\)/);
+    assert.match(src, /update\(\{ variants_byte_size: processed\.variantsBytes \}\)/);
+  });
+
+  test('plan_limit_storage, hazır fotoğrafın yeniden işlenmesi: hiçbir dosya silinmez, kayıt başarısız işaretlenmez', () => {
+    const start = src.indexOf("/plan_limit_storage/.test(sizeError.message ?? '') && media.status === 'ready'");
+    assert.ok(start > 0);
+    const block = src.slice(start, src.indexOf('} else if', start + 1));
+    assert.doesNotMatch(block, /\.remove\(/);
+    assert.doesNotMatch(block, /markFailed\(/);
+  });
+
+  test('plan_limit_storage, yeni yükleme: varyantlar ve orijinal silinir, kayıt başarısız işaretlenir, quota hatası', () => {
+    const start = src.lastIndexOf("/plan_limit_storage/.test(sizeError");
+    assert.ok(start > 0);
+    const block = src.slice(start, start + 800);
+    assert.match(block, /MEDIA_BUCKETS\.public\)\.remove\(variantPaths/);
+    assert.match(block, /MEDIA_BUCKETS\.originals\)\.remove\(\[media\.original_path\]\)/);
+    assert.match(block, /markFailed\(/);
+    assert.match(block, /'quota'/);
+  });
+
+  test('uygulama media_size_readonly tetikleyen doğrudan boyut yazımı yapmaz (yedek yol hariç)', () => {
+    const writes = src.match(/byte_size:/g) ?? [];
+    assert.deepEqual(writes.length, 2 + 1, 'insert (2) + eski veritabanı yedeği (1)');
+  });
+});
+
+describe('MS-02 bekleyen migration dosyaları', () => {
+  const quota = read('supabase/pending/20261026000001_media_quota_lock.sql');
+  const sizes = read('supabase/pending/20261026000003_media_size_reconcile.sql');
+
+  test('kota tetikleyicisi yetkisiz çağıranı kilitlemeden döndürür; service_role çalıştırma yetkisi kapalı', () => {
+    assert.match(quota, /user_org_ids\('media\.manage'\)/);
+    assert.match(quota, /is_super_admin\(\)/);
+    assert.ok(quota.indexOf('is_super_admin()') < quota.indexOf('pg_advisory_xact_lock'), 'kilit yetki denetiminden sonra');
+    assert.match(quota, /revoke all on function public\.media_quota_check\(\) from public, anon, authenticated, service_role;/);
+  });
+
+  test('media_record_sizes: definer, search_path boş, yetki denetimi, kilit, dar yetki', () => {
+    assert.match(sizes, /function public\.media_record_sizes\(p_media uuid\)[\s\S]*security definer[\s\S]*set search_path = ''/);
+    assert.match(sizes, /has_org_permission\(v_org, 'media\.manage'\)/);
+    assert.match(sizes, /errcode = '42501'/);
+    assert.match(sizes, /bucket_id = 'media-originals'/);
+    assert.match(sizes, /bucket_id = 'media'/);
+    assert.match(sizes, /karay\.quota:media_assets:/);
+    assert.match(sizes, /plan_limit_storage/);
+    assert.match(sizes, /revoke all on function public\.media_record_sizes\(uuid\) from public, anon;/);
+    assert.match(sizes, /grant execute on function public\.media_record_sizes\(uuid\) to authenticated;/);
+  });
+
+  test('koruma tetikleyicisi: yalnızca authenticated, SECURITY INVOKER, iki sütun, geri dönüş satırları', () => {
+    assert.match(sizes, /before update of byte_size, variants_byte_size on public\.media_assets/);
+    assert.match(sizes, /current_user = 'authenticated'/);
+    assert.match(sizes, /media_size_readonly/);
+    const guard = sizes.slice(sizes.indexOf('function public.media_assets_size_guard()'), sizes.indexOf('revoke all on function public.media_assets_size_guard'));
+    assert.doesNotMatch(guard, /security definer/);
+    assert.match(guard, /set search_path = ''/);
+    assert.match(sizes, /GERİ DÖNÜŞ:/);
+    assert.match(sizes, /drop trigger if exists media_assets_size_guard/);
+    assert.match(sizes, /drop function if exists public\.media_record_sizes\(uuid\)/);
+  });
+
+  test('pending dosyaları migrations/ dışında ve son migration’dan sonra sıralanır', () => {
+    assert.ok('20261026000003_media_size_reconcile.sql' > '20261026000001_media_quota_lock.sql');
+  });
+});

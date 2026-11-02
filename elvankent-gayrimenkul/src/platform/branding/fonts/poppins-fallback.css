@@ -1,0 +1,10 @@
+/* OTOMATİK ÜRETİLİR — elle düzenlemeyin: node scripts/fonts/build-local-fonts.mjs */
+/* Poppins yedeği: next/font'un Google yazı tipleri için önceden hesapladığı metrikler (düzen kayması olmaz) */
+@font-face {
+  font-family: 'Poppins Fallback';
+  src: local('Arial');
+  ascent-override: 93.62%;
+  descent-override: 31.21%;
+  line-gap-override: 8.92%;
+  size-adjust: 112.16%;
+}

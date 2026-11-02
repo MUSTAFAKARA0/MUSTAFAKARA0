@@ -1,0 +1,108 @@
+# KARAYS · Cloudflare R2 bağlantı teşhisi (yalnız elle; yedek iş akışından bağımsız)
+#
+# Backup #41: veritabanı yedeği hazır, R2'ye ilk aktarım "400 Bad Request" (önceki deneme "403 Forbidden").
+# Bu iş akışı yedeğin KULLANDIĞI sır ve değişkenlerle (yeni anahtar yok) R2'yi aşama aşama dener:
+#   0 ayarların biçimi · 1 kova erişimi (yalnız diagnostics/ öneki) · 2 diagnostics/ altına benzersiz küçük test dosyası
+#   · 3 geri okuma + SHA-256 · 4 YALNIZ o dosyanın silinmesi. Ayrıntı: elvankent-gayrimenkul/scripts/r2-diagnose.sh
+# Veritabanına bağlanmaz; müşteri verisi okumaz; var olan yedeklere dokunmaz (sync/delete/purge yok).
+# Log'a anahtar, uç nokta, hesap kimliği ya da ham hata metni yazılmaz; yalnız aşama ve güvenli hata kategorisi.
+#
+# Elle başlatma (ikisi de yalnız sizin eyleminizle çalışır; kod değişikliği tetiklemez):
+#   a) Actions › elvankent-r2-diagnose › Run workflow (GitHub bu düğmeyi yalnız iş akışı varsayılan dalda da varsa gösterir)
+#   b) Çalışma dalında elvankent-gayrimenkul/ops-requests/r2-diagnose.request dosyasını düzenleyip commit etmek
+#      (telefondan tarayıcıyla: dosya › kalem › bir satır ekle › Commit changes)
+name: elvankent-r2-diagnose
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ['claude/karays-mission-control-vn8g65']
+    paths: ['elvankent-gayrimenkul/ops-requests/r2-diagnose.request']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elvankent-r2-diagnose
+  cancel-in-progress: false
+
+jobs:
+  r2:
+    # Yalnız sahibin eylemi: Run workflow ya da istek dosyasını sahibin düzenlemesi. Geliştirme oturumunun commit'leri
+    # ("Claude-Session:" satırı taşır) istek dosyasına dokunsa bile teşhis kendiliğinden çalışmaz.
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, 'Claude-Session:') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            elvankent-gayrimenkul/scripts
+      - name: rclone (yedekle aynı kaynak ve sürüm)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rclone
+          rclone version | head -1
+          command -v aws >/dev/null && aws --version || echo "aws cli yok (ikinci görüş atlanır)"
+      - name: R2 teşhisi
+        env:
+          BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          BACKUP_S3_REGION: ${{ secrets.BACKUP_S3_REGION }}
+          BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+          BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET }}
+          BACKUP_S3_PROVIDER: ${{ vars.BACKUP_S3_PROVIDER }}
+          RUN_TAG: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: bash elvankent-gayrimenkul/scripts/r2-diagnose.sh
+
+  # Backup #43: media-originals aktarımında HTTP 501. 501'in hangi işlemde ve hangi tarafta oluştuğunu ölçer, aday çözümü
+  # (sabit güncel rclone, --s3-no-head) sentetik dosyayla doğrular. Ayrıntı: elvankent-gayrimenkul/scripts/storage-transfer-probe.sh
+  storage-probe:
+    needs: r2
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, 'Claude-Session:') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      RCLONE_NEW: v1.75.2
+      # rclone sürüm imzalama anahtarı (rclone.org/install: "gpg --recv-keys"); SHA256SUMS bu anahtarla imzalı olmalı
+      RCLONE_KEY_FPR: FBF737ECE9F8AB18604BD2AC93935E02FF3B54FA
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            elvankent-gayrimenkul/scripts
+      - name: rclone 1.60.1 (yedekteki) ve imzası doğrulanmış güncel sürüm
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq rclone unzip gnupg
+          bins="1.60.1=$(command -v rclone)"
+          cd "$RUNNER_TEMP"
+          base="https://github.com/rclone/rclone/releases/download/$RCLONE_NEW"
+          zip="rclone-$RCLONE_NEW-linux-amd64.zip"
+          if curl -fsSLO "$base/$zip" && curl -fsSLO "$base/SHA256SUMS" \
+             && gpg --batch --quiet --keyserver hkps://keyserver.ubuntu.com --recv-keys "$RCLONE_KEY_FPR" \
+             && gpg --batch --status-fd 1 --verify SHA256SUMS 2>/dev/null | grep -q "VALIDSIG .*$RCLONE_KEY_FPR" \
+             && grep " $zip\$" SHA256SUMS | sha256sum -c --quiet -; then
+            unzip -q "$zip"
+            bins="$bins ${RCLONE_NEW#v}=$RUNNER_TEMP/rclone-$RCLONE_NEW-linux-amd64/rclone"
+            echo "rclone $RCLONE_NEW: imza ($RCLONE_KEY_FPR) ve SHA-256 doğrulandı; özet $(sha256sum "$zip" | cut -d' ' -f1)"
+          else
+            echo "::warning title=Güncel rclone doğrulanamadı::$RCLONE_NEW imza/özet doğrulaması geçmedi; yalnız 1.60.1 ile ölçülür"
+          fi
+          echo "RCLONE_BINS=$bins" >> "$GITHUB_ENV"
+      - name: Storage → R2 aktarım sondası (kaynak salt okuma, hedef sentetik)
+        env:
+          SUPABASE_S3_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
+          SUPABASE_S3_REGION: ${{ secrets.SUPABASE_S3_REGION }}
+          SUPABASE_S3_ACCESS_KEY_ID: ${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}
+          SUPABASE_S3_SECRET_ACCESS_KEY: ${{ secrets.SUPABASE_S3_SECRET_ACCESS_KEY }}
+          BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          BACKUP_S3_REGION: ${{ secrets.BACKUP_S3_REGION }}
+          BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_S3_ACCESS_KEY_ID }}
+          BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_ACCESS_KEY }}
+          BACKUP_BUCKET: ${{ vars.BACKUP_BUCKET }}
+          BACKUP_S3_PROVIDER: ${{ vars.BACKUP_S3_PROVIDER }}
+          RUN_TAG: ${{ github.run_id }}-${{ github.run_attempt }}
+          PROBE_SOURCE_LIMIT: '25'
+        run: bash elvankent-gayrimenkul/scripts/storage-transfer-probe.sh

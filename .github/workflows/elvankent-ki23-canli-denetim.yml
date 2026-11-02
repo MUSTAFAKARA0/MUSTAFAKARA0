@@ -1,0 +1,74 @@
+# Elvankent Gayrimenkul — KI-23 canlı şema ve güvenlik denetimi (SALT OKUNUR), telefonda SQL Editor yerine.
+#
+# Ne yapar: supabase/ops/canli_sema_denetimi.sql (tek SELECT; yalnız sistem kataloğu; 828 nesne parmak izi + G1–G4) ve
+# supabase/ops/canli_fonksiyon_teshis.sql (fonksiyon farkını başlık/gövde/satır sonu bileşenlerine ayırır; yalnız sayılar) canlı
+# veritabanında, BAŞLANGIÇTA salt okunur açılan bir oturumda (PGOPTIONS default_transaction_read_only=on) çalışır.
+# Günlüğe yalnız G1–G4 sonucu ve AYNI/FARKLI/EKSİK/FAZLA sayıları yazılır (scripts/ki23-canli-denetim.sh).
+#
+# NE ZAMAN ÇALIŞIR — yalnız sahibin elle tetiklemesiyle:
+#   a) Sahibin GitHub web'den ops-requests/ki23-canli-denetim.request dosyasında "# CALISTIR=evet" satırını AÇTIĞI gönderim
+#      (çalışma dalında). TEK KULLANIMLIK: yalnız satırın kapalıdan açığa geçtiği gönderim çalışır (scripts/ki23-tetik-kontrol.sh);
+#      satır açıkken yapılan sıradan düzenlemeler ve Actions'taki "Re-run" yeni denetim başlatamaz. Yeniden çalıştırmak için
+#      sahip satırı kapatıp (commit) yeniden açar (commit). Geliştirme oturumunun commit'leri ("Claude-Session:") tetiklemez.
+#   b) workflow_dispatch (Actions › Run workflow) — GitHub bu düğmeyi yalnız iş akışı VARSAYILAN dalda bulunduğunda gösterir.
+#      Varsayılan dal production dalıdır; oraya bu dosya bu iş kapsamında GÖNDERİLMEZ (ayrı karar: KI23 belgesi §7).
+#   İsteğe bağlı ek kapı: GitHub › Settings › Environments › "ki23-canli-denetim" › Required reviewers: sahip.
+#
+# Güvenceler (tests/unit/canli-sema-tespiti.test.mjs KT-09 denetler):
+#   - Yalnız contents: read; sır olarak yalnız SUPABASE_DB_URL (mevcut, yedek iş akışıyla aynı); başka sır yok.
+#   - Denetim dosyası SHA-256 ile sabit (DENETIM_SQL_SHA256): dosya değişirse bu iş akışı da açıkça güncellenmeli.
+#   - Bekçi (scripts/ki23-denetim-guard.mjs): tek ifade, WITH … SELECT, yazma/DDL/ayar/dosya/süreç komutu yok.
+#   - Bağlantı adresi ve parçaları ::add-mask:: ile maskelenir; set -x yok; ham hata metni yazılmaz (yalnız güvenli sınıf).
+#   - Denetim TEK bağlantıda, TEK işlemde: BEGIN READ ONLY → aynı işlemde salt okunur kontrolü → denetim → ROLLBACK.
+#   - upload-artifact yok; çıktı çalıştırıcının geçici klasöründe kalır ve silinir.
+#   - checkout kimlik bilgisini saklamaz (persist-credentials: false); action'lar tam commit SHA'sıyla sabit (LR-11).
+name: elvankent-ki23-canli-denetim
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ['claude/karays-mission-control-vn8g65']
+    paths: ['elvankent-gayrimenkul/ops-requests/ki23-canli-denetim.request']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: elvankent-ki23-canli-denetim
+  cancel-in-progress: false
+
+jobs:
+  denetim:
+    # Re-run (run_attempt > 1) yeni bir canlı denetim başlatamaz: tek kullanımlık
+    if: ${{ github.actor == github.repository_owner && github.run_attempt == 1 && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, 'Claude-Session:')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: ki23-canli-denetim
+    defaults:
+      run:
+        working-directory: elvankent-gayrimenkul
+    env:
+      DENETIM_SQL_SHA256: 20730d2598d1dbe961a91ff7d5c8a9027db09e63b2a1e1df5527d67a3e213f3a
+      # Fonksiyon farkı teşhisi (yalnız sayılar; denetimle aynı salt okunur işlemde)
+      DENETIM_TESHIS_SHA256: 9682aaa8abeebbfd8b714bc38db1702b7aff5704879ab8febe52f77145b50307
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Tek kullanımlık tetik önceki commit'teki istek dosyasını okur (git geçmişi); kimlik bilgisi saklanmaz
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Tek kullanımlık tetik (CALISTIR=evet bu gönderimde kapalıdan açığa mı geçti)
+        if: ${{ github.event_name == 'push' }}
+        env:
+          ONCEKI: ${{ github.event.before }}
+          YENI: ${{ github.sha }}
+        run: bash scripts/ki23-tetik-kontrol.sh "$ONCEKI" "$YENI"
+      - name: PostgreSQL istemcisi
+        run: |
+          set -euo pipefail
+          command -v psql > /dev/null || { sudo apt-get update -qq > /dev/null && sudo apt-get install -y -qq postgresql-client > /dev/null; }
+          echo "psql ana sürüm: $(psql --version | grep -oE '[0-9]+' | head -1)"
+      - name: Canlı denetim (salt okunur; yalnız sayılar)
+        env:
+          DENETIM_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: bash scripts/ki23-canli-denetim.sh

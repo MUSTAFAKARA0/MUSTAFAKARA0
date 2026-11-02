@@ -355,7 +355,7 @@ test.describe('Yönetim paneli (telefon)', () => {
     await page.getByRole('button', { name: 'Giriş yap' }).click();
     await expect(page).toHaveURL(/\/platform$/);
     const header = page.getByRole('banner');
-    await expect(header.getByRole('img', { name: 'KARAY' })).toBeVisible();
+    await expect(header.getByRole('img', { name: 'KARAYS', exact: true })).toBeVisible();
     await expect(header.getByText(/Elvankent/)).toHaveCount(0);
     await expect(header.locator('img[src*="branding"]')).toHaveCount(0);
     await noOverflow(page, '/platform');

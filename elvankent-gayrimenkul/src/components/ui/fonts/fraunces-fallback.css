@@ -1,0 +1,10 @@
+/* OTOMATİK ÜRETİLİR — elle düzenlemeyin: node scripts/fonts/build-local-fonts.mjs */
+/* Fraunces yedeği: next/font'un Google yazı tipleri için önceden hesapladığı metrikler (düzen kayması olmaz) */
+@font-face {
+  font-family: 'Fraunces Fallback';
+  src: local('Times New Roman');
+  ascent-override: 84.71%;
+  descent-override: 22.09%;
+  line-gap-override: 0.00%;
+  size-adjust: 115.45%;
+}

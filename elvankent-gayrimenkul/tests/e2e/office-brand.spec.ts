@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
+import sharp from 'sharp';
 import { createClient } from '@supabase/supabase-js';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
@@ -37,7 +38,9 @@ const NEW_NAME = `Yeni Marka ${RUN}`;
 const OLD_PHONE = '0312 555 10 10';
 const NEW_PHONE = '0312 555 20 20';
 const B_NAME = `B Marka ${RUN}`;
-const logoFile = path.join(__dirname, '.fixtures', 'kabul-logo.png');
+// Logo test görseli bellekte üretilir (kabul testindekiyle aynı 600×200 PNG): başka bir spec'in
+// diske bıraktığı dosyaya bağlı kalınmaz, test tek başına ve temiz checkout'ta da çalışır
+const logoPng = () => sharp({ create: { width: 600, height: 200, channels: 4, background: { r: 16, g: 80, b: 70, alpha: 1 } } }).png().toBuffer();
 
 test.use({
   launchOptions: {
@@ -116,7 +119,12 @@ const draftOf = async (org: string) => (await service!.from('site_configs').sele
 
 /** Sitedeki marka: başlıktaki ad, iletişim sayfasındaki telefon bağlantıları, header logosu */
 async function siteBrand(p: Page, site: string) {
-  await p.goto(`${site}/iletisim`, { waitUntil: 'networkidle' });
+  // networkidle beklenmez (K-12): sayfa henüz boşa çıkmamış bir site belgesindeyken (yeni açılan önizleme) eski belgenin
+  // prefetch istekleri gezinme sırasında kesilip yeniden denenir; belge değişirken başlayanlar hiç bitmez, networkidle
+  // oluşmaz. Marka sunucuda işlenir: belge yüklendikten sonra okunan başlık ve iletişim telefonu görünür olmalıdır.
+  await p.goto(`${site}/iletisim`, { waitUntil: 'load' });
+  await expect(p.getByRole('banner')).toBeVisible();
+  await expect(p.getByRole('main').locator('a[href^="tel:"]').first()).toBeVisible();
   const html = await p.content();
   const tels = await p.locator('a[href^="tel:"]').evaluateAll((els) => els.map((e) => e.getAttribute('href') ?? ''));
   const logos = await p.getByRole('banner').locator('img[src*="branding"]').evaluateAll((els) => els.map((e) => (e as HTMLImageElement).currentSrc || e.getAttribute('src') || ''));
@@ -147,7 +155,7 @@ test('OBR-A: marka değişikliği taslak → önizleme → yayın → geri alma 
   await page.getByRole('button', { name: 'Taslağa kaydet' }).click();
   await expect(page.getByText('Taslağa kaydedildi', { exact: false }).first()).toBeVisible();
   // 4) Logo (görsel taslağa yüklenir)
-  await page.locator('#branding-logo').setInputFiles(logoFile);
+  await page.locator('#branding-logo').setInputFiles({ name: 'kabul-logo.png', mimeType: 'image/png', buffer: await logoPng() });
   await expect(page.getByText('Logo taslağa kaydedildi', { exact: false })).toBeVisible({ timeout: 30_000 });
   await page.reload();
   await expect(page.getByTestId('site-status')).toContainText('Taslak değişiklikler var');
@@ -224,7 +232,7 @@ test('OBR-B: A kullanıcısı B kiracısının markasına, iletişimine, logosun
   }
   // Görsel uç noktası istemciden kurum kimliği kabul etmez: yükleme A'nın taslağına gider
   const res = await page.request.post('/api/admin/branding', {
-    multipart: { kind: 'logo', orgId: S.b!, organization_id: S.b!, file: { name: 'logo.png', mimeType: 'image/png', buffer: (await import('node:fs')).readFileSync(logoFile) } },
+    multipart: { kind: 'logo', orgId: S.b!, organization_id: S.b!, file: { name: 'logo.png', mimeType: 'image/png', buffer: await logoPng() } },
     headers: { origin: baseURL },
   });
   expect(res.status()).toBe(201);

@@ -57,6 +57,7 @@ const CHECKLIST_LABELS: Record<string, string> = {
 const DB_MESSAGES: Record<string, string> = {
   plan_limit_properties: 'Planınızın ilan limitine ulaşıldı. Yeni ilan için planınızı yükseltin veya eski ilanları silin.',
   plan_limit_users: 'Planınızın kullanıcı limitine ulaşıldı.',
+  plan_limit_storage: 'Depolama alanı kotanız doldu. Kullanılmayan görselleri silin veya planınızı yükseltin.',
   publish_forbidden: 'Bu ilanın yayın durumunu değiştirme yetkiniz yok. "Onaya gönder" seçeneğini kullanabilirsiniz.',
   delete_forbidden: 'Silme / geri yükleme yetkiniz yok.',
   settings_forbidden: 'Şirket ayarlarını değiştirme yetkiniz yok.',
@@ -79,6 +80,13 @@ const DB_MESSAGES: Record<string, string> = {
   invitation_accepted: 'Davet zaten kabul edildi; sahip hesabı etkin.',
   owner_not_found: 'Bu organizasyonun aktif bir sahibi yok.',
   invalid_invitation: 'Davet bilgileri geçersiz.',
+  media_conflict: 'Fotoğraf başka bir işlemde güncellendi; sayfayı yenileyin.',
+  media_not_uploaded: 'Dosya yüklemesi tamamlanmamış görünüyor. "Tekrar dene" ile yeniden yükleyin.',
+  media_variants_missing: 'Fotoğraf varyantları depolamada bulunamadı. Lütfen tekrar deneyin.',
+  media_invalid_path: 'Fotoğraf yolu geçersiz.',
+  media_invalid_input: 'Fotoğraf bilgileri geçersiz.',
+  media_busy: 'Fotoğraf şu anda başka bir işlemde; birkaç saniye sonra tekrar deneyin.',
+  media_pending_limit: 'Çok fazla yarım kalmış yükleme var. Bekleyen yüklemeler tamamlandıktan sonra tekrar deneyin.',
   brand_requires_publish: 'Marka ve site bilgileri doğrudan değiştirilemez; taslağa kaydedip yayınlayın.',
 };
 

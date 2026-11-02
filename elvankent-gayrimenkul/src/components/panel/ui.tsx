@@ -143,13 +143,23 @@ export function ListingStatusBadge({ status, deleted }: { status: ListingStatus;
   return <Badge variant={STATUS_VARIANT[status]}>{STATUS_LABELS[status]}</Badge>;
 }
 
-/** Tablo/liste boş durumu */
-export function EmptyPanel({ icon: Icon, title, description, action }: { icon: LucideIcon; title: string; description?: string; action?: React.ReactNode }) {
+/** Tablo/liste boş durumu. illustration verilirse simgenin yerinde gösterilir (ör. KARAYS yardımcı maskotu) */
+export function EmptyPanel({
+  icon: Icon,
+  illustration,
+  title,
+  description,
+  action,
+}: { title: string; description?: string; action?: React.ReactNode } & ({ icon: LucideIcon; illustration?: never } | { icon?: never; illustration: React.ReactNode })) {
   return (
     <div className="flex flex-col items-center px-6 py-14 text-center">
-      <span className="flex size-12 items-center justify-center rounded-2xl bg-surface-muted text-muted-foreground">
-        <Icon className="size-6" aria-hidden />
-      </span>
+      {Icon ? (
+        <span className="flex size-12 items-center justify-center rounded-2xl bg-surface-muted text-muted-foreground">
+          <Icon className="size-6" aria-hidden />
+        </span>
+      ) : (
+        illustration
+      )}
       <p className="mt-4 text-[15.5px] font-semibold text-foreground">{title}</p>
       {description && <p className="mt-1 max-w-sm text-sm leading-relaxed text-muted-foreground">{description}</p>}
       {action && <div className="mt-5">{action}</div>}

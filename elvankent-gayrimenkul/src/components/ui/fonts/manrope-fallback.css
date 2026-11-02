@@ -1,0 +1,10 @@
+/* OTOMATİK ÜRETİLİR — elle düzenlemeyin: node scripts/fonts/build-local-fonts.mjs */
+/* Manrope yedeği: next/font'un Google yazı tipleri için önceden hesapladığı metrikler (düzen kayması olmaz) */
+@font-face {
+  font-family: 'Manrope Fallback';
+  src: local('Arial');
+  ascent-override: 103.31%;
+  descent-override: 29.07%;
+  line-gap-override: 0.00%;
+  size-adjust: 103.19%;
+}

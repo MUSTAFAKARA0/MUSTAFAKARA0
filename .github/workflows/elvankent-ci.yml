@@ -10,6 +10,15 @@
 # Production'a geçişi engellemek: main (veya production) dalı için branch protection'da
 # "quality" (ve açıldıysa "database") işlerini "required status check" yapın; Vercel'de
 # production dağıtımını yalnızca bu korumalı daldan yapın (docs/DEPLOYMENT_RUNBOOK.md).
+#
+# Çalıştırıcı imajı sabittir: ubuntu-24.04. ubuntu-latest etiketi 19.10.2026'dan itibaren Ubuntu 26'ya
+# taşınıyor; iki iş de en son ubuntu-24.04 imajında doğrulandı. İmaj, CI'da doğrulanarak ayrı bir
+# commit'le değiştirilir (tests/unit/launch-readiness.test.mjs, LR-09).
+#
+# Tedarik zinciri (LR-11): action'lar tam commit SHA'sıyla sabitlenir (sürüm yanındaki yorumda; etiket
+# taşınsa da çalışan kod değişmez) ve hepsi node24 çalışma zamanındadır. Supabase CLI sürümü sabittir;
+# gitleaks arşivi resmî SHA-256 özetiyle doğrulanır; sunucu beklemesi çalışma anında paket indirmez.
+# Güncelleme: yeni sürümün SHA'sı `git ls-remote` ile alınır, CI'da yeşil görülür, ayrı commit'le değişir.
 name: elvankent-ci
 
 on:
@@ -42,10 +51,10 @@ jobs:
       SITE_ENV: development
       NEXT_TELEMETRY_DISABLED: '1'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -66,7 +75,10 @@ jobs:
       - name: Gizli anahtar taraması (gitleaks)
         working-directory: .
         run: |
-          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/gitleaks_8.24.2_linux_x64.tar.gz | tar -xz gitleaks
+          # Sürüm ve arşiv özeti sabit (resmî gitleaks_8.24.2_checksums.txt); özet tutmazsa iş durur
+          curl -sSfLO https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/gitleaks_8.24.2_linux_x64.tar.gz
+          echo 'fa0500f6b7e41d28791ebc680f5dd9899cd42b58629218a5f041efa899151a8e  gitleaks_8.24.2_linux_x64.tar.gz' | sha256sum -c -
+          tar -xzf gitleaks_8.24.2_linux_x64.tar.gz gitleaks
           # Proje klasörüne dokunan tüm commit'ler taranır (node_modules/.next değil)
           ./gitleaks git . --log-opts="-- elvankent-gayrimenkul" --no-banner --redact --exit-code 1
 
@@ -76,15 +88,19 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # KI-23 canlı denetim provası tarihî demo paketlerini git geçmişinden okur (scripts/canli-denetim-prova.sh)
+          fetch-depth: 0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: elvankent-gayrimenkul/package-lock.json
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:
-          # Sabit: "latest" kayıyordu (çalışma dalında doğrulanan sürüm)
+          # 19.10.2026'daki son kararlı sürüm (CI #83 o gün "latest" ile yeşildi). `supabase init`
+          # şablonu sürüme göre değişebildiği için sabit; yeni sürüm CI'da doğrulanıp ayrı commit'le seçilir.
           version: 2.121.0
       - run: npm ci
       - name: Yerel Supabase (migration'lar sıfırdan uygulanır)
@@ -99,9 +115,16 @@ jobs:
           supabase status -o env > /tmp/supa.env
           set -a; . /tmp/supa.env; set +a
           PGOPTIONS='-c app.allow_demo_seed=on' psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/seed.sql
-          # .env.local'ı hem Node (create-admin, RLS testleri, Playwright) hem bash ("E2E hazırlık": . ./.env.local) okur.
-          # Her değer tek tırnakla yazılır (çalışma dalı K-11): tırnaksız EMAIL_FROM=KARAY CI <davet@example.test> satırını
-          # bash yönlendirme sanıyordu ("syntax error near unexpected token `newline'", CI #129/#130).
+          # O-5 runbook provası (supabase/ops/*): temiz, tohumlanmış veritabanında 01→05→01→03 döngüsü; bitişte hepsi
+          # uygulanmış kalır. Aşağıdaki bekleyen dosya döngüsü idempotenttir (create or replace / drop if exists)
+          bash scripts/rehearse-runbooks.sh
+          # Bekleyen migration'lar (supabase/pending, canlıya uygulanmaz): bayraklar varsayılan kapalı; RLS ve E2E
+          # testleri bunlar uygulanmış veritabanında koşar (geriye uyumluluk) ve yeni davranışı sınar
+          for f in supabase/pending/*.sql; do psql "$DB_URL" -X -v ON_ERROR_STOP=1 -q -f "$f"; done
+          # .env.local'ı hem Node (create-admin, RLS testleri, Playwright) hem bash ("E2E hazırlık": . ./.env.local)
+          # okur. Her değer tek tırnakla yazılır; tek tırnak veya satır sonu içeren değer yazılmaz. Yazımdan sonra
+          # iki tarafın aynı değerleri okuduğu denetlenir (K-11: tırnaksız EMAIL_FROM=Ad <e-posta> satırını Node
+          # metin olarak okuyordu, bash yönlendirme sanıp adımı düşürüyordu).
           env_line() {
             case "$2" in *"'"* | *$'\n'* | *$'\r'*) echo "::error::.env.local: $1 değeri tek tırnakla yazılamaz" >&2; return 1 ;; esac
             printf "%s='%s'\n" "$1" "$2"
@@ -110,11 +133,14 @@ jobs:
             env_line NEXT_PUBLIC_SUPABASE_URL "$API_URL"
             env_line NEXT_PUBLIC_SUPABASE_ANON_KEY "$ANON_KEY"
             env_line SUPABASE_SERVICE_ROLE_KEY "$SERVICE_ROLE_KEY"
+            # SL-07: kota kilidini ayrı bir psql oturumunda tutar (yalnızca yerel veritabanı)
+            env_line DB_URL "${DB_URL:-}"
             env_line NEXT_PUBLIC_SITE_URL http://localhost:3000
             env_line IP_HASH_SALT "ci-$(openssl rand -hex 16)"
             env_line CRON_SECRET "ci-$(openssl rand -hex 32)"
             env_line NEXT_IMAGE_ALLOW_LOCAL_IP 1
-            # E2E demo ortamını ve süper admin yöneticiyi bekler (çalışma dalı K-10; SITE_ENV=development E2E'yi ortam yüzünden düşürüyordu)
+            # E2E demo ortamını bekler (DEMO ORTAMI şeridi, noindex; demo verisi yukarıda yüklenir):
+            # tests/e2e/acceptance.spec.ts ve visitor.spec.ts. Yerel çalıştırmalarla aynı ortam.
             env_line SITE_ENV demo
             # P0.4 davet e-postası: gerçek gönderim yok; E2E sahte Resend sunucusunu (127.0.0.1:4010) kendisi açar
             env_line EMAIL_PROVIDER resend
@@ -126,22 +152,60 @@ jobs:
             env_line DOMAIN_TARGET_CNAME sites.karay.test
             env_line DOMAIN_TARGET_A 203.0.113.10
           } > .env.local
-          # Yazılan dosya bash'te hatasız okunabilmeli (#129'daki hata burada, E2E'den önce yakalanır)
-          bash -c 'set -a; . ./.env.local' || { echo "::error::.env.local bash ile okunamıyor"; exit 1; }
+          node scripts/check-env-file.mjs .env.local
       - name: Birim + güvenlik testleri (RLS, MFA, kiracı izolasyonu)
         run: npm test
+      - name: KI-24 sentetik geri yükleme provası (demo verisi; yerel yedek → yerel geçici veritabanı; canlı benzeri şema; K6 Storage)
+        run: |
+          set -euo pipefail
+          # Müşteri verisi YOK, sır YOK. scripts/restore-drill-synthetic.sh: A güncel şema (bütünlük + şema TAMAM),
+          # B canlı gibi geride şema (BİLGİ, başarısızlık değil), C1 bozuk dump (BÜTÜNLÜK HATA), C2 uzak hedef (YALITIM),
+          # D1 canlının gerçek durumu (sürüm fonksiyonu yok, birden çok migration eksik: BİLGİ), D2–D4 aynı şemada RLS /
+          # açık politika / istemciye açık fonksiyon (HATA, gizlenmez), S1 K6 Storage gidiş-dönüş, S2 uzak Storage (YALITIM).
+          # Supabase sunucusu PG 17: pg_dump/pg_restore 17 gerekir (runner'ın /usr/bin araçları 16; Backup #39)
+          sudo apt-get install -y -qq postgresql-common > /dev/null
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
+          sudo apt-get install -y -qq postgresql-client-17 > /dev/null
+          export PATH=/usr/lib/postgresql/17/bin:$PATH
+          [ "$(pg_restore --version | sed -nE 's/^[^0-9]*([0-9]+).*$/\1/p')" = 17 ] || { echo "::error::pg_restore 17 kurulamadı"; exit 1; }
+          set -a; . ./.env.local; set +a
+          # D: canlının gerçek durumu (karay_schema_version yok, son migration'lar eksik) — AYRI portlu ikinci yerel yığın
+          trap 'bash scripts/live-like-stack.sh stop' EXIT
+          # Demo verisi "Yerel Supabase" adımında /tmp/seed.sql'e taşındı
+          LIVE_LIKE_SEED=/tmp/seed.sql bash scripts/live-like-stack.sh start
+          # Yerel yığının süper kullanıcısı: tam Supabase dump'ı (realtime şeması) yalnız süper kullanıcıyla yüklenebilir
+          DRILL_URL=postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres
+          # S: K6 Storage gidiş-dönüş, ana yerel yığının Storage'ı (geçici kova; sentetik dosyalar)
+          DB_URL="$DB_URL" DRILL_URL="$DRILL_URL" \
+            LIVE_DB_URL=postgresql://postgres:postgres@127.0.0.1:55322/postgres \
+            LIVE_DRILL_URL=postgresql://supabase_admin:postgres@127.0.0.1:55322/postgres REQUIRE_LIVE_LIKE=1 \
+            STORAGE_DRILL_URL="$NEXT_PUBLIC_SUPABASE_URL" STORAGE_DRILL_KEY="$SUPABASE_SERVICE_ROLE_KEY" REQUIRE_STORAGE=1 \
+            bash scripts/restore-drill-synthetic.sh
+      - name: KI-23 canlı denetim provası (tarihî demo paketleriyle kurulan canlı benzeri şema; salt okunur denetimler)
+        run: |
+          set -euo pipefail
+          # Müşteri verisi YOK, sır YOK. scripts/canli-denetim-prova.sh: canlının kuruluş yolu (supabase/demo paketleri,
+          # TARİHÎ hâlleri git geçmişinden; SQL Editor gibi tek işlem) → sahibin canlı çıktısı (İÇERİKSİZ=21, KAYITSIZ=10)
+          # yeniden üretilir; köken (xmin), şema/güvenlik parmak izi (828 nesne) ve 6 negatif kontrol; ardından KI-24 yolu:
+          # yedek → yerel geçici veritabanı → restore-drill 9. adım (G TAMAM / P AYNI; RLS kapalı kopya ŞEMA HATA).
+          export PATH=/usr/lib/postgresql/17/bin:$PATH
+          trap 'bash scripts/live-like-stack.sh stop' EXIT
+          DRILL_URL=postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres bash scripts/canli-denetim-prova.sh
+          # O-5 Aşama 3 uygulama betiği (scripts/o5b-uygula.sh) sentetik testi: canlının 02.11 hâli (O-5a + KARAYS) üzerinde
+          # onaysız paket, uzun kilit (yeniden deneme + dur), kısa kilit (yeniden denemeyle geçer), tekrar; günlükte SQL/adres yok
+          LIVE_LIKE_SEED=/tmp/seed.sql bash scripts/o5b-uygula-test.sh
       - name: E2E hazırlık (yönetici hesabı, build, sunucu)
         run: |
           set -euo pipefail
+          # E2E yöneticisi hem ofis sahibi hem KARAY süper admini olmalı (acceptance.spec.ts ön koşulu;
+          # /platform testleri bu hesapla giriş yapar)
           npm run create-admin -- e2e-admin@example.test 'E2e-Password-12345' --role=owner --super-admin
-          # Masaüstü OBR-A/SEO-A logo dosyasını bekler; ff2f7da'da onu yalnız mobil projedeki acceptance.spec üretir
-          mkdir -p tests/e2e/.fixtures
-          node -e "require('sharp')({ create: { width: 600, height: 200, channels: 4, background: { r: 16, g: 80, b: 70, alpha: 1 } } }).png().toFile('tests/e2e/.fixtures/kabul-logo.png')"
           npx playwright install --with-deps chromium
           set -a; . ./.env.local; set +a
           npm run build
           (npm start > /tmp/next.log 2>&1 &)
-          npx --yes wait-on -t 60000 http://localhost:3000/api/health
+          # Sunucu hazır olana kadar en fazla 60 sn beklenir; çalışma anında paket indirilmez
+          timeout 60 bash -c 'until curl -fs -o /dev/null http://localhost:3000/api/health; do sleep 1; done'
       - name: Playwright E2E
         env:
           E2E_ADMIN_EMAIL: e2e-admin@example.test
@@ -149,9 +213,99 @@ jobs:
         run: npx playwright test
       - name: Hata ayıklama çıktıları
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-results
+          path: |
+            elvankent-gayrimenkul/test-results
+            /tmp/next.log
+          retention-days: 7
+
+  # KI-37 · CI PENDING matrisi (K-22 DB R3): "yeni kod + bekleyen dosyasız şema" = canlıdaki şema. database işi bekleyen
+  # dosyaların HEPSİ uygulanmış şemayı sınar (PENDING=all); bu iş hiçbirini uygulamaz (PENDING=none) ve yalnız medya E2E'sini
+  # (yükleme, işleme, döndürme, silme: admin.spec.ts + acceptance.spec.ts) koşar: yeni kodun RPC'siz yedek yolu canlıdaki
+  # şemayla çalışır. Paralel çalışır (duvar süresi artmaz). PENDING=a (yalnız A) ayağı ayrı iş değil: MF-07 A altında
+  # eski kodu, media-storage-slots SL-13 C'nin B'siz durduğunu güvenlik testlerinde sınar (değerlendirme: GELISTIRME_GUNLUGU K-23).
+  database-legacy-schema:
+    if: ${{ vars.ELVANKENT_CI_DB_TESTS == 'true' }}
+    needs: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: elvankent-gayrimenkul/package-lock.json
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
+        with:
+          # 19.10.2026'daki son kararlı sürüm (CI #83 o gün "latest" ile yeşildi). `supabase init`
+          # şablonu sürüme göre değişebildiği için sabit; yeni sürüm CI'da doğrulanıp ayrı commit'le seçilir.
+          version: 2.121.0
+      - run: npm ci
+      - name: Yerel Supabase (PENDING=none; supabase/pending UYGULANMAZ)
+        run: |
+          set -euo pipefail
+          mv supabase/seed.sql /tmp/seed.sql
+          [ -f supabase/config.toml ] || supabase init --force
+          supabase start -x studio,imgproxy,realtime,edge-runtime,logflare,vector,supavisor
+          supabase status -o env > /tmp/supa.env
+          set -a; . /tmp/supa.env; set +a
+          PGOPTIONS='-c app.allow_demo_seed=on' psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f /tmp/seed.sql
+          # Bu ayak bekleyen dosyasız şemayı sınar: biri uygulanmışsa iş kırmızı
+          [ "$(psql "$DB_URL" -X -Atc "select to_regprocedure('public.media_finalize(uuid,text,text,smallint[],integer,integer,text)') is null")" = t ] \
+            || { echo "::error::PENDING=none ayağında media_finalize var (bekleyen dosya uygulanmış)"; exit 1; }
+          env_line() {
+            case "$2" in *"'"* | *$'\n'* | *$'\r'*) echo "::error::.env.local: $1 değeri tek tırnakla yazılamaz" >&2; return 1 ;; esac
+            printf "%s='%s'\n" "$1" "$2"
+          }
+          {
+            env_line NEXT_PUBLIC_SUPABASE_URL "$API_URL"
+            env_line NEXT_PUBLIC_SUPABASE_ANON_KEY "$ANON_KEY"
+            env_line SUPABASE_SERVICE_ROLE_KEY "$SERVICE_ROLE_KEY"
+            # SL-07: kota kilidini ayrı bir psql oturumunda tutar (yalnızca yerel veritabanı)
+            env_line DB_URL "${DB_URL:-}"
+            env_line NEXT_PUBLIC_SITE_URL http://localhost:3000
+            env_line IP_HASH_SALT "ci-$(openssl rand -hex 16)"
+            env_line CRON_SECRET "ci-$(openssl rand -hex 32)"
+            env_line NEXT_IMAGE_ALLOW_LOCAL_IP 1
+            # E2E demo ortamını bekler (DEMO ORTAMI şeridi, noindex; demo verisi yukarıda yüklenir):
+            # tests/e2e/acceptance.spec.ts ve visitor.spec.ts. Yerel çalıştırmalarla aynı ortam.
+            env_line SITE_ENV demo
+            # P0.4 davet e-postası: gerçek gönderim yok; E2E sahte Resend sunucusunu (127.0.0.1:4010) kendisi açar
+            env_line EMAIL_PROVIDER resend
+            env_line RESEND_API_KEY ci-test-key
+            env_line RESEND_API_BASE http://127.0.0.1:4010
+            env_line EMAIL_FROM 'KARAY CI <davet@example.test>'
+            # P0.5 özel alan adı: gerçek DNS yok; E2E sahte DoH sunucusunu (127.0.0.1:4011) kendisi açar
+            env_line DOMAIN_DNS_RESOLVER_URL http://127.0.0.1:4011/dns-query
+            env_line DOMAIN_TARGET_CNAME sites.karay.test
+            env_line DOMAIN_TARGET_A 203.0.113.10
+          } > .env.local
+          node scripts/check-env-file.mjs .env.local
+      - name: E2E hazırlık (yönetici hesabı, build, sunucu)
+        run: |
+          set -euo pipefail
+          # E2E yöneticisi hem ofis sahibi hem KARAY süper admini olmalı (acceptance.spec.ts ön koşulu;
+          # /platform testleri bu hesapla giriş yapar)
+          npm run create-admin -- e2e-admin@example.test 'E2e-Password-12345' --role=owner --super-admin
+          npx playwright install --with-deps chromium
+          set -a; . ./.env.local; set +a
+          npm run build
+          (npm start > /tmp/next.log 2>&1 &)
+          # Sunucu hazır olana kadar en fazla 60 sn beklenir; çalışma anında paket indirilmez
+          timeout 60 bash -c 'until curl -fs -o /dev/null http://localhost:3000/api/health; do sleep 1; done'
+      - name: Medya E2E (yeni kod + bekleyen dosyasız şema)
+        env:
+          E2E_ADMIN_EMAIL: e2e-admin@example.test
+          E2E_ADMIN_PASSWORD: E2e-Password-12345
+        run: npx playwright test tests/e2e/admin.spec.ts tests/e2e/acceptance.spec.ts
+      - name: Hata ayıklama çıktıları
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-results-legacy-schema
           path: |
             elvankent-gayrimenkul/test-results
             /tmp/next.log

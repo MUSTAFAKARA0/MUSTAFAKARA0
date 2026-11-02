@@ -1,9 +1,10 @@
 import { randomBytes } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
 
 /**
- * KARAY şirket sayfası (/karay), KARAY talepleri ve 10 tema — KARAY-01…18.
+ * KARAY şirket sayfası (/karay), KARAY talepleri ve 10 tema — KARAY-01…18; platform giriş logosu (KARAY-19);
+ * KARAYS görsel paketi: paylaşım görseli ve simgeler (KARAY-20), maskotlar ve KARO animasyonu (KARAY-21…22).
  *
  *   KARAY (platform sahibi) ── /karay (kendi markası, kendi talep tablosu: platform_leads)
  *     ├─ Elvankent (varsayılan kiracı; görünümü DEĞİŞTİRİLMEZ, yalnızca okunur)
@@ -100,7 +101,8 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   if (!service) return;
   if (S.settings) {
-    const { id: _id, updated_at: _u, updated_by: _b, ...rest } = S.settings;
+    // Kimlik ve denetim sütunları geri yazılmaz (KI-18: kullanılmayan değişken bırakmadan ayıklanır)
+    const rest = Object.fromEntries(Object.entries(S.settings).filter(([key]) => !['id', 'updated_at', 'updated_by'].includes(key)));
     await service.from('platform_settings').update(rest).eq('id', true);
   }
   await service.from('platform_leads').delete().in('email', [LEAD_EMAIL]);
@@ -177,12 +179,12 @@ async function scrollThrough(page: Page) {
 test('KARAY-01: KARAY şirket sayfası açılır (kendi header, menü, bölümler, footer)', async ({ page }) => {
   const res = await page.goto('/karay');
   expect(res?.status()).toBe(200);
-  await expect(page).toHaveTitle(/KARAY/);
+  await expect(page).toHaveTitle(/KARAYS/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Emlak ofisinizin');
-  const nav = page.getByRole('navigation', { name: 'KARAY menüsü' });
+  const nav = page.getByRole('navigation', { name: 'KARAYS menüsü' });
   for (const name of ['Platform', 'Özellikler', 'Temalar', 'Nasıl çalışır?', 'Hakkımızda', 'İletişim']) await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
   for (const id of ['platform', 'ozellikler', 'temalar', 'nasil-calisir', 'hakkimizda', 'iletisim']) await expect(page.locator(`#${id}`), id).toBeAttached();
-  await expect(page.getByRole('contentinfo')).toContainText('KARAY');
+  await expect(page.getByRole('contentinfo')).toContainText('KARAYS');
   // Gerçek ürün ekran görüntüleri, header/footer logoları ve simgeler oturumsuz ziyaretçide yüklenir
   // (kırık görsel yok; K-15: logolar /platform altındayken giriş sayfasına yönleniyordu)
   await scrollThrough(page);
@@ -194,6 +196,22 @@ test('KARAY-01: KARAY şirket sayfası açılır (kendi header, menü, bölümle
   await expect(page.locator('.demo-notice')).toBeHidden();
   // Sahte istatistik / yorum yok; iletişim bilgisi girilmediyse gösterilmez
   await expect(page.locator('a[href^="mailto:"]')).toHaveCount(S.settings!.contact_email ? 2 : 0);
+});
+
+test('KARAY-23: platform yüzeylerinde eski marka adı (KARAY) görünmez; metin, başlık, meta, JSON-LD ve erişilebilir adlar', async ({ page }) => {
+  // KARAYS (ve ekleri: KARAYS'in) kabul; KARAY'ın / "KARAY " gibi eski ad reddedilir. Teknik adlar (/karay yolu) görünür metin değildir.
+  for (const path of ['/karay', '/platform/giris']) {
+    await page.goto(path);
+    const texts = await page.evaluate(() => [
+      document.title,
+      document.body.innerText,
+      ...[...document.querySelectorAll('meta[content]')].map((m) => m.getAttribute('content') ?? ''),
+      ...[...document.querySelectorAll('script[type="application/ld+json"]')].map((s) => s.textContent ?? ''),
+      ...[...document.querySelectorAll('[alt], [aria-label], [title]')].flatMap((e) => [e.getAttribute('alt'), e.getAttribute('aria-label'), e.getAttribute('title')]).filter((v): v is string => Boolean(v)),
+    ]);
+    const old = texts.flatMap((t) => t.match(/\bKARAY(?![A-Za-zÇĞİÖŞÜçğıöşü])[^\n]{0,30}/g) ?? []);
+    expect(old, `${path}: eski marka adı`).toEqual([]);
+  }
 });
 
 test('KARAY-02: KARAY sayfası indekslenebilir; demo kiracının noindex kuralı korunur', async ({ page, request }) => {
@@ -379,7 +397,7 @@ test('KARAY-10: kiracı B tema değişikliği Elvankent\'i etkilemez', async ({ 
 
 test('KARAY-11: kiracı markası KARAY markasını değiştirmez', async ({ browser }) => {
   const k = await open(browser, '/karay');
-  await expect(k.page.getByRole('link', { name: 'KARAY ana sayfa' })).toBeVisible();
+  await expect(k.page.getByRole('link', { name: 'KARAYS ana sayfa' })).toBeVisible();
   const html = await k.page.content();
   expect(html).not.toContain(B_NAME);
   expect(html.toLowerCase()).not.toContain('#7a1f5c');
@@ -420,7 +438,7 @@ test('KARAY-13: KARAY sayfası telefonda çalışır (menü, form, taşma yok)',
   const m = await open(browser, '/karay', { width: 390, height: 844 });
   await expect(m.page.getByRole('heading', { level: 1 })).toBeVisible();
   await m.page.getByRole('button', { name: 'Menüyü aç' }).click();
-  const menu = m.page.getByRole('navigation', { name: 'KARAY mobil menü' });
+  const menu = m.page.getByRole('navigation', { name: 'KARAYS mobil menü' });
   await expect(menu).toBeVisible();
   await menu.getByRole('link', { name: 'İletişim' }).click();
   await expect(menu).toBeHidden();
@@ -455,7 +473,7 @@ test('KARAY-16: KARAY rotası kiracı rotalarıyla karışmaz', async ({ browser
   // Kiracının kendi alan adında /karay yoktur (kiracı sitesine yeniden yazılır → 404)
   const b = await open(browser, `${SITE_B}/karay`);
   expect(b.res?.status()).toBe(404);
-  await expect(b.page.getByRole('link', { name: 'KARAY ana sayfa' })).toHaveCount(0);
+  await expect(b.page.getByRole('link', { name: 'KARAYS ana sayfa' })).toHaveCount(0);
   await b.close();
   const bLead = await open(browser, `${SITE_B}/karay/yasal/kvkk`);
   expect(bLead.res?.status()).toBe(404);
@@ -466,7 +484,7 @@ test('KARAY-16: KARAY rotası kiracı rotalarıyla karışmaz', async ({ browser
   expect(karayHtml).not.toContain(S.elvName!);
   expect(karayHtml).not.toContain(B_NAME);
   const home = await open(browser, '/');
-  await expect(home.page.getByRole('link', { name: 'KARAY ana sayfa' })).toHaveCount(0);
+  await expect(home.page.getByRole('link', { name: 'KARAYS ana sayfa' })).toHaveCount(0);
   expect(await siteTheme(home.page)).toBe(S.elvTheme);
   await home.close();
   // Kiracı yolu /t/<slug>/karay dışarıdan açılamaz
@@ -483,7 +501,7 @@ test('KARAY-17: kiracı kullanıcısı platforma (KARAY talepleri/ayarları dahi
     // Ofis oturumuna platform alanı hiç yokmuş gibi davranır (404; varlığı da sızdırılmaz)
     const res = await page.goto(p);
     expect(res?.status(), p).toBe(404);
-    await expect(page.getByText('KARAY talepleri'), p).toHaveCount(0);
+    await expect(page.getByText('KARAYS talepleri'), p).toHaveCount(0);
   }
   const settings = await S.eClient!.from('platform_settings').select('*');
   expect(settings.data ?? []).toHaveLength(0);
@@ -518,8 +536,113 @@ test('KARAY-18: platform kullanıcısı yetkisiz olarak kiracı verisine erişem
 test('KARAY-19: platform giriş sayfasının logosu ve simgeleri oturumsuz ziyaretçide yüklenir', async ({ page }) => {
   // K-15: logo ve simgeler /platform altındayken proxy onları da konsol rotası sayıp girişe yönlendiriyordu
   await page.goto('/platform/giris');
-  const logo = page.getByRole('img', { name: 'KARAY', exact: true });
+  const logo = page.getByRole('img', { name: 'KARAYS', exact: true });
   await expect(logo).toBeVisible();
   await expect.poll(() => logo.evaluate((img: HTMLImageElement) => (img.complete ? img.naturalWidth : 0))).toBeGreaterThan(0);
   await expectIconsServed(page);
+});
+
+test('KARAY-20: paylaşım görseli, simgeler ve yapılandırılmış veri KARAYS paketinden; eski KARAY görselleri sunulmaz', async ({ page, request }) => {
+  await page.goto('/karay');
+  for (const sel of ['meta[property="og:image"]', 'meta[name="twitter:image"]']) {
+    expect(new URL((await page.locator(sel).getAttribute('content'))!).pathname, sel).toBe('/karay/og-karays.png');
+  }
+  await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute('content', '1200');
+  await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute('content', '630');
+  const og = await request.get('/karay/og-karays.png', { maxRedirects: 0 });
+  expect(og.status()).toBe(200);
+  expect(og.headers()['content-type']).toBe('image/png');
+  const org = (await page.locator('script[type="application/ld+json"]').allTextContents()).map((t) => JSON.parse(t)).find((d) => d['@type'] === 'Organization');
+  expect(new URL(org.logo).pathname).toBe('/brand/karays/karays-icon-512.png');
+  // K-16 öncesi KARAY dosyaları kaldırıldı (yönlendirme veya yedek kopya yok)
+  for (const old of ['/karay/og-karay.png', '/brand/karay/favicon.ico', '/brand/karay/karay-logo-yatay.svg', '/brand/karay/uygulama-ikonu-512.png']) {
+    expect((await request.get(old, { maxRedirects: 0 })).status(), old).toBe(404);
+  }
+});
+
+const loaded = (img: Locator) => img.evaluate((el: HTMLImageElement) => (el.complete ? el.naturalWidth : 0));
+
+test('KARAY-21: KARO ve yardımcı maskot platform yüzeylerinde, boyutları sabit ve dekoratif', async ({ page, browser }) => {
+  // K-16: KARO /karay hero'sunda karşılar; yardımcı maskot gerçek destek kanalının (iletişim formu) yanında
+  await page.goto('/karay');
+  const karo = page.locator('[data-platform-brand="karo"]');
+  const helper = page.locator('#iletisim [data-platform-brand="helper"]');
+  await expect(karo).toHaveCount(1);
+  for (const img of [karo, helper]) {
+    await img.scrollIntoViewIfNeeded();
+    await expect(img).toBeVisible();
+    await expect(img).toHaveAttribute('alt', '');
+    await expect(img).toHaveAttribute('width', /^\d+$/);
+    await expect(img).toHaveAttribute('height', /^\d+$/);
+    await expect.poll(() => loaded(img)).toBeGreaterThan(0);
+  }
+  // Hero overflow-hidden: KARO hiçbir genişlikte bölümün sol kenarından taşmaz (kırpılmaz)
+  const hero = page.locator('section[aria-labelledby="karay-hero"]');
+  for (const width of [390, 640, 768, 1024, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    const [k, h] = [await karo.boundingBox(), await hero.boundingBox()];
+    expect(k!.x, `${width} px`).toBeGreaterThanOrEqual(h!.x);
+  }
+  // Platform girişi: geniş ekranda KARO kartın yanında; dar ekranda gösterilmez
+  await page.goto('/platform/giris');
+  await expect(page.locator('[data-platform-brand="karo"]')).toBeVisible();
+  const narrow = await newContext(browser, { width: 390, height: 844 });
+  const np = await narrow.newPage();
+  await np.goto(`${baseURL}/platform/giris`);
+  await expect(np.getByRole('img', { name: 'KARAYS', exact: true })).toBeVisible();
+  await expect(np.locator('[data-platform-brand="karo"]')).toBeHidden();
+  await narrow.close();
+  // Konsol: talep listesi boşken yardımcı maskot boş durumu açıklar, doluyken görünmez
+  await loginPlatform(page);
+  const { count } = await service!.from('platform_leads').select('id', { count: 'exact', head: true }).eq('status', 'closed');
+  await page.goto('/platform/talepler?durum=kapali');
+  await expect(page.locator('main [data-platform-brand="helper"]')).toHaveCount(count === 0 ? 1 : 0);
+  if (count === 0) await expect(page.getByText('Bu filtrede talep yok')).toBeVisible();
+});
+
+test('KARAY-22: KARO animasyonu bir kez oynar; "hareketi azalt" ve dar ekranda indirilmez', async ({ browser }) => {
+  const animatedRequests = (p: Page) => {
+    const urls: string[] = [];
+    p.on('request', (r) => {
+      if (r.url().includes('KARO-hareketli')) urls.push(r.url());
+    });
+    return urls;
+  };
+  // Geniş ekran, hareket serbest: sayfa yüklendikten sonra hazır animasyon bir döngü oynar, sabit poza döner
+  const wide = await browser.newContext({ ...test.info().project.use, viewport: { width: 1280, height: 800 }, reducedMotion: 'no-preference' });
+  await prepare(wide);
+  const wp = await wide.newPage();
+  const wideRequests = animatedRequests(wp);
+  await wp.goto(`${baseURL}/karay`);
+  const karo = wp.locator('[data-platform-brand="karo"]');
+  const shown = () => karo.evaluate((img: HTMLImageElement) => img.currentSrc);
+  await expect(karo).toHaveAttribute('data-karo', 'animated', { timeout: 15_000 });
+  expect(await shown()).toMatch(/KARO-hareketli\.[\w-]+\.webp$/);
+  await expect(karo).toHaveAttribute('data-karo', 'still', { timeout: 6_000 });
+  await expect.poll(shown).not.toContain('KARO-hareketli');
+  // Tekrar oynamaz (otomatik hareket 5 saniyeyi geçmez); 4,2 MB'lık dosya bir kez indirilir
+  await wp.waitForTimeout(3_500);
+  await expect(karo).toHaveAttribute('data-karo', 'still');
+  expect(wideRequests).toHaveLength(1);
+  await wide.close();
+
+  // "Hareketi azalt" ve dar ekran: sabit poz kalır, animasyon dosyası hiç istenmez
+  for (const [name, options] of [
+    ['hareketi azalt', { viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' }],
+    ['dar ekran', { viewport: { width: 390, height: 844 }, reducedMotion: 'no-preference' }],
+  ] as const) {
+    const ctx = await browser.newContext({ ...test.info().project.use, ...options });
+    await prepare(ctx);
+    const p = await ctx.newPage();
+    const requests = animatedRequests(p);
+    await p.goto(`${baseURL}/karay`, { waitUntil: 'load' });
+    const k = p.locator('[data-platform-brand="karo"]');
+    await k.scrollIntoViewIfNeeded();
+    await expect.poll(() => loaded(k), name).toBeGreaterThan(0);
+    await p.waitForTimeout(2_000);
+    await expect(k, name).toHaveAttribute('data-karo', 'still');
+    expect(await k.evaluate((img: HTMLImageElement) => img.currentSrc), name).not.toContain('KARO-hareketli');
+    expect(requests, name).toEqual([]);
+    await ctx.close();
+  }
 });

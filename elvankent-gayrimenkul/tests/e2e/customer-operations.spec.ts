@@ -186,7 +186,7 @@ test('CO-4: aktivasyon → ofis panelinde kurulum listesi', async ({ browser }) 
   await expect(list).toHaveAttribute('data-progress', '0');
   // Başlangıç planı: alan adı adımı isteğe bağlı; "yayına açma" KARAY'ın adımı
   await expect(list.locator('[data-step="domain"]')).toContainText('isteğe bağlı');
-  await expect(list.locator('[data-step="live"]')).toContainText('KARAY');
+  await expect(list.locator('[data-step="live"]')).toContainText('KARAYS');
   await list.locator('[data-step="listing"]').getByRole('link').click();
   await expect(page).toHaveURL(/\/admin\/ilanlar\/yeni$/);
   // Ofis KARAY notlarını göremez

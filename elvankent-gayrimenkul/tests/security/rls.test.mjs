@@ -31,6 +31,11 @@ import { freshTotp } from './totp.mjs';
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// CI'da (GitHub Actions, CI=true) yalnızca işin kendi geçici yerel Supabase'i kullanılır: test kiracı ve
+// kullanıcı oluşturup siler; production veya paylaşılan bir projeye yönelirse hiç başlamaz
+if (process.env.CI && url && !/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(url)) {
+  throw new Error("CI: NEXT_PUBLIC_SUPABASE_URL yerel değil; RLS testleri CI'da yalnızca geçici yerel Supabase ile çalışır");
+}
 const missing = !url || !anonKey || !serviceKey;
 const skip = missing ? 'NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY ve SUPABASE_SERVICE_ROLE_KEY tanımlı değil' : false;
 
@@ -286,7 +291,21 @@ describe('Kiracı izolasyonu (Tenant A ↔ Tenant B)', { skip }, () => {
   });
   test('Depolama (kontrol): A kendi klasörüne yazabilir', async () => {
     const a = T.A.users.owner.client;
-    const own = `organizations/${T.A.orgId}/properties/${T.A.publishedId}/images/${randomUUID()}/original`;
+    // Uygulamanın yolu: önce bekleyen medya satırı, sonra yükleme (KI-37: bekleyen dosya C satırsız yüklemeyi reddeder)
+    const mediaId = randomUUID();
+    const own = `organizations/${T.A.orgId}/properties/${T.A.publishedId}/images/${mediaId}/original`;
+    const row = await service.from('media_assets').insert({
+      id: mediaId,
+      organization_id: T.A.orgId,
+      property_id: T.A.publishedId,
+      kind: 'property_photo',
+      status: 'pending',
+      original_path: own,
+      mime_type: 'image/png',
+      byte_size: PNG.length,
+      created_by: T.A.users.owner.id,
+    });
+    assert.ifError(row.error);
     const up = await a.storage.from('media-originals').upload(own, PNG, { contentType: 'image/png' });
     assert.ifError(up.error);
     storageObjects.push(['media-originals', own]);
@@ -1938,4 +1957,57 @@ describe('FAZ 1: müşteri operasyonları (ekip daveti, kurulum durumu, KARAY no
     assert.ok((await platformAdmin.client.from('platform_org_notes').insert({ organization_id: T.A.orgId, author_id: platformAdmin.id, body: '' })).error);
     assert.ok((await platformAdmin.client.from('platform_org_notes').insert({ organization_id: T.A.orgId, author_id: platformAdmin.id, body: 'x'.repeat(2001) })).error);
   });
+});
+
+describe('company_name düz metin (bekleyen 20261026000002)', () => {
+  // Global ayar satırını değiştirir: CI olsun olmasın YALNIZCA yerel Supabase'e karşı çalışır
+  const local = !url || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(url);
+  let reason = skip || (local ? false : 'NEXT_PUBLIC_SUPABASE_URL yerel değil; company_name testi yalnızca yerel Supabase ile çalışır');
+  let original = null;
+  const setName = (v) => service.from('platform_settings').update({ company_name: v }).eq('id', true);
+
+  before(async () => {
+    if (reason) return;
+    const cur = await service.from('platform_settings').select('company_name').eq('id', true).single();
+    if (cur.error) {
+      if (process.env.CI) throw new Error(`CI: platform_settings okunamadı (${cur.error.message})`);
+      reason = 'platform_settings okunamadı';
+      return;
+    }
+    original = cur.data.company_name;
+    // Sonda: '\n' kabul ediliyorsa kısıt uygulanmamıştır
+    const probe = await setName('Probe\nSatir');
+    if (!probe.error) {
+      await setName(original);
+      if (process.env.CI) throw new Error('CI: company_name kısıtı (supabase/pending/20261026000002) uygulanmamış');
+      reason = 'company_name kısıtı bu veritabanında uygulanmamış (supabase/pending/20261026000002)';
+    }
+  });
+
+  after(async () => {
+    if (original !== null) await setName(original);
+  });
+
+  const bad = [
+    ['satır sonu (\\n)', 'Karay\nGayrimenkul'],
+    ['yön geçersiz kılma U+202E', 'Karay\u202EGayrimenkul'],
+    ['sıfır genişlikli boşluk U+200B', 'Karay\u200BGayrimenkul'],
+    ['BEL kontrol karakteri U+0007', 'Karay\u0007Gayrimenkul'],
+  ];
+  for (const [label, value] of bad) {
+    test(`reddedilir: ${label}`, (t) => {
+      if (reason) return t.skip(reason);
+      return setName(value).then((res) => {
+        assert.ok(res.error, 'kısıt değeri reddetmedi');
+        assert.equal(res.error.code, '23514');
+      });
+    });
+  }
+
+  for (const value of ['KARAYS', 'Karay Gayrimenkul Ltd. Şti.']) {
+    test(`kabul edilir: ${value}`, async (t) => {
+      if (reason) return t.skip(reason);
+      assert.ifError((await setName(value)).error);
+    });
+  }
 });

@@ -1,0 +1,217 @@
+diff --git a/elvankent-gayrimenkul/src/app/actions/media.ts b/elvankent-gayrimenkul/src/app/actions/media.ts
+index d659514..2d8d885 100644
+--- a/elvankent-gayrimenkul/src/app/actions/media.ts
++++ b/elvankent-gayrimenkul/src/app/actions/media.ts
+@@ -198,6 +198,11 @@ export async function renewMediaUpload(mediaId: string): Promise<ActionResult<Up
+   });
+ }
+ 
++/** RPC eski veritabanında yok: PostgREST PGRST202 (şema önbelleğinde yok) ya da Postgres 42883 */
++function isMissingRpc(error: { code?: string; message?: string }) {
++  return error.code === 'PGRST202' || error.code === '42883' || /could not find the function/i.test(error.message ?? '');
++}
++
+ async function markFailed(ctx: OrgContext, mediaId: string, message: string) {
+   await ctx.supabase.from('media_assets').update({ status: 'failed', error: message.slice(0, 300) }).eq('id', mediaId);
+ }
+@@ -263,7 +268,6 @@ async function processMedia(ctx: OrgContext, media: AdminMedia & { original_path
+       width: processed.width,
+       height: processed.height,
+       blur_data_url: processed.blurDataUrl,
+-      variants_byte_size: processed.variantsBytes,
+       processed_at: new Date().toISOString(),
+       error: null,
+     })
+@@ -276,6 +280,35 @@ async function processMedia(ctx: OrgContext, media: AdminMedia & { original_path
+     throw new ActionError('Fotoğraf kaydedilemedi. Lütfen tekrar deneyin.');
+   }
+ 
++  // Gerçek boyutlar veritabanında (storage.objects) kaydedilir ve kota yeniden denetlenir. byte_size /
++  // variants_byte_size'ı oturum istemcisi doğrudan yazamaz (media_size_readonly), yalnızca bu RPC yazar.
++  const { error: sizeError } = await ctx.supabase.rpc('media_record_sizes', { p_media: media.id });
++  if (sizeError) {
++    if (isMissingRpc(sizeError)) {
++      // Eski veritabanı (bekleyen migration uygulanmamış): önceki davranış, varyant boyutu doğrudan yazılır
++      const { error: legacyError } = await ctx.supabase
++        .from('media_assets')
++        .update({ variants_byte_size: processed.variantsBytes })
++        .eq('id', media.id);
++      if (legacyError) {
++        await ctx.supabase.storage.from(MEDIA_BUCKETS.public).remove(variantPaths(publicBase, widths));
++        assertNoDbError(legacyError);
++      }
++    } else if (/plan_limit_storage/.test(sizeError.message ?? '') && media.status === 'ready') {
++      // Hazır fotoğrafın yeniden işlenmesi (döndürme): satır yeni varyantları gösteriyor; orijinal ve varyantlar
++      // silinmez (veri kaybı olmaz), boyutlar önceki sürümün değerinde kalır. Kota yalnızca büyümede aşılabilir.
++      console.warn('[media] yeniden işleme kota üstünde; boyutlar güncellenmedi', media.id);
++    } else if (/plan_limit_storage/.test(sizeError.message ?? '')) {
++      await ctx.supabase.storage.from(MEDIA_BUCKETS.public).remove(variantPaths(publicBase, widths));
++      await ctx.supabase.storage.from(MEDIA_BUCKETS.originals).remove([media.original_path]);
++      await markFailed(ctx, media.id, 'Depolama kotası doldu.');
++      throw new ActionError('Depolama alanı kotanız doldu. Kullanılmayan fotoğrafları silin veya planınızı yükseltin.', 'quota');
++    } else {
++      await ctx.supabase.storage.from(MEDIA_BUCKETS.public).remove(variantPaths(publicBase, widths));
++      assertNoDbError(sizeError);
++    }
++  }
++
+   // Önceki sürümün varyantları (döndürme / yeniden işleme)
+   if (media.public_base && media.public_base !== publicBase && !media.public_base.startsWith('/')) {
+     await ctx.supabase.storage.from(MEDIA_BUCKETS.public).remove(variantPaths(media.public_base, media.variant_widths ?? []));
+diff --git a/elvankent-gayrimenkul/src/types/supabase.ts b/elvankent-gayrimenkul/src/types/supabase.ts
+index 7e0b65b..02ee23f 100644
+--- a/elvankent-gayrimenkul/src/types/supabase.ts
++++ b/elvankent-gayrimenkul/src/types/supabase.ts
+@@ -2404,6 +2404,12 @@ export type Database = {
+         }
+         Returns: undefined
+       }
++      media_record_sizes: {
++        Args: {
++          p_media: string
++        }
++        Returns: undefined
++      }
+       media_upload_allowed: {
+         Args: {
+           p_org: string
+diff --git a/elvankent-gayrimenkul/tests/security/subscription-limits.test.mjs b/elvankent-gayrimenkul/tests/security/subscription-limits.test.mjs
+index c3b95ab..3c576af 100644
+--- a/elvankent-gayrimenkul/tests/security/subscription-limits.test.mjs
++++ b/elvankent-gayrimenkul/tests/security/subscription-limits.test.mjs
+@@ -15,7 +15,10 @@
+  *          Abonelik durumu (iptal/süresi doldu) yalnızca kurumun üyesine görünür; anonim ve başka kiracı görmez.
+  *   SL-05  Eşzamanlı ilan eklemeleri plan limitini aşamaz.
+  *   SL-06  Depolama kotası veritabanında denetlenir (20261026000001_media_quota_lock.sql): eşzamanlı ya da
+- *          media_upload_allowed() çağrılmadan doğrudan eklenen medya kayıtları kotayı aşamaz.
++ *          media_upload_allowed() çağrılmadan doğrudan eklenen medya kayıtları kotayı aşamaz. Ek
++ *          (20261026000001 / 20261026000003): üye byte_size / variants_byte_size'ı doğrudan değiştiremez
++ *          (media_size_readonly), media_record_sizes() gerçek boyutu storage.objects'ten yazar ve kotayı
++ *          yeniden denetler, başka kurumun üyesi çağıramaz, yetkisiz kurum eklemesi kota durumunu sızdırmaz.
+  *
+  * Bekleyen migration uygulanmamış bir veritabanında testler atlanır; CI'da (CI=true) atlanmaz, hata verir.
+  */
+@@ -299,6 +302,123 @@ describe('SL-06 depolama kotası veritabanında', { skip }, () => {
+     assert.match((await addMedia(service, org.id, org.propertyId, 10)).error?.message ?? '', /plan_limit_storage/, 'service role kotayı aştı'); // 37 + 13,5
+   });
+ 
++  const SIZE_GUARD_PENDING = '20261026000003 (media_size_reconcile) bu veritabanında uygulanmamış';
++  const hasSizeRpc = async () => {
++    const r = await service.rpc('media_record_sizes', { p_media: '00000000-0000-0000-0000-000000000000' });
++    return !/Could not find the function|PGRST202/.test(`${r.error?.code} ${r.error?.message}`);
++  };
++  const uploaded = [];
++  after(async () => {
++    if (skip) return;
++    for (const path of uploaded) await service.storage.from('media-originals').remove([path]);
++  });
++  /** Bildirilen boyutla (bayt) satır ekler, gerçek bir nesneyi original_path'e yükler */
++  const addUploaded = async (org, declaredBytes, realBytes) => {
++    const row = await org.owner.client
++      .from('media_assets')
++      .insert({
++        organization_id: org.id,
++        property_id: org.propertyId,
++        kind: 'property_photo',
++        status: 'pending',
++        original_path: `organizations/${org.id}/properties/${org.propertyId}/${randomBytes(8).toString('hex')}`,
++        mime_type: 'image/jpeg',
++        byte_size: declaredBytes,
++      })
++      .select('id, original_path')
++      .single();
++    assert.ifError(row.error);
++    uploaded.push(row.data.original_path);
++    const up = await org.owner.client.storage.from('media-originals').upload(row.data.original_path, Buffer.alloc(realBytes, 1), { contentType: 'image/jpeg' });
++    assert.ifError(up.error);
++    return row.data;
++  };
++
++  test('üye byte_size / variants_byte_size değerini doğrudan değiştiremez; diğer alanlar güncellenir', async (t) => {
++    if (!(await hasSizeRpc())) return t.skip(SIZE_GUARD_PENDING);
++    const org = await orgWithListing('mguard', { plan: PLAN, status: 'active' });
++    const row = await addMedia(org.owner.client, org.id, org.propertyId, 10).select('id').single();
++    assert.ifError(row.error);
++    const zero = await org.owner.client.from('media_assets').update({ byte_size: 0 }).eq('id', row.data.id);
++    assert.match(zero.error?.message ?? '', /media_size_readonly/);
++    const variants = await org.owner.client.from('media_assets').update({ variants_byte_size: 0 }).eq('id', row.data.id);
++    assert.match(variants.error?.message ?? '', /media_size_readonly/);
++    assert.equal(await usedBytes(org.id), 10 * MB);
++    assert.ifError((await org.owner.client.from('media_assets').update({ alt_text: 'açıklama' }).eq('id', row.data.id)).error);
++    // service role (bakım / yönetici bağlantısı) RLS'yi zaten aşar; kilit yalnızca 'authenticated' istek rolünü kapsar
++    assert.ifError((await service.from('media_assets').update({ byte_size: 5 * MB }).eq('id', row.data.id)).error);
++    assert.equal(await usedBytes(org.id), 5 * MB);
++  });
++
++  test('media_record_sizes() gerçek nesne boyutunu yazar (bildirilen 1 bayt yerine)', async (t) => {
++    if (!(await hasSizeRpc())) return t.skip(SIZE_GUARD_PENDING);
++    const org = await orgWithListing('mreal', { plan: PLAN, status: 'active' });
++    const media = await addUploaded(org, 1, 2048);
++    const rpc = await org.owner.client.rpc('media_record_sizes', { p_media: media.id });
++    assert.ifError(rpc.error);
++    const row = await service.from('media_assets').select('byte_size, variants_byte_size').eq('id', media.id).single();
++    assert.equal(Number(row.data.byte_size), 2048);
++    assert.equal(Number(row.data.variants_byte_size), 0);
++  });
++
++  test('media_record_sizes() gerçek boyut kotayı aşıyorsa plan_limit_storage ile reddeder, değer değişmez', async (t) => {
++    if (!(await hasSizeRpc())) return t.skip(SIZE_GUARD_PENDING);
++    const org = await orgWithListing('mover', { plan: PLAN, status: 'active' });
++    assert.ifError((await addMedia(org.owner.client, org.id, org.propertyId, 30)).error); // 30 MB
++    const media = await addUploaded(org, 1, 25 * MB); // gerçek 25 MB: 30 + 25 > 50
++    const rpc = await org.owner.client.rpc('media_record_sizes', { p_media: media.id });
++    assert.match(rpc.error?.message ?? '', /plan_limit_storage/);
++    const row = await service.from('media_assets').select('byte_size').eq('id', media.id).single();
++    assert.equal(Number(row.data.byte_size), 1);
++  });
++
++  test('kota üstündeki kurumda küçülen ya da aynı kalan boyut reddedilmez (döndürme veri kaybı yaratmaz)', async (t) => {
++    if (!(await hasSizeRpc())) return t.skip(SIZE_GUARD_PENDING);
++    const org = await orgWithListing('mshrink', { plan: PLAN, status: 'active' });
++    const media = await addUploaded(org, 4096, 2048);
++    // Kurumu kotanın üstüne taşı (ör. plan düşürüldü): service role ile 60 MB'lık bir kayıt
++    const big = await addMedia(org.owner.client, org.id, org.propertyId, 1).select('id').single();
++    assert.ifError(big.error);
++    assert.ifError((await service.from('media_assets').update({ byte_size: 60 * MB }).eq('id', big.data.id)).error);
++    assert.ifError((await org.owner.client.rpc('media_record_sizes', { p_media: media.id })).error);
++    const row = await service.from('media_assets').select('byte_size').eq('id', media.id).single();
++    assert.equal(Number(row.data.byte_size), 2048);
++    // Aynı boyutla yeniden çağrı (döndürme sonrası) da reddedilmez
++    assert.ifError((await org.owner.client.rpc('media_record_sizes', { p_media: media.id })).error);
++  });
++
++  test('başka kurumun üyesi media_record_sizes() çağıramaz', async (t) => {
++    if (!(await hasSizeRpc())) return t.skip(SIZE_GUARD_PENDING);
++    const org = await orgWithListing('mforb', { plan: PLAN, status: 'active' });
++    const media = await addUploaded(org, 1, 1024);
++    const rpc = await O.active.owner.client.rpc('media_record_sizes', { p_media: media.id });
++    assert.match(rpc.error?.message ?? '', /forbidden/);
++    const anonRpc = await anon.rpc('media_record_sizes', { p_media: media.id });
++    assert.ok(anonRpc.error);
++    const row = await service.from('media_assets').select('byte_size').eq('id', media.id).single();
++    assert.equal(Number(row.data.byte_size), 1);
++  });
++
++  test('üyesi olmadığı kuruma site görseli ekleyen kullanıcı RLS hatası alır, kota durumu sızmaz', async () => {
++    const org = await orgWithListing('mleak', { plan: PLAN, status: 'active' });
++    assert.ifError((await addMedia(org.owner.client, org.id, org.propertyId, 37)).error); // kotaya yakın
++    const attempt = (orgId) =>
++      O.active.owner.client.from('media_assets').insert({
++        organization_id: orgId,
++        property_id: null,
++        kind: 'post_cover',
++        status: 'pending',
++        original_path: `organizations/${orgId}/content/${randomBytes(8).toString('hex')}`,
++        mime_type: 'image/jpeg',
++        byte_size: 10 * MB,
++      });
++    const atQuota = await attempt(org.id);
++    assert.ok(atQuota.error, 'yetkisiz ekleme kabul edildi');
++    assert.doesNotMatch(atQuota.error.message, /plan_limit_storage/);
++    assert.match(atQuota.error.message, /row-level security/);
++    assert.equal(await usedBytes(org.id), 37 * MB);
++  });
++
+   test('planı sınırsız (etkin aboneliği yok, bayrak kapalı) organizasyon etkilenmez', async () => {
+     await setFlag(false);
+     const org = await orgWithListing('munl', null);

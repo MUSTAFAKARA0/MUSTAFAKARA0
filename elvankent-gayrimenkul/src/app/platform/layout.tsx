@@ -12,11 +12,11 @@ export const metadata: Metadata = {
   applicationName: `${PLATFORM_BRAND.name} ${PLATFORM_BRAND.product}`,
   robots: { index: false, follow: false, nocache: true },
   referrer: 'same-origin',
-  // KARAY simgesi (logo paketi); kiracı simgesi kullanılmaz
+  // KARAYS simgesi (logo paketi); kiracı simgesi kullanılmaz
   icons: {
     icon: [
-      { url: PLATFORM_BRAND.icons.ico, sizes: '32x32' },
-      { url: PLATFORM_BRAND.icons.svg, type: 'image/svg+xml' },
+      { url: PLATFORM_BRAND.icons.ico, sizes: '64x64' },
+      { url: PLATFORM_BRAND.icons.png, sizes: '192x192', type: 'image/png' },
     ],
     apple: PLATFORM_BRAND.icons.apple,
   },

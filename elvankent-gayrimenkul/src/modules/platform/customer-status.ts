@@ -77,9 +77,9 @@ export function onboardingSteps(flags: OnboardingFlags): OnboardingStep[] {
       done: flags.domain,
       required: flags.domain_available,
       href: flags.domain_available ? '/admin/site/alan-adi' : null,
-      hint: flags.domain_available ? 'Kendi alan adınızı bağlayın' : 'Planınızda özel alan adı yok; site KARAY adresinde yayınlanır',
+      hint: flags.domain_available ? 'Kendi alan adınızı bağlayın' : 'Planınızda özel alan adı yok; site KARAYS adresinde yayınlanır',
     },
-    { key: 'live', label: 'Site yayına açıldı', done: flags.live, required: false, href: null, hint: 'KARAY ekibi kontrol ettikten sonra siteyi ziyaretçilere açar' },
+    { key: 'live', label: 'Site yayına açıldı', done: flags.live, required: false, href: null, hint: 'KARAYS ekibi kontrol ettikten sonra siteyi ziyaretçilere açar' },
   ];
 }
 

@@ -36,7 +36,7 @@ export function KarayLeadForm() {
       <div role="status" className="flex flex-col items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-900">
         <CheckCircle2 className="size-7" aria-hidden />
         <p className="text-[17px] font-semibold">{state.message}</p>
-        <p className="text-[14px] text-emerald-900/80">Bu talep KARAY ekibine iletilir; herhangi bir emlak ofisiyle paylaşılmaz.</p>
+        <p className="text-[14px] text-emerald-900/80">Bu talep KARAYS ekibine iletilir; herhangi bir emlak ofisiyle paylaşılmaz.</p>
       </div>
     );
   }

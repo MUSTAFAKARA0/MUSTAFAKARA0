@@ -3,6 +3,7 @@ import { PlatformWordmark } from '@/components/brand/platform-wordmark';
 import { KARAY_NAV } from '@/modules/karay/nav';
 import { KARAY_LEGAL } from '@/modules/karay/legal';
 import type { KarayProfile } from '@/modules/karay/profile';
+import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 
 /**
  * KARAY alt bilgisi. Kiracı sitelerinin alt bilgisinden tamamen ayrıdır. Sosyal medya
@@ -17,7 +18,7 @@ export function KarayFooter({ profile }: { profile: KarayProfile }) {
     <footer className="bg-[#0b1b3a] text-white">
       <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr] lg:py-16">
         <div className="max-w-sm">
-          <PlatformWordmark tone="dark" tagline height={40} />
+          <PlatformWordmark tone="dark" height={34} />
           <p className="mt-5 text-[14.5px] leading-relaxed text-white/70">
             Emlak ofisleri için web sitesi, ilan, müşteri ve marka yönetimini tek platformda toplayan gayrimenkul teknolojileri ve SaaS altyapısı.
           </p>
@@ -34,7 +35,7 @@ export function KarayFooter({ profile }: { profile: KarayProfile }) {
             </ul>
           )}
         </div>
-        <nav aria-label="KARAY alt menü">
+        <nav aria-label={`${PLATFORM_BRAND.name} alt menü`}>
           <h2 className="text-[12px] font-bold tracking-[0.14em] text-white/50 uppercase">Platform</h2>
           <ul className="mt-4 space-y-2.5 text-[14.5px]">
             {KARAY_NAV.map((l) => (

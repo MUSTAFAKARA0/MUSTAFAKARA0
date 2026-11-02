@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { JsonLd } from '@/components/common/json-ld';
 import { KarayLeadForm } from '@/components/karay/karay-lead-form';
+import { HelperMascot } from '@/components/brand/helper-mascot';
+import { KaroMascot } from '@/components/brand/karo-mascot';
 import { ThemeShowcase } from '@/components/karay/theme-showcase';
 import { Button } from '@/components/ui/button';
 import { karaySiteUrl } from '@/modules/karay/site';
@@ -78,8 +80,8 @@ const STEPS = [
 ];
 
 const FAQ = [
-  { q: 'KARAY bir emlak ofisi mi?', a: 'Hayır. KARAY, emlak ofislerine yazılım altyapısı sağlayan bir gayrimenkul teknolojileri şirketidir. İlan sahibi değildir, emlak hizmeti vermez.' },
-  { q: 'Sitemde KARAY adı görünür mü?', a: 'Hayır. Siteniz kendi logonuz, adınız, renkleriniz ve alan adınızla yayınlanır (beyaz etiket).' },
+  { q: 'KARAYS bir emlak ofisi mi?', a: 'Hayır. KARAYS, emlak ofislerine yazılım altyapısı sağlayan bir gayrimenkul teknolojileri şirketidir. İlan sahibi değildir, emlak hizmeti vermez.' },
+  { q: 'Sitemde KARAYS adı görünür mü?', a: 'Hayır. Siteniz kendi logonuz, adınız, renkleriniz ve alan adınızla yayınlanır (beyaz etiket).' },
   { q: 'Mevcut alan adımı kullanabilir miyim?', a: 'Evet. Alan adınız platforma bağlanır; gerekli DNS kayıtları panelde adım adım gösterilir.' },
   { q: 'Verilerim diğer ofislerle karışır mı?', a: 'Hayır. Her ofisin ilanları, müşterileri ve talepleri veritabanı düzeyinde ayrıdır; bir ofis başka bir ofisin verisini göremez.' },
   { q: 'Sitenin görünümünü kendim değiştirebilir miyim?', a: `Evet. ${THEME_LIST.length} tema, renk paletleri, yazı tipleri, menü, ana sayfa bölümleri ve footer ayarlanabilir. Değişiklikler önce taslakta önizlenir, sonra yayınlanır.` },
@@ -134,22 +136,32 @@ export default async function KarayPage() {
             </ul>
           </div>
           <figure className="relative min-w-0">
-            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white shadow-[0_30px_80px_-30px_rgb(0_0_0/0.6)]">
-              <div className="flex items-center gap-1.5 border-b border-[#e3e8f0] bg-[#f4f7fb] px-4 py-2.5" aria-hidden>
-                <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
-                <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
-                <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
-                <span className="ml-3 truncate text-[11.5px] text-[#5b6b85]">KARAY · Site Kontrol Merkezi</span>
+            <div className="relative">
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-white shadow-[0_30px_80px_-30px_rgb(0_0_0/0.6)]">
+                <div className="flex items-center gap-1.5 border-b border-[#e3e8f0] bg-[#f4f7fb] px-4 py-2.5" aria-hidden>
+                  <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
+                  <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
+                  <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
+                  <span className="ml-3 truncate text-[11.5px] text-[#5b6b85]">{PLATFORM_BRAND.name} · Site Kontrol Merkezi</span>
+                </div>
+                <Image
+                  src={ekranKontrolMerkezi}
+                  alt={`${PLATFORM_BRAND.name} Site Kontrol Merkezi: bir emlak ofisi sitesinin tasarım aileleri, canlı ve taslak durumu`}
+                  sizes="(min-width: 1024px) 600px, 100vw"
+                  priority
+                  className="h-auto w-full"
+                />
               </div>
-              <Image
-                src={ekranKontrolMerkezi}
-                alt="KARAY Site Kontrol Merkezi: bir emlak ofisi sitesinin tema galerisi, canlı ve taslak durumu"
-                sizes="(min-width: 1024px) 600px, 100vw"
-                priority
-                className="h-auto w-full"
+              {/* KARO ziyaretçiyi karşılar: ekran görüntüsünün sol alt köşesinde (dekoratif). Sola taşması sayfa kenar boşluğunu
+                  (16 / 24 px) ve geniş ekranda sütun aralığını (48 px) aşmaz: hero overflow-hidden, KARO kırpılmamalı (KARAY-21) */}
+              <KaroMascot
+                width={168}
+                sizes="(min-width: 1024px) 168px, (min-width: 640px) 128px, 92px"
+                loading="eager"
+                className="absolute -bottom-5 -left-3 h-auto w-[92px] sm:-left-5 sm:w-[128px] lg:-bottom-8 lg:-left-12 lg:w-[168px]"
               />
             </div>
-            <figcaption className="mt-3 text-center text-[12.5px] text-white/55">Gerçek ekran görüntüsü · örnek ofis verisiyle</figcaption>
+            <figcaption className="mt-3 text-right text-[12.5px] text-white/55 lg:text-center">Gerçek ekran görüntüsü · örnek ofis verisiyle</figcaption>
           </figure>
         </div>
       </section>
@@ -158,12 +170,12 @@ export default async function KarayPage() {
       <section id="hakkimizda" aria-labelledby="karay-nedir" className="scroll-mt-20 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
           <div className="max-w-3xl">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#2f6bff] uppercase">KARAY nedir?</p>
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">{PLATFORM_BRAND.name} nedir?</p>
             <h2 id="karay-nedir" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
               Emlak ofisleri için geliştirilen bir gayrimenkul teknolojileri platformu
             </h2>
             <p className="mt-5 text-[17px] leading-relaxed text-[#33415c]">
-              KARAY bir emlak ofisi değildir; emlak ofislerine yazılım altyapısı sağlar. Her ofis platformda kendi markasıyla, kendi alan adında, kendi web sitesini ve iş süreçlerini yönetir. Ofislerin verileri birbirinden tamamen ayrıdır.
+              {PLATFORM_BRAND.name} bir emlak ofisi değildir; emlak ofislerine yazılım altyapısı sağlar. Her ofis platformda kendi markasıyla, kendi alan adında, kendi web sitesini ve iş süreçlerini yönetir. Ofislerin verileri birbirinden tamamen ayrıdır.
             </p>
           </div>
           <div className="mt-14 grid gap-6 lg:grid-cols-2">
@@ -179,7 +191,7 @@ export default async function KarayPage() {
               </ul>
             </div>
             <div className="rounded-2xl bg-[#0b1b3a] p-7 text-white sm:p-9">
-              <h3 className="text-[18px] font-semibold">KARAY ile</h3>
+              <h3 className="text-[18px] font-semibold">{PLATFORM_BRAND.name} ile</h3>
               <ul className="mt-5 space-y-3.5">
                 {SOLUTIONS.map((s) => (
                   <li key={s} className="flex gap-3 text-[15px] leading-relaxed text-white/85">
@@ -197,7 +209,7 @@ export default async function KarayPage() {
       <section id="ozellikler" aria-labelledby="karay-ozellikler" className="scroll-mt-20 bg-[#f4f7fb]">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
           <div className="max-w-2xl">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#2f6bff] uppercase">Platform özellikleri</p>
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Platform özellikleri</p>
             <h2 id="karay-ozellikler" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
               Bir emlak ofisinin dijitalde ihtiyaç duyduğu her şey
             </h2>
@@ -220,7 +232,7 @@ export default async function KarayPage() {
       <section id="platform" aria-labelledby="karay-platform" className="scroll-mt-20 bg-white">
         <div className="mx-auto grid max-w-7xl gap-14 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:py-28">
           <div>
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#2f6bff] uppercase">Site Kontrol Merkezi</p>
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Site Kontrol Merkezi</p>
             <h2 id="karay-platform" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
               Web sitenizi tek panelden yönetin
             </h2>
@@ -262,7 +274,7 @@ export default async function KarayPage() {
       <section id="temalar" aria-labelledby="karay-temalar" className="scroll-mt-20 border-y border-[#e3e8f0] bg-[#f4f7fb]">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
           <div className="max-w-2xl">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#2f6bff] uppercase">Temalar</p>
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Temalar</p>
             <h2 id="karay-temalar" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
               {THEME_LIST.length} tema, her biri farklı bir karakter
             </h2>
@@ -335,12 +347,12 @@ export default async function KarayPage() {
         <span id="demo" className="block scroll-mt-20" aria-hidden />
         <div className="mx-auto grid max-w-7xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:py-28">
           <div>
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#2f6bff] uppercase">İletişim</p>
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">İletişim</p>
             <h2 id="karay-iletisim" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
               Ofisiniz için konuşalım
             </h2>
             <p className="mt-5 text-[16.5px] leading-relaxed text-[#33415c]">
-              Bilgi almak veya platformu canlı görmek için formu doldurun. Talebiniz yalnızca KARAY ekibine iletilir; herhangi bir emlak ofisiyle paylaşılmaz.
+              Bilgi almak veya platformu canlı görmek için formu doldurun. Talebiniz yalnızca {PLATFORM_BRAND.name} ekibine iletilir; herhangi bir emlak ofisiyle paylaşılmaz.
             </p>
             {(profile.email || profile.phone || profile.address) && (
               <dl className="mt-8 space-y-3 text-[15px]">
@@ -372,6 +384,8 @@ export default async function KarayPage() {
                 )}
               </dl>
             )}
+            {/* Yardımcı maskot: bu bölümün gerçek destek kanalının (iletişim formu) görsel yüzü; dekoratif */}
+            <HelperMascot width={144} sizes="(min-width: 1024px) 144px, (min-width: 640px) 112px, 96px" className="mt-10 h-auto w-24 sm:w-28 lg:w-36" />
           </div>
           <div className="rounded-2xl border border-[#e3e8f0] bg-[#f8fafc] p-6 sm:p-8">
             <KarayLeadForm />

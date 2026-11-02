@@ -56,7 +56,9 @@ export function FavoriteButton({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      aria-label={active ? 'Favorilerden çıkar' : 'Favorilere ekle'}
+      // Yalnızca simge gösteren düğmeye ad verilir; metinli düğmenin adı görünen metindir (sesli komutla
+      // görünen adla çağrılabilsin, WCAG 2.5.3). Durum aria-pressed ile iletilir.
+      aria-label={variant === 'outline' ? undefined : active ? 'Favorilerden çıkar' : 'Favorilere ekle'}
       className={cn('relative z-10 inline-flex items-center justify-center gap-2 transition active:scale-95', variantClass[variant], className)}
     >
       <Heart className={cn('size-[19px] transition', active && 'fill-danger text-danger')} aria-hidden />

@@ -58,7 +58,7 @@ function db() {
 const DB_MESSAGES: Record<string, string> = {
   forbidden: 'Bu alan adını yönetme yetkiniz yok.',
   invalid_organization: 'Organizasyon bulunamadı veya aktif değil.',
-  plan_feature_disabled: 'Planınız özel alan adını içermiyor. Planınızı yükseltmek için KARAY ile iletişime geçin.',
+  plan_feature_disabled: 'Planınız özel alan adını içermiyor. Planınızı yükseltmek için KARAYS ile iletişime geçin.',
   domain_limit: 'En fazla 5 alan adı eklenebilir.',
   domain_taken: 'Bu alan adı başka bir sitede doğrulanmış / kullanımda.',
   domain_exists: 'Bu alan adı zaten ekli.',
@@ -178,8 +178,8 @@ export async function connectDomain(actor: DomainActor, orgId: string, domainId:
     if (!ok) {
       throw new ActionError(
         cfg.targetCname || cfg.targetA.length
-          ? 'Alan adı henüz KARAY\'a yönlendirilmiyor. Gösterilen DNS kaydını ekleyin; yayılması birkaç dakika ile birkaç saat sürebilir.'
-          : 'Bağlantı hedefi yapılandırılmamış; bağlantıyı KARAY ekibi onaylayacak.',
+          ? 'Alan adı henüz KARAYS\'a yönlendirilmiyor. Gösterilen DNS kaydını ekleyin; yayılması birkaç dakika ile birkaç saat sürebilir.'
+          : 'Bağlantı hedefi yapılandırılmamış; bağlantıyı KARAYS ekibi onaylayacak.',
         'not_connected',
       );
     }

@@ -1,0 +1,120 @@
+-- =============================================================================
+-- Plan limitleri · medya boyutunun gerçek değerle eşlenmesi ve doğrudan güncellemenin kapatılması
+--
+-- BEKLEYEN migration: supabase/migrations/ altında DEĞİL, canlıya uygulanmaz. Yayına O-5 onayı ve
+-- kendi ön/son kontrol betikleriyle alınır; D-04/D-05 kararını beklemez. OPS-02 bayrağına dokunmaz.
+-- 20261026000001_media_quota_lock.sql ile birlikte (ondan sonra) uygulanır.
+--
+-- Hata: byte_size istemcinin bildirdiği boyuttur ve işlem sonrası gerçek boyutla eşlenmez.
+-- media_member_write (FOR ALL, media.manage) politikası üyenin byte_size / variants_byte_size
+-- sütunlarını PostgREST ile doğrudan 0 yapmasına izin verir; depolama kotası böylece aşılabilir.
+--
+-- Düzeltme:
+--  1) media_record_sizes(p_media): SECURITY DEFINER; media.manage yetkisini satırın kurumu için
+--     doğrular, GERÇEK boyutları storage.objects'ten okur (orijinal: media-originals/original_path,
+--     varyantlar: media/public_base/* toplamı), kurum kilidini alır, kotayı satırın kendisi hariç
+--     gerçek değerlerle (1,35 payı olmadan) yeniden denetler ve aşılırsa plan_limit_storage
+--     (P0001) fırlatır; aksi halde iki sütunu yazar. Uygulama (processMedia) yükleme işlendikten sonra çağırır.
+--  2) media_assets_size_guard: byte_size / variants_byte_size değerini 'authenticated' rolüyle
+--     (PostgREST istek rolü) doğrudan değiştirmeye çalışan UPDATE'i media_size_readonly (42501) ile
+--     reddeder. Tetikleyici fonksiyonu SECURITY INVOKER'dır: PostgREST isteğinde current_user
+--     'authenticated'dır; media_record_sizes (SECURITY DEFINER) içinde fonksiyon sahibidir, bu yüzden
+--     yalnızca o yol değiştirebilir. service_role ve yönetici bağlantıları etkilenmez (kurum silme,
+--     bakım betikleri); service role zaten RLS'yi aşar.
+--
+-- Kapsam: yalnızca media_assets. Satırlar ve RLS politikaları değişmez; veri değiştirmez.
+-- YAYIN SIRASI (zorunlu): ÖNCE bu RPC'yi kullanan uygulama kodu yayınlanır, SONRA bu dosya uygulanır.
+-- Eski uygulama sürümü variants_byte_size'ı oturum istemcisiyle doğrudan yazar; bu dosya eski kod
+-- canlıdayken uygulanırsa media_assets_size_guard o yazımı reddeder ve fotoğraf işleme bozulur.
+-- Yeni kod RPC yoksa eski davranışa düşer (docs/K17_KARAYS_RELEASE.md §5), bu yüzden kod önce gider.
+-- Bilinen kalan risk: üye public_base / original_path sütunlarını doğrudan değiştirebildiği için RPC'nin
+-- okuduğu boyut yine etkilenebilir; tam çözüm sonlandırmanın tek bir definer RPC'ye taşınması ve
+-- authenticated için UPDATE'in sütun düzeyinde daraltılmasıdır (ayrı iş).
+-- Yalnızca büyüme denetlenir: kota üstündeki kurumda döndürme gibi küçülen/aynı kalan boyut reddedilmez.
+--
+-- Tekrar çalıştırılabilir.
+--
+-- GERİ DÖNÜŞ:
+--   drop trigger if exists media_assets_size_guard on public.media_assets;
+--   drop function if exists public.media_assets_size_guard();
+--   drop function if exists public.media_record_sizes(uuid);
+-- =============================================================================
+
+create or replace function public.media_record_sizes(p_media uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_org uuid;
+  v_original text;
+  v_base text;
+  v_cur_orig bigint;
+  v_cur_var bigint;
+  v_orig bigint;
+  v_var bigint;
+  v_limit integer;
+begin
+  select organization_id, original_path, public_base, byte_size, variants_byte_size
+    into v_org, v_original, v_base, v_cur_orig, v_cur_var
+    from public.media_assets where id = p_media;
+  -- Satır yoksa ve yetkisizse aynı hata (varlık sızmaz)
+  if v_org is null or not public.has_org_permission(v_org, 'media.manage') then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+
+  -- Gerçek boyutlar; nesne yoksa mevcut değer korunur
+  v_orig := v_cur_orig;
+  if v_original is not null then
+    select coalesce((o.metadata->>'size')::bigint, v_cur_orig) into v_orig
+      from storage.objects o where o.bucket_id = 'media-originals' and o.name = v_original;
+    v_orig := coalesce(v_orig, v_cur_orig);
+  end if;
+  v_var := v_cur_var;
+  if v_base is not null and left(v_base, 1) <> '/' then
+    select coalesce(sum((o.metadata->>'size')::bigint), 0) into v_var
+      from storage.objects o
+     where o.bucket_id = 'media' and left(o.name, length(v_base) + 1) = v_base || '/';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended('karay.quota:media_assets:' || v_org::text, 0));
+  select max_storage_mb into v_limit from public.org_plan(v_org);
+  -- Yalnızca büyüme denetlenir: küçülme ya da aynı boyut (ör. kota üstündeki kurumda döndürme) reddedilmez
+  if v_limit is not null
+     and coalesce(v_orig, 0) + v_var > coalesce(v_cur_orig, 0) + coalesce(v_cur_var, 0) and (
+    select coalesce(sum(coalesce(byte_size, 0) + variants_byte_size), 0)
+      from public.media_assets where organization_id = v_org and id <> p_media
+  ) + coalesce(v_orig, 0) + v_var > v_limit::bigint * 1024 * 1024 then
+    raise exception 'plan_limit_storage' using errcode = 'P0001',
+      hint = 'Depolama alanı kotanız doldu.';
+  end if;
+
+  update public.media_assets set byte_size = v_orig, variants_byte_size = v_var where id = p_media;
+end;
+$$;
+revoke all on function public.media_record_sizes(uuid) from public, anon;
+grant execute on function public.media_record_sizes(uuid) to authenticated;
+
+-- SECURITY INVOKER (bilinçli): current_user çağıran roldür
+create or replace function public.media_assets_size_guard()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if current_user = 'authenticated'
+     and (new.byte_size is distinct from old.byte_size
+          or new.variants_byte_size is distinct from old.variants_byte_size) then
+    raise exception 'media_size_readonly' using errcode = '42501',
+      hint = 'Dosya boyutu yalnızca yükleme işlemi sırasında sunucu tarafından kaydedilir.';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.media_assets_size_guard() from public, anon, authenticated;
+
+drop trigger if exists media_assets_size_guard on public.media_assets;
+create trigger media_assets_size_guard
+  before update of byte_size, variants_byte_size on public.media_assets
+  for each row execute function public.media_assets_size_guard();

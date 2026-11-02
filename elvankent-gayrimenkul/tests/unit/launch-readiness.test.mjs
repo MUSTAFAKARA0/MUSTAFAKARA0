@@ -8,11 +8,32 @@
  *  LR-05  E-posta: geçici hatada sınırlı yeniden deneme, kalıcı hatada deneme yok, aynı anahtar
  *  LR-06  Şifre sıfırlama: KARAY e-posta sağlayıcısı, güvenilir kök adres, hız sınırı, after()
  *  LR-07  Anında yayına çıkan düzenleyiciler bunu açıkça söyler (taslak sanılmaz)
+ *  LR-08  CI'nin veritabanı işi E2E ön koşullarını sağlar: demo ortamı, ofis sahibi + süper admin yönetici;
+ *         CI'da RLS ve E2E testleri yalnızca geçici yerel Supabase'e bağlanır (production'a yönelirse durur);
+ *         CI'nin yazdığı .env.local bash ve Node tarafından aynı değerlerle okunur (K-11)
+ *  LR-09  CI ve yedek iş akışlarındaki her iş sabit çalıştırıcı imajında (ubuntu-24.04) çalışır; imaj
+ *         ubuntu-latest etiketiyle kendiliğinden değişmez (K-16)
+ *  LR-10  KARAYS migration runbook'u (supabase/ops/karays_brand/): uygulama betiğindeki gövde migration
+ *         dosyasıyla birebir aynı; okuyan betikler tek SELECT; yazan betikler tek işlem; 03 yalnızca önceki
+ *         ya da kendi şema sürümünde uygular; 02'nin ürettiği yorumlar tek satırdır (K-17)
+ *  LR-11  CI tedarik zinciri: her action tam commit SHA'sıyla sabit; Supabase CLI sürümü sabit; gitleaks
+ *         arşivi SHA-256 ile doğrulanır; çalışma anında npx ile paket indirilmez (K-18)
+ *  LR-12  Yalnız güvenlik yaması adayı: patch özeti kayıtlı; iş akışı, README ve patch aynı tabanı ve ağacı
+ *         söyler; aday iş akışı yalnızca doğrulama dalında çalışır, gizli değer kullanmaz (K-19)
+ *  LR-13  Bekleyen migration'lar (supabase/pending): son migration'dan sonra sıralanır, şema sürümünü
+ *         değiştirmez; CI demo verisinden sonra uygular; OPS-02 bayrağı varsayılan kapalı (K-19)
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { parseEnv } from 'node:util';
 import { tenantBaseUrls } from '../../src/platform/tenant/host.ts';
+import { isIndexable, showsDemoNotice } from '../../src/lib/site-env.ts';
 
 const root = new URL('../../', import.meta.url);
 const read = (p) => readFileSync(new URL(p, root), 'utf8');
@@ -251,5 +272,468 @@ describe('LR-07 anında yayına çıkan düzenleyiciler', () => {
   });
   test('site yönetimi › sayfalar kapsamı ayırır', () => {
     assert.match(read('src/components/site-editor/structure-forms.tsx'), /data-testid="pages-draft-scope"/);
+  });
+});
+
+describe('LR-08 CI E2E ortamı', () => {
+  // E2E ön koşulları (tests/e2e/acceptance.spec.ts): demo ortamı (DEMO ORTAMI şeridi, noindex) ve hem ofis
+  // sahibi hem KARAY süper admini olan bir yönetici. CI bunları sağlamazsa testler yerelde geçip CI'da düşer.
+  const wf = read('../.github/workflows/elvankent-ci.yml');
+  const database = wf.split(/\n {2}database:\n/)[1]?.split(/\n {2}[a-z][\w-]*:\n/)[0] ?? '';
+  const tmp = (t) => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'karay-ci-env-'));
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    return dir;
+  };
+  const checkEnv = (file) =>
+    spawnSync(process.execPath, ['scripts/check-env-file.mjs', file], { cwd: fileURLToPath(root), encoding: 'utf8', timeout: 30_000 });
+  // CI'nin .env.local'ı yazan bloğu (env_line … } > .env.local) örnek yerel Supabase değerleriyle geçici klasörde
+  // çalıştırılır: testler YAML metnine değil, CI'nin gerçekten yazacağı dosyaya bakar
+  const writeCiEnv = (dir) => {
+    const block = database.match(/^( *)env_line\(\) \{\n[\s\S]*?^\1\} > \.env\.local$/m);
+    assert.ok(block, ".env.local'ı yazan blok bulundu");
+    const script = block[0].split('\n').map((l) => l.slice(block[1].length)).join('\n');
+    const env = { PATH: process.env.PATH, API_URL: 'http://127.0.0.1:54321', ANON_KEY: 'anon.ornek.imza', SERVICE_ROLE_KEY: 'servis.ornek.imza' };
+    const r = spawnSync('bash', ['--noprofile', '--norc', '-c', `set -euo pipefail\n${script}`], { cwd: dir, env, encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    return path.join(dir, '.env.local');
+  };
+  test('veritabanı işi uygulamayı ve testleri demo ortamında çalıştırır', (t) => {
+    assert.ok(database, 'database işi bulundu');
+    const text = readFileSync(writeCiEnv(tmp(t)), 'utf8');
+    assert.equal(text.match(/^SITE_ENV=/gm)?.length, 1, 'SITE_ENV bir kez yazılır');
+    const env = parseEnv(text).SITE_ENV;
+    assert.equal(env, 'demo');
+    const prev = process.env.SITE_ENV;
+    process.env.SITE_ENV = env;
+    try {
+      assert.equal(showsDemoNotice(), true, 'DEMO ORTAMI şeridi görünür');
+      assert.equal(isIndexable(), false, 'noindex');
+    } finally {
+      if (prev === undefined) delete process.env.SITE_ENV;
+      else process.env.SITE_ENV = prev;
+    }
+  });
+  test('E2E yöneticisi ofis sahibi ve süper admin olarak oluşturulur', () => {
+    const line = database.split('\n').find((l) => /npm run create-admin -- /.test(l) && !/^\s*#/.test(l));
+    assert.ok(line, 'create-admin satırı var');
+    assert.match(line, /--role=owner\b/);
+    assert.match(line, /--super-admin\b/);
+    assert.match(line, /e2e-admin@example\.test/);
+    assert.match(database, /E2E_ADMIN_EMAIL: e2e-admin@example\.test/);
+  });
+  test("CI'da RLS ve E2E testleri yerel olmayan bir Supabase'e bağlanmadan durur", () => {
+    const run = (args, env) => spawnSync(process.execPath, args, { cwd: fileURLToPath(root), env: { ...process.env, CI: 'true', ...env }, encoding: 'utf8', timeout: 60_000 });
+    const remote = { NEXT_PUBLIC_SUPABASE_URL: 'https://ornek-proje.supabase.co', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'x', SUPABASE_SERVICE_ROLE_KEY: 'x' };
+    const config = ['--input-type=module', '-e', "await import('./playwright.config.ts')"];
+    for (const args of [['tests/security/rls.test.mjs'], ['tests/security/subscription-limits.test.mjs'], ['tests/security/membership-changes.test.mjs'], config]) {
+      const r = run(args, remote);
+      assert.notEqual(r.status, 0, args.join(' '));
+      assert.match(r.stderr, /CI: NEXT_PUBLIC_SUPABASE_URL yerel değil/, args.join(' '));
+    }
+    // Yerel adreste koruma devreye girmez (yalnızca yapılandırma yüklenir; ağ isteği yapılmaz)
+    assert.equal(run(config, { NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:54321' }).status, 0);
+  });
+  test('.env.local bash ve Node tarafından aynı değerlerle okunur (K-11)', (t) => {
+    const file = writeCiEnv(tmp(t));
+    const r = checkEnv(file);
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /\d+ değişken bash ve Node tarafından aynı değerlerle okunuyor/);
+    // K-11'e yol açan değer iki tarafta da aynı metin olarak okunur ("E2E hazırlık" adımı dosyayı bash ile yükler)
+    const sender = 'KARAY CI <davet@example.test>';
+    const sh = spawnSync('bash', ['--noprofile', '--norc', '-c', 'set -euo pipefail; set -a; . "$1"; set +a; printf %s "$EMAIL_FROM"', 'bash', file], {
+      env: { PATH: process.env.PATH },
+      encoding: 'utf8',
+    });
+    assert.equal(sh.status, 0, sh.stderr);
+    assert.equal(sh.stdout, sender);
+    assert.equal(parseEnv(readFileSync(file, 'utf8')).EMAIL_FROM, sender);
+    // CI dosyayı yazar yazmaz, testlerden ve "E2E hazırlık" adımından önce denetler
+    assert.match(database, /\} > \.env\.local\n +node scripts\/check-env-file\.mjs \.env\.local\n/);
+  });
+  test('denetleyici bash ile Node farklı okuduğunda durur ve değer yazdırmaz', (t) => {
+    const dir = tmp(t);
+    const cases = [
+      // K-11'in kendisi (eski CI satırı): bash için yönlendirme ve sözdizimi hatası, Node için metin
+      ['EMAIL_FROM=KARAY CI <davet@example.test>', /bash dosyayı okuyamadı \(çıkış \d+\); satır 2: EMAIL_FROM$/m],
+      // iki taraf da okur ama farklı değerle: Node çift tırnak içinde \n'i satır sonuna çevirir, bash çevirmez
+      ['SATIR="birinci\\nikinci-5b2e"', /^ {2}- SATIR: bash ve Node farklı değer okuyor$/m],
+      // bash "true" komutunu çalıştırır ve değişkeni tanımlamaz; Node değeri "komut-degeri-3f9a true" okur
+      ['KOMUT=komut-degeri-3f9a true', /^ {2}- KOMUT: bash tanımlamıyor$/m],
+      // yalnızca bash'in tanımladığı değişken (Node satırı başka bir ad olarak okur)
+      ['declare ICINDE=bash-degeri-9d1f', /^ {2}- ICINDE: yalnızca bash tanımlıyor$/m],
+    ];
+    cases.forEach(([line, expected], i) => {
+      const file = path.join(dir, `durum-${i}.env`);
+      writeFileSync(file, `GIZLI_ORNEK='gizli-ornek-7c1d'\n${line}\n`);
+      const r = checkEnv(file);
+      assert.equal(r.status, 1, `${line}: ${r.stdout}`);
+      assert.match(r.stderr, expected, line);
+      assert.doesNotMatch(r.stdout + r.stderr, /gizli-ornek-7c1d|davet@example|ikinci-5b2e|komut-degeri-3f9a|bash-degeri-9d1f/, `${line}: değer yazdırılmaz`);
+    });
+    const quoted = path.join(dir, 'tirnakli.env');
+    writeFileSync(quoted, "EMAIL_FROM='KARAY CI <davet@example.test>'\n");
+    assert.equal(checkEnv(quoted).status, 0, 'aynı değer tek tırnakla iki tarafta da aynı okunur');
+  });
+});
+
+describe('LR-09 sabit çalıştırıcı imajı (K-16)', () => {
+  // ubuntu-latest 19.10.2026'dan itibaren Ubuntu 26'ya taşınıyor. CI'nin doğruladığı ortam ubuntu-24.04'tür;
+  // yeni imaj, CI'da doğrulanıp ayrı bir commit'le seçilir (etiket kendiliğinden kaymaz).
+  const LR09 = [['elvankent-ci.yml', 2], ['elvankent-backup.yml', 2], ['elvankent-security-candidate.yml', 1], ['elvankent-r2-diagnose.yml', 1], ['elvankent-restore-drill.yml', 1], ['elvankent-o4-onkontrol.yml', 1], ['elvankent-o4-e2e.yml', 1], ['elvankent-uretim-saglik.yml', 1], ['elvankent-ki23-canli-denetim.yml', 1], ['elvankent-o5a-uygula.yml', 1], ['elvankent-o5b-uygula.yml', 1]];
+  const LR09_FILES = LR09.map(([f]) => f);
+  test('depodaki her iş akışı LR-09 listesinde', () => {
+    const all = readdirSync(new URL('../.github/workflows/', root)).filter((f) => /^elvankent-.*\.yml$/.test(f));
+    assert.deepEqual(all.filter((f) => !LR09_FILES.includes(f)), []);
+  });
+  for (const [file, minJobs] of LR09) {
+    test(`${file}: her iş ubuntu-24.04 üzerinde çalışır`, () => {
+      const jobs = read(`../.github/workflows/${file}`).split(/\njobs:\n/)[1] ?? '';
+      const names = [...jobs.matchAll(/^ {2}([a-z][\w-]*):$/gm)].map((m) => m[1]);
+      const runners = [...jobs.matchAll(/^ {4}runs-on:(.*)$/gm)].map((m) => m[1].trim());
+      // Aynı depodaki yeniden kullanılabilir iş akışını çağıran iş runs-on taşımaz; çağrılan dosya bu listede denetlenir
+      const calls = [...jobs.matchAll(/^ {4}uses: \.\/\.github\/workflows\/(elvankent-[\w-]+\.yml)$/gm)].map((m) => m[1]);
+      for (const called of calls) assert.ok(LR09_FILES.includes(called), `${file}: çağrılan ${called} LR-09 listesinde`);
+      assert.ok(names.length >= minJobs, `${file}: işler bulundu`);
+      assert.equal(runners.length + calls.length, names.length, `${file}: her işte runs-on var (${names.join(', ')})`);
+      assert.deepEqual([...new Set(runners)], ['ubuntu-24.04']);
+    });
+  }
+});
+
+describe('LR-10 KARAYS migration runbook (K-17)', () => {
+  // supabase/ops/karays_brand/: 20261018000001'i canlıda tek başına uygulayan betikler. Migration dosyası
+  // değişip 03 değişmezse canlıya provası yapılmamış bir gövde gider; okuyan betikler canlıya yazamaz.
+  const dir = 'supabase/ops/karays_brand/';
+  const file = '20261018000001_karays_brand.sql';
+  const prev = migrations[migrations.indexOf(file) - 1];
+  // Tırnak içindeki metin (ör. üretilen 'begin;' satırları) ifade sayılmaz
+  const statements = (sql) =>
+    sql
+      .split('\n')
+      .filter((l) => !/^\s*--/.test(l))
+      .join('\n')
+      .replace(/'(?:[^']|'')*'/g, "''")
+      .trim();
+  test('03 uygulama betiğindeki migration gövdesi dosyayla birebir aynı', () => {
+    const apply = read(`${dir}03_apply.sql`);
+    const start = apply.indexOf(`-- ---- ${file}`);
+    const end = apply.indexOf('-- ---- gövde sonu');
+    assert.ok(start > 0 && end > start, 'gövde işaretleri var');
+    const migration = read(`supabase/migrations/${file}`);
+    // Gövde ilk ifadeyle başlar (başlıktaki yorumlu geri dönüş satırları gövde değildir)
+    const bodyStart = migration.search(/^alter table /m);
+    assert.ok(bodyStart > 0, 'migration gövdesi bulundu');
+    assert.equal(apply.slice(apply.indexOf('\n', start) + 1, end).trim(), migration.slice(bodyStart).trim());
+  });
+  test('okuyan betikler (01, 02, 04) tek bir SELECT', () => {
+    for (const f of ['01_preflight.sql', '02_rollback_script.sql', '04_postflight.sql']) {
+      const code = statements(read(dir + f));
+      assert.match(code, /^with\n/, `${f}: with … select`);
+      assert.equal(code.match(/;/g)?.length, 1, `${f}: tek ifade`);
+      assert.ok(code.endsWith(';'), `${f}: ifade sonda biter`);
+      assert.doesNotMatch(code, /^\s*(begin|commit|insert|update|delete|alter|create|drop|grant|revoke|do)\b/im, `${f}: yazma ifadesi yok`);
+      // xpath(query_to_xml(…, tableforest)) boş sonuçta hata verir ve değeri XML kaçışlı (&amp;) döndürür
+      assert.doesNotMatch(code, /\bxpath\(/, `${f}: değerler xmltable ile okunur`);
+      // '…'::regprocedure sorgu derlenirken çözülür: nesne yoksa CASE koruması işe yaramaz (to_regprocedure kullanılır)
+      assert.doesNotMatch(code, /''::reg(procedure|class)\b/, `${f}: nesne adı sabit dönüşümle çözülmez`);
+    }
+  });
+  test('yazan betikler (03, 05) tek işlem ve kilit zaman aşımıyla', () => {
+    for (const f of ['03_apply.sql', '05_rollback.sql']) {
+      const sql = read(dir + f);
+      assert.match(sql, /^begin;\nset local lock_timeout = '5s';\nset local statement_timeout = '60s';$/m, f);
+      assert.equal(sql.match(/^begin;$/gm)?.length, 1, `${f}: tek begin`);
+      assert.equal(sql.match(/^commit;$/gm)?.length, 1, `${f}: tek commit`);
+    }
+  });
+  test('02 ürettiği yorum satırlarını tek satıra indirir (veritabanı metni komuta dönüşmez)', () => {
+    // company_name gibi elle girilen bir değer satır sonu içerirse "--" yorumu orada biter ve kalan
+    // metin, geri dönüş betiğinde veritabanı sahibi yetkisiyle çalışan bir komut olur
+    assert.match(
+      read(`${dir}02_rollback_script.sql`),
+      /^select case when betik like '--%' then regexp_replace\(betik, '\[\\r\\n\]\+', ' ', 'g'\) else betik end as betik from \($/m,
+    );
+  });
+  test('03 yalnızca önceki ya da kendi şema sürümünde uygular (daha yenisinde sürüm geriye gitmez)', () => {
+    assert.ok(prev, 'önceki migration bulundu');
+    assert.match(
+      read(`${dir}03_apply.sql`),
+      new RegExp(`if surum is null or surum not in \\('${prev.slice(0, 14)}', '${file.slice(0, 14)}'\\) then\n\\s+raise exception 'DUR:`),
+    );
+  });
+  test('05 genel geri dönüş bir önceki migration dosyasının şema sürümüne döner', () => {
+    assert.ok(prev, 'önceki migration bulundu');
+    assert.match(read(`${dir}05_rollback.sql`), new RegExp(`eski_surum +constant text := '${prev.slice(0, 14)}'`));
+  });
+});
+
+describe('LR-11 CI tedarik zinciri (K-18)', () => {
+  // Etiket (@v4) ve dal (@v1) taşınabilir: ele geçirilen bir etiket depodaki her iş akışında kod çalıştırır.
+  // Tam commit SHA'sı çalışan kodu sabitler; yorumdaki sürüm güncelleme için okunur.
+  const workflows = ['elvankent-ci.yml', 'elvankent-backup.yml', 'elvankent-security-candidate.yml', 'elvankent-r2-diagnose.yml', 'elvankent-restore-drill.yml', 'elvankent-o4-onkontrol.yml', 'elvankent-o4-e2e.yml', 'elvankent-ki23-canli-denetim.yml', 'elvankent-o5a-uygula.yml', 'elvankent-o5b-uygula.yml'].map((f) => [f, read(`../.github/workflows/${f}`)]);
+  test('her action tam commit SHA ile sabit ve sürüm yorumu taşır', () => {
+    for (const [f, wf] of workflows) {
+      const uses = [...wf.matchAll(/^\s*(?:-\s+)?uses:\s*(\S+)(.*)$/gm)].map((m) => [m[1], m[2].trim()]);
+      assert.ok(uses.length > 0, `${f}: action bulundu`);
+      for (const [ref, comment] of uses) {
+        // Aynı depodaki yeniden kullanılabilir iş akışı: çağıranla AYNI commit'ten okunur (sabitlenecek dış kod yok).
+        // Yalnız bu biçim muaf; başka depodan iş akışı çağrısı (owner/repo/.github/workflows/x.yml@ref) yine SHA ister.
+        if (/^\.\/\.github\/workflows\/elvankent-[\w-]+\.yml$/.test(ref)) { assert.equal(comment, '', `${f}: ${ref}`); continue; }
+        assert.match(ref, /^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/, `${f}: ${ref} SHA ile sabit değil`);
+        assert.match(comment, /^# v\d+\.\d+\.\d+$/, `${f}: ${ref} sürüm yorumu yok`);
+      }
+    }
+  });
+  test('Supabase CLI sürümü sabit (latest/beta değil)', () => {
+    for (const [f, wf] of workflows.filter(([, wf]) => wf.includes('supabase/setup-cli@'))) {
+      // Adım, bir sonraki "- " ile başlayan (girintili) adımda biter; sonraki adımların version: alanı sayılmaz
+      const step = wf.slice(wf.indexOf('supabase/setup-cli@')).split(/\n\s*- /)[0];
+      assert.match(step, /^\s+version: \d+\.\d+\.\d+$/m, f);
+    }
+  });
+  test('gitleaks arşivi SHA-256 ile doğrulanıp öyle açılır', () => {
+    const ci = workflows[0][1];
+    const archive = ci.match(/gitleaks_(\d+\.\d+\.\d+)_linux_x64\.tar\.gz/)?.[0];
+    assert.ok(archive, 'gitleaks arşivi bulundu');
+    const check = ci.indexOf(`  ${archive}' | sha256sum -c -`);
+    assert.ok(check > 0, 'arşiv özeti denetleniyor');
+    assert.match(ci.slice(check - 80, check), /'[0-9a-f]{64}$/, 'özet 64 haneli SHA-256');
+    assert.ok(ci.indexOf(`tar -xzf ${archive}`) > check, 'arşiv özet denetiminden sonra açılır');
+    assert.doesNotMatch(ci, /curl[^\n]*\|\s*tar/, 'indirilen arşiv denetlenmeden açılmaz');
+  });
+  test('çalışma anında npx ile paket indirilmez', () => {
+    for (const [f, wf] of workflows) assert.doesNotMatch(wf, /npx\s+(--yes|-y)\b/, f);
+  });
+});
+
+describe('LR-12 yalnız güvenlik yaması adayı (K-19)', () => {
+  // Aday ayrı dal olarak itilmez (Preview açardı); patch doğrulama dalında saklanır ve ayrı iş akışında sınanır.
+  const dir = 'release/security-only/';
+  const wf = read('../.github/workflows/elvankent-security-candidate.yml');
+  test('patch özeti kayıtlı SHA-256 ile aynı', () => {
+    const [hash, name] = read(`${dir}security-only-ff2f7da.patch.sha256`).trim().split(/\s+/);
+    assert.equal(name, 'security-only-ff2f7da.patch');
+    assert.equal(createHash('sha256').update(readFileSync(new URL(`../../${dir}${name}`, import.meta.url))).digest('hex'), hash);
+  });
+  test('iş akışı, README ve patch aynı taban ve ağacı söyler', () => {
+    const base = wf.match(/BASE_SHA: ([0-9a-f]{40})/)?.[1];
+    const tree = wf.match(/CANDIDATE_TREE: ([0-9a-f]{40})/)?.[1];
+    const readme = read(`${dir}README.md`);
+    assert.ok(base && tree);
+    assert.ok(readme.includes(base) && readme.includes(tree));
+    assert.match(read(`${dir}security-only-ff2f7da.patch`), /^From 57fdbb7/);
+  });
+  test('yalnızca doğrulama dalında ve aday klasörü değişince çalışır; production\'a yazmaz', () => {
+    assert.match(wf, /branches: \[claude\/karay-ci-dogrulama\]/);
+    assert.match(wf, /paths: \['elvankent-gayrimenkul\/release\/security-only\/\*\*'/);
+    assert.match(wf, /permissions:\n {2}contents: read/);
+    assert.doesNotMatch(wf, /secrets\.|git push|vercel (deploy|--prod)|npx vercel/i);
+  });
+});
+
+describe('LR-13 bekleyen migration\'lar (K-19)', () => {
+  // supabase/pending/: canlıya uygulanmayan, karar ya da onay bekleyen migration'lar. CI hepsini uygular;
+  // şema sürümü ve yayın runbook'u (migrations/) değişmez.
+  const pending = readdirSync(new URL('supabase/pending/', root)).filter((f) => f.endsWith('.sql')).sort();
+  const latestMigration = migrations.at(-1).slice(0, 14);
+  test('bekleyen dosyalar son migration\'dan sonra sıralanır ve şema sürümünü değiştirmez', () => {
+    assert.ok(pending.length > 0);
+    for (const f of pending) {
+      assert.match(f, /^\d{14}_[a-z0-9_]+\.sql$/);
+      assert.ok(f.slice(0, 14) > latestMigration, `${f} son migration'dan önce`);
+      assert.doesNotMatch(read(`supabase/pending/${f}`), /function public\.karay_schema_version\(\)/, f);
+      assert.ok(!migrations.includes(f), `${f} hem pending hem migrations'da`);
+    }
+  });
+  test('CI database işi demo verisinden sonra bekleyen migration\'ları uygular', () => {
+    const ci = read('../.github/workflows/elvankent-ci.yml');
+    const seed = ci.indexOf('-f /tmp/seed.sql');
+    const apply = ci.indexOf('for f in supabase/pending/*.sql; do psql "$DB_URL" -X -v ON_ERROR_STOP=1');
+    assert.ok(seed > 0 && apply > seed);
+    assert.ok(apply < ci.indexOf('- name: Birim + güvenlik testleri'));
+  });
+  test('KI-37 PENDING=none ayağı: bekleyen dosya uygulamaz, bunu denetler ve medya E2E\'sini koşar', () => {
+    const ci = read('../.github/workflows/elvankent-ci.yml');
+    const legacy = ci.split(/\n {2}database-legacy-schema:\n/)[1]?.split(/\n {2}[a-z][\w-]*:\n/)[0] ?? '';
+    assert.ok(legacy, 'database-legacy-schema işi var');
+    assert.match(legacy, /needs: quality/);
+    assert.doesNotMatch(legacy, /supabase\/pending\/\*\.sql|rehearse-runbooks/, 'bekleyen dosya uygulanmaz');
+    assert.match(legacy, /to_regprocedure\('public\.media_finalize\([^)]*\)'\) is null/, 'şemanın bekleyen dosyasız olduğu denetlenir');
+    assert.match(legacy, /npx playwright test tests\/e2e\/admin\.spec\.ts tests\/e2e\/acceptance\.spec\.ts/);
+  });
+  test('OPS-02 bayrağı varsayılan kapalı; güvenlik testleri sırayla çalışır', () => {
+    const flag = read('supabase/pending/20261025000002_ops02_subscription_limits.sql');
+    assert.match(flag, /add column if not exists enforce_subscription_limits boolean not null default false/);
+    assert.match(JSON.parse(read('package.json')).scripts['test:rls'], /--test-concurrency=1 tests\/security\/\*\.test\.mjs/);
+  });
+});
+
+describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, company_name, media_finalize_rpc, media_privileges, media_storage_slots ve media_stray_sweep (supabase/ops)', () => {
+  // Bekleyen migration'ları canlıda tek başına uygulayan betikler (karays_brand ile aynı düzen, LR-10).
+  // Pending dosya değişip 03/04/05 değişmezse canlıya provası yapılmamış bir gövde gider.
+  const runbooks = [
+    { dir: 'supabase/ops/quota_lock/', pending: '20261025000001_quota_lock.sql', first: 'create or replace function public.quota_lock', fn: 'public.quota_lock', hashFrom: 'create or replace function public.quota_lock' },
+    { dir: 'supabase/ops/ops02_limits/', pending: '20261025000002_ops02_subscription_limits.sql', first: 'alter table public.platform_settings', fn: 'public.org_plan', hashFrom: 'create or replace function public.org_plan' },
+    { dir: 'supabase/ops/media_quota_lock/', pending: '20261026000001_media_quota_lock.sql', first: 'create or replace function public.media_quota_check', fn: 'public.media_quota_check', hashFrom: 'create or replace function public.media_quota_check' },
+    // WP-A2: A (RPC + kuyruk) ve B (sütun yetkileri). B'nin gövdesi 'do $guard$' ile başlar ('apply A first'); A, B'den önce sıralanır
+    { dir: 'supabase/ops/media_finalize_rpc/', pending: '20261027000001_media_finalize_rpc.sql', first: 'create or replace function public.media_finalize', fn: 'public.media_finalize', hashFrom: 'create or replace function public.media_finalize' },
+    { dir: 'supabase/ops/media_privileges/', pending: '20261027000002_media_column_privileges.sql', first: 'do $guard$', fn: 'public.media_assets_pending_shape', hashFrom: 'create or replace function public.media_assets_pending_shape' },
+    // KI-37: C (depolama yuvaları) 'apply B first' ile başlar; B'den sonra sıralanır, B'den önce geri alınır
+    { dir: 'supabase/ops/media_storage_slots/', pending: '20261027000003_media_storage_slots.sql', first: 'do $guard$', fn: 'public.media_storage_slot_guard', hashFrom: 'create or replace function public.media_storage_slot_guard' },
+    // KI-38: D (başıboş dosya listesi) yalnız A'ya dayanır
+    { dir: 'supabase/ops/media_stray_sweep/', pending: '20261031000001_media_stray_sweep.sql', first: 'do $guard$', fn: 'public.media_stray_objects', hashFrom: 'create or replace function public.media_stray_objects' },
+    // 03b_validate.sql isteğe bağlı ayrı adım (VALIDATE tabloyu tarar); varsa aşağıda ayrıca denetlenir
+    { dir: 'supabase/ops/company_name/', pending: '20261026000002_company_name_check.sql', first: 'alter table public.platform_settings drop constraint', fn: null, hashFrom: null, optional: ['03b_validate.sql'] },
+  ];
+  const files = ['01_preflight.sql', '02_save_state.sql', '03_apply.sql', '04_postflight.sql', '05_rollback.sql'];
+  const noComments = (sql) => sql.split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
+  const norm = (sql) => noComments(sql).replace(/\s+/g, ' ').trim();
+  const code = (sql) => noComments(sql).replace(/'(?:[^']|'')*'/g, "''").trim();
+  const md5 = (s) => createHash('md5').update(s.replace(/\s+/g, ' ').trim()).digest('hex');
+  const prosrc = (sql, from) => sql.slice(sql.indexOf(from)).match(/as \$\$([\s\S]*?)\$\$;/)[1];
+  const pendingOf = (rb) => read(`supabase/pending/${rb.pending}`);
+  const bodyOf = (rb) => { const p = pendingOf(rb); return p.slice(p.indexOf(`\n${rb.first}`) + 1); }; // satır başı: başlıktaki yorumlu geri dönüş satırı gövde değildir
+  // GERİ DÖNÜŞ başlığındaki SQL ifadeleri ("--   drop …;")
+  const rollbackStatements = (rb) => {
+    const p = pendingOf(rb);
+    const block = p.slice(p.indexOf('GERİ DÖNÜŞ:'), p.indexOf('-- ====', p.indexOf('GERİ DÖNÜŞ:')));
+    return [...block.matchAll(/^--\s+((?:drop|alter)\b.*;)\s*$/gim)].map((m) => m[1]);
+  };
+
+  for (const rb of runbooks) {
+    describe(rb.dir, () => {
+      test('beş betik ve README var', () => {
+        const present = readdirSync(new URL(rb.dir, root)).filter((f) => !(rb.optional ?? []).includes(f)).sort();
+        assert.deepEqual(present, [...files, 'README.md'].sort());
+        assert.ok(pendingOf(rb).includes(`\n${rb.first}`), 'pending gövdesi bulundu');
+      });
+      test('03 ve 05: tek işlem, lock_timeout 3s ve statement_timeout 30s', () => {
+        for (const f of ['03_apply.sql', '05_rollback.sql']) {
+          const sql = read(rb.dir + f);
+          assert.match(sql, /^begin;\nset local lock_timeout = '3s';\nset local statement_timeout = '30s';$/m, f);
+          assert.equal(sql.match(/^begin;$/gm)?.length, 1, `${f}: tek begin`);
+          assert.equal(sql.match(/^commit;$/gm)?.length, 1, `${f}: tek commit`);
+          assert.ok(sql.indexOf('begin;') < sql.indexOf('commit;'), `${f}: begin önce`);
+        }
+      });
+      test('03 gövdesi pending dosyadaki ifadelerle aynı (yorum ve boşluk dışında)', () => {
+        const apply = read(`${rb.dir}03_apply.sql`);
+        const start = apply.indexOf(`-- ---- ${rb.pending.replace(/\.sql$/, '')}`);
+        const end = apply.indexOf('-- ---- gövde sonu');
+        assert.ok(start > 0 && end > start, 'gövde işaretleri var');
+        const body = apply.slice(apply.indexOf('\n', start) + 1, end);
+        assert.equal(norm(body), norm(bodyOf(rb)));
+      });
+      test('03 şema sürümünü ve nesne varlığını denetler, sürümü değiştirmez', () => {
+        const sql = read(`${rb.dir}03_apply.sql`);
+        assert.match(sql, /surum < '20261018000001'/);
+        assert.match(sql, /raise exception 'DUR:/);
+        assert.match(sql, /to_regprocedure\('public\.karay_schema_version\(\)'\)/);
+        assert.doesNotMatch(norm(sql), /function public\.karay_schema_version\(\)/);
+      });
+      test('01, 02 ve 04 tek bir okuyan ifade: yazma ifadesi yok', () => {
+        for (const f of ['01_preflight.sql', '02_save_state.sql', '04_postflight.sql']) {
+          const c = code(read(rb.dir + f));
+          assert.match(c, /^(with|select)\b/i, `${f}: with/select ile başlar`);
+          assert.equal(c.match(/;/g)?.length, 1, `${f}: tek ifade`);
+          assert.ok(c.endsWith(';'), `${f}: ifade sonda biter`);
+          assert.doesNotMatch(c, /\b(begin|commit|insert|update|delete|alter|create|drop|grant|revoke|truncate|do|set|notify|call|execute)\b/i, `${f}: yazma ifadesi yok`);
+          assert.doesNotMatch(c, /\bxpath\(/, `${f}: değerler xmltable ile okunur`);
+          assert.doesNotMatch(c, /''::reg(procedure|class)\b/, `${f}: nesne adı sabit dönüşümle çözülmez`);
+        }
+      });
+      test('hiçbir dosya enforce_subscription_limits değerini true yapmaz', () => {
+        for (const f of [...files, 'README.md']) {
+          assert.doesNotMatch(read(rb.dir + f), /enforce_subscription_limits\s*(=|:=|\bto\b)\s*('?(true|t|on|1)'?)(?![a-z_])/i, f);
+        }
+      });
+      test('05 pending dosyanın GERİ DÖNÜŞ başlığındaki her ifadeyi içerir', () => {
+        const stmts = rollbackStatements(rb);
+        assert.ok(stmts.length >= 1, 'geri dönüş ifadeleri bulundu');
+        const rollback = norm(read(`${rb.dir}05_rollback.sql`));
+        for (const s of stmts) assert.ok(rollback.includes(norm(s)), `05'te yok: ${s}`);
+      });
+      test('04 ve 03 gövde özeti (md5) pending dosyadaki fonksiyonla aynı', () => {
+        if (!rb.hashFrom) return; // yalnızca kısıt: fonksiyon gövdesi yok
+        const hash = md5(prosrc(pendingOf(rb), rb.hashFrom));
+        assert.ok(read(`${rb.dir}04_postflight.sql`).includes(`'${hash}'`), '04 özeti');
+        if (rb.fn === 'public.org_plan') assert.ok(read(`${rb.dir}03_apply.sql`).includes(`'${hash}'`), '03 özeti');
+      });
+    });
+  }
+
+  test('media_quota_lock: tetikleyici adı media_assets_org\'dan sonra sıralanır; 03/04 tek tetikleyici, definer, boş search_path, yetki denetler', () => {
+    const pending = read('supabase/pending/20261026000001_media_quota_lock.sql');
+    const name = pending.match(/create trigger (\w+)\s+before insert on public\.media_assets/)[1];
+    assert.ok(name > 'media_assets_org', 'ada göre media_assets_org\'dan sonra');
+    for (const f of ['03_apply.sql', '04_postflight.sql']) {
+      const sql = read(`supabase/ops/media_quota_lock/${f}`);
+      assert.match(sql, new RegExp(`'${name}'`), `${f}: tetikleyici adı`);
+      assert.match(sql, /prosecdef/, `${f}: security definer`);
+      assert.match(sql, /search_path=""/, `${f}: boş search_path`);
+      assert.match(sql, /r\.rolname in \('anon', 'authenticated', 'service_role'\)/, `${f}: yetki`);
+      assert.match(sql, /media_assets_org/, `${f}: sıra denetimi`);
+    }
+    const pre = read('supabase/ops/media_quota_lock/01_preflight.sql');
+    assert.match(pre, /DUR: quota_lock\/03_apply\.sql henüz uygulanmamış/);
+    assert.match(pre, /20261018000001/);
+    assert.doesNotMatch(pre, /organization_id::text|\bname\b/i, 'kurum kimliği/adı seçilmez');
+  });
+  test('company_name: düzenli ifade pending ile birebir (01, 03, 04); 03b yalnızca VALIDATE; 03 NOT VALID', () => {
+    const pending = read('supabase/pending/20261026000002_company_name_check.sql');
+    const regex = pending.match(/check \(company_name !~ (E'.*?')\)/)[1];
+    for (const f of ['01_preflight.sql', '03_apply.sql', '04_postflight.sql']) {
+      assert.ok(read(`supabase/ops/company_name/${f}`).includes(regex), `${f}: düzenli ifade`);
+    }
+    assert.match(norm(read('supabase/ops/company_name/03_apply.sql')), /not valid;/);
+    assert.doesNotMatch(code(read('supabase/ops/company_name/03_apply.sql')), /validate constraint/i);
+    assert.match(read('supabase/ops/company_name/01_preflight.sql'), /DUR: /);
+    const v = read('supabase/ops/company_name/03b_validate.sql');
+    assert.match(v, /^begin;\nset local lock_timeout = '3s';\nset local statement_timeout = '30s';$/m);
+    const stmts = code(v).split(';').map((x) => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    assert.deepEqual(stmts, [
+      'begin',
+      "set local lock_timeout = ''",
+      "set local statement_timeout = ''",
+      'alter table public.platform_settings validate constraint platform_settings_company_name_plain',
+      'commit',
+    ]);
+  });
+  test('media_storage_slots: B kapısı ve TRIGGER hakkı (01, 03); B\'nin 05\'i C varken durur; 05 v2 politikalarını birebir kurar; provada', () => {
+    const pre = read('supabase/ops/media_storage_slots/01_preflight.sql');
+    assert.match(pre, /DUR: apply B first/);
+    assert.match(pre, /has_table_privilege\(current_user, 'storage\.objects', 'trigger'\)/);
+    const apply = read('supabase/ops/media_storage_slots/03_apply.sql');
+    assert.match(apply, /raise exception 'DUR: apply B first/);
+    assert.match(apply, /has_table_privilege\(current_user, 'storage\.objects', 'trigger'\)/);
+    assert.match(read('supabase/ops/media_privileges/05_rollback.sql'), /media_storage_slot_guard[\s\S]*DUR: önce C geri alınır/);
+    // 05, dört politikayı 20260926000008_v2_storage.sql'deki tanımıyla birebir yeniden kurar
+    const v2 = read('supabase/migrations/20260926000008_v2_storage.sql');
+    const rollback = norm(read('supabase/ops/media_storage_slots/05_rollback.sql'));
+    for (const name of ['media_originals_insert', 'media_originals_update', 'media_insert', 'media_update']) {
+      const def = v2.slice(v2.indexOf(`create policy "${name}"`)).match(/^[\s\S]*?\);/)[0];
+      assert.ok(rollback.includes(norm(def)), `05: ${name} birebir`);
+    }
+    assert.match(read('scripts/rehearse-runbooks.sh'), /RUNBOOKS=\([^)]*media_privileges media_storage_slots media_stray_sweep\)/);
+  });
+  test('quota_lock: yetkiler anon/authenticated/PUBLIC için kapalı denetlenir (03 ve 04)', () => {
+    for (const f of ['03_apply.sql', '04_postflight.sql']) {
+      assert.match(read(`supabase/ops/quota_lock/${f}`), /r\.rolname in \('anon', 'authenticated'\)/, f);
+    }
+  });
+  test('ops02: quota_lock\'tan sonra uygulanır (03 ve 01 aa_quota_lock eksikse DUR)', () => {
+    assert.match(read('supabase/ops/ops02_limits/03_apply.sql'), /aa_quota_lock eksik[^\n]*quota_lock\/03_apply\.sql/);
+    assert.match(read('supabase/ops/ops02_limits/01_preflight.sql'), /DUR: quota_lock\/03_apply\.sql henüz uygulanmamış/);
+  });
+  test('ops02 05: org_plan, onu SON tanımlayan migration\'dan birebir geri kurulur; sütun sonra silinir', () => {
+    const last = migrations.filter((f) => /create or replace function public\.org_plan\(/.test(read(`supabase/migrations/${f}`))).at(-1);
+    assert.equal(last, '20260930000002_site_builder.sql', 'son tanımlayan migration değişti: 05\'i güncelleyin');
+    const src = read(`supabase/migrations/${last}`);
+    const def = src.slice(src.lastIndexOf('create or replace function public.org_plan(')).match(/^[\s\S]*?\n\$\$;/)[0];
+    const rollback = read('supabase/ops/ops02_limits/05_rollback.sql');
+    assert.ok(norm(rollback).includes(norm(def)), 'tanım birebir');
+    assert.match(rollback, new RegExp(`'${md5(prosrc(src, 'create or replace function public.org_plan('))}'`), 'özet');
+    assert.ok(rollback.indexOf('create or replace function public.org_plan') < rollback.indexOf('drop column if exists enforce_subscription_limits'));
   });
 });

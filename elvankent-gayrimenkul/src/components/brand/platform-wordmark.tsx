@@ -1,18 +1,31 @@
+import Image from 'next/image';
 import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
+import logo from '@/platform/branding/assets/karays-logo-yatay.webp';
 import { cn } from '@/lib/utils';
 
 /**
- * KARAY logosu (logo paketindeki SVG'ler; yeniden çizilmez, renkleri değiştirilmez).
- *   tone: zemin rengi (dark → koyu zemin versiyonu)
- *   tagline: sloganlı ana versiyon (en az 200 px genişlik) veya slogansız (en az 110 px)
+ * KARAYS yatay logosu (amblem + "karays" yazısı; 01_LOGOLAR/karays-logo-yatay.webp, 2093 × 681).
+ * Dosya yeniden çizilmez, oranı ve renkleri değiştirilmez; next/image yalnızca ekrana uygun boyutta sunar.
+ *   height: logonun yüksekliği (genişlik orandan hesaplanır; dar alanda oranı korunarak küçülür)
+ *   tone: zemin. Yazı koyu lacivert ve pakette beyaz logo yok: koyu zeminde (dark) logo açık bir
+ *         plakanın üzerinde gösterilir.
  * Kiracı (emlak ofisi) logosu burada ASLA kullanılmaz.
  */
-export function PlatformWordmark({ tone = 'light', tagline = true, height = 36, className }: { tone?: 'dark' | 'light'; tagline?: boolean; height?: number; className?: string }) {
-  const { logos, logoAspect, name } = PLATFORM_BRAND;
-  const src = tone === 'dark' ? (tagline ? logos.dark : logos.darkCompact) : tagline ? logos.light : logos.lightCompact;
-  const width = Math.round(height * logoAspect);
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={name} width={width} height={height} decoding="async" className={cn('block h-auto max-w-full shrink-0', className)} style={{ width }} />
+export function PlatformWordmark({ tone = 'light', height = 36, className }: { tone?: 'dark' | 'light'; height?: number; className?: string }) {
+  const width = Math.round((height * logo.width) / logo.height);
+  const image = (
+    <Image
+      src={logo}
+      alt={PLATFORM_BRAND.name}
+      width={width}
+      height={height}
+      sizes={`${width}px`}
+      loading="eager"
+      data-platform-brand="logo"
+      className={cn('block h-auto max-w-full shrink-0', tone === 'light' && className)}
+      style={{ width }}
+    />
   );
+  if (tone === 'light') return image;
+  return <span className={cn('inline-flex max-w-full shrink-0 items-center rounded-lg bg-white px-2.5 py-1.5', className)}>{image}</span>;
 }
