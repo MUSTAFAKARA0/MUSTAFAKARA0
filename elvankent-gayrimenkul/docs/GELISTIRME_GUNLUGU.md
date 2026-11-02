@@ -24,6 +24,17 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (30) · K-54: O-5 Aşama 4 (medya) uygulama iş akışı hazır (çalıştırılmadı); Mission Control geliştirmeleri
+
+- `elvankent-o5c-uygula.yml` + `scripts/o5c-uygula.sh` (o5b'den türetildi): media_finalize_rpc → media_privileges → media_storage_slots →
+  media_stray_sweep; ön kontrol 35 VAR, son kontrol 39/39 VAR, bayrak false, geçmiş 31 kayıt. Sentetik `scripts/o5c-uygula-test.sh`
+  V1–V5 yerelde yeşil (kilit testi ROW EXCLUSIVE: okuma engellenmez, tetikleyici DDL'i beklemeye düşer). CI'da KI-23 provası adımında.
+  Birim KT-14 (toplam 827). O-5a/b/c aynı eşzamanlılık grubunda.
+- Mission Control: ajan bitişi düzeltmesi birleştirildi (MC PR #4); pano doğruluğu ve sahip listesi, keşif (Bugün ne oldu, Oturum karnesi,
+  durum rozetleri) dallarda; KARAYS tanıtım videosu ajan tarafından hazırlanıyor (canlıya ayrı yayın onayıyla).
+
+**Açık (sahip):** Aşama 4 onayı (önce yeni kodla fotoğraf yükle/döndür/sil denemesi) · Sentry `SENTRY_DSN` · özel alan adı.
+
 ### 02.11.2026 (29) · K-53: KARAYS tam kod yayını production'da (PR #4 → `6b698e9`)
 
 - Sahip PR #4'ü birleştirdi (16:32 TR). Vercel production dağıtımı `dpl_A4MN…` (`6b698e9`) READY, takma ad `mustafakara-0-7hh3.vercel.app`;

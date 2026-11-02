@@ -1,0 +1,84 @@
+# Elvankent Gayrimenkul — O-5 AŞAMA 4: dört medya runbook'unu (media_finalize_rpc → media_privileges → media_storage_slots → media_stray_sweep)
+# canlı veritabanına SIRAYLA uygular. Bayrak (enforce_subscription_limits) KAPALI kalır. Ön koşul: yeni medya kodu production'da
+# (PR #4, 02.11) ve sahibin yeni kodla yükleme/döndürme denemesi (media_privileges eski kodu bozar).
+#
+# Bu iş canlıya YAZAR ve AYRI sahip onayı ister (O5_YAYIN_PLANI "Aşama 4"). Yalnız sahibin açık, tek kullanımlık tetiklemesiyle çalışır:
+#   - ops-requests/o5c-uygula.request dosyasında "# CALISTIR=evet" satırının KAPALIDAN AÇIĞA geçtiği, sahibin GitHub web'den yaptığı
+#     gönderim (çalışma dalı). Satır açıkken başka düzenleme, Actions'taki "Re-run" ve geliştirme commit'leri ("Claude-Session:")
+#     çalıştırmaz (scripts/ki23-tetik-kontrol.sh, run_attempt == 1).
+#   - Ortam "o5a-uygula" (sahip: Required reviewers) — her çalıştırma "Review deployments › Approve" ister.
+#   - Taze yedek kapısı: son 3 saatte başarıyla biten bir elvankent-backup koşusu yoksa ya da şu an çalışan/sırada bir yedek
+#     varsa veritabanına bağlanmadan durur.
+# Ne yapar (scripts/o5c-uygula.sh): paket SHA-256 → salt okunur ön kontrol → her runbook: 01 (DUR yok) → 03 (tek işlem; 55P03'te
+# yeniden deneme) → [03b] → 04 (DUR/HATA yok) → son kontrol (39 VAR, sürüm değişmez, postflight HATA yok, bayrak false).
+# Günlükte yalnız runbook adı, durum, sayılar ve güvenli hata sınıfı; adres/parola maskeli; artifact yok.
+name: elvankent-o5c-uygula
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ['claude/karays-mission-control-vn8g65']
+    paths: ['elvankent-gayrimenkul/ops-requests/o5c-uygula.request']
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: elvankent-o5-canli-yazma
+  cancel-in-progress: false
+
+jobs:
+  uygula:
+    # Re-run (run_attempt > 1) yeni bir uygulama başlatamaz: tek kullanımlık
+    if: ${{ github.actor == github.repository_owner && github.run_attempt == 1 && (github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, 'Claude-Session:')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: o5a-uygula
+    defaults:
+      run:
+        working-directory: elvankent-gayrimenkul
+    env:
+      # 4 medya runbook'unun 01/03/04 dosyalarının sıralı SHA-256 listesinin özeti; dosyalar değişirse bu değer de açıkça güncellenmeli
+      O5C_PAKET_SHA256: 086e4c7a766416617e2a513a55e7a72956fad04dba7fd59e11178f05f19c03e2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Tek kullanımlık tetik önceki commit'teki istek dosyasını okur
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Tek kullanımlık tetik (CALISTIR=evet bu gönderimde kapalıdan açığa mı geçti)
+        if: ${{ github.event_name == 'push' }}
+        env:
+          ONCEKI: ${{ github.event.before }}
+          YENI: ${{ github.sha }}
+          TETIK_DOSYA: elvankent-gayrimenkul/ops-requests/o5c-uygula.request
+        run: bash scripts/ki23-tetik-kontrol.sh "$ONCEKI" "$YENI"
+      - name: Taze yedek kapısı (son 3 saatte başarılı elvankent-backup; çalışan yedek yok)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Çalışan/sırada bir yedek varsa durur: pg_dump tablolarda kilit tutar, DDL kilit beklemesine düşer (O-5a #2, 55P03)
+          suren=$(for d in queued in_progress waiting requested pending; do
+            curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/elvankent-backup.yml/runs?status=$d&per_page=1" \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin)["total_count"])'
+          done | awk '{t+=$1} END {print t+0}')
+          [ "$suren" -eq 0 ] || { echo "::error::Şu an çalışan/sırada bir elvankent-backup var: bitip yeşil olmasını bekleyin, sonra yeniden tetikleyin"; exit 1; }
+          son=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/elvankent-backup.yml/runs?status=success&per_page=1" \
+            | python3 -c 'import json,sys; r=json.load(sys.stdin)["workflow_runs"]; print(r[0]["updated_at"] if r else "")')
+          [ -n "$son" ] || { echo "::error::Başarılı yedek bulunamadı: önce elvankent-backup'ı çalıştırın"; exit 1; }
+          yas=$(( $(date -u +%s) - $(date -u -d "$son" +%s) ))
+          echo "Son başarılı yedek: $son ($(( yas / 60 )) dk önce)"
+          [ "$yas" -le 10800 ] || { echo "::error::Son başarılı yedek 3 saatten eski: önce elvankent-backup'ı elle çalıştırın"; exit 1; }
+      - name: PostgreSQL istemcisi
+        run: |
+          set -euo pipefail
+          command -v psql > /dev/null || { sudo apt-get update -qq > /dev/null && sudo apt-get install -y -qq postgresql-client > /dev/null; }
+          echo "psql ana sürüm: $(psql --version | grep -oE '[0-9]+' | head -1)"
+      - name: O-5 Aşama 4 uygulama (4 medya runbook, sırayla, her biri tek işlem)
+        env:
+          O5C_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: bash scripts/o5c-uygula.sh

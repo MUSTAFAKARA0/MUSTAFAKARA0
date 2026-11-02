@@ -194,6 +194,8 @@ jobs:
           # O-5 Aşama 3 uygulama betiği (scripts/o5b-uygula.sh) sentetik testi: canlının 02.11 hâli (O-5a + KARAYS) üzerinde
           # onaysız paket, uzun kilit (yeniden deneme + dur), kısa kilit (yeniden denemeyle geçer), tekrar; günlükte SQL/adres yok
           LIVE_LIKE_SEED=/tmp/seed.sql bash scripts/o5b-uygula-test.sh
+          # O-5 Aşama 4 (medya) uygulama betiği (scripts/o5c-uygula.sh): canlının Aşama 3 sonrası hâli üzerinde aynı V1–V5
+          LIVE_LIKE_SEED=/tmp/seed.sql bash scripts/o5c-uygula-test.sh
       - name: E2E hazırlık (yönetici hesabı, build, sunucu)
         run: |
           set -euo pipefail

@@ -90,6 +90,12 @@ Sıra ve runbook: `quota_lock` (20261025000001) → `ops02_limits` (202610250000
 
 ### Aşama 4 — Medya birimleri (`20261027000001` → `…02` → `…03` → `20261031000001`)
 
+**Uygulama yöntemi (K-54, hazır, çalıştırılmadı):** `elvankent-o5c-uygula.yml` + `scripts/o5c-uygula.sh` — Aşama 3 ile aynı kapılar
+(tek kullanımlık tetik `ops-requests/o5c-uygula.request`, onaylı ortam, çalışan yedek yok + ≤3 saat yedek, paket SHA 12 dosya); sırayla
+A → B → C → D, her biri 01 (DUR'da 3 deneme) → 03 (55P03'te 3 deneme) → 04; son kontrol 39/39 VAR, bayrak false. Sahip ön adımı:
+yeni kodla (production `6b698e9`) bir fotoğraf yükleme + döndürme + silme denemesi (4e eski kodu bozar; yeni kod canlıda).
+Canlıda dikkat: C (media_storage_slots) `storage.objects` üzerinde TRIGGER hakkı ister; yoksa 01 DUR der ve iş C'de güvenle durur.
+
 - **Kod önkoşulu (K19 §8, 4d–4g):** özellikle `media_column_privileges` **eski medya kodunu bozar**: production'daki kodun yeni
   medya akışını (WP-A2) içerdiği ve yükleme/döndürme denemesinin geçtiği doğrulanmadan uygulanmaz. Bu aşama ayrı bir kod yayını
   kararına bağlıdır; bugün onay istenmez.
