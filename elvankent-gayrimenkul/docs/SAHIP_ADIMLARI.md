@@ -26,6 +26,15 @@ Mission Control PR #4/#5 ve APK #13
 
 ### 2. E-posta gönderimi ✓ (02.11 K-60) — Resend doğrulandı, şifre sıfırlama e-postası test edildi
 
+### 2a. GitHub güvenlik ayarları (KI-41; 02.11 bağımsız güvenlik incelemesi) — ~5 dk
+1. https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/settings/rules › **New ruleset › New branch ruleset**.
+   Ad: `koruma`; **Enforcement status: Active**; **Target branches › Add target › Include by pattern**:
+   `claude/karays-mission-control-vn8g65` ve `claude/elvankent-real-estate-platform-vxq9dj`.
+   Kurallar: **Restrict deletions** ✓, **Block force pushes** ✓ (diğerlerine dokunmayın) › **Create**.
+2. https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/settings/environments › **o5a-uygula** ›
+   **Deployment branches and tags › Selected branches and tags › Add rule**: `claude/karays-mission-control-vn8g65` › kaydet.
+3. Veritabanı adresinin onay ortamına taşınması yedek iş akışını da etkilediği için ayrı bir planla yapılacak (Claude hazırlar).
+
 ### 3. Elvankent alan adı — önce müşteriyle görüşün
 Onay sonrası konsol › Web Siteleri › Elvankent › Domain ekranındaki DNS kayıtları müşteriye iletilir.
 
