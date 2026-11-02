@@ -21,16 +21,14 @@
 Tamamlananlar (02.11): köken sorgusu · KI-24 gerçek prova · gece yedeği · O-5a (9 migration) · KARAYS marka · O-5 Aşama 3
 (4 runbook, bayrak KAPALI) · duman testleri · `o5a-uygula` ve `ki23-canli-denetim` ortamlarına onay kuralı · şerit metinleri onayı.
 
-### 1. O-6 geri alma kararı (kod yayınından önce)
-Öneri: "O-6: Yayından sonra site/panel açılmazsa ya da girişte hata olursa Vercel'de önceki sürüme dönülür; dönmeyi ben yaparım,
-Claude önerir." Yer: Vercel › mustafakara-0-7hh3 › Deployments › en üstteki Production › ⋯ › Instant Rollback (yalnız görün).
+### 1. ✓ O-6 kararı verildi (02.11): Claude söyler, siz onaylarsınız, Claude Vercel'de önceki sürüme döner
 
 ### 2. Kod yayını PR'ını birleştirmek
 CI yeşil olunca PR linki gelir; birleştirme production dağıtımını başlatır. Sonra duman testi (KARAYS sayfası, konsol, ofis paneli).
 
 ### 3. Özel alan adı değişkenleri (ikinci müşteriden önce)
 Vercel › Settings › Environment Variables (yalnız Production): `VERCEL_API_TOKEN` (https://vercel.com/account/settings/tokens,
-Sensitive), `VERCEL_PROJECT_ID` (Settings › General), takım altındaysa `VERCEL_TEAM_ID`. Değerleri bana göndermeyin.
+Sensitive), `VERCEL_PROJECT_ID` (Settings › General), ve `VERCEL_TEAM_ID` (proje bir takım altında: Team Settings › Team ID). Değerleri bana göndermeyin.
 
 ### 4. İsteğe bağlı: hata bildirimi
 `SENTRY_DSN` ya da `ERROR_WEBHOOK_URL` (şu an yok; hatalar yalnız Vercel kayıtlarında).

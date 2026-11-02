@@ -30,6 +30,9 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
   (backup-workflow, security-patch) korundu, birim 822/822.
 - Sahip onayı (sohbette): "şerit metinleri onaylı" (KI-21, 7 durum; K-47 listesindeki metinler).
 - Sıradaki: CI yeşil → production'a PR (sahip birleştirir; geri dönüş Vercel Instant Rollback).
+- **O-6 kararı (sahip, sohbette):** "Yayından sonra site/panel açılmazsa ya da girişte hata olursa Vercel'de önceki sürüme dönülür;
+  dönmeyi Claude bana söyler. Ben onaylarım, Claude yapar." Claude'un Vercel bağlantısı projeyi görüyor (takım altında → alan adı
+  için `VERCEL_TEAM_ID` de gerekir); geri dönüş yalnız sahibin o anki açık onayıyla, önceki production dağıtımına.
 
 ### 02.11.2026 (25) · K-49: O-5 Aşama 3 canlıya uygulandı (o5b #2 "SONUÇ: TAMAM")
 
