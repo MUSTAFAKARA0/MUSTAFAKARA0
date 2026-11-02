@@ -301,3 +301,26 @@ yalnız satır sonu biçimi (CRLF) olduğu artık **canlıda kanıtlandı**; tan
 
 **§2.7 karar kuralının durumu:** (2) şema/güvenlik denetimi ✓ (G TAMAM; tüm P farkları açıklandı). (1) köken sorgusu — bekliyor.
 (3) KI-24 gerçek provası 9. adım — bekliyor (sahip onayı). O-5a engeli bu ikisi gelene kadar açık.
+
+### 8.2 Köken sorgusu canlı sonucu (02.11.2026, sahip, SQL Editor, "query 7" CSV) — §2.7 koşul 1 ✓
+
+| Satır | Canlı sonuç |
+| --- | --- |
+| K1 demo işareti | **VAR · kurulum 2026-09-27** — canlı veritabanı `supabase/demo` paketleriyle kurulmuş (§2.2 varsayımı **doğrulandı**) |
+| K2 | `version:text, statements:ARRAY, name:text` (paketlerin oluşturduğu tablo) |
+| K3 | 21 kaydın hepsi `statements NULL` |
+| K4 | 4 işlem grubu, **hepsi ŞEMA İLE AYNI İŞLEM**: 1212 (V1, 4 kayıt; pg_class 57 · pg_attribute 444 · pg_type 40) · 1222 (enum, 1; pg_type 2) · 1223 (V2+Stage 3, 12; pg_class 160 · pg_attribute 806 · pg_proc 59 · pg_policy 78 · pg_type 68) · 2431 (06 paketi, 4; pg_class 25 · pg_attribute 79 · pg_proc 18 · pg_policy 4 · pg_type 4) |
+| K5 | Demo işaret tablosu V1 grubuyla (1212) aynı işlemde |
+
+**Yorum (kanıtlı):** her kayıt grubu, o grubun şema nesneleriyle **aynı veritabanı işleminde** yazılmış. Paketler tek işlemde çalıştığı
+ve kayıt satırı paketin sonunda olduğu için, kaydın varlığı paketteki bütün migration gövdelerinin **eksiksiz** uygulandığını gösterir
+(atomiklik). İlk üç grubun katalog sayıları yerel simülasyonla (tarihî paketler) **birebir aynı**. 06 paketi canlıda tek seferde
+(`d721428` sürümü, 4 kayıt tek işlemde) çalıştırılmış; BELİRSİZ grup yok. → **İÇERİKSİZ = yalnız eksik geçmiş içeriği; eksik uygulama değil.**
+
+**§2.7 durumu:** (1) köken ✓ · (2) şema/güvenlik denetimi ✓ (#8) · (3) KI-24 gerçek provası 9. adım — sahip onayı verildi (02.11),
+çalıştırma bekleniyor. Üçüncüsü de olumlu çıkarsa O-5a engeli kalkar (O-5a'nın kendisi yine ayrı onay ister).
+
+**Yönetişim bulgusu (karar sahibin):** production'ın bağlı olduğu veritabanı, başlığında "YALNIZCA DEMO SUPABASE PROJESİ İÇİNDİR"
+yazan kurulum paketleriyle kurulmuş (`elvankent_demo.environment` tablosu canlıda var; proje adı `elvankent-demo`). Bu paketler
+04 (12 demo ilan) ve 05 (demo yönetici) adımlarını da içerir; canlıda demo ilan/hesap kalıp kalmadığı veri okumadan bilinmiyor.
+Teknik sorun değil (şema doğru), ama "demo" etiketli bir projenin production olarak kullanılması ayrıca değerlendirilmeli.

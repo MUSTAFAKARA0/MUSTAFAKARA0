@@ -18,14 +18,14 @@
 
 ## Sizin yapacaklarınız (sırayla)
 
-### 1. Köken sorgusu — telefondan, 2 dk (yalnız okur)
+### 1. ✓ Köken sorgusu — YAPILDI (02.11): 21 migration eksiksiz uygulanmış (KI23 §8.2)
 O-5a engelinin (İÇERİKSİZ geçmiş) üç koşulundan biri. Dosya küçük (≈ 5 KB), telefonda SQL Editor'ü dondurmaz.
 1. https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/blob/claude/karays-mission-control-vn8g65/elvankent-gayrimenkul/supabase/ops/canli_kayit_kokeni.sql
    › "Raw" › tümünü kopyalayın.
 2. Supabase › **elvankent-demo** › SQL Editor › New query › yapıştırın › Run.
 3. Sonucu CSV olarak (ya da ekran görüntüsüyle) gönderin. İçinde kişisel veri yok (yalnız sürüm numaraları, VAR/YOK, işlem sayıları).
 
-### 2. KI-24 gerçek geri yükleme provası — onay + 3 tıklama
+### 2. KI-24 gerçek geri yükleme provası — yazılı onay VERİLDİ (02.11); kalan: değişken + istek dosyası + Approve
 Müşteri verisi GitHub'ın geçici makinesinde, yalnız oradaki yerel veritabanına yüklenir; iş bitince silinir; canlıya dokunulmaz.
 1. Bana yazılı onay: **"KI-24 gerçek prova: müşteri verisinin GitHub'ın geçici çalıştırıcısında işlenmesini onaylıyorum."**
 2. GitHub › Settings › Secrets and variables › Actions › **Variables** › `RESTORE_DRILL_REAL_DATA_APPROVED` = `true`.

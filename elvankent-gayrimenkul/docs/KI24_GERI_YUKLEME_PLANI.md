@@ -164,3 +164,9 @@ Required reviewers. `RESTORE_DRILL_REAL_DATA_APPROVED` **açılmadı**.
 | Not (öneri) | İstek dosyası tetiği KI-23'teki gibi tek kullanımlık değil; artık her çalıştırma ortam onayı istediği için kabul edilebilir. İstenirse aynı kural uygulanabilir |
 
 Gerçek prova için kalan tek şey sahibin yazılı veri işleme onayı ve ardından değişkeni açması (§8 adım 1 ve 6).
+
+## 10. Sahip onayı (02.11.2026)
+
+Sahibin yazılı onayı (sohbette, 02.11.2026): **"KI-24 gerçek prova: müşteri verisinin GitHub'ın geçici çalıştırıcısında işlenmesini
+onaylıyorum."** Sahibe değişken (`RESTORE_DRILL_REAL_DATA_APPROVED=true`), istek dosyası düzenlemesi, ortam onayı ve bitince değişkeni
+`false` yapma bağlantıları verildi. Geliştirici değişkeni açmaz ve provayı başlatmaz; sonucu Actions özetinden okur.

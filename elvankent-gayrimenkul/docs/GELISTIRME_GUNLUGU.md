@@ -23,6 +23,16 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (17) · K-41: KI-23 köken canlıda — 21 migration eksiksiz; KI-24 sahip onayı
+
+- **Köken (sahip, SQL Editor, query 7):** K1 demo işareti VAR (kurulum 2026-09-27); 21 kayıt statements NULL; 4 işlem grubu (1212, 1222, 1223, 2431)
+  hepsi ŞEMA İLE AYNI İŞLEM; K5 işaret V1 grubunda. İlk üç grubun katalog sayıları yerel simülasyonla birebir. → İÇERİKSİZ yalnız eksik geçmiş;
+  21 migration paketlerle atomik ve eksiksiz uygulanmış. §2.7: (1) ✓ (2) ✓ (3) KI-24 bekliyor. Not: sahibin önceki CSV'si (query 6)
+  geçmiş sorgusunun tekrarıydı; köken dosyasının ham bağlantısı verildi.
+- **Yönetişim bulgusu:** production veritabanı "yalnız demo için" etiketli paketlerle kurulmuş (`elvankent_demo.environment` canlıda var) — sahibin değerlendirmesine.
+- **KI-24:** sahibin yazılı veri işleme onayı (02.11). Değişken/tetik/onay sahipte; geliştirici başlatmadı.
+- CI: K-40 `b436183` → elvankent-ci #161 (sonuç bu commit'in CI'ı ile birlikte izlenir).
+
 ### 02.11.2026 (16) · K-40: KI-23 canlı #8 TAMAM (biçim farkı); sahip adımları yenilendi
 
 - **Canlı #8 (sahip, 05:24 UTC):** G1–G4 TAMAM; 751 AYNI, 77 FARKLI yalnız fonksiyon; teşhis: başlık 77/77, CR'siz gövde 77/77, CR içeren 77
