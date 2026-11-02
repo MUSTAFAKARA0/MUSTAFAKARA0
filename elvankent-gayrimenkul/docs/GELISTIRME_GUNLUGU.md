@@ -23,6 +23,14 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (28) · K-52: Vercel takım erişimi verildi; KI-25 kapandı; PR #4 açıldı
+
+- Sahip Vercel takım (`kara-6892`) erişimini onayladı. Okuma: production dağıtımı `a0f0a67` READY; geri dönüş adayı `74013a5`
+  dağıtımı. O-6 artık uygulanabilir (Claude önerir, sahip onaylar, Claude Vercel'de geri döner).
+- Not: Vercel projesinde özel alan adı tanımlı değil (yalnız `*.vercel.app`); konsoldaki "özel alan adı bağlı 1/1" veritabanı kaydı.
+  Alan adı Vercel'e eklenmeden `www.elvankentgayrimenkul.com` bu projeye yönlenmez (VERCEL_API_TOKEN adımıyla birlikte ele alınacak).
+- PR #4 (çalışma dalı → production) açıldı; birleştirme sahipte.
+
 ### 02.11.2026 (27) · K-51: CI #177 yeşil (production birleştirmesi); KI-22/26/28 kapandı; Vercel takım yetkisi eksik
 
 - CI #177 (`1d79589`, production birleştirmesi dahil) yeşil.
