@@ -34,7 +34,7 @@ https://github.com/MUSTAFAKARA0/ecc-mission-control/pull/5 (pano: Yapılanlar / 
 ### 5. ✓ Aşama 4 (medya) uygulandı ve duman testi geçti (02.11)
 Önce yeni kodla bir ilanda fotoğraf yükleme + döndürme + silme denemesi; sonra onay cümlesi (iş akışı `elvankent-o5c-uygula`, hazır).
 
-### 6. Özel alan adı — önce müşteriyle görüşün (alan adı ve DNS müşterinin)
+### 6. Özel alan adı — D-13 kararı verildi (02.11): siteler kendi alan adlarıyla. Önce müşteriyle görüşün (alan adı ve DNS müşterinin), sonra `VERCEL_*` değişkenleri
 Vercel'e `www.elvankentgayrimenkul.com` eklemek + `VERCEL_API_TOKEN` (1 yıl), `VERCEL_PROJECT_ID`, `VERCEL_TEAM_ID` (Production).
 
 ### 7. Açık kararlar — araştırma paketi hazır

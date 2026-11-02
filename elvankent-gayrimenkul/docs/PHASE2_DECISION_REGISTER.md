@@ -50,7 +50,7 @@
 | D-10 | KVKK rolleri, sözleşmeler, yurt dışı aktarım | P0 | İlk müşteri sözleşmesi | PF-09 | Bekliyor |
 | D-11 | Altyapı planları ve bütçe | P0 | Production açılışı | PF-02, PF-03, PF-06 | Bekliyor |
 | D-12 | Depo görünürlüğü | P1 | İlk ücretli müşteri | SEC-01, SEC-03 | Bekliyor |
-| D-13 | Alan adı stratejisi | P0 | Production açılışı | PF-05, PF-06 | Bekliyor |
+| D-13 | Alan adı stratejisi | P0 | Production açılışı | PF-05, PF-06 | **Karar verildi (02.11.2026)** — müşteri siteleri kendi alan adlarıyla açılır; alt kararlar açık |
 | D-14 | Dal ve yayın stratejisi | P0 | Production açılışı | PF-04, PF-11 | Bekliyor |
 | D-15 | Güvenlik başlıkları ve görüntü yüzeyi (CSP, HSTS, SVG) | P1 | Sonraki faz | SEC-02, PF-10, SEC-06 | Bekliyor |
 | D-16 | Güvenlik güncellemesine onay | P0 | Hemen | PF-01 | Bekliyor |
@@ -528,6 +528,13 @@ Karar verildikçe ilgili maddeye **"Karar: … (tarih)"** satırı eklenir ve ta
 - **Tamamlanma ölçütü:** PF belgesi SEC-01'deki ölçütler (C için) ya da SEC-03 düzeltmesi (A için).
 
 ### D-13 · Alan adı stratejisi
+
+> **Karar (sahip, 02.11.2026, sohbette):** "Kendi alan adlarına açılacak, kendi domainleriyle." Her müşteri ofisinin sitesi kendi
+> alan adıyla (ör. `www.elvankentgayrimenkul.com`) yayınlanır; bağlama müşterinin onayı ve DNS kaydıyla yapılır (özel alan adı akışı:
+> panel/konsol › Domain; Vercel'e otomatik ekleme `VERCEL_API_TOKEN` + `VERCEL_PROJECT_ID` + `VERCEL_TEAM_ID` ister).
+> **Açık alt kararlar:** (1) alan adı bağlanana kadar müşteri sitesinin geçici adresi — `PLATFORM_ROOT_DOMAIN` için ayrı bir kök
+> (seçenek B) mi, yoksa yalnız özel alan adı mı; (2) KARAYS'in kendi alan adı (`KARAY_HOSTS`) ve e-posta gönderen alt alan adı;
+> (3) alan adını müşteri mi alır, KARAYS mi müşteri adına yönetir.
 
 - **ID:** D-13
 - **Mevcut durum:**
