@@ -23,6 +23,17 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (22) · K-46: KARAYS marka runbook'u canlıya uygulandı (Aşama 2) — O-5 Aşama 1–2 tamam
+
+- Sahip onayı (sohbette): "KARAYS marka: supabase/ops/karays_brand runbook'unun (01→04) canlıya uygulanmasını onaylıyorum."
+- Taze yedek: backup #51 (`workflow_dispatch`, 09:57–09:59 UTC) başarılı; uygulama sırasında çalışan yedek yok.
+- Sahip, SQL Editor: `01_preflight` DUR yok (sürüm 20261011000001, company_name KARAY, değişecek satır 1, kilit/uzun işlem 0) ·
+  `02_rollback_script` çıktısı saklandı (10:02 UTC) · `03_apply` → company_name KARAYS, varsayılan 'KARAYS', sürüm 20261018000001 ·
+  `04_postflight` 6/6 TAMAM (yetkiler, `public_platform_profile()` KARAYS) · `canli_migration_gecmisi`: 31 kayıt, en yeni 20261018000001,
+  `AYNI (KARAYS runbook kaydı)=1 · AYNI (O-5a kaydı)=9 · İÇERİKSİZ=21`, KAYITSIZ yok.
+- K-45 eki: sahip ofis paneline ofis hesabıyla girdi; Dashboard açıldı (kurulum 5/8, 1 aktif ilan).
+- Sıradaki: O-5 Aşama 3 (O-5b/b'/c kilitler + OPS-02 dosyası, bayrak KAPALI) — ayrı onay.
+
 ### 02.11.2026 (21) · K-45: O-5a canlıya uygulandı (#4 "SONUÇ: TAMAM"); #2 yarıda kaldı, yedek kapısı sıkılaştırıldı
 
 - **O-5a #2** (`282c872`, 08:45 UTC): 01 `karay_platform` ve 02 `design_family_access` uygulandı (her biri tek işlem, geçmiş kaydıyla);

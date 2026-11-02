@@ -1,6 +1,6 @@
 # O-5 · Canlı veritabanı migration planı (sıralı, geri dönüşü tanımlı) — K-33, güncelleme K-34 (01.11.2026)
 
-**Durum: O-5a CANLIYA UYGULANDI (02.11.2026, iş akışı #4 "SONUÇ: TAMAM", K-45). Sıradaki aşama KARAYS marka runbook'u — ayrı onay.** §2.7 üç koşulu sağlandı (K-42). (Önceki: ENGELLİ, K-35.) Hiçbir aşama başlatılmadı. Ön koşul 0.4 (İÇERİKSİZ geçmiş) çözülmeden hiçbir aşama
+**Durum: Aşama 1 (O-5a, K-45) ve Aşama 2 (KARAYS marka, K-46) CANLIYA UYGULANDI (02.11.2026). Sıradaki: Aşama 3 — ayrı onay.** §2.7 üç koşulu sağlandı (K-42). (Önceki: ENGELLİ, K-35.) Hiçbir aşama başlatılmadı. Ön koşul 0.4 (İÇERİKSİZ geçmiş) çözülmeden hiçbir aşama
 önerilmez. Her aşama **ayrı, açık, yazılı sahip onayı** ister; bir aşamanın onayı sonrakini
 kapsamaz. OPS-02 bayrağı (`enforce_subscription_limits`) bu planın hiçbir aşamasında açılmaz (ayrı karar, K19 §8 birim 5b).
 
@@ -66,7 +66,7 @@ Sıra (değişmez): `20261002000001_karay_platform` → `20261004000001_design_f
   yükleme (BACKUP_RESTORE.md, ayrı onay). Kod geri alınmaz (kod migration'sız da çalışır).
 - **Onay cümlesi örneği:** "O-5a: supabase/ops/o5a altındaki 9 dosyanın sırayla canlıya uygulanmasını onaylıyorum."
 
-### Aşama 2 — KARAYS marka (`20261018000001`, ayrı runbook `supabase/ops/karays_brand/`; ayrı onay)
+### Aşama 2 — KARAYS marka (`20261018000001`, ayrı runbook `supabase/ops/karays_brand/`; ayrı onay) — uygulandı 02.11.2026 (K-46)
 
 - **Ön kontrol:** `01_preflight.sql` → DUR yok (artık `karay_schema_version()` = `20261011000001`).
 - **Yedek:** `02_rollback_script.sql` çıktısını sakla (o anki `company_name` için geri dönüş betiği üretir).
