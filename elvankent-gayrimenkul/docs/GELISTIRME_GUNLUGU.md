@@ -33,6 +33,9 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 - Not: çalıştırma "Review deployments" onayı beklemeden başladı (sahip ekranında onay düğmesi görünmedi; onay kaydı yok) →
   `o5a-uygula` ortamında "Required reviewers" kuralı etkin görünmüyor. Tek kullanımlık tetik ve yedek kapısı çalıştı. Sahibe ortam
   ayarını kontrol etmesi önerildi.
+- Sahip (14:37–14:45 yerel): Settings › Environments ekranında `o5a-uygula` kuralsızdı (`restore-drill`'de 1 kural) → `o5a-uygula` ve
+  `ki23-canli-denetim` ortamlarına Required reviewers = sahip (self-review serbest) eklendi (sahibin beyanı; ilk çalıştırmada
+  "Review deployments" görünmesiyle doğrulanacak). Duman testi: ilan düzenleme ve fotoğraf yükleme hatasız (sahip).
 - İstek satırı kapatıldı. Sıradaki: duman testi (ilan ekleme/düzenleme, fotoğraf yükleme), sonra kod yayını (ayrı onay).
 
 ### 02.11.2026 (24) · K-48: KI-39 D süpürmesi sayfalı (bekleyen 20261031000001; canlıda değil)
