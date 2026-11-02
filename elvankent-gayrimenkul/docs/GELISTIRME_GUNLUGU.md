@@ -23,6 +23,14 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (26) · K-50: kod yayını hazırlığı — production birleştirildi, şerit metinleri onaylandı
+
+- Production (`a0f0a67`; 7 commit: O-4 güvenlik yaması, KARAY-01, CI onarımları, yedek iş akışı) çalışma dalına birleştirildi
+  (`47f1632`). Çakışmaların hepsi aynı değişikliklerin dalda bulunan sonraki hâlleri → dal tarafı; production'ın iki birim dosyası
+  (backup-workflow, security-patch) korundu, birim 822/822.
+- Sahip onayı (sohbette): "şerit metinleri onaylı" (KI-21, 7 durum; K-47 listesindeki metinler).
+- Sıradaki: CI yeşil → production'a PR (sahip birleştirir; geri dönüş Vercel Instant Rollback).
+
 ### 02.11.2026 (25) · K-49: O-5 Aşama 3 canlıya uygulandı (o5b #2 "SONUÇ: TAMAM")
 
 - Sahip onayı (sohbette): "O-5 Aşama 3: quota_lock, ops02_limits, media_quota_lock ve company_name runbook'larının iş akışıyla
