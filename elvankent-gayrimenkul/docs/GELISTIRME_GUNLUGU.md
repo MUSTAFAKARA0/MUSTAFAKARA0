@@ -24,6 +24,23 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (38) · K-62: güvenlik denetimi — O-5 tetik açığı kapatıldı; medya denetimi ve düzeltmeler
+
+- **Doğrulama:** production `2eeb5e1` (Vercel READY, son 24 saatte çalışma hatası yok); canlı DB 39 migration (o5a #4, o5b #2,
+  o5c #2 SONUÇ: TAMAM — O-5 Aşama 4 uygulanmış); yedek #53 (02.11 20:20 TR) başarılı; CI #193 (`592ca7c`) yeşil.
+  CI #191 (istek satırı açık bırakılmıştı) ve #192 (TEST-OWNER-08 zamanlama; `a85f353` ile düzeltildi) kırmızıydı.
+- **P0 (KI-40):** o5a/o5b/o5c iş akışlarında elle başlatma tek kullanımlık `CALISTIR=evet` kuralını atlıyordu. Elle başlatma
+  kaldırıldı; tetik adımı koşulsuz ve sıkı (zorla gönderim, yeniden açılan dal reddi); aynı istek commit'i için ikinci koşu reddi
+  (`scripts/o5-tek-kullanim.sh`); tetikleyen de sahip olmalı. KT-15 negatif testleri. Bağımsız güvenlik incelemesi: açık kapandı.
+  Yapısal risk (KI-41): yazabilen DB adresi depo sırrı — sahip GitHub ayarları (SAHIP_ADIMLARI 2a).
+- **Medya denetimi (bağımsız):** kritik/yüksek yok. Orta: bekleyen yükleme kotası bildirilen boyutla sayılıyor (KI-42, migration
+  gerekir). Düzeltildi (canlıda değil): temizlik işinin süre bütçesi ve kuyruk tıkanması (KI-43), "yüklenmemiş" hatasında çıkmaz,
+  bırakılan kayıt ve geçici indirme hatası (KI-44). İkinci bağımsız inceleme ilk düzeltmede bir gerileme buldu, giderildi.
+  Diğer düşük bulgular KI-45. Yerel: birim 836/836, ESLint 0, tsc 0, production build ✓, `npm audit --omit=dev` 0 açık.
+- Production, canlı DB ve ortam değişkenleri bu çalışmada değiştirilmedi.
+
+**Açık (sahip):** KI-41 GitHub ayarları · medya düzeltmelerinin yayını (onay) · KI-42 planı · Sentry deneme olayı (ayrı onay) · D-11.
+
 ### 02.11.2026 (37) · K-61: KARAYS alan adı siteye bağlandı
 
 - **Sahip onayı (sohbette):** "Karaysı bagla". Alan adı ve `www` (kalıcı yönlendirme) projeye eklendi, KARAYS alan adı
