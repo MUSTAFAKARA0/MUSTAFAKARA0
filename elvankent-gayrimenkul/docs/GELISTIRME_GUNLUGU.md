@@ -4,22 +4,23 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 > Depo herkese açıktır. Buraya proje veya dağıtım kimliği, ortam değişkeni değeri ya da varlığı, alan adı ayarı, kayıt sayısı veya sır yazılmaz.
 
-## Güncel durum (31.10.2026)
+## Güncel durum (02.11.2026, K-53)
 
 | Konu | Durum |
 | --- | --- |
-| Production dalı | `ff2f7da`, değişmedi. KARAYS yayını kapıları bekliyor (aşağıda) |
-| Çalışma dalı | `claude/karays-mission-control-vn8g65` (26.10: `claude/karay-ci-dogrulama` `7bd583f`'ün fast-forward devamı). Vercel dağıtımı iki dalda da kapalı (`a24fef8` ve K-20); yayın zinciri bu commit'ler hariç kurulur |
-| Son kod commit'i | `751dc11` (K-23: WP-A2 C depolama yuvaları, bekleyen; KI-21 şerit iskeleti; KI-18) |
-| GitHub | K-13…K-16 GitHub'da (`a24fef8..968e3ad`). Production dalının yerel kopyasındaki 15 commit kaybolmadı: zincir uzak dallardan birebir yeniden kurulabiliyor (aşağıda) |
-| CI | [#105](https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/actions/runs/41211573470) yeşil (`cc706e0`, 31.10.2026): quality, database ve database-legacy-schema. #104 = `87337a5` yeşil. `751dc11` + K-23 günlüğü sonraki koşuda (K-23 girdisi) |
-| Güvenlik | Production'da next 16.3.6 ve sharp 0.35.4 var; yeni Next.js duyurularının etki alanında ([K17 §3](K17_KARAYS_RELEASE.md)). Düzeltme bu dalda; canlıya çıkması yayın onayına bağlı (O-4) |
-| Açık kapılar | P0-1 canlı yedek yok: sağlayıcı yedeği/PITR yok (Free Plan, 31.10 kanıtı), kendi gece yedeği (O-3) henüz açılmadı · P0-2 canlı veritabanının kimliği ve şema durumu doğrulanmadı · onaylar O-1…O-6 ([K17 §1–§2](K17_KARAYS_RELEASE.md)) |
-| Bekleyen kararlar | D-01…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)). Özellikle D-05 (iptal ve veri saklama; OPS-02'nin kalıcı düzeltmesi buna bağlı), D-14 (dal ve yayın stratejisi), D-15 (güvenlik başlıkları, SVG) · PHASE4 §8 K-4…K-7 |
+| Production dalı | `6b698e9` (02.11.2026 16:32 TR, PR #4: tam KARAYS kodu). Vercel production READY; geri dönüş adayı `a0f0a67`. Önceki: `a0f0a67` (PR #3), `74013a5` (KARAY-01), `650fd4e` (O-4 güvenlik yaması) |
+| Çalışma dalı | `claude/karays-mission-control-vn8g65`, production ile aynı noktadan devam ediyor (02.11 fast-forward) |
+| Son kod commit'i | `6b698e9` (production'daki kod; çalışma dalında üstüne yalnız belge commit'leri) |
+| Canlı veritabanı | 35 migration: 21 temel + O-5a (9, 02.11) + KARAYS marka (02.11) + Aşama 3 (quota_lock, ops02_limits, media_quota_lock, company_name; 02.11). `enforce_subscription_limits` = false. Bekleyen: Aşama 4 medya (4 dosya) |
+| CI | Son yeşil: #181 (`666d515`), #179 (`236ef1c`), #177 (`1d79589`, production birleştirmesi). Her push sonrası koşu bu günlüğe yazılır |
+| Yedek | Gece yedeği (R2) çalışıyor: zamanlanmış #49; O-5 öncesi elle #50–#52. Gerçek geri yükleme provası KI-24 #2 başarılı |
+| Güvenlik | Canlıya yazan iş akışları sahip onaylı ortamda (`o5a-uygula`, `ki23-canli-denetim`: Required reviewers). O-6: geri dönüşü Claude önerir, sahip onaylar, Claude Vercel'de uygular |
+| Açık kapılar | Aşama 4 medya migration'ları (ayrı onay) · özel alan adı (Vercel'e alan adı + `VERCEL_*` değişkenleri) · hata bildirimi (`SENTRY_DSN`/`ERROR_WEBHOOK_URL`) · OPS-02 bayrağı (D-04/D-05 alt kararları) |
+| Bekleyen kararlar | D-04/D-05 alt kararları (hatırlatma zamanları, salt okunur kapsamı, saklama süresi — hukuki görüş) · D-01…D-03, D-06…D-14, D-16…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)) |
 
-**Yayın hazırlığı:** [K19_YAYIN_HAZIRLIK.md](K19_YAYIN_HAZIRLIK.md) (Go/No-Go, kalite kapısı, toplu karar paketi). **Kalan işler:** [KALAN_ISLER.md](KALAN_ISLER.md) (tek liste, KI-01…KI-37).
+**Kalan işler:** [KALAN_ISLER.md](KALAN_ISLER.md) · **Sahibin adımları:** [SAHIP_ADIMLARI.md](SAHIP_ADIMLARI.md).
 
-**Sıradaki adım:** Sahibin K-17 kapılarını açması: A1–A4 (panel teyidi, salt okunur ön kontrol, geri dönüş betiği, yedek). Ardından O-4 ile kod yayını, O-5 ile migration. Canlıdaki güvenlik açığı nedeniyle bu sıranın öne alınması önerilir. Güvenlik düzeltmesini migration'dan önce, yalnızca kod olarak yayınlamak teknik olarak mümkün (yeni kod eski veritabanıyla çalışır, [K17 §5](K17_KARAYS_RELEASE.md)). Yedek kapısının (P0-1) bu kod yayınını da bekletip bekletmeyeceği sahibin kararıdır.
+**Sıradaki adım:** Aşama 4 medya migration'ları için plan ve sahip onayı (yeni medya kodu production'da; 4e ön koşulu sağlandı); ardından özel alan adı.
 
 ## Girişler
 
@@ -29,6 +30,11 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
   geri dönüş adayı `a0f0a67` (`dpl_8CQW…`). Vercel çalışma zamanı hatası: son 30 dk 0.
 - Sahip duman testi: KARAYS sayfası (yeni logo), konsol, ofis paneli ve kiracı sitesi açılıyor.
 - Çalışma dalı production'a fast-forward edildi (iki dal aynı noktada).
+- Güncel durum tablosu (31.10'dan kalmıştı) yenilendi; Mission Control panosu production'ı bu tablodan okuyor.
+
+**CI:** #177 (`1d79589`) ve #181 (`666d515`) yeşil; production birleştirmesi #177'de doğrulandı.
+
+**Açık (sahip):** Mission Control PR #4 birleştirmesi · Aşama 4 medya onayı · özel alan adı (Vercel + `VERCEL_*`) · hata bildirimi (isteğe bağlı) · D-04/D-05 alt kararları.
 - Kalan (ayrı onaylar): Aşama 4 medya migration'ları (`media_finalize_rpc` → `media_privileges` → `media_storage_slots` → `media_stray_sweep`;
   yeni kod artık production'da — 4e ön koşulu sağlandı), özel alan adı (Vercel'e alan adı + `VERCEL_*` değişkenleri), hata bildirimi.
 
