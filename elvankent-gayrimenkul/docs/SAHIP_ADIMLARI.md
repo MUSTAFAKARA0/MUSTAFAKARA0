@@ -37,7 +37,7 @@ Müşteri verisi GitHub'ın geçici makinesinde, yalnız oradaki yerel veritaban
 Vercel › production projesi › Settings › Environment Variables: **`VERCEL_API_TOKEN`** ve **`VERCEL_PROJECT_ID`** adları var mı?
 (Değerleri değil, yalnız "var / yok".) Özel alan adı özelliği bunlar olmadan çalışmaz.
 
-### 4. Gece yedeği — yalnız bilgi
+### 4. ✓ Gece yedeği — İLK ZAMANLANMIŞ KOŞU BAŞARILI (#49, 02.11); Faz A kapanabilir. (Aşağıdaki not geçmiş bilgi.)
 Zamanlanmış koşu GitHub'da 5–6 saat gecikmeli başlıyor (önceki koşular 06:15–07:38 UTC). Ben izliyorum; bir şey yapmanız gerekmez.
 Bugün akşama kadar başlamazsa size "Run workflow" (varsayılan dal) ile elle yedek almanızı söyleyeceğim.
 

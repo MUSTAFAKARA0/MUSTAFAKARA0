@@ -23,6 +23,14 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (20) · K-44: ilk zamanlanmış gece yedeği doğrulandı — Faz A kapanabilir
+
+- **Backup #49** (`schedule`, varsayılan dal `a0f0a67`; cron 01:23 UTC, başlangıç 07:46 UTC — GitHub kuyruğu ≈6 saat): sürüm kapısı geçti
+  (istemci/sunucu PostgreSQL 17.11); `db-2026-11-02T0746Z` dump, parmak izi, tablo sayıları, SHA-256 → R2 (`rclone copyto`) ve `rclone check --one-way`
+  hatasız (adım `set -e` ile başarılı); Storage `media-originals`, `media`, `branding`, `property-images` → "hata yok"; saklama (30/90 gün) tamam.
+  Uyarı "Parmak izinde bulunamayan tablo var" beklenen: `organization_invitations` O-5a ile gelecek.
+- Faz A (O-3 gece yedeği) kanıtları: zamanlanmış koşu #49 + geri yükleme provası KI-24 #2. KI-28'de O-3 tamam; O-2, O-6 açık.
+
 ### 02.11.2026 (19) · K-43: O-5a onaylandı — uygulama iş akışı hazır (çalıştırılmadı); gece yedeği #49 başarılı
 
 - **Gece yedeği:** zamanlanmış koşu #49 (varsayılan dal) 07:46 UTC'de başladı, başarılı (≈6 saat GitHub gecikmesi). Faz A kapanabilir.
