@@ -16,14 +16,13 @@
 | KI-24 hazırlığı | R2 okuma anahtarı (`RESTORE_S3_*`) ve `restore-drill` ortam onayı tanımlandı |
 | PR #2 | Kapalı |
 
-## Sizin yapacaklarınız (güncel, 02.11 K-60)
+## Sizin yapacaklarınız (güncel, 02.11 K-61)
 
 Tamamlananlar (02.11): O-5 Aşama 1–4 canlıda ve doğrulandı · tam kod (PR #4) ve tanıtım videosu (PR #5) yayında · Sentry bağlandı ·
 `VERCEL_API_TOKEN` / `VERCEL_PROJECT_ID` / `VERCEL_TEAM_ID` tanımlandı · onay kuralları · O-6 · D-13 (müşteri siteleri kendi alan adlarıyla) ·
 Mission Control PR #4/#5 ve APK #13
 
-### 1. KARAYS alan adı ✓ alındı (`karays.com`) — siteye bağlamak için onayınız bekleniyor
-Bağlanınca alan adının kökünde KARAYS tanıtım sayfası, `/platform`'da konsol açılır; eski `…vercel.app/karay` adresi kapanır.
+### 1. KARAYS alan adı ✓ (02.11 K-61) — alındı, siteye bağlandı, sahip kontrol etti
 
 ### 2. E-posta gönderimi ✓ (02.11 K-60) — Resend doğrulandı, şifre sıfırlama e-postası test edildi
 

@@ -15,14 +15,23 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 | CI | Son yeşil: #181 (`666d515`), #179 (`236ef1c`), #177 (`1d79589`, production birleştirmesi). Her push sonrası koşu bu günlüğe yazılır |
 | Yedek | Gece yedeği (R2) çalışıyor: zamanlanmış #49; O-5 öncesi elle #50–#52. Gerçek geri yükleme provası KI-24 #2 başarılı |
 | Güvenlik | Canlıya yazan iş akışları sahip onaylı ortamda (`o5a-uygula`, `ki23-canli-denetim`: Required reviewers). O-6: geri dönüşü Claude önerir, sahip onaylar, Claude Vercel'de uygular |
-| Açık kapılar | KARAYS alan adını siteye bağlama (alındı; e-posta gönderimi 02.11 K-60 ile çalışıyor) · müşteri alan adı bağlama (müşteri onayı + DNS) · D-11 ücretli planlar · OPS-02 bayrağı (D-04/D-05 alt kararları) |
+| Açık kapılar | Müşteri alan adı bağlama (müşteri onayı + DNS) · D-11 ücretli planlar · OPS-02 bayrağı (D-04/D-05 alt kararları) |
 | Bekleyen kararlar | D-04/D-05 alt kararları (hatırlatma zamanları, salt okunur kapsamı, saklama süresi — hukuki görüş) · D-01…D-03, D-06…D-14, D-16…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)) |
 
 **Kalan işler:** [KALAN_ISLER.md](KALAN_ISLER.md) · **Sahibin adımları:** [SAHIP_ADIMLARI.md](SAHIP_ADIMLARI.md).
 
-**Sıradaki adım:** KARAYS alan adını siteye bağlamak (sahip onayıyla); ardından müşteri alan adı.
+**Sıradaki adım:** müşteri (Elvankent) alan adı — müşteri onayı ve DNS erişimi; D-11 planları.
 
 ## Girişler
+
+### 02.11.2026 (37) · K-61: KARAYS alan adı siteye bağlandı
+
+- **Sahip onayı (sohbette):** "Karaysı bagla". Alan adı ve `www` (kalıcı yönlendirme) projeye eklendi, KARAYS alan adı
+  ayarı production'a girildi; production `2eeb5e1` aynı kodla yeniden dağıtıldı (`dpl_3bih…`, READY, çalışma hatası yok).
+- **Sahip kontrolü: hepsi tamam** — alan adının kökünde KARAYS tanıtım sayfası, `www` yönlendirmesi, `/platform` konsol girişi,
+  Elvankent sitesi ve paneli eskisi gibi; paylaşılan adresteki `/karay` artık açılmıyor (beklenen).
+
+**Açık (sahip):** Elvankent alan adı görüşmesi · D-11 planları · avukat/mali müşavir · Sentry denemesi ve seslendirme (sonra).
 
 ### 02.11.2026 (36) · K-60: KARAYS alan adı alındı; e-posta gönderimi canlıda çalışıyor
 
