@@ -24,6 +24,20 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (39) · K-63: KI-41 güvenli sır sınırı planı; yedek silme ve sahte yedek kapısı kapatıldı
+
+- Sahip GitHub'da: `koruma` kural seti (production ve çalışma dalında silme/zorla gönderim kapalı), `o5a-uygula` dal sınırı.
+- Sır envanteri: hassas sırların hepsi depo düzeyinde; ortamsız kullananlar `backup` ve `r2-diagnose`. Claude'un push'ları
+  sahibin kimliğiyle (CI #194 actor = sahip) → "yalnız sahip" kontrolleri Claude'u ayırmaz (T2).
+- Plan: [KI41_GUVENLIK_PLANI.md](KI41_GUVENLIK_PLANI.md) (Aşama 0–6, kesinti riski ve geri dönüş). Bağımsız güvenlik incelemesi
+  4 yüksek bulgu verdi; plan düzeltildi (Aşama 6 T2 için zorunlu; restore-drill sırları; eski anahtar iptali).
+- Kod (canlıya etkisi yok): yedek saklama süresi en az 14 gün (değişkenle yedekler silinemez); O-5 yedek kapısı yalnız gerçek
+  `backup` işini sayar; `tests/unit/workflow-secrets.test.mjs` (sır envanteri, PR olaylarında sır yok, saklama alt sınırı).
+  Birim 841/841.
+- Sır, ortam, Vercel ve canlı veritabanı değiştirilmedi.
+
+**Açık (sahip):** KI-41 Aşama 0 (ortamı elle kur) ve Aşama 1 PR'ı · medya düzeltmelerinin yayını · Aşama 6 kararı.
+
 ### 02.11.2026 (38) · K-62: güvenlik denetimi — O-5 tetik açığı kapatıldı; medya denetimi ve düzeltmeler
 
 - **Doğrulama:** production `2eeb5e1` (Vercel READY, son 24 saatte çalışma hatası yok); canlı DB 39 migration (o5a #4, o5b #2,

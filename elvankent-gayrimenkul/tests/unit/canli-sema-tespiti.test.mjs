@@ -626,6 +626,9 @@ describe('KT-15 canlıya yazan O-5 iş akışlarında tetik güvenliği (02.11 g
       assert.match(wf, /for d in queued in_progress waiting requested pending/, `${n}: çalışan/sırada yedek varken durur`);
       assert.match(wf, /\[ "\$yas" -le 10800 \]/, `${n}: son 3 saatte başarılı yedek`);
       assert.match(wf, /Başarılı yedek bulunamadı/, `${n}: yedeksiz çalışmaz`);
+      assert.match(wf, /actions\/runs\/\$kosu\/jobs\?per_page=100/, `${n}: koşunun işlerine bakılır`);
+      assert.match(wf, /any\(x\["name"\] == "backup" and x\["conclusion"\] == "success" for x in j\)/, `${n}: yalnız gerçek yedek işi sayılır (yedek kapalı koşusu değil)`);
+      assert.ok(wf.indexOf('$kosu/jobs') < wf.indexOf('[ "$yas" -le 10800 ]'), `${n}: iş denetimi yaş denetiminden önce`);
     }
     for (const n of ['o5a', 'o5b', 'o5c']) assert.match(read(`scripts/${n}-uygula.sh`), /onaylanan sürüm değil/, `${n}: değiştirilmiş paket reddi`);
   });

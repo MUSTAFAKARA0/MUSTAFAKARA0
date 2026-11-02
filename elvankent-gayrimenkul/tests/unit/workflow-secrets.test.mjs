@@ -5,6 +5,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 const root = new URL('../../../', import.meta.url).pathname;
@@ -67,5 +68,32 @@ describe('KI-41 hassas sır envanteri (.github/workflows)', () => {
     const ortamsizDb = Object.entries(hepsi).flatMap(([f, { isler }]) =>
       Object.entries(isler).filter(([, is]) => is.sirlar.includes('SUPABASE_DB_URL') && !is.ortam).map(([ad]) => `${f}/${ad}`));
     assert.deepEqual(ortamsizDb, ['elvankent-backup.yml/backup'], 'ortamsız veritabanı erişimi yalnız gece yedeği (KI-41 adım 2 ile kapanacak)');
+  });
+  test('pull_request_target hiç yok; ortamlı (sır taşıyan) iş akışları workflow_run / workflow_call ile tetiklenmez', () => {
+    for (const [f, { olaylar, isler }] of Object.entries(hepsi)) {
+      assert.ok(!olaylar.includes('pull_request_target'), `${f}: pull_request_target`);
+      if (Object.values(isler).some((is) => is.ortam)) {
+        assert.deepEqual(olaylar.filter((o) => /^(workflow_run|workflow_call|pull_request)$/.test(o)), [], `${f}: ortamlı iş akışı`);
+      }
+    }
+  });
+});
+
+describe('KI-41 H2: yedek saklama süresi alt sınırı (değişkenle yedekler silinemez)', () => {
+  const wf = readFileSync(path.join(dir, 'elvankent-backup.yml'), 'utf8');
+  const i = wf.indexOf('          gun=$RETENTION_DAYS');
+  const blok = wf.slice(i, wf.indexOf('          rclone delete "dest:$BUCKET/db"', i)).split('\n').map((l) => l.replace(/^ {10}/, '')).join('\n');
+  const gun = (v) => spawnSync('bash', ['-c', `set -euo pipefail\nRETENTION_DAYS='${v}'\n${blok}\necho "$gun"`], { encoding: 'utf8' }).stdout.trim().split('\n').pop();
+  test('silme komutu sınırlanmış değeri kullanır; 0, 7, boş ve geçersiz değer 14/30 olur; 14 ve üstü aynen kalır', () => {
+    assert.ok(i > 0);
+    assert.match(wf, /rclone delete "dest:\$BUCKET\/db" --min-age "\$\{gun\}d"/);
+    assert.doesNotMatch(wf, /--min-age "\$\{RETENTION_DAYS\}d"/);
+    assert.equal(gun('0'), '14');
+    assert.equal(gun('7'), '14');
+    assert.equal(gun('14'), '14');
+    assert.equal(gun('30'), '30');
+    assert.equal(gun(''), '30');
+    assert.equal(gun('1d'), '30');
+    assert.equal(gun('-5'), '30');
   });
 });

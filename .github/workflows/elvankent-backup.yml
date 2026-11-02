@@ -207,6 +207,10 @@ jobs:
       - name: Saklama süresi
         run: |
           set -euo pipefail
-          rclone delete "dest:$BUCKET/db" --min-age "${RETENTION_DAYS}d"   # .dump, .fingerprint.txt, .tables.txt, .sha256 birlikte
+          # KI-41 (H2): saklama süresi değişkenle 0'a çekilip yedekler silinemesin — en az 14 gün; geçersiz değer → 30
+          gun=$RETENTION_DAYS
+          [[ "$gun" =~ ^[0-9]+$ ]] || { echo "::warning title=Saklama süresi::BACKUP_RETENTION_DAYS geçersiz; 30 gün kullanıldı"; gun=30; }
+          if [ "$gun" -lt 14 ]; then echo "::warning title=Saklama süresi::BACKUP_RETENTION_DAYS 14'ten küçük; 14 gün kullanıldı"; gun=14; fi
+          rclone delete "dest:$BUCKET/db" --min-age "${gun}d"   # .dump, .fingerprint.txt, .tables.txt, .sha256 birlikte
           rclone delete "dest:$BUCKET/storage/deleted" --min-age 90d
           rclone rmdirs "dest:$BUCKET/storage/deleted" --leave-root || true

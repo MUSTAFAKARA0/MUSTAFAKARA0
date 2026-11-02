@@ -81,8 +81,14 @@ jobs:
           [ "$suren" -eq 0 ] || { echo "::error::Şu an çalışan/sırada bir elvankent-backup var: bitip yeşil olmasını bekleyin, sonra yeniden tetikleyin"; exit 1; }
           son=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/elvankent-backup.yml/runs?status=success&per_page=1" \
-            | python3 -c 'import json,sys; r=json.load(sys.stdin)["workflow_runs"]; print(r[0]["updated_at"] if r else "")')
+            | python3 -c 'import json,sys; r=json.load(sys.stdin)["workflow_runs"]; print(str(r[0]["id"]) + " " + r[0]["updated_at"] if r else "")')
           [ -n "$son" ] || { echo "::error::Başarılı yedek bulunamadı: önce elvankent-backup'ı çalıştırın"; exit 1; }
+          # KI-41 (M2): yedek kapalıyken yalnız "backup-disabled" işi koşar ve koşu yine "success" olur — gerçek yedek işi aranır
+          kosu=${son%% *}; son=${son#* }
+          curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/$kosu/jobs?per_page=100" \
+            | python3 -c 'import json,sys; j=json.load(sys.stdin)["jobs"]; sys.exit(0 if any(x["name"] == "backup" and x["conclusion"] == "success" for x in j) else 1)' \
+            || { echo "::error::Son başarılı yedek koşusunda gerçek yedek işi (backup) başarıyla bitmemiş: yedek kapalı olabilir"; exit 1; }
           yas=$(( $(date -u +%s) - $(date -u -d "$son" +%s) ))
           echo "Son başarılı yedek: $son ($(( yas / 60 )) dk önce)"
           [ "$yas" -le 10800 ] || { echo "::error::Son başarılı yedek 3 saatten eski: önce elvankent-backup'ı elle çalıştırın"; exit 1; }
