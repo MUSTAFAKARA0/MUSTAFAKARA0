@@ -3,3 +3,4 @@
 # Onaydan sonra: bu dosyaya bir satır ekleyip "Commit changes" deyin (çalışma dalında), ardından Actions'ta
 # "Review deployments › Approve". Belirli bir yedek için "STAMP=2026-11-01T0423Z" satırı yazın; yoksa en yenisi seçilir.
 # Bu dosyada sır, anahtar ya da adres YAZMAYIN.
+# prova 02.11
