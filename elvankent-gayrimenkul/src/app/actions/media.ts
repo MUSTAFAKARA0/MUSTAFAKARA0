@@ -300,6 +300,16 @@ async function processMedia(ctx: OrgContext, media: ProcessInput, rotate: Rotati
 
   const { data: blob, error: downloadError } = await ctx.supabase.storage.from(MEDIA_BUCKETS.originals).download(media.original_path);
   if (downloadError || !blob) {
+    // Geçici depolama/ağ hatası "yüklenmemiş" sayılmaz: nesne gerçekten yoksa (liste başarılı ve boş) kayıt başarısız işaretlenir;
+    // liste okunamıyorsa ya da nesne duruyorsa kayıt olduğu gibi kalır ve aynı kayıtla yeniden denenebilir.
+    const slash = media.original_path.lastIndexOf('/');
+    const name = media.original_path.slice(slash + 1);
+    const { data: listed, error: listError } = await ctx.supabase.storage
+      .from(MEDIA_BUCKETS.originals)
+      .list(media.original_path.slice(0, slash), { search: name, limit: 10 });
+    if (listError || (listed ?? []).some((f) => f.name === name && f.id !== null)) {
+      throw new ActionError('Fotoğraf şu an işlenemedi (depolama geçici olarak yanıt vermedi). Biraz sonra "Tekrar dene"ye basın.', 'processing');
+    }
     await markFailed(ctx, media, 'Orijinal dosya depolamada bulunamadı; yükleme tamamlanmamış olabilir.');
     throw new ActionError('Dosya yüklemesi tamamlanmamış görünüyor. "Tekrar dene" ile yeniden yükleyin.', 'not_uploaded');
   }

@@ -265,8 +265,21 @@ describe('classifyFinalizeError · media_busy', () => {
 describe('MF-UI not_uploaded: "Tekrar dene" çıkmaza girmez (02.11 medya denetimi bulgu #4)', () => {
   const ui = readFileSync(`${root}src/components/admin/media/media-manager.tsx`, 'utf8');
   test('kayıt başarısız işaretlendiyse yeniden deneme aynı kaydı değil, yeni bir yüklemeyi başlatır', () => {
-    assert.match(ui, /if \(res\.code === 'not_uploaded'\) \{\n[\s\S]*?patch\(item\.key, \{ status: 'error', error: res\.error, retryable: true, failedAt: undefined, ticket: undefined \}\);\n\s*return;/);
+    assert.match(ui, /if \(res\.code === 'not_uploaded'\) \{\n[\s\S]*?patch\(item\.key, \{ status: 'error', error: res\.error, retryable: true, failedAt: undefined, ticket: undefined \}\);\n[\s\S]*?\n\s*return;/);
+    assert.match(ui, /void cancelMediaUpload\(ticket\.mediaId\)\.catch\(\(\) => undefined\);/, 'eski başarısız kayıt hemen bırakılır');
+    assert.match(ui, /if \(!res\.ok && res\.code === 'not_uploaded'\) \{\n\s*\/\/[^\n]*\n\s*return void toast\.error\('Bu fotoğrafın dosyası sunucuya ulaşmamış\./, 'liste görünümünde döngü yok');
     // ticket yoksa process createMediaUpload ile yeni kayıt açar
     assert.match(ui, /let ticket = item\.ticket;\n\s*if \(!ticket\) \{\n\s*const res = await createMediaUpload\(/);
+  });
+});
+
+describe('MF-DL geçici indirme hatası "yüklenmemiş" sayılmaz (02.11 inceleme bulgu #3)', () => {
+  const src = readFileSync(`${root}src/app/actions/media.ts`, 'utf8');
+  test('liste okunamıyorsa ya da nesne duruyorsa kayıt başarısız işaretlenmez, yeniden denenebilir hata döner', () => {
+    const i = src.indexOf('if (downloadError || !blob) {');
+    const block = src.slice(i, src.indexOf("'not_uploaded');", i));
+    assert.ok(i > 0);
+    assert.ok(block.indexOf("if (listError || (listed ?? []).some((f) => f.name === name && f.id !== null)) {") < block.indexOf('await markFailed('), 'önce var mı denetimi, sonra başarısız işareti');
+    assert.match(block, /throw new ActionError\('[^']+', 'processing'\);/);
   });
 });
