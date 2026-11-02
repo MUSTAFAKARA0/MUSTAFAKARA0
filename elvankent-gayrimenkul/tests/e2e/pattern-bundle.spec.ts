@@ -56,7 +56,11 @@ const orgs: string[] = [];
 
 test.beforeAll(async () => {
   for (const s of SITES) {
-    const org = await service!.from('organizations').insert({ slug: `pb${s.key}-${RUN}`, name: `E2E Desen ${s.key} ${RUN}`, reference_prefix: `Q${letters(3)}`, status: 'active' }).select('id').single();
+    // reference_prefix tekil ve rastgele (Q + 3 harf): nadir çakışmada (23505, CI #171) yeni harflerle yeniden dene
+    let org = await service!.from('organizations').insert({ slug: `pb${s.key}-${RUN}`, name: `E2E Desen ${s.key} ${RUN}`, reference_prefix: `Q${letters(3)}`, status: 'active' }).select('id').single();
+    for (let i = 0; i < 5 && org.error?.code === '23505' && /reference_prefix/.test(org.error.details ?? ''); i++) {
+      org = await service!.from('organizations').insert({ slug: `pb${s.key}-${RUN}`, name: `E2E Desen ${s.key} ${RUN}`, reference_prefix: `Q${letters(3)}`, status: 'active' }).select('id').single();
+    }
     if (org.error) throw org.error;
     orgs.push(org.data.id);
     await service!.from('organization_settings').insert({ organization_id: org.data.id, display_name: `Desen Testi ${s.key}`, address_city: 'Ankara', service_area: 'Ankara' });

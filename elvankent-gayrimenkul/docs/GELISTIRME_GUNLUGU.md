@@ -32,6 +32,8 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
   hataları → `MediaStraySweepFailed`, 7 günü aşan tur → `MediaStraySweepStalled` (reportError ile izlemeye).
 - Runbook `media_stray_sweep` 01–05 ve README güncel (04 yeni md5 `2723d177…`). Doğrulama (koordinatör, yerel): birim 782/782;
   yerel yığın sıfırlandı + 8 runbook provası (01→05→01→03→04) temiz; güvenlik testleri 206/206 (SW-01…SW-09 dahil).
+- CI #171 (`60d9b7f`) kırmızı: E2E PB-01 kurulumunda rastgele `reference_prefix` çakışması (23505, `QKMM`); 201 test geçti, değişikliklerle
+  ilgisiz. Düzeltme: pattern-bundle kurulumunda çakışmada yeni harflerle yeniden deneme. #172 (`ab6059e`) bu düzeltme için iptal edildi.
 - Açık: canlı Storage'da C sıralı indeks yoksa her sayfa kovayı sıralar (01 8. satır BİLGİ). Medya birimleri (Aşama 4) ayrı karar.
 
 ### 02.11.2026 (23) · K-47: kod yayını incelemesi, Aşama 3 uygulama iş akışı (çalıştırılmadı), KI-21 şerit durumları
