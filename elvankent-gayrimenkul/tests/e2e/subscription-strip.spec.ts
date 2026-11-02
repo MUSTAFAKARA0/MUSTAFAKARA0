@@ -3,14 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * KI-21 · ofis panelinde abonelik durum şeridi ve "verilerinizi indirin" bağlantısı (iskelet).
+ * KI-21 · ofis panelinde abonelik durum şeridi ve "verilerinizi indirin" bağlantısı (D-04 / D-05 metinleri).
  *
  *  SUB-01  Aktif abonelikte şerit yok.
- *  SUB-02  Deneme: kalan gün; ödeme gecikmesi: uyarı. İkisinde de dışa aktarma bağlantısı yok.
- *  SUB-03  İptal: sahip "Verilerinizi indirin" ile Ayarlar › Veri dışa aktarma bölümüne gider.
- *  SUB-04  İptal: settings.manage yetkisi olmayan danışman bağlantı görmez, yöneticisine yönlendirilir.
+ *  SUB-02  Deneme: kalan gün; biten deneme "bugün bitiyor" demez; ödeme gecikmesi: 7 günlük ek süre (D-04). Dışa aktarma bağlantısı yok.
+ *  SUB-03  İptal bildirimi (active + cancelled_at) ve salt okunur süre (D-05): sahip "Verilerinizi indirin" ile
+ *          Ayarlar › Veri dışa aktarma bölümüne gider.
+ *  SUB-04  Süre dolumu: settings.manage yetkisi olmayan danışman bağlantı görmez, yöneticisine yönlendirilir.
  *
- * Metinler D-05 kararına kadar TASLAK (şerit `data-draft="D-05"` taşır); test yalnız davranışı ve taslak işaretini sınar.
+ * Müşteriye görünür "taslak" etiketi yoktur; dayanılan karar `data-policy` ile işaretlenir. Şerit yalnız gösterimdir.
  * Kendi geçici kiracısını oluşturur ve siler; paylaşılan demo kiracısının aboneliğine dokunmaz. Yalnızca yerel sunucu.
  */
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -36,8 +37,15 @@ async function makeMember(role: 'owner' | 'agent') {
   if (m.error) throw m.error;
 }
 
-async function setSubscription(status: string, trialEndsAt: string | null = null) {
-  const r = await service!.from('subscriptions').update({ status, trial_ends_at: trialEndsAt }).eq('organization_id', S.orgId!);
+type SubFields = { trial_ends_at?: string | null; renewal_at?: string | null; cancelled_at?: string | null };
+const daysFromNow = (d: number) => new Date(Date.now() + d * 24 * 3600e3).toISOString();
+
+// updated_at tetikleyicisi şimdiki zamanı yazar (ödeme gecikmesinin başlangıcı olarak okunur)
+async function setSubscription(status: string, fields: SubFields = {}) {
+  const r = await service!
+    .from('subscriptions')
+    .update({ status, trial_ends_at: null, renewal_at: null, cancelled_at: null, ...fields })
+    .eq('organization_id', S.orgId!);
   if (r.error) throw r.error;
 }
 
@@ -72,34 +80,49 @@ async function login(page: Page, email: string) {
 
 const strip = (page: Page) => page.getByRole('region', { name: 'Abonelik durumu' });
 
-test('SUB-01/02: aktifte şerit yok; deneme kalan gün, ödeme gecikmesi uyarı; bağlantı yok', async ({ page }) => {
+test('SUB-01/02: aktifte şerit yok; deneme kalan gün / biten deneme; ödeme gecikmesi 7 gün ek süre; bağlantı yok', async ({ page }) => {
   await setSubscription('active');
   await login(page, emailOf('owner'));
   await page.goto('/admin');
   await expect(page.locator('#admin-icerik')).toBeVisible();
   await expect(strip(page)).toHaveCount(0);
 
-  await setSubscription('trialing', new Date(Date.now() + 5 * 24 * 3600e3 - 60e3).toISOString());
+  await setSubscription('trialing', { trial_ends_at: daysFromNow(5) });
   await page.reload();
-  await expect(strip(page)).toHaveAttribute('data-subscription-status', 'trialing');
-  await expect(strip(page)).toContainText('5 gün');
-  await expect(strip(page)).toHaveAttribute('data-draft', 'D-05');
-  await expect(strip(page).getByText('Taslak metin · D-05')).toBeVisible();
+  await expect(strip(page)).toHaveAttribute('data-subscription-state', 'trialing');
+  await expect(strip(page)).toContainText(/bitmesine [56] gün kaldı/);
+  await expect(strip(page)).toHaveAttribute('data-policy', 'D-03');
+  await expect(strip(page).getByText(/Taslak/)).toHaveCount(0);
   await expect(strip(page).getByRole('link', { name: 'Verilerinizi indirin' })).toHaveCount(0);
+
+  await setSubscription('trialing', { trial_ends_at: daysFromNow(-3) });
+  await page.reload();
+  await expect(strip(page)).toHaveAttribute('data-subscription-state', 'trial_ended');
+  await expect(strip(page)).toContainText('Deneme süreniz sona erdi.');
+  await expect(strip(page)).not.toContainText('bugün bitiyor');
 
   await setSubscription('past_due');
   await page.reload();
-  await expect(strip(page)).toHaveAttribute('data-subscription-status', 'past_due');
-  await expect(strip(page)).toContainText('Ödeme bekleniyor');
+  await expect(strip(page)).toHaveAttribute('data-subscription-state', 'past_due_grace');
+  await expect(strip(page)).toHaveAttribute('data-policy', 'D-04');
+  await expect(strip(page)).toContainText('7 gün ek süreniz var');
+  await expect(strip(page)).toContainText('site ve panel çalışmaya devam eder');
   await expect(strip(page).getByRole('link', { name: 'Verilerinizi indirin' })).toHaveCount(0);
 });
 
-test('SUB-03: iptal: sahip "Verilerinizi indirin" ile dışa aktarma bölümüne gider; şerit her panel sayfasında', async ({ page }) => {
-  await setSubscription('cancelled');
+test('SUB-03: iptal bildirimi ve salt okunur süre: sahip "Verilerinizi indirin" ile dışa aktarma bölümüne gider', async ({ page }) => {
+  await setSubscription('active', { cancelled_at: daysFromNow(-1), renewal_at: daysFromNow(10) });
   await login(page, emailOf('owner'));
   await page.goto('/admin/ilanlar');
-  await expect(strip(page)).toHaveAttribute('data-subscription-status', 'cancelled');
-  await expect(strip(page)).toContainText('Abonelik sona erdi');
+  await expect(strip(page)).toHaveAttribute('data-subscription-state', 'cancel_scheduled');
+  await expect(strip(page)).toHaveAttribute('data-policy', 'D-05');
+  await expect(strip(page)).toContainText('tüm özellikler açık kalır');
+  await expect(strip(page).getByRole('link', { name: 'Verilerinizi indirin' })).toBeVisible();
+
+  await setSubscription('cancelled', { cancelled_at: daysFromNow(-2) });
+  await page.reload();
+  await expect(strip(page)).toHaveAttribute('data-subscription-state', 'read_only');
+  await expect(strip(page)).toContainText('14 günlük salt okunur erişim süresi');
   await strip(page).getByRole('link', { name: 'Verilerinizi indirin' }).click();
   await expect(page).toHaveURL(/\/admin\/ayarlar#veri-disa-aktarma$/);
   const section = page.locator('#veri-disa-aktarma');
@@ -107,7 +130,7 @@ test('SUB-03: iptal: sahip "Verilerinizi indirin" ile dışa aktarma bölümüne
   await expect(section.getByRole('link', { name: /CSV/ }).first()).toHaveAttribute('href', /\/api\/admin\/export\/ilanlar\?format=csv/);
 });
 
-test('SUB-04: iptal: danışman bağlantı görmez, yöneticisine yönlendirilir', async ({ page }) => {
+test('SUB-04: süre dolumu: danışman bağlantı görmez, yöneticisine yönlendirilir', async ({ page }) => {
   await setSubscription('expired');
   await login(page, emailOf('agent'));
   await page.goto('/admin');

@@ -36,10 +36,10 @@ export default async function PanelLayout({ children }: LayoutProps<'/admin'>) {
           .then((r) => r.count ?? 0)
       : Promise.resolve(0),
     getOrgBrand(),
-    // KI-21: abonelik durum şeridi için son abonelik satırı (iptal/süresi dolmuş dahil; RLS: üyeler okur)
+    // KI-21: abonelik durum şeridi için son abonelik satırı (iptal/süresi dolmuş dahil; RLS: üyeler okur). Yalnız gösterim.
     ctx.supabase
       .from('subscriptions')
-      .select('status, trial_ends_at')
+      .select('status, trial_ends_at, renewal_at, cancelled_at, started_at, updated_at')
       .eq('organization_id', ctx.org.id)
       .order('created_at', { ascending: false })
       .limit(1)

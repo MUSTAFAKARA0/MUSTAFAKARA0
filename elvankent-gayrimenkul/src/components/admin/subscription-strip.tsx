@@ -10,8 +10,9 @@ const TONES: Record<Strip['tone'], string> = {
 };
 
 /**
- * KI-21 · panelin üstündeki abonelik durum şeridi (iskelet).
- * Metinler D-05 kararına kadar TASLAK: `data-draft="D-05"` ve görünür "Taslak metin" etiketi taşır.
+ * KI-21 · panelin üstündeki abonelik durum şeridi (yalnız gösterim; yetki/limit değiştirmez).
+ * Metinler D-04/D-05 kararlarına dayanır; kesin ifade sahibin onayına tabidir. Müşteriye görünür "taslak" etiketi
+ * gösterilmez; dayanılan karar `data-policy`, aşama `data-subscription-state` olarak işaretlenir.
  */
 export function SubscriptionStrip({ strip }: { strip: Strip | null }) {
   if (!strip) return null;
@@ -19,16 +20,12 @@ export function SubscriptionStrip({ strip }: { strip: Strip | null }) {
     <section
       aria-label="Abonelik durumu"
       data-subscription-status={strip.status}
-      data-draft={strip.draft ? 'D-05' : undefined}
+      data-subscription-state={strip.state}
+      data-policy={strip.policy}
       className={cn('mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border px-4 py-3 text-[13.5px]', TONES[strip.tone])}
     >
       <p className="min-w-0">
         <strong className="font-bold">{strip.title}.</strong> {strip.message}
-        {strip.draft && (
-          <span className="ml-2 inline-block rounded border border-current px-1.5 py-px align-middle text-[11px] font-semibold uppercase tracking-wide opacity-80">
-            Taslak metin · D-05
-          </span>
-        )}
       </p>
       {strip.exportLink && (
         <Link href={EXPORT_HREF} className="inline-flex items-center gap-1.5 font-bold underline underline-offset-2">
