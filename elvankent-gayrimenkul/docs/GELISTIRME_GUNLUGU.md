@@ -34,6 +34,8 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
   yerel yığın sıfırlandı + 8 runbook provası (01→05→01→03→04) temiz; güvenlik testleri 206/206 (SW-01…SW-09 dahil).
 - CI #171 (`60d9b7f`) kırmızı: E2E PB-01 kurulumunda rastgele `reference_prefix` çakışması (23505, `QKMM`); 201 test geçti, değişikliklerle
   ilgisiz. Düzeltme: pattern-bundle kurulumunda çakışmada yeni harflerle yeniden deneme. #172 (`ab6059e`) bu düzeltme için iptal edildi.
+- **CI #173 (`8ecaa8f`) yeşil:** quality, database (RLS/güvenlik, runbook provası, KI-24 sentetik, KI-23 provası + O-5 Aşama 3 sentetik
+  V1–V5, E2E) ve database-legacy-schema.
 - Açık: canlı Storage'da C sıralı indeks yoksa her sayfa kovayı sıralar (01 8. satır BİLGİ). Medya birimleri (Aşama 4) ayrı karar.
 
 ### 02.11.2026 (23) · K-47: kod yayını incelemesi, Aşama 3 uygulama iş akışı (çalıştırılmadı), KI-21 şerit durumları
