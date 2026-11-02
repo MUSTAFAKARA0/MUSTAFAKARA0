@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { JsonLd } from '@/components/common/json-ld';
 import { KarayLeadForm } from '@/components/karay/karay-lead-form';
+import { KarayTourVideo } from '@/components/karay/karay-tour-video';
 import { HelperMascot } from '@/components/brand/helper-mascot';
 import { KaroMascot } from '@/components/brand/karo-mascot';
 import { ThemeShowcase } from '@/components/karay/theme-showcase';
@@ -162,6 +163,25 @@ export default async function KarayPage() {
               />
             </div>
             <figcaption className="mt-3 text-right text-[12.5px] text-white/55 lg:text-center">Gerçek ekran görüntüsü · örnek ofis verisiyle</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      {/* Tanıtım videosu: gerçek ürün, örnek verilerle (~1 dk) */}
+      <section id="tanitim" aria-labelledby="karay-tanitim" className="scroll-mt-20 border-b border-[#e3e8f0] bg-[#f4f7fb]">
+        <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:py-20">
+          <div className="max-w-2xl">
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Tanıtım videosu</p>
+            <h2 id="karay-tanitim" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
+              Platformu 1 dakikada görün
+            </h2>
+            <p className="mt-4 text-[16.5px] leading-relaxed text-[#33415c]">
+              Platform konsolu, ofis paneli, ilan ekleme, telefonda ofis sitesi ve temalar. Sessiz izlenebilir: ekran yazıları ve Türkçe altyazı var.
+            </p>
+          </div>
+          <figure className="mt-10 min-w-0">
+            <KarayTourVideo />
+            <figcaption className="mt-3 text-center text-[12.5px] text-[#5b6b85]">Gerçek ürün ekranları · örnek (demo) ofis verisiyle</figcaption>
           </figure>
         </div>
       </section>

@@ -64,7 +64,7 @@ function sources(dir, ext = /\.(ts|tsx)$/) {
 describe('Platform marka dosyaları (K-15/K-16)', () => {
   test('proxy matcher okunur', () => {
     for (const p of ['/platform', '/admin', '/api', '/karay', '/t', '/site-onizleme']) assert.ok(PREFIXES.includes(p), p);
-    for (const f of ['a.svg', 'a.png', 'a.ico', 'a.webp']) assert.match(f, STATIC);
+    for (const f of ['a.svg', 'a.png', 'a.ico', 'a.webp', 'a.webm', 'a.mp4', 'a.vtt']) assert.match(f, STATIC);
   });
 
   test('depodaki paket dosyaları onaylı paketle bayt bayt aynıdır (VARLIK_LISTESI.json SHA-256)', () => {
@@ -90,6 +90,40 @@ describe('Platform marka dosyaları (K-15/K-16)', () => {
     assert.ok(url.startsWith('/karay/') && url.endsWith('.png'), url);
     assert.deepEqual(pngSize(`public${url}`), [width, height]);
     assert.deepEqual([width, height], [1200, 630]);
+  });
+
+  test('tanıtım videosu: public/brand/karays/video/ altında, proxy önekleri dışında, statik uzantılı ve boyut bütçesinde', () => {
+    const { webm, mp4, poster, captions, width, height } = PLATFORM_BRAND.video;
+    assert.deepEqual([width, height], [1280, 720]);
+    const read = (a) => readFileSync(path.join(ROOT, 'public', a));
+    for (const a of [webm, mp4, poster, captions]) {
+      assert.ok(a.startsWith('/brand/karays/video/'), a);
+      assert.ok(existsSync(path.join(ROOT, 'public', a)), a);
+      for (const p of PREFIXES) assert.ok(!a.startsWith(`${p}/`), `${a} → ${p} rotası`);
+      assert.match(a, STATIC, `${a}: uzantı proxy'den geçer`);
+    }
+    // Biçim imzaları: WebM (EBML), MP4 (ftyp), WebP (RIFF....WEBP)
+    assert.equal(read(webm).readUInt32BE(0), 0x1a45dfa3, 'WebM değil');
+    assert.equal(read(mp4).toString('latin1', 4, 8), 'ftyp', 'MP4 değil');
+    const p = read(poster);
+    assert.equal(p.toString('latin1', 0, 4) + p.toString('latin1', 8, 12), 'RIFFWEBP', 'WebP değil');
+    // Boyut bütçesi: her video ≤ 4 MB, poster ≤ 150 KB
+    assert.ok(read(webm).length <= 4 * 1024 * 1024, 'webm > 4 MB');
+    assert.ok(read(mp4).length <= 4 * 1024 * 1024, 'mp4 > 4 MB');
+    assert.ok(p.length <= 150 * 1024, 'poster > 150 KB');
+    // Türkçe altyazı: geçerli WebVTT, sıralı zamanlar, eski marka adı yok
+    const vtt = read(captions).toString('utf8');
+    assert.ok(vtt.startsWith('WEBVTT'), 'WEBVTT başlığı yok');
+    const times = [...vtt.matchAll(/(\d\d):(\d\d):(\d\d\.\d{3}) --> (\d\d):(\d\d):(\d\d\.\d{3})/g)].map((m) => [+m[1] * 3600 + +m[2] * 60 + +m[3], +m[4] * 3600 + +m[5] * 60 + +m[6]]);
+    assert.ok(times.length >= 5, 'altyazı satırı az');
+    for (const [i, [a, b]] of times.entries()) {
+      assert.ok(a < b, `satır ${i + 1}: başlangıç < bitiş`);
+      if (i) assert.ok(a >= times[i - 1][1] - 0.001, `satır ${i + 1}: çakışma`);
+    }
+    assert.ok(times.at(-1)[1] <= 65, 'video ~1 dakikayı aşmamalı');
+    assert.match(vtt, /KARAYS/);
+    assert.doesNotMatch(vtt, /\bKARAY(?![A-Za-zÇĞİÖŞÜçğıöşü])/);
+    assert.doesNotMatch(vtt, /Elvankent/i, 'altyazıda kiracı adı yok');
   });
 
   test('eski KARAY görselleri kaldırıldı; kaynakta onlara başvuru yok', () => {

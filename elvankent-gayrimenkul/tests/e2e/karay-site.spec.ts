@@ -4,7 +4,8 @@ import { expect, test, type Browser, type BrowserContext, type Locator, type Pag
 
 /**
  * KARAY şirket sayfası (/karay), KARAY talepleri ve 10 tema — KARAY-01…18; platform giriş logosu (KARAY-19);
- * KARAYS görsel paketi: paylaşım görseli ve simgeler (KARAY-20), maskotlar ve KARO animasyonu (KARAY-21…22).
+ * KARAYS görsel paketi: paylaşım görseli ve simgeler (KARAY-20), maskotlar ve KARO animasyonu (KARAY-21…22);
+ * tanıtım videosu, posteri ve Türkçe altyazısı (KARAY-24).
  *
  *   KARAY (platform sahibi) ── /karay (kendi markası, kendi talep tablosu: platform_leads)
  *     ├─ Elvankent (varsayılan kiracı; görünümü DEĞİŞTİRİLMEZ, yalnızca okunur)
@@ -196,6 +197,55 @@ test('KARAY-01: KARAY şirket sayfası açılır (kendi header, menü, bölümle
   await expect(page.locator('.demo-notice')).toBeHidden();
   // Sahte istatistik / yorum yok; iletişim bilgisi girilmediyse gösterilmez
   await expect(page.locator('a[href^="mailto:"]')).toHaveCount(S.settings!.contact_email ? 2 : 0);
+});
+
+test('KARAY-24: tanıtım videosu (poster, altyazı, oynatma ayarları) oturumsuz sunulur; kendiliğinden oynamaz; dar ekranda taşmaz', async ({ page, request, browser }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/karay');
+  const section = page.locator('#tanitim');
+  await expect(section.getByRole('heading', { level: 2 })).toHaveText('Platformu 1 dakikada görün');
+  const video = section.locator('video');
+  await expect(video).toHaveCount(1);
+  await expect(video).toHaveAttribute('controls', '');
+  await expect(video).toHaveAttribute('playsinline', '');
+  await expect(video).toHaveAttribute('preload', 'none');
+  await expect(video).not.toHaveAttribute('autoplay');
+  expect(await video.evaluate((v: HTMLVideoElement) => v.muted)).toBe(true);
+  const poster = (await video.getAttribute('poster')) ?? '';
+  const track = video.locator('track[kind="captions"]');
+  await expect(track).toHaveAttribute('srclang', 'tr');
+  const captions = (await track.getAttribute('src')) ?? '';
+  const sources = await video.locator('source').evaluateAll((els) => els.map((e) => [e.getAttribute('src') ?? '', e.getAttribute('type') ?? '']));
+  expect(sources.map(([, type]) => type)).toEqual(['video/webm', 'video/mp4']);
+  // Sabit 16:9 oran (yüklenirken kayma yok); hareket azaltma tercihinde de video duraklatılmış kalır
+  const box = (await video.boundingBox())!;
+  expect(Math.abs(box.width / box.height - 16 / 9)).toBeLessThan(0.02);
+  await page.waitForTimeout(500);
+  expect(await video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
+  // Dosyalar proxy öneklerinin dışında ve oturumsuz istekte yönlendirmesiz 200 döner (KARAY-01 dersi)
+  const expected: [string, RegExp][] = [
+    [poster, /^image\/webp/],
+    [captions, /^text\/vtt/],
+    ...sources.map(([src, type]): [string, RegExp] => [src, new RegExp(`^${type.replace('/', '\\/')}`)]),
+  ];
+  for (const [href, type] of expected) {
+    expect(href, href).toMatch(/^\/brand\/karays\/video\//);
+    const res = await request.get(href, { maxRedirects: 0 });
+    expect(res.status(), href).toBe(200);
+    expect(res.headers()['content-type'] ?? '', href).toMatch(type);
+  }
+  expect(await (await request.get(captions)).text()).toMatch(/^WEBVTT[\s\S]*KARAYS/);
+  // 320 / 360 px: yatay taşma yok, video ekrana sığar
+  for (const width of [320, 360]) {
+    const { page: narrow, close } = await open(browser, '/karay', { width, height: 740 });
+    const v = narrow.locator('#tanitim video');
+    await v.scrollIntoViewIfNeeded();
+    expect(await overflow(narrow), `${width}px`).toBeLessThanOrEqual(0);
+    const b = (await v.boundingBox())!;
+    expect(b.x).toBeGreaterThanOrEqual(0);
+    expect(b.x + b.width).toBeLessThanOrEqual(width);
+    await close();
+  }
 });
 
 test('KARAY-23: platform yüzeylerinde eski marka adı (KARAY) görünmez; metin, başlık, meta, JSON-LD ve erişilebilir adlar', async ({ page }) => {
