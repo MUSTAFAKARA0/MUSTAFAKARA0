@@ -23,6 +23,15 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (27) · K-51: CI #177 yeşil (production birleştirmesi); KI-22/26/28 kapandı; Vercel takım yetkisi eksik
+
+- CI #177 (`1d79589`, production birleştirmesi dahil) yeşil.
+- Sahip maddeleri gerçek duruma getirildi: KI-22 (canlı yedek kanıtı), KI-26 (güvenlik yaması yayını), KI-28 (O-2/O-3/O-6) kapandı.
+  KI-25 (ortam teyidi) Vercel okuması bekliyor.
+- Bulgu: Claude'un Vercel bağlantısı projenin takımına (`kara-6892`) yetkili değil (403) → O-6'daki "Claude geri döner" için sahibin
+  takım erişim onayı gerekli; onaylanana kadar geri dönüş sahibin Vercel panelinden (Deployments › ⋯ › Instant Rollback) yapılır.
+- Mission Control: proje panosu KARAYS belgelerini saatlik eşitliyor (son zamanlanmış koşu 07:44 UTC); bu güncellemeden sonra elle eşitleme.
+
 ### 02.11.2026 (26) · K-50: kod yayını hazırlığı — production birleştirildi, şerit metinleri onaylandı
 
 - Production (`a0f0a67`; 7 commit: O-4 güvenlik yaması, KARAY-01, CI onarımları, yedek iş akışı) çalışma dalına birleştirildi
