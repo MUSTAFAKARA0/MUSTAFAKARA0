@@ -261,3 +261,12 @@ describe('classifyFinalizeError · media_busy', () => {
     }
   });
 });
+
+describe('MF-UI not_uploaded: "Tekrar dene" çıkmaza girmez (02.11 medya denetimi bulgu #4)', () => {
+  const ui = readFileSync(`${root}src/components/admin/media/media-manager.tsx`, 'utf8');
+  test('kayıt başarısız işaretlendiyse yeniden deneme aynı kaydı değil, yeni bir yüklemeyi başlatır', () => {
+    assert.match(ui, /if \(res\.code === 'not_uploaded'\) \{\n[\s\S]*?patch\(item\.key, \{ status: 'error', error: res\.error, retryable: true, failedAt: undefined, ticket: undefined \}\);\n\s*return;/);
+    // ticket yoksa process createMediaUpload ile yeni kayıt açar
+    assert.match(ui, /let ticket = item\.ticket;\n\s*if \(!ticket\) \{\n\s*const res = await createMediaUpload\(/);
+  });
+});

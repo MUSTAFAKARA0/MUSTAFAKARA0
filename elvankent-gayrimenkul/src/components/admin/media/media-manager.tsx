@@ -166,6 +166,12 @@ export function MediaManager({ propertyId, propertyTitle, initialMedia, canManag
         patch(item.key, { status: 'processing', progress: 100, error: undefined });
         const res = item.failedAt === 'process' ? await retryMediaProcessing(ticket.mediaId) : await finalizeMediaUpload({ mediaId: ticket.mediaId, replaceId: item.replaceId });
         if (!res.ok) {
+          if (res.code === 'not_uploaded') {
+            // Sunucu dosyayı bulamadı ve kaydı başarısız işaretledi (yükleme yuvası kapandı): aynı kayıtla yeniden işleme ya da
+            // yuvayı yenileme hep aynı hatayı verir. "Tekrar dene" yeni bir kayıtla dosyayı baştan yükler; eski kayıt 24 saatte temizlenir.
+            patch(item.key, { status: 'error', error: res.error, retryable: true, failedAt: undefined, ticket: undefined });
+            return;
+          }
           const permanent = ['unsupported', 'too_small', 'too_large', 'corrupt'].includes(res.code ?? '');
           patch(item.key, { status: 'error', error: res.error, retryable: !permanent, failedAt: permanent ? 'upload' : 'process' });
           return;
