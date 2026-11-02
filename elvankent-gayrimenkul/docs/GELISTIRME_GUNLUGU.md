@@ -24,6 +24,15 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (40) · K-64: KI-41 Aşama 0 (sahip) ve Aşama 1 kodu
+
+- Sahip `uretim-yedek` ortamını oluşturdu (dal sınırı production dalı; sır yok). Ortam ayarları bu oturumdan okunamıyor (vekil
+  sunucu GitHub ortam API'sine izin vermiyor); ayar sahibin beyanıyla kayıtlı.
+- Aşama 1 (kod): `backup` işi ve R2 teşhisinin iki işi `environment: uretim-yedek`; R2 teşhisinin istek dosyası tetiği kaldırıldı
+  (yalnız elle). Sırlar hâlâ depo düzeyinde olduğu için yedek aynen çalışır; ancak artık **elle yedek yalnız production dalından**
+  başlatılabilir (çalışma dalından başlatılan yedek dal sınırına takılır — beklenen). Envanter testi: hassas sır kullanan her iş
+  bir ortamda. Birim 842/842.
+
 ### 02.11.2026 (39) · K-63: KI-41 güvenli sır sınırı planı; yedek silme ve sahte yedek kapısı kapatıldı
 
 - Sahip GitHub'da: `koruma` kural seti (production ve çalışma dalında silme/zorla gönderim kapalı), `o5a-uygula` dal sınırı.

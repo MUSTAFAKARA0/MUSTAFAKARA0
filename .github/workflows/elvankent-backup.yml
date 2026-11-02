@@ -55,6 +55,10 @@ jobs:
     if: ${{ vars.ELVANKENT_BACKUP_ENABLED == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    # KI-41 Aşama 1: yedek sırları uretim-yedek ortamından (dal sınırı: yalnız production dalı). Ortam sırrı yokken depo sırrı
+    # kullanılır (Aşama 3–4'e kadar). Not: iş düzeyindeki "if" ortamdan ÖNCE değerlendirilir; ELVANKENT_BACKUP_ENABLED depo
+    # değişkeni olarak kalmalıdır (ortama taşınırsa yedek işi hiç çalışmaz).
+    environment: uretim-yedek
     env:
       BUCKET: ${{ vars.BACKUP_BUCKET }}
       RETENTION_DAYS: ${{ vars.BACKUP_RETENTION_DAYS || '30' }}

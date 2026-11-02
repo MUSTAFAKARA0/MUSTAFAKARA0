@@ -91,12 +91,10 @@ const noLeak = (out) => {
 };
 
 describe('R2-01 iş akışı', () => {
-  test('yalnız workflow_dispatch ve çalışma dalındaki istek dosyası; iş koşulu geliştirme commit\'lerini dışlar', () => {
-    assert.match(wf, /\non:\n {2}workflow_dispatch: \{\}\n {2}push:\n {4}branches: \['claude\/karays-mission-control-vn8g65'\]\n {4}paths: \['elvankent-gayrimenkul\/ops-requests\/r2-diagnose\.request'\]\n/);
-    assert.doesNotMatch(wf, /\n {2}(schedule|pull_request|workflow_run|repository_dispatch):/);
-    assert.match(wf, /if: \$\{\{ github\.event_name == 'workflow_dispatch' \|\| !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\) \}\}/);
-    assert.ok(existsSync(new URL('ops-requests/r2-diagnose.request', root)), 'istek dosyası var');
-    assert.doesNotMatch(read('ops-requests/r2-diagnose.request'), /https?:\/\/|[0-9a-f]{32}/, 'istek dosyasında adres/anahtar yok');
+  test('KI-41: yalnız elle (workflow_dispatch); her iş uretim-yedek ortamında (sırlar yalnız production dalından)', () => {
+    assert.match(wf, /\non:\n(?: {2}#[^\n]*\n)? {2}workflow_dispatch: \{\}\n\npermissions:/);
+    assert.doesNotMatch(wf, /\n {2}(push|schedule|pull_request|pull_request_target|workflow_run|repository_dispatch):/);
+    assert.equal((wf.match(/\n {4}environment: uretim-yedek\n/g) ?? []).length, 2, 'iki iş de ortamda');
   });
   test('en az yetki, sabit çalıştırıcı ve SHA, veritabanı sırrı yok', () => {
     assert.match(wf, /\npermissions:\n {2}contents: read\n/);
@@ -216,10 +214,10 @@ describe('R2-06 kalan test dosyası', () => {
 describe('R2-07 Storage aktarım sondası (Backup #43)', () => {
   const probe = read('scripts/storage-transfer-probe.sh');
   const pcode = probe.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
-  test('iş: R2 teşhisinden sonra, aynı elle tetikleme koşulu; güncel rclone imza + SHA-256 ile doğrulanır', () => {
+  test('iş: R2 teşhisinden sonra, aynı ortamda (KI-41); güncel rclone imza + SHA-256 ile doğrulanır', () => {
     const job = wf.slice(wf.indexOf('\n  storage-probe:'));
     assert.match(job, /needs: r2/);
-    assert.match(job, /if: \$\{\{ github\.event_name == 'workflow_dispatch' \|\| !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\) \}\}/);
+    assert.match(job, /\n {4}environment: uretim-yedek\n/, 'KI-41: sırlar ortamdan (yalnız elle, production dalı)');
     assert.match(job, /RCLONE_NEW: v\d+\.\d+\.\d+/);
     assert.match(job, /RCLONE_KEY_FPR: [0-9A-F]{40}/);
     assert.match(job, /gpg --batch --status-fd 1 --verify SHA256SUMS[^\n]*\| grep -q "VALIDSIG \.\*\$RCLONE_KEY_FPR"/);

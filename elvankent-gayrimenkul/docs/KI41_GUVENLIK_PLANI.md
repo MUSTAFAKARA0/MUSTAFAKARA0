@@ -2,6 +2,7 @@
 
 > 02.11.2026 · K-63 · Durum: **plan; hiçbir sır, ortam ya da canlı ayar değiştirilmedi.** Her aşama sahibin ayrı onayıyla.
 > Bağımsız güvenlik incelemesi (02.11) bulguları §7'de; plan buna göre düzeltildi.
+> **İlerleme:** Aşama 0 ✓ (sahip, 02.11: `uretim-yedek` ortamı, dal sınırı). Aşama 1 kodu çalışma dalında (K-64); production'a PR ile.
 > Depo herkese açıktır: burada sır değeri, adres ya da kimlik yazılmaz.
 
 ## 1. Bugünkü durum (kanıt: `.github/workflows/*`, `tests/unit/workflow-secrets.test.mjs`)
@@ -68,7 +69,10 @@ only" değil). Sır eklenmez. Böylece Aşama 1'deki iş ortamı korumasız otom
 
 **Aşama 1 · Kod (küçük PR, canlıya etkisi yok).** Production dalından açılan **ayrı ve küçük** bir dal (çalışma dalı production'ın
 çok önünde; ondan açılan PR ilgisiz kodu da yayına taşır): `backup` işine `environment: uretim-yedek`; `r2-diagnose` silinir;
-yedek değişkenleri (`ELVANKENT_BACKUP_ENABLED`, `BACKUP_BUCKET`, `BACKUP_S3_PROVIDER`, `BACKUP_RETENTION_DAYS`) ortamdan okunur;
+yedek değişkenleri (`BACKUP_BUCKET`, `BACKUP_S3_PROVIDER`, `BACKUP_RETENTION_DAYS`) ortam değişkeni olabilir (ortam değeri depo
+değerini gölgeler); **`ELVANKENT_BACKUP_ENABLED` depo değişkeni kalır** — iş düzeyindeki `if` ortamdan önce değerlendirilir, ortama
+taşınırsa yedek işi hiç çalışmaz (kapalıysa `backup-disabled` uyarısı görünür; O-5 kapısı da gerçek yedek işini arar). R2 teşhisi
+silinmek yerine yalnız elle + ortamda bırakıldı;
 envanter testi yeni duruma. Depo sırları dururken yedek aynen çalışır.
 - Kesinti riski: yok (CI ve Vercel bu sırları kullanmaz). Geri dönüş: geri alma PR'ı.
 

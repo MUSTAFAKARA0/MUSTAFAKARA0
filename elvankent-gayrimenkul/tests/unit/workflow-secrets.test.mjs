@@ -31,12 +31,12 @@ function envanter(file) {
   return { olaylar, isler };
 }
 
-// Bugünkü durum (02.11, K-63). "ortam: null" = KI-41 kapsamında henüz onay ortamına taşınmadı.
+// Bugünkü durum (02.11, K-64: KI-41 Aşama 1). Hassas sır kullanan her iş bir ortamda.
 const BEKLENEN = {
-  'elvankent-backup.yml': { backup: { ortam: null, sirlar: ['BACKUP_S3_ACCESS_KEY_ID', 'BACKUP_S3_ENDPOINT', 'BACKUP_S3_REGION', 'BACKUP_S3_SECRET_ACCESS_KEY', 'SUPABASE_DB_URL', 'SUPABASE_S3_ACCESS_KEY_ID', 'SUPABASE_S3_ENDPOINT', 'SUPABASE_S3_REGION', 'SUPABASE_S3_SECRET_ACCESS_KEY'] } },
+  'elvankent-backup.yml': { backup: { ortam: 'uretim-yedek', sirlar: ['BACKUP_S3_ACCESS_KEY_ID', 'BACKUP_S3_ENDPOINT', 'BACKUP_S3_REGION', 'BACKUP_S3_SECRET_ACCESS_KEY', 'SUPABASE_DB_URL', 'SUPABASE_S3_ACCESS_KEY_ID', 'SUPABASE_S3_ENDPOINT', 'SUPABASE_S3_REGION', 'SUPABASE_S3_SECRET_ACCESS_KEY'] } },
   'elvankent-r2-diagnose.yml': {
-    r2: { ortam: null, sirlar: ['BACKUP_S3_ACCESS_KEY_ID', 'BACKUP_S3_ENDPOINT', 'BACKUP_S3_REGION', 'BACKUP_S3_SECRET_ACCESS_KEY'] },
-    'storage-probe': { ortam: null, sirlar: ['BACKUP_S3_ACCESS_KEY_ID', 'BACKUP_S3_ENDPOINT', 'BACKUP_S3_REGION', 'BACKUP_S3_SECRET_ACCESS_KEY', 'SUPABASE_S3_ACCESS_KEY_ID', 'SUPABASE_S3_ENDPOINT', 'SUPABASE_S3_REGION', 'SUPABASE_S3_SECRET_ACCESS_KEY'] },
+    r2: { ortam: 'uretim-yedek', sirlar: ['BACKUP_S3_ACCESS_KEY_ID', 'BACKUP_S3_ENDPOINT', 'BACKUP_S3_REGION', 'BACKUP_S3_SECRET_ACCESS_KEY'] },
+    'storage-probe': { ortam: 'uretim-yedek', sirlar: ['BACKUP_S3_ACCESS_KEY_ID', 'BACKUP_S3_ENDPOINT', 'BACKUP_S3_REGION', 'BACKUP_S3_SECRET_ACCESS_KEY', 'SUPABASE_S3_ACCESS_KEY_ID', 'SUPABASE_S3_ENDPOINT', 'SUPABASE_S3_REGION', 'SUPABASE_S3_SECRET_ACCESS_KEY'] },
   },
   'elvankent-restore-drill.yml': { 'restore-drill': { ortam: 'restore-drill', sirlar: ['BACKUP_S3_ENDPOINT', 'BACKUP_S3_REGION', 'RESTORE_S3_ACCESS_KEY_ID', 'RESTORE_S3_SECRET_ACCESS_KEY'] } },
   'elvankent-ki23-canli-denetim.yml': { denetim: { ortam: 'ki23-canli-denetim', sirlar: ['SUPABASE_DB_URL'] } },
@@ -67,7 +67,10 @@ describe('KI-41 hassas sır envanteri (.github/workflows)', () => {
     }
     const ortamsizDb = Object.entries(hepsi).flatMap(([f, { isler }]) =>
       Object.entries(isler).filter(([, is]) => is.sirlar.includes('SUPABASE_DB_URL') && !is.ortam).map(([ad]) => `${f}/${ad}`));
-    assert.deepEqual(ortamsizDb, ['elvankent-backup.yml/backup'], 'ortamsız veritabanı erişimi yalnız gece yedeği (KI-41 adım 2 ile kapanacak)');
+    assert.deepEqual(ortamsizDb, [], 'ortamsız veritabanı erişimi yok (KI-41 Aşama 1)');
+    const ortamsiz = Object.entries(hepsi).flatMap(([f, { isler }]) => Object.entries(isler).filter(([, is]) => is.sirlar.length && !is.ortam).map(([ad]) => `${f}/${ad}`));
+    assert.deepEqual(ortamsiz, [], 'hassas sır kullanan her iş bir ortamda');
+    assert.match(readFileSync(path.join(dir, 'elvankent-backup.yml'), 'utf8'), /\n {4}if: \$\{\{ vars\.ELVANKENT_BACKUP_ENABLED == 'true' \}\}\n[\s\S]*?\n {4}environment: uretim-yedek\n/, 'yedek işi ortamda; açma anahtarı depo değişkeni (iş koşulu ortamdan önce değerlendirilir)');
   });
   test('pull_request_target hiç yok; ortamlı (sır taşıyan) iş akışları workflow_run / workflow_call ile tetiklenmez', () => {
     for (const [f, { olaylar, isler }] of Object.entries(hepsi)) {
