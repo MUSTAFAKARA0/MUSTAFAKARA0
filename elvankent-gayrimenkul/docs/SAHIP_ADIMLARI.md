@@ -24,7 +24,7 @@ Tamamlananlar (02.11): köken sorgusu · KI-24 gerçek prova · gece yedeği · 
 
 ### 2. ✓ Kod yayını PR #4 birleştirildi (02.11, production `6b698e9`, duman testi geçti)
 
-### 3. ✓ Hata bildirimi (Sentry) bağlandı (02.11) — kalan: tarayıcıdan bir deneme olayı
+### 3. ✓ Hata bildirimi (Sentry) bağlandı (02.11) — deneme olayı sonra (sahip kararı)
 sentry.io (AB veri bölgesi) › Next.js projesi `karays` › DSN › Vercel › Settings › Environment Variables › `SENTRY_DSN` (Production) ›
 Redeploy. Bana "eklendi" yazın; deneme hatasıyla e-postayı birlikte doğrularız.
 
