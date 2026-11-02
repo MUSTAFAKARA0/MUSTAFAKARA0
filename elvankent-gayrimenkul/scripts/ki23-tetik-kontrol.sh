@@ -10,6 +10,8 @@
 #   açık → kapalı / kapalı → kapalı: çalıştırma
 #   önceki commit yok (0000…, yeni dal) : önceki KAPALI sayılır
 #   önceki commit geçmişte bulunamıyor (zorla gönderim vb.): çalıştırma (güvenli taraf)
+#   yeni commit önceki commit'in devamı değil (zorla gönderimle eski bir "açık" commit'e dönüş): çalıştırma
+#   TETIK_SIKI=1 (canlıya yazan O-5 iş akışları): önceki commit yok (dal silinip yeniden açıldı) da çalıştırmaz
 # Yeniden çalıştırmak için sahip satırı önce kapatıp (commit) sonra yeniden açar (commit). Actions'taki "Re-run" iş akışında
 # ayrıca engellidir (github.run_attempt == 1).
 # =============================================================================
@@ -24,8 +26,11 @@ top=$(git rev-parse --show-toplevel)
 is_open() { git -C "$top" show "$1:$FILE" 2> /dev/null | tr -d '\r' | grep -qx 'CALISTIR=evet'; }
 is_open "$AFTER" || { echo "Tetik: yeni commit'te 'CALISTIR=evet' satırı açık değil — çalıştırılmadı"; exit 1; }
 if [ "$BEFORE" = 0000000000000000000000000000000000000000 ]; then
+  [ "${TETIK_SIKI:-}" != 1 ] || { echo "Tetik: önceki commit yok (yeni/yeniden açılmış dal) — sıkı kipte çalıştırılmadı"; exit 1; }
   before_open=hayır
 elif git -C "$top" cat-file -e "$BEFORE^{commit}" 2> /dev/null; then
+  git -C "$top" merge-base --is-ancestor "$BEFORE" "$AFTER" 2> /dev/null \
+    || { echo "Tetik: yeni commit önceki commit'in devamı değil (zorla gönderim) — çalıştırılmadı"; exit 1; }
   if is_open "$BEFORE"; then before_open=evet; else before_open=hayır; fi
 else
   echo "Tetik: önceki commit geçmişte bulunamadı — güvenli tarafta kalındı, çalıştırılmadı"; exit 1

@@ -425,16 +425,16 @@ describe('KT-12 O-5a uygulama iş akışı (elvankent-o5a-uygula.yml) ve betiği
   const code = (t) => t.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
   test('tetik: yalnız sahip, tek kullanımlık (kapalı → açık), Re-run yok, geliştirme commit\'i yok, onay ortamı', () => {
     const on = wf.slice(wf.indexOf('\non:\n'), wf.indexOf('\npermissions:'));
-    assert.equal(on, "\non:\n  workflow_dispatch: {}\n  push:\n    branches: ['claude/karays-mission-control-vn8g65']\n    paths: ['elvankent-gayrimenkul/ops-requests/o5a-uygula.request']\n");
-    assert.match(wf, /if: \$\{\{ github\.actor == github\.repository_owner && github\.run_attempt == 1 && \(github\.event_name == 'workflow_dispatch' \|\| !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\)\) \}\}/);
+    assert.equal(on, "\non:\n  push:\n    branches: ['claude/karays-mission-control-vn8g65']\n    paths: ['elvankent-gayrimenkul/ops-requests/o5a-uygula.request']\n");
+    assert.match(wf, /if: \$\{\{ github\.event_name == 'push' && github\.actor == github\.repository_owner && github\.triggering_actor == github\.repository_owner && github\.run_attempt == 1 && !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\) \}\}/);
     assert.match(wf, /environment: o5a-uygula\n/);
-    assert.match(wf, /TETIK_DOSYA: elvankent-gayrimenkul\/ops-requests\/o5a-uygula\.request\n {8}run: bash scripts\/ki23-tetik-kontrol\.sh "\$ONCEKI" "\$YENI"/);
+    assert.match(wf, /TETIK_SIKI: '1'\n {10}TETIK_DOSYA: elvankent-gayrimenkul\/ops-requests\/o5a-uygula\.request\n {8}run: bash scripts\/ki23-tetik-kontrol\.sh "\$ONCEKI" "\$YENI"/);
     const req = read('ops-requests/o5a-uygula.request').split('\n').filter((l) => /CALISTIR=evet/.test(l) && !/"# CALISTIR=evet"|"CALISTIR=evet"/.test(l));
     assert.equal(req.length, 1);
     assert.match(req[0], /^(# )?CALISTIR=evet$/);
   });
   test('sırayla kapılar: tetik → çalışan yedek yok → taze yedek (≤ 3 saat) → istemci → uygulama; sır yalnız son adımda; izinler dar', () => {
-    const order = ['ki23-tetik-kontrol.sh', 'Taze yedek kapısı', 'for d in queued in_progress waiting requested pending', '[ "$suren" -eq 0 ]', '[ "$yas" -le 10800 ]', 'PostgreSQL istemcisi', 'secrets.SUPABASE_DB_URL'];
+    const order = ['ki23-tetik-kontrol.sh', 'o5-tek-kullanim.sh', 'Taze yedek kapısı', 'for d in queued in_progress waiting requested pending', '[ "$suren" -eq 0 ]', '[ "$yas" -le 10800 ]', 'PostgreSQL istemcisi', 'secrets.SUPABASE_DB_URL'];
     let at = -1;
     for (const o of order) { const i = wf.indexOf(o); assert.ok(i > at, `sıra: ${o}`); at = i; }
     assert.match(wf, /\npermissions:\n  contents: read\n  actions: read\n\n/);
@@ -470,16 +470,16 @@ describe('KT-13 O-5 Aşama 3 uygulama iş akışı (elvankent-o5b-uygula.yml) ve
   const RB = ['quota_lock', 'ops02_limits', 'media_quota_lock', 'company_name'];
   test('tetik: yalnız sahip, tek kullanımlık, Re-run yok, geliştirme commit\'i yok, onay ortamı; O-5a ile aynı anda çalışmaz', () => {
     const on = wf.slice(wf.indexOf('\non:\n'), wf.indexOf('\npermissions:'));
-    assert.equal(on, "\non:\n  workflow_dispatch: {}\n  push:\n    branches: ['claude/karays-mission-control-vn8g65']\n    paths: ['elvankent-gayrimenkul/ops-requests/o5b-uygula.request']\n");
-    assert.match(wf, /if: \$\{\{ github\.actor == github\.repository_owner && github\.run_attempt == 1 && \(github\.event_name == 'workflow_dispatch' \|\| !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\)\) \}\}/);
+    assert.equal(on, "\non:\n  push:\n    branches: ['claude/karays-mission-control-vn8g65']\n    paths: ['elvankent-gayrimenkul/ops-requests/o5b-uygula.request']\n");
+    assert.match(wf, /if: \$\{\{ github\.event_name == 'push' && github\.actor == github\.repository_owner && github\.triggering_actor == github\.repository_owner && github\.run_attempt == 1 && !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\) \}\}/);
     assert.match(wf, /environment: o5a-uygula\n/);
-    assert.match(wf, /TETIK_DOSYA: elvankent-gayrimenkul\/ops-requests\/o5b-uygula\.request\n {8}run: bash scripts\/ki23-tetik-kontrol\.sh "\$ONCEKI" "\$YENI"/);
+    assert.match(wf, /TETIK_SIKI: '1'\n {10}TETIK_DOSYA: elvankent-gayrimenkul\/ops-requests\/o5b-uygula\.request\n {8}run: bash scripts\/ki23-tetik-kontrol\.sh "\$ONCEKI" "\$YENI"/);
     for (const w of [wf, wfa]) assert.match(w, /concurrency:\n  group: elvankent-o5-canli-yazma\n  cancel-in-progress: false\n/);
     const req = read('ops-requests/o5b-uygula.request').split('\n').filter((l) => /CALISTIR=evet/.test(l) && !/"# CALISTIR=evet"|"CALISTIR=evet"/.test(l));
     assert.deepEqual(req, ['# CALISTIR=evet'], 'istek satırı kapalı teslim edilir');
   });
   test('kapılar sırayla: tetik → çalışan yedek yok → taze yedek → istemci → uygulama; sır yalnız son adımda; izinler dar', () => {
-    const order = ['ki23-tetik-kontrol.sh', 'Taze yedek kapısı', '[ "$suren" -eq 0 ]', '[ "$yas" -le 10800 ]', 'PostgreSQL istemcisi', 'secrets.SUPABASE_DB_URL', 'bash scripts/o5b-uygula.sh'];
+    const order = ['ki23-tetik-kontrol.sh', 'o5-tek-kullanim.sh', 'Taze yedek kapısı', '[ "$suren" -eq 0 ]', '[ "$yas" -le 10800 ]', 'PostgreSQL istemcisi', 'secrets.SUPABASE_DB_URL', 'bash scripts/o5b-uygula.sh'];
     let at = -1;
     for (const o of order) { const i = wf.indexOf(o); assert.ok(i > at, `sıra: ${o}`); at = i; }
     assert.match(wf, /\npermissions:\n  contents: read\n  actions: read\n\n/);
@@ -513,16 +513,16 @@ describe('KT-14 O-5 Aşama 4 (medya) uygulama iş akışı (elvankent-o5c-uygula
   const RB = ['media_finalize_rpc', 'media_privileges', 'media_storage_slots', 'media_stray_sweep'];
   test('tetik: yalnız sahip, tek kullanımlık, Re-run yok, geliştirme commit\'i yok, onay ortamı; O-5a ile aynı anda çalışmaz', () => {
     const on = wf.slice(wf.indexOf('\non:\n'), wf.indexOf('\npermissions:'));
-    assert.equal(on, "\non:\n  workflow_dispatch: {}\n  push:\n    branches: ['claude/karays-mission-control-vn8g65']\n    paths: ['elvankent-gayrimenkul/ops-requests/o5c-uygula.request']\n");
-    assert.match(wf, /if: \$\{\{ github\.actor == github\.repository_owner && github\.run_attempt == 1 && \(github\.event_name == 'workflow_dispatch' \|\| !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\)\) \}\}/);
+    assert.equal(on, "\non:\n  push:\n    branches: ['claude/karays-mission-control-vn8g65']\n    paths: ['elvankent-gayrimenkul/ops-requests/o5c-uygula.request']\n");
+    assert.match(wf, /if: \$\{\{ github\.event_name == 'push' && github\.actor == github\.repository_owner && github\.triggering_actor == github\.repository_owner && github\.run_attempt == 1 && !contains\(github\.event\.head_commit\.message, 'Claude-Session:'\) \}\}/);
     assert.match(wf, /environment: o5a-uygula\n/);
-    assert.match(wf, /TETIK_DOSYA: elvankent-gayrimenkul\/ops-requests\/o5c-uygula\.request\n {8}run: bash scripts\/ki23-tetik-kontrol\.sh "\$ONCEKI" "\$YENI"/);
+    assert.match(wf, /TETIK_SIKI: '1'\n {10}TETIK_DOSYA: elvankent-gayrimenkul\/ops-requests\/o5c-uygula\.request\n {8}run: bash scripts\/ki23-tetik-kontrol\.sh "\$ONCEKI" "\$YENI"/);
     for (const w of [wf, wfa]) assert.match(w, /concurrency:\n  group: elvankent-o5-canli-yazma\n  cancel-in-progress: false\n/);
     const req = read('ops-requests/o5c-uygula.request').split('\n').filter((l) => /CALISTIR=evet/.test(l) && !/"# CALISTIR=evet"|"CALISTIR=evet"/.test(l));
     assert.deepEqual(req, ['# CALISTIR=evet'], 'istek satırı kapalı teslim edilir');
   });
   test('kapılar sırayla: tetik → çalışan yedek yok → taze yedek → istemci → uygulama; sır yalnız son adımda; izinler dar', () => {
-    const order = ['ki23-tetik-kontrol.sh', 'Taze yedek kapısı', '[ "$suren" -eq 0 ]', '[ "$yas" -le 10800 ]', 'PostgreSQL istemcisi', 'secrets.SUPABASE_DB_URL', 'bash scripts/o5c-uygula.sh'];
+    const order = ['ki23-tetik-kontrol.sh', 'o5-tek-kullanim.sh', 'Taze yedek kapısı', '[ "$suren" -eq 0 ]', '[ "$yas" -le 10800 ]', 'PostgreSQL istemcisi', 'secrets.SUPABASE_DB_URL', 'bash scripts/o5c-uygula.sh'];
     let at = -1;
     for (const o of order) { const i = wf.indexOf(o); assert.ok(i > at, `sıra: ${o}`); at = i; }
     assert.match(wf, /\npermissions:\n  contents: read\n  actions: read\n\n/);
@@ -545,5 +545,88 @@ describe('KT-14 O-5 Aşama 4 (medya) uygulama iş akışı (elvankent-o5c-uygula
     for (const k of ['[ "$bayrak" = false ] || fail=1', '[ "$surum" = 20261018000001 ] || fail=1', '[ "$var" = 39 ] || fail=1']) assert.ok(sh.includes(k), k);
     assert.match(sh, /::add-mask::/);
     assert.doesNotMatch(code(sh), /cat "\$T\/(ro|uygula)\.(out|err)"/, 'ham çıktı/hata yazdırılmaz');
+  });
+});
+
+describe('KT-15 canlıya yazan O-5 iş akışlarında tetik güvenliği (02.11 güvenlik incelemesi: workflow_dispatch atlatması)', () => {
+  const WF = ['o5a', 'o5b', 'o5c'].map((n) => ({ n, wf: read(`../.github/workflows/elvankent-${n}-uygula.yml`) }));
+  const code = (t) => t.split('\n').filter((l) => !/^\s*#/.test(l)).join('\n');
+  const steps = (wf) => wf.split('\n      - ').slice(1);
+  test('elle başlatma (workflow_dispatch) ve başka olaylar yok; iş yalnız push + sahip (aktör ve tetikleyen) + ilk deneme', () => {
+    for (const { n, wf } of WF) {
+      const on = wf.slice(wf.indexOf('\non:\n'), wf.indexOf('\npermissions:'));
+      assert.deepEqual(on.split('\n').filter((l) => /^  [a-z_]+:/.test(l)), ['  push:'], `${n}: yalnız push olayı`);
+      assert.doesNotMatch(code(wf), /workflow_dispatch/, `${n}: elle başlatma yok`);
+      assert.match(wf, /github\.event_name == 'push' && github\.actor == github\.repository_owner && github\.triggering_actor == github\.repository_owner && github\.run_attempt == 1/, `${n}: iş koşulu`);
+      assert.match(wf, /environment: o5a-uygula\n/, `${n}: onay ortamı`);
+    }
+  });
+  test('tek kullanım kapıları koşulsuz: hiçbir adımda olay türüne bağlı "if" yok; sıkı kip açık; sırdan önce çalışır', () => {
+    for (const { n, wf } of WF) {
+      for (const st of steps(wf)) assert.doesNotMatch(st, /^\s*if:/m, `${n}: adımda koşul (atlatılabilir kapı) olmamalı`);
+      const tetik = steps(wf).find((st) => st.includes('ki23-tetik-kontrol.sh'));
+      assert.match(tetik, /TETIK_SIKI: '1'/, `${n}: sıkı kip`);
+      const tek = steps(wf).find((st) => st.includes('o5-tek-kullanim.sh'));
+      assert.match(tek, new RegExp(`workflows/elvankent-${n}-uygula\\.yml/runs\\?head_sha=\\$YENI&per_page=100`), `${n}: kendi iş akışının koşuları`);
+      assert.match(tek, /bash scripts\/o5-tek-kullanim\.sh "\$RUN_ID" "\$YENI"/);
+      assert.ok(wf.indexOf('o5-tek-kullanim.sh') < wf.indexOf('secrets.SUPABASE_DB_URL'), `${n}: sırdan önce`);
+      assert.ok(wf.indexOf('o5-tek-kullanim.sh') < wf.indexOf('Taze yedek kapısı'), `${n}: yedek kapısından önce`);
+      assert.match(wf, /concurrency:\n  group: elvankent-o5-canli-yazma\n  cancel-in-progress: false\n/, `${n}: eşzamanlı canlı yazma yok`);
+      assert.match(wf, /O5[ABC]?_PAKET_SHA256: [0-9a-f]{64}/, `${n}: paket bütünlüğü`);
+    }
+  });
+
+  const gitRepo = () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'o5-tetik-'));
+    const env = { ...process.env, GIT_AUTHOR_NAME: 't', GIT_AUTHOR_EMAIL: 't@t', GIT_COMMITTER_NAME: 't', GIT_COMMITTER_EMAIL: 't@t' };
+    const git = (...a) => spawnSync('git', a, { cwd: dir, encoding: 'utf8', env });
+    git('init', '-q');
+    const f = path.join(dir, 'elvankent-gayrimenkul/ops-requests');
+    mkdirSync(f, { recursive: true });
+    const commit = (body) => { writeFileSync(path.join(f, 'o5c-uygula.request'), body); git('add', '-A'); git('commit', '-qm', 'x'); return git('rev-parse', 'HEAD').stdout.trim(); };
+    const run = (b, a, siki = '1') => spawnSync('bash', [path.join(root, 'scripts/ki23-tetik-kontrol.sh'), b, a], {
+      cwd: dir, encoding: 'utf8', env: { ...process.env, TETIK_DOSYA: 'elvankent-gayrimenkul/ops-requests/o5c-uygula.request', TETIK_SIKI: siki } }).status;
+    return { dir, git, commit, run };
+  };
+  test('tetik (sıkı kip): kapalı istek, aynı isteğin ikinci kullanımı, eski commit\'e zorla dönüş ve yeniden açılan dal reddedilir', () => {
+    const { dir, commit, run } = gitRepo();
+    const kapali = commit('# CALISTIR=evet\n');
+    const acik = commit('CALISTIR=evet\n');
+    const duzenleme = commit('# not\nCALISTIR=evet\n');
+    const kapandi = commit('# CALISTIR=evet\n');
+    assert.equal(run(kapali, acik), 0, 'kapalı → açık: tek meşru yol');
+    assert.equal(run(kapali, kapali), 1, 'kapalı istekle çalıştırma');
+    assert.equal(run(acik, duzenleme), 1, 'aynı isteğin ikinci kullanımı (satır zaten açık)');
+    assert.equal(run(kapandi, acik), 1, 'eski "açık" commit\'e zorla gönderimle dönüş (devam değil)');
+    assert.equal(run('0'.repeat(40), acik), 1, 'dal silinip eski açık commit ile yeniden açıldı');
+    assert.equal(run('0'.repeat(40), acik, ''), 0, 'sıkı kip dışında (salt okunur KI-23) yeni dal eski davranış');
+    rmSync(dir, { recursive: true, force: true });
+  });
+  const tek = (runs, id = 7, sha = 'a'.repeat(40), total) => spawnSync('bash', [path.join(root, 'scripts/o5-tek-kullanim.sh'), String(id), sha], {
+    encoding: 'utf8', input: typeof runs === 'string' ? runs : JSON.stringify({ total_count: total ?? runs.length, workflow_runs: runs }) });
+  test('tek kullanım: aynı commit için başka koşu (başarılı, başarısız, iptal, atlanmış, sırada) varsa reddedilir; bozuk yanıt reddedilir', () => {
+    const sha = 'a'.repeat(40);
+    const ben = { id: 7, head_sha: sha, status: 'in_progress' };
+    assert.equal(tek([ben]).status, 0, 'bu commit için ilk koşu');
+    for (const c of ['success', 'failure', 'cancelled', 'skipped', null]) {
+      assert.equal(tek([ben, { id: 3, head_sha: sha, status: c ? 'completed' : 'queued', conclusion: c }]).status, 1, `önceki koşu: ${c ?? 'sırada'}`);
+    }
+    assert.equal(tek([ben, { id: 3, head_sha: 'b'.repeat(40), conclusion: 'success' }]).status, 0, 'başka commit\'in koşusu engellemez');
+    assert.equal(tek([]).status, 1, 'bu koşu listede yok: güvenli taraf');
+    assert.equal(tek([ben], 7, sha, 150).status, 1, 'liste eksik (sayfalama): güvenli taraf');
+    assert.equal(tek('{bozuk').status, 1, 'okunamayan yanıt');
+    assert.equal(tek('').status, 1, 'boş yanıt (API hatası)');
+    assert.equal(tek([ben], 'x').status, 1, 'geçersiz koşu kimliği');
+    assert.equal(tek([ben], 7, 'zz').status, 1, 'geçersiz commit');
+  });
+  test('Re-run, yetkisiz aktör, değiştirilmiş paket ve yedek kapıları iş akışında korunuyor', () => {
+    for (const { n, wf } of WF) {
+      assert.match(wf, /github\.run_attempt == 1/, `${n}: Re-run yeni uygulama başlatamaz`);
+      assert.match(wf, /github\.triggering_actor == github\.repository_owner/, `${n}: Re-run'ı başka biri tetikleyemez`);
+      assert.match(wf, /for d in queued in_progress waiting requested pending/, `${n}: çalışan/sırada yedek varken durur`);
+      assert.match(wf, /\[ "\$yas" -le 10800 \]/, `${n}: son 3 saatte başarılı yedek`);
+      assert.match(wf, /Başarılı yedek bulunamadı/, `${n}: yedeksiz çalışmaz`);
+    }
+    for (const n of ['o5a', 'o5b', 'o5c']) assert.match(read(`scripts/${n}-uygula.sh`), /onaylanan sürüm değil/, `${n}: değiştirilmiş paket reddi`);
   });
 });
