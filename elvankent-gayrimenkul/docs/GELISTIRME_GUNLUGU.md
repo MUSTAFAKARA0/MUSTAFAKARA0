@@ -15,14 +15,23 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 | CI | Son yeşil: #181 (`666d515`), #179 (`236ef1c`), #177 (`1d79589`, production birleştirmesi). Her push sonrası koşu bu günlüğe yazılır |
 | Yedek | Gece yedeği (R2) çalışıyor: zamanlanmış #49; O-5 öncesi elle #50–#52. Gerçek geri yükleme provası KI-24 #2 başarılı |
 | Güvenlik | Canlıya yazan iş akışları sahip onaylı ortamda (`o5a-uygula`, `ki23-canli-denetim`: Required reviewers). O-6: geri dönüşü Claude önerir, sahip onaylar, Claude Vercel'de uygular |
-| Açık kapılar | Aşama 4 medya migration'ları (ayrı onay) · özel alan adı (Vercel'e alan adı + `VERCEL_*` değişkenleri) · hata bildirimi (`SENTRY_DSN`/`ERROR_WEBHOOK_URL`) · OPS-02 bayrağı (D-04/D-05 alt kararları) |
+| Açık kapılar | E-posta gönderimi (Resend + KARAYS alan adı) · müşteri alan adı bağlama (müşteri onayı + DNS) · D-11 ücretli planlar · OPS-02 bayrağı (D-04/D-05 alt kararları) |
 | Bekleyen kararlar | D-04/D-05 alt kararları (hatırlatma zamanları, salt okunur kapsamı, saklama süresi — hukuki görüş) · D-01…D-03, D-06…D-14, D-16…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)) |
 
 **Kalan işler:** [KALAN_ISLER.md](KALAN_ISLER.md) · **Sahibin adımları:** [SAHIP_ADIMLARI.md](SAHIP_ADIMLARI.md).
 
-**Sıradaki adım:** Aşama 4 medya migration'ları için plan ve sahip onayı (yeni medya kodu production'da; 4e ön koşulu sağlandı); ardından özel alan adı.
+**Sıradaki adım:** KARAYS alan adı ve e-posta gönderimi (davet/şifre sıfırlama e-postaları şu an gitmiyor); ardından müşteri alan adı.
 
 ## Girişler
+
+### 02.11.2026 (35) · K-59: alan adı değişkenleri tanımlandı; e-posta gönderimi eksik bulundu
+
+- Sahip Vercel production'a `VERCEL_API_TOKEN`, `VERCEL_PROJECT_ID`, `VERCEL_TEAM_ID` ekledi (Claude doğruladı: üçü de kayıtlı, Sensitive);
+  production `2eeb5e1` aynı kodla yeniden dağıtıldı (`dpl_UGCX…`).
+- Bulgu: `EMAIL_PROVIDER` var ama `RESEND_API_KEY` ve `EMAIL_FROM` yok → davet, şifre sıfırlama ve talep e-postaları gönderilmiyor.
+  Çözüm KARAYS'in kendi alan adına bağlı (D-13 alt kararı 2): alan adı → Resend alan adı doğrulama → değişkenler.
+
+**Açık (sahip):** KARAYS alan adı · e-posta (Resend) · Elvankent alan adı görüşmesi · D-11 planları · avukat/mali müşavir · Sentry denemesi ve seslendirme (sonra).
 
 ### 02.11.2026 (34) · K-58: Aşama 4 duman testi geçti; yazılı onay; medya maddeleri canlıda doğrulandı
 
