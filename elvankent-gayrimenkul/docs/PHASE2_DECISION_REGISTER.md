@@ -535,6 +535,9 @@ Karar verildikçe ilgili maddeye **"Karar: … (tarih)"** satırı eklenir ve ta
 > **Açık alt kararlar:** (1) alan adı bağlanana kadar müşteri sitesinin geçici adresi — `PLATFORM_ROOT_DOMAIN` için ayrı bir kök
 > (seçenek B) mi, yoksa yalnız özel alan adı mı; (2) KARAYS'in kendi alan adı (`KARAY_HOSTS`) ve e-posta gönderen alt alan adı;
 > (3) alan adını müşteri mi alır, KARAYS mi müşteri adına yönetir.
+> **Alt karar 2 (sahip, 02.11.2026):** KARAYS'in alan adı **`karays.com`** (henüz alınmadı; Vercel'de müsait, 1 yıl 12,03 $ — 02.11
+> sorgusu), destek adresi **`karays.support@gmail.com`** (açıldı). E-postalar `karays.com` doğrulandıktan sonra Resend ile gönderilir;
+> yanıtlar destek adresine gider (`EMAIL_REPLY_TO`, Vercel production'a 02.11'de eklendi).
 
 - **ID:** D-13
 - **Mevcut durum:**
