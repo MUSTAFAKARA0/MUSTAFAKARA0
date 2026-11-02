@@ -36,6 +36,9 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
   Birim 841/841.
 - Sır, ortam, Vercel ve canlı veritabanı değiştirilmedi.
 
+- CI: #194 (`9105aad`) yeşil. #195 (`b9db067`) kırmızı: canlı benzeri yığın 55324 portunu bağlayamadı ("address already in use");
+  #184 ile aynı. Kök neden: 543xx/553xx Linux geçici port aralığında (32768–60999). CI'da bu portlar geçici aralıktan ayrıldı (test).
+
 **Açık (sahip):** KI-41 Aşama 0 (ortamı elle kur) ve Aşama 1 PR'ı · medya düzeltmelerinin yayını · Aşama 6 kararı.
 
 ### 02.11.2026 (38) · K-62: güvenlik denetimi — O-5 tetik açığı kapatıldı; medya denetimi ve düzeltmeler

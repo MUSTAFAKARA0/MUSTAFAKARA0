@@ -97,3 +97,17 @@ describe('KI-41 H2: yedek saklama süresi alt sınırı (değişkenle yedekler s
     assert.equal(gun('-5'), '30');
   });
 });
+
+describe('CI: yerel yığın portları geçici port aralığından ayrılır (#184, #195 kök nedeni)', () => {
+  test('her iki veritabanı işinde yığın başlamadan önce 543xx ve 553xx ayrılır', () => {
+    const ci = readFileSync(path.join(dir, 'elvankent-ci.yml'), 'utf8');
+    const ayir = 'run: sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329,55320-55329';
+    assert.equal(ci.split(ayir).length - 1, 2);
+    for (const ad of ["- name: Yerel Supabase (migration'lar sıfırdan uygulanır)", '- name: Yerel Supabase (PENDING=none; supabase/pending UYGULANMAZ)']) {
+      const i = ci.indexOf(ad);
+      assert.ok(i > 0 && ci.lastIndexOf(ayir, i) > ci.lastIndexOf('\n  ', ci.lastIndexOf('runs-on:', i)), `${ad}: önce port ayırma`);
+    }
+    const live = readFileSync(path.join(root, 'elvankent-gayrimenkul/scripts/live-like-stack.sh'), 'utf8');
+    assert.match(live, /s\/= 543\(\[0-9\]\{2\}\)\$\/= 553\\1\//, 'canlı benzeri yığın 553xx kullanır (ayrılan aralık)');
+  });
+});
