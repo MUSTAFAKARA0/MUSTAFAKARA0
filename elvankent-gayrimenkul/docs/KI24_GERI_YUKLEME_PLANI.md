@@ -147,3 +147,20 @@ günlükte yol/e-posta/kayıt içeriği görülürse koşu günlüğü silinir v
 
 Bu provanın O-5 için önemi: Supabase Free planında panelden yedek geri yükleme/PITR'a güvenilemez; O-5'in son çare geri dönüşü
 R2 yedeğidir. Bu yüzden O-5'in ilk migration'ından önce gerçek prova en az bir kez **TAMAM** olmalıdır (O5_YAYIN_PLANI.md §0).
+
+## 9. Yeniden değerlendirme (K-39, 02.11.2026) — sahip ayarları yapıldı, prova BAŞLATILMADI
+
+Sahip: R2'de ayrı *Object Read* anahtarı → `RESTORE_S3_ACCESS_KEY_ID` / `RESTORE_S3_SECRET_ACCESS_KEY`; `restore-drill` ortamında
+Required reviewers. `RESTORE_DRILL_REAL_DATA_APPROVED` **açılmadı**.
+
+| Kontrol | Durum |
+| --- | --- |
+| Kapılar | İş: değişken `true` **ve** (elle başlatma **ya da** geliştirme commit'i olmayan istek dosyası gönderimi); `environment: restore-drill` (artık onay ister); `contents: read` |
+| Sırlar | Yalnız `RESTORE_S3_*` (okuma), `BACKUP_S3_ENDPOINT/REGION`; yedek yazma anahtarı ve canlı veritabanı sırrı YOK |
+| Gizlilik | artifact yok; günlükte yol/içerik yok; yerel anahtar maskeli; dump ve örnekler iş sonunda silinir |
+| Yerel izolasyon | `restore-drill.sh`: yalnız 127.0.0.1/localhost, sorgu parametresi ve hedef değiştiren ortam değişkenleri reddedilir (RD-01…03) |
+| **Düzeltildi — K6 "25 dosya"** | Önceden `rclone lsf … \|\| true` ve `--min=1`: listeleme hatası sessiz geçebilir, 25 yerine daha az dosyayla "TAMAM" çıkabilirdi. Artık listeleme hatası adımı durdurur; hedef = 20 media-originals + 5 branding (kovada azsa hepsi); `--min=hedef` ve STORAGE_DOSYA = STORAGE_AYNI = hedef zorunlu; özet tabloda hedef yazılır (birim KT-11) |
+| **Eklendi — 9. adım teşhis** | Yedeğin geçmişi `20261001000001`'de bitiyorsa denetimin yanında fonksiyon teşhisi: `DENETIM_FONKSIYON=AYNI|BICIM|ACIKLANAMAZ`. Canlı #6'daki 77 fonksiyon farkı gerçek yedekte de büyük olasılıkla görülecek; BICIM ise yalnız satır sonu farkıdır (yerelde CRLF yedeğiyle sınandı) |
+| Not (öneri) | İstek dosyası tetiği KI-23'teki gibi tek kullanımlık değil; artık her çalıştırma ortam onayı istediği için kabul edilebilir. İstenirse aynı kural uygulanabilir |
+
+Gerçek prova için kalan tek şey sahibin yazılı veri işleme onayı ve ardından değişkeni açması (§8 adım 1 ve 6).

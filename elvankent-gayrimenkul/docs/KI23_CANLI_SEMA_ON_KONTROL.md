@@ -262,3 +262,32 @@ aynı işlemde okunur). `on` ise denetim aynı işlemde çalışır ve `ROLLBACK
 davranışı bağlantı adresindeki `options` ile taklit edildi) → denetim çalışır, 828 AYNI · T15 işlem salt okunur değil → denetim dahil
 edilmez, hiçbir şey oluşmaz · T10 güncellendi. KT-09: istek dosyası açık ya da kapalı olabilir (tek CALISTIR satırı, sır yok);
 tek kullanımlık kural (KT-10) ve geliştirme commit'lerinin dışlanması aynen. İstek dosyası yeniden **kapalı**.
+
+## 8. KI-23 #6: 77 fonksiyon FARKLI — kök neden araştırması (K-39, 02.11.2026; canlıya yeni sorgu gönderilmedi)
+
+**Canlı #6 (sahibin aktardığı):** 828 nesne; 751 AYNI, 77 FARKLI; farkların hepsi `fonksiyon` kategorisinde; fonksiyon yetkileri
+77/77 AYNI; G1–G4 TAMAM; search_path beklenenle aynı; PostgreSQL 17.
+
+**Yerel kanıtlar (yalnız yerel veritabanları):**
+
+| # | Deney | Sonuç |
+| --- | --- | --- |
+| 1 | Başvurudaki 77 fonksiyonun profili | 77'sinin de gövdesi çok satırlı; 77'sinde de `SET` ayarı var; yalnız 18'inde ASCII dışı karakter, 11'inde yorum, 0'ında satır sonu boşluğu |
+| 2 | Bu profille her adayın tahmini | Unicode normalleştirme (en çok 18) ve yorum ayıklama (en çok 11) tek başına 77'yi açıklayamaz; satır sonu boşluğu kırpma 0 fark üretir → **elendi**. 77'yi açıklayabilenler: (a) satır sonu biçimi (CRLF), (b) tüm fonksiyonlarda ortak bir başlık/SET biçim farkı |
+| 3 | Aynı tarihî demo paketleri (`f760625` 01–04, 06 dört sürüm) **CRLF** satır sonlarıyla, SQL Editor gibi tek işlemde boş yığına | Denetim: **751 AYNI, 77 FARKLI yalnız fonksiyon, fonksiyon yetkileri 77 AYNI, G TAMAM** — canlı #6 ile birebir aynı desen |
+| 4 | CRLF kurulumu ↔ CLI başvurusu, fonksiyon bazında | Ham gövde 0/77 aynı; **`\r` çıkarılınca gövde 77/77 aynı**; başlık (dil, oynaklık, definer, strict, leakproof, paralel, maliyet, dönüş, argümanlar, SET) **77/77 aynı**; `pg_get_functiondef` `\r` çıkarılınca 77/77 aynı |
+| 5 | Davranış: başvuru gövdelerinde satır sonu içeren dize sabiti var mı (sözcük çözümleyici taraması) | **0/77** → CRLF'deki `\r` yalnız boşluk/yorum konumlarına düşer; PostgreSQL/PL/pgSQL çözümleyicisi bunları boşluk sayar → davranış aynı |
+| 6 | LF ile kurulmuş demo yolu (K-35) | 828/828 AYNI — kurulum yöntemi (SQL Editor/paket) tek başına fark üretmez; fark satır sonu biçimine bağlı |
+
+**Sonuç (kesinlik derecesiyle):** CRLF ile kurulmuş bir veritabanının canlı #6'daki deseni *tam olarak* ürettiği ve bu durumda farkın
+davranışsız (yalnız biçim) olduğu **yerelde kanıtlandı**. Canlının farkının gerçekten CRLF olduğu ise **henüz kanıtlanmadı**
+(aday (b) canlı veri olmadan elenemez). Canlıda bunu kesinleştirecek salt okunur ölçüm hazırlandı, ÇALIŞTIRILMADI.
+
+**Hazırlanan teşhis (`supabase/ops/canli_fonksiyon_teshis.sql`, sahip onayıyla aynı Actions iş akışında):** tek SELECT, yalnız
+`pg_proc`/`pg_language`; her fonksiyon için başlık, ham gövde ve `\r` çıkarılmış gövde özetleri başvuruyla karşılaştırılır; yalnız
+SAYILAR döner (ad, gövde yazılmaz). Denetimle aynı salt okunur işlemde, ikinci SHA-256 sabiti ve bekçiyle. Karar kuralı:
+başlık 77/77 ve CR'siz gövde 77/77 AYNI → "TAMAM (biçim farkı)" (çıkış 0); aksi → "AÇIKLANAMIYOR" (çıkış 4). Yerel doğrulama:
+LF kurulumu → hepsi AYNI; CRLF → başlık 77, ham 0, CR'siz 77 → TAMAM (biçim farkı); bir gövde değişince CR'siz 76 → çıkış 4;
+bir başlık (oynaklık) değişince başlık 76 → çıkış 4. KI-24 gerçek provasında da aynı teşhis 9. adımda çalışır
+(`DENETIM_FONKSIYON=AYNI|BICIM|ACIKLANAMAZ`). Fonksiyonlar otomatik değiştirilmez; CRLF "düzeltmesi" gerekmiyor (davranış aynı) —
+istenirse O-5 sırasında fonksiyonlar LF ile yeniden oluşturulabilir (ayrı karar).

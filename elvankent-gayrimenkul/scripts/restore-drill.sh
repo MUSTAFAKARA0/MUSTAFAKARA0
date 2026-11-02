@@ -30,6 +30,7 @@
 #      9) KI-23 şema ve güvenlik denetimi (supabase/ops/canli_sema_denetimi.sql): yalnız yedeğin migration geçmişi canlının
 #         bilinen durumundaysa (son kayıt 20261001000001 = denetimin başvurusu). G (mutlak güvenlik kuralı) HATA → ŞEMA: HATA,
 #         çıkış 3; P (parmak izi) AYNI olmayan nesne sayısı bilgi olarak yazılır (DENETIM_P=…), nesne adları da yazılır.
+#         Ardından canli_fonksiyon_teshis.sql: DENETIM_FONKSIYON=AYNI / BICIM (fark yalnız satır sonu) / ACIKLANAMAZ.
 #         Başka durumda ATLANDI. (xmin geri yüklemede korunmaz: köken sorgusu yedekte anlamsızdır, burada çalıştırılmaz.)
 #   Geçici veritabanı her durumda silinir (KEEP_DB=1 ile inceleme için bırakılabilir; sonra elle silin).
 #
@@ -215,6 +216,18 @@ if [ "$REG_LAST" = 20261001000001 ] && [ -f "$OPS/canli_sema_denetimi.sql" ]; th
   if [ "$p_diff" -ne 0 ]; then awk -F'|' '$1 ~ /^P / { print "      " $1 " " $2 ": " $3 }' "$WORK/denetim.txt"; fi
   result "DENETIM_G=$([ "$g_errors" = 0 ] && echo TAMAM || echo HATA)"
   result "DENETIM_P=$([ "$p_diff" = 0 ] && echo AYNI || echo "FARKLI_$p_diff")"
+  # Fonksiyon farkı teşhisi (canli_fonksiyon_teshis.sql): başlık / gövde / satır sonu (CR) — yalnız sayılar
+  if [ -f "$OPS/canli_fonksiyon_teshis.sql" ]; then
+    target -F'|' -c 'set search_path = "$user", public, extensions' -f "$OPS/canli_fonksiyon_teshis.sql" > "$WORK/teshis.txt"
+    tv() { awk -F'|' -v k="$1" '$1 == "TESHIS" && $2 == k { print $3 }' "$WORK/teshis.txt"; }
+    tb=$(tv 'beklenen fonksiyon'); tes=$(tv 'eşleşen imza'); tba=$(tv 'başlık AYNI'); tha=$(tv 'gövde ham AYNI'); tcr=$(tv 'gövde CR çıkarılınca AYNI'); tfz=$(tv 'beklenmeyen fonksiyon')
+    echo "    fonksiyon teşhisi: başlık AYNI=$tba/$tb, gövde ham AYNI=$tha, CR çıkarılınca AYNI=$tcr, beklenmeyen=$tfz"
+    if [ "$tes" = "$tb" ] && [ "$tba" = "$tb" ] && [ "$tcr" = "$tb" ] && [ "$tfz" = 0 ]; then
+      result "DENETIM_FONKSIYON=$([ "$tha" = "$tb" ] && echo AYNI || echo BICIM)"
+    else
+      result DENETIM_FONKSIYON=ACIKLANAMAZ
+    fi
+  fi
   if [ "$g_errors" -ne 0 ]; then
     awk -F'|' '$1 ~ /^G[0-9]/ { print "    " $1 " " $2 ": " $3 }' "$WORK/denetim.txt" >&2
     echo "ŞEMA: HATA — KI-23 denetiminde $g_errors mutlak güvenlik kuralı ihlali"

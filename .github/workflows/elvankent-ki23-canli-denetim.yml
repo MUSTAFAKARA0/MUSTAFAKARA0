@@ -1,6 +1,7 @@
 # Elvankent Gayrimenkul — KI-23 canlı şema ve güvenlik denetimi (SALT OKUNUR), telefonda SQL Editor yerine.
 #
-# Ne yapar: supabase/ops/canli_sema_denetimi.sql (tek SELECT; yalnız sistem kataloğu; 828 nesne parmak izi + G1–G4) canlı
+# Ne yapar: supabase/ops/canli_sema_denetimi.sql (tek SELECT; yalnız sistem kataloğu; 828 nesne parmak izi + G1–G4) ve
+# supabase/ops/canli_fonksiyon_teshis.sql (fonksiyon farkını başlık/gövde/satır sonu bileşenlerine ayırır; yalnız sayılar) canlı
 # veritabanında, BAŞLANGIÇTA salt okunur açılan bir oturumda (PGOPTIONS default_transaction_read_only=on) çalışır.
 # Günlüğe yalnız G1–G4 sonucu ve AYNI/FARKLI/EKSİK/FAZLA sayıları yazılır (scripts/ki23-canli-denetim.sh).
 #
@@ -48,6 +49,8 @@ jobs:
         working-directory: elvankent-gayrimenkul
     env:
       DENETIM_SQL_SHA256: 20730d2598d1dbe961a91ff7d5c8a9027db09e63b2a1e1df5527d67a3e213f3a
+      # Fonksiyon farkı teşhisi (yalnız sayılar; denetimle aynı salt okunur işlemde)
+      DENETIM_TESHIS_SHA256: 9682aaa8abeebbfd8b714bc38db1702b7aff5704879ab8febe52f77145b50307
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

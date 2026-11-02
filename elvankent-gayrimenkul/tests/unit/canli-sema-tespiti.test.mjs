@@ -377,3 +377,44 @@ describe('KT-10 tek kullanımlık tetik (scripts/ki23-tetik-kontrol.sh)', () => 
     rmSync(dir, { recursive: true, force: true });
   });
 });
+
+describe('KT-11 fonksiyon farkı teşhisi (canli_fonksiyon_teshis.sql) ve KI-24 K6 sertleştirmesi', () => {
+  const t = read('supabase/ops/canli_fonksiyon_teshis.sql');
+  const wf = read('../.github/workflows/elvankent-ki23-canli-denetim.yml');
+  test('teşhis: bekçiden geçer; yalnız katalog; yalnız sayı döner; özet adın önünde; 77 fonksiyon', () => {
+    assert.equal(spawnSync('node', ['scripts/ki23-denetim-guard.mjs', 'supabase/ops/canli_fonksiyon_teshis.sql'], { cwd: root }).status, 0);
+    const body = t.split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
+    const sk = body.replace(/'(?:[^']|'')*'/g, "''");
+    const froms = [...sk.matchAll(/\bfrom\s+([a-z_][a-z_.]*)/gi)].map((m) => m[1].toLowerCase());
+    for (const f of froms) assert.ok(['pg_proc', 'exp', 'cur', 'e', 'j', 'unnest'].includes(f), `kaynak: ${f}`);
+    // Çıktıda imza / gövde yok: son SELECT'ler yalnız sayım
+    const tail = body.slice(body.indexOf("select 'TESHIS'"));
+    assert.doesNotMatch(tail, /prosrc|imza\s*(,|$)|h_govde\s*(,|$)/m);
+    const exp = [...t.matchAll(/^ {4}\('([0-9a-f]{32})', '([0-9a-f]{32})', '([^']+)'\)/gm)];
+    assert.equal(exp.length, 77);
+    assert.doesNotMatch(t, /^ {4}\('[^']+', '[^']+', '[0-9a-f]{32}'\)/m, 'özet sonda değil');
+  });
+  test('iş akışı teşhis dosyasını da SHA-256 ile sabitler; betik ikisini aynı işlemde çalıştırır', () => {
+    const pinned = wf.match(/DENETIM_TESHIS_SHA256: ([0-9a-f]{64})/)?.[1];
+    assert.equal(pinned, createHash('sha256').update(readFileSync(path.join(root, 'supabase/ops/canli_fonksiyon_teshis.sql'))).digest('hex'));
+    const sh = read('scripts/ki23-canli-denetim.sh');
+    assert.match(sh, /\[ "\$t_actual" = "\$DENETIM_TESHIS_SHA256" \] \|\| die 2/);
+    assert.match(sh, /node scripts\/ki23-denetim-guard\.mjs "\$TESHIS"/);
+    assert.match(sh, /wrapper "\$SQL" "\$TESHIS" > "\$T\/run\.sql"/);
+    const w = sh.slice(sh.indexOf('# SARMALAYICI-BAS'), sh.indexOf('# SARMALAYICI-SON'));
+    assert.ok(w.indexOf("\\i '$1'") < w.indexOf("${2:+\\\\i '$2'}") && w.indexOf("${2:+\\\\i '$2'}") < w.indexOf('\\else'), 'teşhis kapının içinde, denetimden sonra');
+    // "TAMAM (biçim farkı)" yalnız: G temiz, EKSİK/FAZLA yok, tüm farklar fonksiyon ve teşhis hepsini açıklıyor
+    assert.match(sh, /\[ "\$tot_farkli" = "\$fn_farkli" \]/);
+    assert.match(sh, /\[ "\$t_bas" = "\$t_bek" \] && \[ "\$t_cr" = "\$t_bek" \]/);
+  });
+  test('KI-24 K6: listeleme hatası sessiz geçmez; seçilen her dosya doğrulanmalı (hedef 20 + 5)', () => {
+    const r = read('../.github/workflows/elvankent-restore-drill.yml');
+    const k6 = r.slice(r.indexOf('- name: Storage örneği (K6'), r.indexOf('- name: Temizlik'));
+    assert.doesNotMatch(k6, /> "\$RUNNER_TEMP\/k6-\$b\.all" \|\| true/);
+    assert.match(k6, /for spec in media-originals:20 branding:5; do/);
+    assert.match(k6, /--min="\$\(\( hedef > 0 \? hedef : 1 \)\)"/);
+    assert.match(k6, /if \[ "\$\{dosya:-0\}" != "\$hedef" \] \|\| \[ "\$\{ayni:-0\}" != "\$hedef" \]; then/);
+    const d = read('scripts/restore-drill.sh');
+    assert.match(d, /result "DENETIM_FONKSIYON=\$\(\[ "\$tha" = "\$tb" \] && echo AYNI \|\| echo BICIM\)"/);
+  });
+});

@@ -3,7 +3,9 @@
 # KI-23 canlı şema ve güvenlik denetimi — GitHub Actions'ta (telefonda SQL Editor yerine) SALT OKUNUR çalıştırma.
 # İş akışı: .github/workflows/elvankent-ki23-canli-denetim.yml (yalnız sahibin elle tetiklemesi).
 #
-#   DENETIM_DB_URL=<gizli> DENETIM_SQL_SHA256=<onaylı özet> bash scripts/ki23-canli-denetim.sh
+#   DENETIM_DB_URL=<gizli> DENETIM_SQL_SHA256=<onaylı özet> DENETIM_TESHIS_SHA256=<onaylı özet> bash scripts/ki23-canli-denetim.sh
+# Teşhis (canli_fonksiyon_teshis.sql): denetimle aynı salt okunur işlemde; fonksiyon farkını başlık / gövde / satır sonu (CR)
+# bileşenlerine ayırır, yalnız SAYI yazar. Fark yalnız CRLF ise sonuç "TAMAM (biçim farkı)", değilse "BULGU VAR".
 #
 # Sıra (biri tutmazsa durur; çıkış kodu: 0 TAMAM · 4 bulgu var · 2 dosya/bekçi reddi · 3 bağlantı/oturum/SQL hatası):
 #   1 Bağlantı adresi ve parçaları (kullanıcı, parola, ana makine, port) GitHub günlüğünde maskelenir (::add-mask::).
@@ -24,6 +26,8 @@ set -euo pipefail
 set +x
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 SQL=${DENETIM_SQL:-supabase/ops/canli_sema_denetimi.sql}
+# Fonksiyon farkı teşhisi (yalnız sayılar): denetimle AYNI işlemde, ardından
+TESHIS=${DENETIM_TESHIS_SQL:-supabase/ops/canli_fonksiyon_teshis.sql}
 say() { printf '%s\n' "$*"; if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then printf '%s\n' "$*" >> "$GITHUB_STEP_SUMMARY"; fi; }
 die() { local code=$1; shift; say "✗ $*"; exit "$code"; }
 
@@ -49,9 +53,15 @@ fi
 actual=$(sha256sum "$SQL" | cut -d' ' -f1)
 [ "$actual" = "$DENETIM_SQL_SHA256" ] || die 2 "Denetim dosyası onaylanan sürüm değil (SHA-256 farklı); hiçbir şey gönderilmedi"
 say "• Denetim dosyası onaylı sürüm (SHA-256 ${actual:0:12}…)"
+[ -n "${DENETIM_TESHIS_SHA256:-}" ] || die 2 "Onaylı teşhis özeti (DENETIM_TESHIS_SHA256) verilmedi"
+[ -f "$TESHIS" ] || die 2 "Teşhis dosyası yok"
+t_actual=$(sha256sum "$TESHIS" | cut -d' ' -f1)
+[ "$t_actual" = "$DENETIM_TESHIS_SHA256" ] || die 2 "Teşhis dosyası onaylanan sürüm değil (SHA-256 farklı); hiçbir şey gönderilmedi"
+say "• Teşhis dosyası onaylı sürüm (SHA-256 ${t_actual:0:12}…)"
 
 # 3 Bekçi
 node scripts/ki23-denetim-guard.mjs "$SQL" > /dev/null 2>&1 || die 2 "Bekçi: dosya tek salt okunur SELECT değil; hiçbir şey gönderilmedi"
+node scripts/ki23-denetim-guard.mjs "$TESHIS" > /dev/null 2>&1 || die 2 "Bekçi: teşhis dosyası tek salt okunur SELECT değil; hiçbir şey gönderilmedi"
 say "• Bekçi: tek salt okunur SELECT ifadesi"
 
 T=$(mktemp -d)
@@ -85,7 +95,7 @@ classify() { # ham hata metnini YAZMADAN güvenli sınıf
 # Supabase bağlantı havuzu PGOPTIONS'ı iletmeyebilir (canlı #4: default=off, işlem=on); işlem yine BEGIN READ ONLY ile salt okunurdur.
 # ON_ERROR_STOP: herhangi bir hata işlemi ve bağlantıyı bırakır (çıkış 3); işlem salt okunur olduğundan hiçbir şey yazılamaz.
 # Sarmalayıcı metni testte birebir kullanılır (scripts/ki23-canli-denetim-test.sh, T10/T11): işaretler arasını değiştirmeyin.
-wrapper() { # $1 = denetim dosyasının yolu (SHA'sı ve bekçisi yukarıda doğrulandı)
+wrapper() { # $1 = denetim dosyası, $2 = (isteğe bağlı) teşhis dosyası; SHA'ları ve bekçileri yukarıda doğrulandı
 # SARMALAYICI-BAS
   cat <<SARMA
 \set ON_ERROR_STOP 1
@@ -96,6 +106,7 @@ SELECT current_setting('transaction_read_only') = 'on' AS ro_tamam,
 SELECT 'KONTROL|' || :'ro_varsayilan' || '|' || current_setting('transaction_read_only') || '|' || :'surum';
 \if :ro_tamam
 \i '$1'
+${2:+\\i '$2'}
 \else
 SELECT 'KONTROL|DENETIM GONDERILMEDI';
 \endif
@@ -103,8 +114,8 @@ ROLLBACK;
 SARMA
 # SARMALAYICI-SON
 }
-case "$SQL" in *"'"*|*'\'*) die 2 "Denetim dosyası yolu geçersiz" ;; esac
-wrapper "$SQL" > "$T/run.sql"
+case "$SQL$TESHIS" in *"'"*|*'\'*) die 2 "Denetim dosyası yolu geçersiz" ;; esac
+wrapper "$SQL" "$TESHIS" > "$T/run.sql"
 psql "$DENETIM_DB_URL" -X -q -A -t -F'|' -v ON_ERROR_STOP=1 -v VERBOSITY=sqlstate -f "$T/run.sql" > "$T/out" 2> "$T/err" \
   || die 3 "Denetim çalışmadı (işlem geri alındı): $(classify "$T/err")"
 IFS='|' read -r tag dro tro ver < <(grep -m1 '^KONTROL|' "$T/out" || true)
@@ -142,14 +153,36 @@ while IFS='|' read -r _ cat counts; do
   e=$(grep -oE 'EKSİK=[0-9]+' <<< "$counts" | cut -d= -f2 || true); z=$(grep -oE 'FAZLA=[0-9]+' <<< "$counts" | cut -d= -f2 || true)
   a=${a:-0}; f=${f:-0}; e=${e:-0}; z=${z:-0}
   tot_ayni=$((tot_ayni + a)); tot_farkli=$((tot_farkli + f)); tot_eksik=$((tot_eksik + e)); tot_fazla=$((tot_fazla + z))
+  if [ "$cat" = "P fonksiyon" ]; then fn_farkli=$f; fi
   say "  ${cat#P }: AYNI=$a FARKLI=$f EKSİK=$e FAZLA=$z"
 done < <(awk -F'|' '$1 == "ÖZET" && $2 ~ /^P / && $2 != "P beklenen değer sayısı"' "$T/out" | sort)
 if grep -q '^ÖZET|P kova|EKSİK=[0-9]*$' "$T/out"; then
   say "  not: kova satırlarının hepsi EKSİK — storage.buckets bu rolle görünmüyor olabilir (RLS); kova sonucu bu çalışmada kanıt sayılmaz"
 fi
 say "P toplam: AYNI=$tot_ayni FARKLI=$tot_farkli EKSİK=$tot_eksik FAZLA=$tot_fazla (beklenen nesne: $expected)"
-if [ "$g_total" = 0 ] && [ "$tot_farkli" = 0 ] && [ "$tot_eksik" = 0 ] && [ "$tot_fazla" = 0 ] && [ "$tot_ayni" = "$expected" ]; then
-  say "SONUÇ: TAMAM — G1–G4 temiz, $expected nesnenin hepsi AYNI"
+# Fonksiyon teşhisi (yalnız sayılar)
+tv() { awk -F'|' -v k="$1" '$1 == "TESHIS" && $2 == k { print $3 }' "$T/out"; }
+t_bek=$(tv 'beklenen fonksiyon'); t_es=$(tv 'eşleşen imza'); t_bas=$(tv 'başlık AYNI'); t_ham=$(tv 'gövde ham AYNI')
+t_cr=$(tv 'gövde CR çıkarılınca AYNI'); t_crv=$(tv 'CR içeren gövde'); t_fazla=$(tv 'beklenmeyen fonksiyon')
+[ -n "$t_bek" ] && [ -n "$t_cr" ] || die 3 "Teşhis çıktısı beklenen biçimde değil"
+say "Fonksiyon teşhisi: beklenen=$t_bek eşleşen imza=$t_es başlık AYNI=$t_bas gövde ham AYNI=$t_ham gövde (CR çıkarılınca) AYNI=$t_cr CR içeren gövde=$t_crv beklenmeyen=$t_fazla"
+fn_aciklandi=hayır
+if [ "$t_es" = "$t_bek" ] && [ "$t_bas" = "$t_bek" ] && [ "$t_cr" = "$t_bek" ] && [ "$t_fazla" = 0 ]; then
+  fn_aciklandi=evet
+  if [ "$t_ham" != "$t_bek" ]; then
+    say "  yorum: $((t_bek - t_ham)) fonksiyonun farkı YALNIZ satır sonu biçimi (CRLF); başlıklar ve CR'siz gövdeler başvuruyla aynı"
+  fi
+else
+  say "  yorum: fonksiyon farkı satır sonu biçimiyle AÇIKLANAMIYOR (başlık ya da gövde içeriği farklı)"
+fi
+fn_farkli=${fn_farkli:-0}
+if [ "$g_total" = 0 ] && [ "$tot_eksik" = 0 ] && [ "$tot_fazla" = 0 ] && [ "$tot_farkli" = "$fn_farkli" ] \
+   && { [ "$tot_farkli" = 0 ] || [ "$fn_aciklandi" = evet ]; } && [ $((tot_ayni + tot_farkli)) = "$expected" ]; then
+  if [ "$tot_farkli" = 0 ]; then
+    say "SONUÇ: TAMAM — G1–G4 temiz, $expected nesnenin hepsi AYNI"
+  else
+    say "SONUÇ: TAMAM (biçim farkı) — G1–G4 temiz; $((expected - tot_farkli)) nesne AYNI, $tot_farkli fonksiyonun farkı yalnız satır sonu biçimi"
+  fi
   exit 0
 fi
 say "SONUÇ: BULGU VAR — ayrıntı (nesne adları) bu günlüğe yazılmaz; ayrı onayla incelenir"

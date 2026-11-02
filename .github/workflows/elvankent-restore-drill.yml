@@ -152,12 +152,17 @@ jobs:
           K6="$RUNNER_TEMP/k6"
           mkdir -p "$K6"
           # Rastgele örnek: media-originals'tan 20, branding'den 5 dosya. Liste ve yollar yalnız dosyada; günlüğe yazılmaz
+          # Hedef: 20 + 5 = 25 dosya (kovada daha az varsa hepsi). Listeleme hatası SESSİZCE geçilmez; seçilen her dosya doğrulanmalı.
+          hedef=0
           for spec in media-originals:20 branding:5; do
             b=${spec%%:*}; n=${spec#*:}
             rclone lsf "src:$BACKUP_BUCKET/storage/current/$b/" -R --files-only --s3-no-check-bucket \
-              --log-file "$RUNNER_TEMP/rclone-k6.log" --log-level INFO > "$RUNNER_TEMP/k6-$b.all" || true
-            shuf -n "$n" "$RUNNER_TEMP/k6-$b.all" > "$RUNNER_TEMP/k6-$b.list" || true
-            echo "$b: $(grep -c . "$RUNNER_TEMP/k6-$b.list" || true) örnek seçildi"
+              --log-file "$RUNNER_TEMP/rclone-k6.log" --log-level INFO > "$RUNNER_TEMP/k6-$b.all" \
+              || { bash scripts/rclone-log-summary.sh "$RUNNER_TEMP/rclone-k6.log" storage-liste; echo "::error::$b listelenemedi"; exit 1; }
+            shuf -n "$n" "$RUNNER_TEMP/k6-$b.all" > "$RUNNER_TEMP/k6-$b.list"
+            secilen=$(grep -c . "$RUNNER_TEMP/k6-$b.list" || true)
+            hedef=$((hedef + secilen))
+            echo "$b: $secilen örnek seçildi (hedef $n; kovada $(grep -c . "$RUNNER_TEMP/k6-$b.all" || true) dosya)"
             [ -s "$RUNNER_TEMP/k6-$b.list" ] || continue
             rclone copy "src:$BACKUP_BUCKET/storage/current/$b/" "$K6/$b/" --files-from "$RUNNER_TEMP/k6-$b.list" --s3-no-check-bucket \
               --log-file "$RUNNER_TEMP/rclone-k6.log" --log-level INFO \
@@ -166,8 +171,14 @@ jobs:
           bash scripts/rclone-log-summary.sh "$RUNNER_TEMP/rclone-k6.log" storage-ornek
           code=0
           STORAGE_DRILL_URL="$API_URL" STORAGE_DRILL_KEY="$SERVICE_ROLE_KEY" \
-            node scripts/storage-roundtrip-drill.mjs --from="$K6" --result="$RUNNER_TEMP/k6.txt" --min=1 || code=$?
+            node scripts/storage-roundtrip-drill.mjs --from="$K6" --result="$RUNNER_TEMP/k6.txt" --min="$(( hedef > 0 ? hedef : 1 ))" || code=$?
+          # Seçilen her dosya indirildi ve doğrulandı mı (25 hedefin eksiksiz karşılandığı)
+          dosya=$(sed -nE 's/^STORAGE_DOSYA=([0-9]+)$/\1/p' "$RUNNER_TEMP/k6.txt"); ayni=$(sed -nE 's/^STORAGE_AYNI=([0-9]+)$/\1/p' "$RUNNER_TEMP/k6.txt")
+          if [ "${dosya:-0}" != "$hedef" ] || [ "${ayni:-0}" != "$hedef" ]; then
+            echo "::error::K6: seçilen $hedef dosyanın $ayni tanesi doğrulandı (indirilen $dosya)"; code=1
+          fi
           {
+            echo "| Storage örneği: hedef (20 media-originals + 5 branding, kovada azsa hepsi) | $hedef |"
             sed -nE 's/^STORAGE=(.*)$/| Storage örneği (K6, SHA-256 gidiş-dönüş) | \1 |/p; s/^STORAGE_AYNI=(.*)$/| Storage örneği: aynı dosya | \1 |/p; s/^STORAGE_DOSYA=(.*)$/| Storage örneği: toplam dosya | \1 |/p' "$RUNNER_TEMP/k6.txt"
           } >> "$GITHUB_STEP_SUMMARY"
           exit "$code"

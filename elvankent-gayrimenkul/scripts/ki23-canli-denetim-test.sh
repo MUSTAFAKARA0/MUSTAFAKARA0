@@ -31,6 +31,7 @@ PW='Ki23-Test-Parola-7Qz9'
 URL="postgresql://$ROLE:$PW@127.0.0.1:55322/postgres"
 SQL=supabase/ops/canli_sema_denetimi.sql
 SHA=$(sha256sum "$SQL" | cut -d' ' -f1)
+TSHA=$(sha256sum supabase/ops/canli_fonksiyon_teshis.sql | cut -d' ' -f1)
 T=$(mktemp -d)
 cleanup() {
   psql "$ADMIN" -X -q -c "alter table public.leads enable row level security" -c "drop policy if exists ki23_test_acik on public.properties" \
@@ -51,7 +52,7 @@ run() { # çıkış kodunu döndürür; günlük $T/log
   local code=0
   # CI'da GITHUB_ACTIONS=true gelir: T1–T7 yerelle aynı koşsun diye kaldırılır (::add-mask:: satırları test parolasını içerir;
   # GitHub bunları günlükte göstermez). T8 değişkeni açıkça verir.
-  env -u GITHUB_STEP_SUMMARY -u GITHUB_ACTIONS DENETIM_SSLMODE=disable "$@" bash scripts/ki23-canli-denetim.sh > "$T/log" 2>&1 || code=$?
+  env -u GITHUB_STEP_SUMMARY -u GITHUB_ACTIONS DENETIM_SSLMODE=disable DENETIM_TESHIS_SHA256="$TSHA" "$@" bash scripts/ki23-canli-denetim.sh > "$T/log" 2>&1 || code=$?
   echo "$code"
 }
 clean() { # günlükte sır / adres / gövde / nesne adı yok (::add-mask:: satırları GitHub'da görünmez, hariç)
@@ -64,6 +65,8 @@ clean() { # günlükte sır / adres / gövde / nesne adı yok (::add-mask:: sat�
 c=$(run DENETIM_DB_URL="$URL" DENETIM_SQL_SHA256="$SHA")
 [ "$c" = 0 ] || { cat "$T/log" >&2; fail "T1 çıkış $c"; }
 grep -q '^G1–G4: TAMAM$' "$T/log" && grep -q 'P toplam: AYNI=828 FARKLI=0 EKSİK=0 FAZLA=0 (beklenen nesne: 828)' "$T/log" \
+  && grep -q '^Fonksiyon teşhisi: beklenen=77 eşleşen imza=77 başlık AYNI=77 gövde ham AYNI=77 gövde (CR çıkarılınca) AYNI=77 CR içeren gövde=0 beklenmeyen=0$' "$T/log" \
+  && grep -q '^SONUÇ: TAMAM — G1–G4 temiz, 828 nesnenin hepsi AYNI$' "$T/log" \
   && grep -q 'Tek bağlantı, tek işlem: BEGIN READ ONLY → işlem salt okunur=on (güvenlik kapısı) → denetim → ROLLBACK' "$T/log" \
   && grep -q '^• Varsayılan salt okunur ayar (bilgi): on; PostgreSQL ana sürüm' "$T/log" \
   || { cat "$T/log" >&2; fail "T1 özet"; }
@@ -77,6 +80,8 @@ c=$(run DENETIM_DB_URL="$URL" DENETIM_SQL_SHA256="$SHA")
 clean T2; echo "  ✓ T2 bozulmuş şema: çıkış 4, G1/G2 sayıları, nesne adı yok"
 psql "$ADMIN" -X -q -c "alter table public.leads enable row level security" -c "drop policy ki23_test_acik on public.properties" > /dev/null
 
+c=$(run DENETIM_DB_URL="$URL" DENETIM_SQL_SHA256="$SHA" DENETIM_TESHIS_SHA256=0000)
+[ "$c" = 2 ] && grep -q 'Teşhis dosyası onaylanan sürüm değil' "$T/log" && ! grep -q 'Tek bağlantı' "$T/log" || fail "T3b (çıkış $c)"
 c=$(run DENETIM_DB_URL="$URL" DENETIM_SQL_SHA256=0000)
 [ "$c" = 2 ] && grep -q 'onaylanan sürüm değil' "$T/log" && ! grep -q 'Oturum' "$T/log" || fail "T3 (çıkış $c)"
 echo "  ✓ T3 onaysız dosya: çıkış 2, bağlantı denenmedi"

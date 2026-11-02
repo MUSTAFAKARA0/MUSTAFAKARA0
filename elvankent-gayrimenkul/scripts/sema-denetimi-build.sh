@@ -31,3 +31,26 @@ assert n == 1
 open(p, 'w').write(s2)
 PY
 echo "✓ $F: $(grep -c "^    ('" "$F") beklenen değer"
+
+# Fonksiyon teşhisi (supabase/ops/canli_fonksiyon_teshis.sql): başlık ve gövde özetleri aynı başvurudan
+TF=supabase/ops/canli_fonksiyon_teshis.sql
+tvals=$(PGOPTIONS='-c default_transaction_read_only=on' psql "$REF_DB_URL" -X -v ON_ERROR_STOP=1 -q -At -c "
+select string_agg(format('    (%L, %L, %L)',
+         md5(concat_ws('|', l.lanname, p.provolatile, p.prosecdef, p.proisstrict, p.proleakproof, p.proparallel, p.procost, p.prorows,
+                       format_type(p.prorettype, null), pg_get_function_arguments(p.oid),
+                       array_to_string(array(select unnest(p.proconfig) order by 1), ','))),
+         md5(p.prosrc), p.oid::regprocedure::text), E',\n' order by p.oid::regprocedure::text)
+  from pg_proc p join pg_language l on l.oid = p.prolang
+ where p.pronamespace = 'public'::regnamespace and p.prokind in ('f', 'p')")
+python3 - "$TF" "$tvals" <<'PY'
+import sys, re
+p, vals = sys.argv[1], sys.argv[2]
+s = open(p).read()
+new = ("-- TESHIS-BEKLENEN-BAS\n-- Sıra (başlık, gövde, imza): özetler adın önünde (gizli anahtar tarayıcısı yanlış alarmı, CI #147)\n"
+       "exp(h_baslik, h_govde, imza) as (\n  values\n" + vals + "\n),\n-- TESHIS-BEKLENEN-SON")
+s2, n = re.subn(r"-- TESHIS-BEKLENEN-BAS\n.*?-- TESHIS-BEKLENEN-SON", lambda m: new, s, flags=re.S)
+assert n == 1
+open(p, 'w').write(s2)
+PY
+echo "✓ $TF: $(grep -cE "^    \('[0-9a-f]{32}', '[0-9a-f]{32}', " "$TF") fonksiyon"
+

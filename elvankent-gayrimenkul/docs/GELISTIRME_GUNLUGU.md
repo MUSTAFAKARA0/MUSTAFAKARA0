@@ -23,6 +23,21 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 02.11.2026 (15) · K-39: dört bağımsız çalışma — KI-23 fonksiyon farkı, gece yedeği, KI-24 hazırlık, müşteri yolculuğu
+
+- **KI-23 #6 (77 fonksiyon FARKLI):** yerelde tarihî demo paketleri CRLF ile kurulunca canlı #6 deseni birebir üretildi (751 AYNI,
+  77 FARKLI yalnız fonksiyon, yetkiler AYNI, G TAMAM); `\r` çıkarılınca gövdeler ve başlıklar 77/77 aynı; gövdelerde satır sonu içeren
+  dize sabiti 0 → davranış aynı. Canlının nedeni henüz kanıtlanmadı; salt okunur sayı-teşhisi hazırlandı (`canli_fonksiyon_teshis.sql`,
+  ikinci SHA, aynı işlem; "TAMAM (biçim farkı)" kuralı). Prova 6. adım (CRLF) + KI-24 yolu + 2 negatif. KI23 §8.
+- **Gece yedeği:** cron `23 1 * * *` (01:23 UTC) doğru, iş akışı `active`, varsayılan dalda aynı. Geçmiş zamanlanmış koşular 06:15–07:38 UTC'de
+  başlamış (GitHub kuyruğu 5–6 saat gecikiyor). #46 (01.11 07:38) eski varsayılan dal commit'i `ff2f7da` ile çalıştı ve başarısız oldu;
+  düzeltilmiş iş akışı varsayılan dala `a0f0a67` ile (01.11 15:47) geldi → 02.11 koşusu düzeltilmiş sürümün ilk zamanlanmış koşusu.
+  04:12 UTC itibarıyla henüz başlamamıştı (gecikme deseniyle uyumlu). 08:00 UTC'de yeniden kontrol (mevcut hatırlatma).
+- **KI-24:** sahip ayarları (okuma anahtarı, ortam onayı) doğrulandı; K6 25 dosya hedefi zorunlu hâle getirildi (listeleme hatası durur);
+  9. adıma fonksiyon teşhisi. Değişken açılmadı, prova başlatılmadı. KI24 §9.
+- **Müşteri yolculuğu:** `docs/MUSTERI_YOLCULUGU.md` — 6 akış nesne→migration eşlemesiyle; bulgu: yeni ofis açılışı yeni sahip e-postasıyla
+  canlıda çalışmaz (`platform_create_organization` 5 parametreli sürüm; kod `p_invite_token_hash` gönderir → 20261008000001).
+
 ### 01.11.2026 (14) · K-38: KI-23 canlı #4 — havuz PGOPTIONS'ı iletmedi; kapı = gerçek işlemin transaction_read_only'si
 
 - **#4 (sahip):** tetik başarılı, bağlantı kuruldu, `default_transaction_read_only=off`, `transaction_read_only=on`; betik denetimi
