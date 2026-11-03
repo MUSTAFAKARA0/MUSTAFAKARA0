@@ -8,7 +8,7 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 | Konu | Durum |
 | --- | --- |
-| Production dalı | `2eeb5e1` (02.11.2026 18:23 TR, PR #5: tanıtım videosu + Aşama 4 iş akışı). Vercel production READY, `SENTRY_DSN` tanımlı; geri dönüş adayı `6b698e9`. Önceki: `6b698e9` (PR #4), `a0f0a67` (PR #3), `74013a5` (KARAY-01), `650fd4e` (O-4 güvenlik yaması) |
+| Production dalı | `d6113e6` (03.11, PR #6); önceki `2eeb5e1` (02.11.2026 18:23 TR, PR #5: tanıtım videosu + Aşama 4 iş akışı). Vercel production READY, `SENTRY_DSN` tanımlı; geri dönüş adayı `6b698e9`. Önceki: `6b698e9` (PR #4), `a0f0a67` (PR #3), `74013a5` (KARAY-01), `650fd4e` (O-4 güvenlik yaması) |
 | Çalışma dalı | `claude/karays-mission-control-vn8g65`, production ile aynı noktadan devam ediyor (02.11 fast-forward) |
 | Son kod commit'i | `2eeb5e1` (production'daki kod) |
 | Canlı veritabanı | 39 migration: 21 temel + O-5a (9) + KARAYS marka + Aşama 3 (4) + Aşama 4 medya (4) — hepsi 02.11. `enforce_subscription_limits` = false. Bekleyen migration yok |
@@ -23,6 +23,15 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 **Sıradaki adım:** müşteri (Elvankent) alan adı — müşteri onayı ve DNS erişimi; D-11 planları.
 
 ## Girişler
+
+### 03.11.2026 (41) · K-65: PR #6 production'da
+
+- Sahip PR #6'yı birleştirdi: production `d6113e6` (medya düzeltmeleri KI-43/44, tanıtım videosu sesi, KI-40, yedek saklama alt
+  sınırı ve yedek kapısı, KI-41 Aşama 1, CI port düzeltmesi). Vercel production `dpl_8zR5…` READY; ilk saatte çalışma hatası yok.
+  Veritabanı değişmedi. Geri dönüş adayı `2eeb5e1` (`dpl_3bih…`).
+- Gece yedeği bundan sonra `uretim-yedek` ortamıyla (yalnız production dalı); sırlar hâlâ depo düzeyinde.
+
+**Açık (sahip):** duman testi (fotoğraf yükle/döndür/sil, tanıtım videosu sesi) · KI-41 Aşama 3–4 oturumu · Aşama 6 kararı.
 
 ### 02.11.2026 (40) · K-64: KI-41 Aşama 0 (sahip) ve Aşama 1 kodu
 
