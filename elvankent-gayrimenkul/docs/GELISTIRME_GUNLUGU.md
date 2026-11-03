@@ -31,7 +31,9 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
   Veritabanı değişmedi. Geri dönüş adayı `2eeb5e1` (`dpl_3bih…`).
 - Gece yedeği bundan sonra `uretim-yedek` ortamıyla (yalnız production dalı); sırlar hâlâ depo düzeyinde.
 
-**Açık (sahip):** duman testi (fotoğraf yükle/döndür/sil, tanıtım videosu sesi) · KI-41 Aşama 3–4 oturumu · Aşama 6 kararı.
+- **Sahip duman testi: tamam** (fotoğraf yükle/döndür/sil, tanıtım videosu sesi).
+
+**Açık (sahip):** KI-41 Aşama 3–4 oturumu · Aşama 6 kararı.
 
 ### 02.11.2026 (40) · K-64: KI-41 Aşama 0 (sahip) ve Aşama 1 kodu
 
