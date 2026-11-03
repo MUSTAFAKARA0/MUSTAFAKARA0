@@ -8,21 +8,126 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 | Konu | Durum |
 | --- | --- |
-| Production dalı | `6b698e9` (02.11.2026 16:32 TR, PR #4: tam KARAYS kodu). Vercel production READY; geri dönüş adayı `a0f0a67`. Önceki: `a0f0a67` (PR #3), `74013a5` (KARAY-01), `650fd4e` (O-4 güvenlik yaması) |
+| Production dalı | `2eeb5e1` (02.11.2026 18:23 TR, PR #5: tanıtım videosu + Aşama 4 iş akışı). Vercel production READY, `SENTRY_DSN` tanımlı; geri dönüş adayı `6b698e9`. Önceki: `6b698e9` (PR #4), `a0f0a67` (PR #3), `74013a5` (KARAY-01), `650fd4e` (O-4 güvenlik yaması) |
 | Çalışma dalı | `claude/karays-mission-control-vn8g65`, production ile aynı noktadan devam ediyor (02.11 fast-forward) |
-| Son kod commit'i | `6b698e9` (production'daki kod; çalışma dalında üstüne yalnız belge commit'leri) |
-| Canlı veritabanı | 35 migration: 21 temel + O-5a (9, 02.11) + KARAYS marka (02.11) + Aşama 3 (quota_lock, ops02_limits, media_quota_lock, company_name; 02.11). `enforce_subscription_limits` = false. Bekleyen: Aşama 4 medya (4 dosya) |
+| Son kod commit'i | `2eeb5e1` (production'daki kod) |
+| Canlı veritabanı | 39 migration: 21 temel + O-5a (9) + KARAYS marka + Aşama 3 (4) + Aşama 4 medya (4) — hepsi 02.11. `enforce_subscription_limits` = false. Bekleyen migration yok |
 | CI | Son yeşil: #181 (`666d515`), #179 (`236ef1c`), #177 (`1d79589`, production birleştirmesi). Her push sonrası koşu bu günlüğe yazılır |
 | Yedek | Gece yedeği (R2) çalışıyor: zamanlanmış #49; O-5 öncesi elle #50–#52. Gerçek geri yükleme provası KI-24 #2 başarılı |
 | Güvenlik | Canlıya yazan iş akışları sahip onaylı ortamda (`o5a-uygula`, `ki23-canli-denetim`: Required reviewers). O-6: geri dönüşü Claude önerir, sahip onaylar, Claude Vercel'de uygular |
-| Açık kapılar | Aşama 4 medya migration'ları (ayrı onay) · özel alan adı (Vercel'e alan adı + `VERCEL_*` değişkenleri) · hata bildirimi (`SENTRY_DSN`/`ERROR_WEBHOOK_URL`) · OPS-02 bayrağı (D-04/D-05 alt kararları) |
+| Açık kapılar | Müşteri alan adı bağlama (müşteri onayı + DNS) · D-11 ücretli planlar · OPS-02 bayrağı (D-04/D-05 alt kararları) |
 | Bekleyen kararlar | D-04/D-05 alt kararları (hatırlatma zamanları, salt okunur kapsamı, saklama süresi — hukuki görüş) · D-01…D-03, D-06…D-14, D-16…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)) |
 
 **Kalan işler:** [KALAN_ISLER.md](KALAN_ISLER.md) · **Sahibin adımları:** [SAHIP_ADIMLARI.md](SAHIP_ADIMLARI.md).
 
-**Sıradaki adım:** Aşama 4 medya migration'ları için plan ve sahip onayı (yeni medya kodu production'da; 4e ön koşulu sağlandı); ardından özel alan adı.
+**Sıradaki adım:** müşteri (Elvankent) alan adı — müşteri onayı ve DNS erişimi; D-11 planları.
 
 ## Girişler
+
+### 02.11.2026 (40) · K-64: KI-41 Aşama 0 (sahip) ve Aşama 1 kodu
+
+- Sahip `uretim-yedek` ortamını oluşturdu (dal sınırı production dalı; sır yok). Ortam ayarları bu oturumdan okunamıyor (vekil
+  sunucu GitHub ortam API'sine izin vermiyor); ayar sahibin beyanıyla kayıtlı.
+- Aşama 1 (kod): `backup` işi ve R2 teşhisinin iki işi `environment: uretim-yedek`; R2 teşhisinin istek dosyası tetiği kaldırıldı
+  (yalnız elle). Sırlar hâlâ depo düzeyinde olduğu için yedek aynen çalışır; ancak artık **elle yedek yalnız production dalından**
+  başlatılabilir (çalışma dalından başlatılan yedek dal sınırına takılır — beklenen). Envanter testi: hassas sır kullanan her iş
+  bir ortamda. Birim 842/842.
+
+### 02.11.2026 (39) · K-63: KI-41 güvenli sır sınırı planı; yedek silme ve sahte yedek kapısı kapatıldı
+
+- Sahip GitHub'da: `koruma` kural seti (production ve çalışma dalında silme/zorla gönderim kapalı), `o5a-uygula` dal sınırı.
+- Sır envanteri: hassas sırların hepsi depo düzeyinde; ortamsız kullananlar `backup` ve `r2-diagnose`. Claude'un push'ları
+  sahibin kimliğiyle (CI #194 actor = sahip) → "yalnız sahip" kontrolleri Claude'u ayırmaz (T2).
+- Plan: [KI41_GUVENLIK_PLANI.md](KI41_GUVENLIK_PLANI.md) (Aşama 0–6, kesinti riski ve geri dönüş). Bağımsız güvenlik incelemesi
+  4 yüksek bulgu verdi; plan düzeltildi (Aşama 6 T2 için zorunlu; restore-drill sırları; eski anahtar iptali).
+- Kod (canlıya etkisi yok): yedek saklama süresi en az 14 gün (değişkenle yedekler silinemez); O-5 yedek kapısı yalnız gerçek
+  `backup` işini sayar; `tests/unit/workflow-secrets.test.mjs` (sır envanteri, PR olaylarında sır yok, saklama alt sınırı).
+  Birim 841/841.
+- Sır, ortam, Vercel ve canlı veritabanı değiştirilmedi.
+
+- CI: #194 (`9105aad`) yeşil. #195 (`b9db067`) kırmızı: canlı benzeri yığın 55324 portunu bağlayamadı ("address already in use");
+  #184 ile aynı. Kök neden: 543xx/553xx Linux geçici port aralığında (32768–60999). CI'da bu portlar geçici aralıktan ayrıldı (test). **#196 (`4d688b6`, bu oturumun tüm değişiklikleri) yeşil.**
+
+**Açık (sahip):** KI-41 Aşama 0 (ortamı elle kur) ve Aşama 1 PR'ı · medya düzeltmelerinin yayını · Aşama 6 kararı.
+
+### 02.11.2026 (38) · K-62: güvenlik denetimi — O-5 tetik açığı kapatıldı; medya denetimi ve düzeltmeler
+
+- **Doğrulama:** production `2eeb5e1` (Vercel READY, son 24 saatte çalışma hatası yok); canlı DB 39 migration (o5a #4, o5b #2,
+  o5c #2 SONUÇ: TAMAM — O-5 Aşama 4 uygulanmış); yedek #53 (02.11 20:20 TR) başarılı; CI #193 (`592ca7c`) yeşil.
+  CI #191 (istek satırı açık bırakılmıştı) ve #192 (TEST-OWNER-08 zamanlama; `a85f353` ile düzeltildi) kırmızıydı.
+- **P0 (KI-40):** o5a/o5b/o5c iş akışlarında elle başlatma tek kullanımlık `CALISTIR=evet` kuralını atlıyordu. Elle başlatma
+  kaldırıldı; tetik adımı koşulsuz ve sıkı (zorla gönderim, yeniden açılan dal reddi); aynı istek commit'i için ikinci koşu reddi
+  (`scripts/o5-tek-kullanim.sh`); tetikleyen de sahip olmalı. KT-15 negatif testleri. Bağımsız güvenlik incelemesi: açık kapandı.
+  Yapısal risk (KI-41): yazabilen DB adresi depo sırrı — sahip GitHub ayarları (SAHIP_ADIMLARI 2a).
+- **Medya denetimi (bağımsız):** kritik/yüksek yok. Orta: bekleyen yükleme kotası bildirilen boyutla sayılıyor (KI-42, migration
+  gerekir). Düzeltildi (canlıda değil): temizlik işinin süre bütçesi ve kuyruk tıkanması (KI-43), "yüklenmemiş" hatasında çıkmaz,
+  bırakılan kayıt ve geçici indirme hatası (KI-44). İkinci bağımsız inceleme ilk düzeltmede bir gerileme buldu, giderildi.
+  Diğer düşük bulgular KI-45. Yerel: birim 836/836, ESLint 0, tsc 0, production build ✓, `npm audit --omit=dev` 0 açık.
+- Production, canlı DB ve ortam değişkenleri bu çalışmada değiştirilmedi.
+
+**Açık (sahip):** KI-41 GitHub ayarları · medya düzeltmelerinin yayını (onay) · KI-42 planı · Sentry deneme olayı (ayrı onay) · D-11.
+
+### 02.11.2026 (37) · K-61: KARAYS alan adı siteye bağlandı
+
+- **Sahip onayı (sohbette):** "Karaysı bagla". Alan adı ve `www` (kalıcı yönlendirme) projeye eklendi, KARAYS alan adı
+  ayarı production'a girildi; production `2eeb5e1` aynı kodla yeniden dağıtıldı (`dpl_3bih…`, READY, çalışma hatası yok).
+- **Sahip kontrolü: hepsi tamam** — alan adının kökünde KARAYS tanıtım sayfası, `www` yönlendirmesi, `/platform` konsol girişi,
+  Elvankent sitesi ve paneli eskisi gibi; paylaşılan adresteki `/karay` artık açılmıyor (beklenen).
+
+**Açık (sahip):** Elvankent alan adı görüşmesi · D-11 planları · avukat/mali müşavir · Sentry denemesi ve seslendirme (sonra).
+
+### 02.11.2026 (36) · K-60: KARAYS alan adı alındı; e-posta gönderimi canlıda çalışıyor
+
+- Sahip KARAYS alan adını (`karays.com`, D-13 alt kararı 2) Vercel'den aldı; Resend'de alan adı eklendi (Ireland), DNS kayıtları
+  Resend'in Vercel otomatik yapılandırmasıyla girildi, DMARC kaydını Claude ekledi; alan adı Resend'de doğrulandı.
+- E-posta ayarları production'da tamamlandı (anahtarı sahip girdi, sağlayıcı ve gönderen adresini Claude ayarladı); production
+  `2eeb5e1` aynı kodla yeniden dağıtıldı (`dpl_ASRo…`, READY). **Sahip testi: şifre sıfırlama e-postası geldi, şifre yenilendi.**
+- CI #192 (`7209718`): TEST-OWNER-08 kırmızı — platform simge `<link>`'leri akışla geldiği için test erken okudu (kod hatası değil);
+  test simgeleri bekleyecek şekilde düzeltildi (`a85f353`).
+- Alan adının siteye bağlanması (KARAYS tanıtım sayfası alan adının kökünde) sahip onayı bekliyor.
+
+**Açık (sahip):** KARAYS alan adını siteye bağlama onayı · Elvankent alan adı görüşmesi · D-11 planları · avukat/mali müşavir · Sentry denemesi ve seslendirme (sonra).
+
+### 02.11.2026 (35) · K-59: alan adı değişkenleri tanımlandı; e-posta gönderimi eksik bulundu
+
+- Sahip Vercel production'a `VERCEL_API_TOKEN`, `VERCEL_PROJECT_ID`, `VERCEL_TEAM_ID` ekledi (Claude doğruladı: üçü de kayıtlı, Sensitive);
+  production `2eeb5e1` aynı kodla yeniden dağıtıldı (`dpl_UGCX…`).
+- Bulgu: `EMAIL_PROVIDER` var ama `RESEND_API_KEY` ve `EMAIL_FROM` yok → davet, şifre sıfırlama ve talep e-postaları gönderilmiyor.
+  Çözüm KARAYS'in kendi alan adına bağlı (D-13 alt kararı 2): alan adı → Resend alan adı doğrulama → değişkenler.
+
+**Açık (sahip):** KARAYS alan adı · e-posta (Resend) · Elvankent alan adı görüşmesi · D-11 planları · avukat/mali müşavir · Sentry denemesi ve seslendirme (sonra).
+
+### 02.11.2026 (34) · K-58: Aşama 4 duman testi geçti; yazılı onay; medya maddeleri canlıda doğrulandı
+
+- **Sahip onayı (sohbette, uygulama sonrası teyit):** "O-5 Aşama 4: media_finalize_rpc, media_privileges, media_storage_slots ve
+  media_stray_sweep runbook'larının iş akışıyla canlıya uygulanmasını onaylıyorum." (İş akışını sahip 20:22'de kendisi tetiklemişti.)
+- **Duman testi (sahip):** canlıda bir ilana fotoğraf yükleme, döndürme ve silme sorunsuz. KI-03…09, KI-36…39 → canlıda doğrulandı.
+- Sahip: yedek tamam, Mission Control APK #13 kuruldu; tanıtım videosu seslendirmesi beklemede (sahip kararı).
+- Özel alan adı: `www.elvankentgayrimenkul.com` müşteriye ait; bağlanması müşterinin onayı ve DNS erişimi gerektirir (D-13 ile birlikte).
+
+**Açık (sahip):** müşteriyle alan adı görüşmesi · karar paketi (D-11 öncelikli) · Sentry deneme olayı (sonra) · seslendirme (beklemede).
+
+### 02.11.2026 (33) · K-57: O-5 Aşama 4 (medya) canlıya uygulandı (o5c #2 "SONUÇ: TAMAM")
+
+- Sahip istek satırını açtı (`353302e`, 20:22 TR) ve ortam onayını verdi; taze yedek #53 (20:20 TR) başarılı.
+- `elvankent-o5c-uygula` #2: paket SHA `086e4c7a…`; ön kontrol 35 VAR; media_finalize_rpc, media_privileges, media_storage_slots,
+  media_stray_sweep — her birinde 01 DUR yok, 04 DUR/HATA yok. Son kontrol: 39/39 VAR, sürüm 20261018000001, postflight_v2 HATA yok,
+  `enforce_subscription_limits` = false, geçmiş 31 kayıt. C (storage.objects tetikleyicisi) canlıda yetki sorunu olmadan uygulandı.
+- CI #191 (`353302e`) kırmızı: KT-14 "istek satırı kapalı teslim edilir" — satır açık commit'te beklenen; satır kapatıldı.
+- Tanıtım videosuna özgün sentez müzik eklendi (`6ebf384`, çalışma dalında; yayın PR'ı seslendirmeyle birlikte).
+
+**Açık (sahip):** Aşama 4 duman testi (fotoğraf yükle/döndür/sil) · seslendirme kaydı · özel alan adı · Sentry deneme olayı · karar paketi.
+
+### 02.11.2026 (32) · K-56: tanıtım videosu production'da (PR #5 → `2eeb5e1`)
+
+- Sahip PR #5'i birleştirdi (18:23 TR). Vercel production `dpl_37Z1…` READY; çalışma zamanı hatası son 40 dk 0. Geri dönüş adayı `6b698e9`.
+  `SENTRY_DSN` bu dağıtımda da etkin (değişken production'a 17:31'de eklendi).
+- CI: #185 (`3aabbec`, video kodu) ve #187 (`219be14`) yeşil.
+- Çalışma dalı production'a fast-forward edildi.
+
+**CI:** #187 (`219be14`) yeşil; production birleştirmesi `2eeb5e1` yalnız bu commit'leri içerir.
+
+**Açık (sahip):** /karay'da videoyu kontrol · Aşama 4 (önce fotoğraf yükle/döndür/sil denemesi, sonra onay) · özel alan adı · Sentry deneme olayı (sonra) · karar paketi.
 
 ### 02.11.2026 (31) · K-55: Sentry bağlandı; KARAYS tanıtım videosu onaylandı; Mission Control panosu doğru
 

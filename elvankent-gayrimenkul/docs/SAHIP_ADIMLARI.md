@@ -1,4 +1,4 @@
-# Sahibin yapacakları · güncel sıra (02.11.2026, K-54)
+# Sahibin yapacakları · güncel sıra (02.11.2026, K-59)
 
 > Değerleri (anahtar, şifre, bağlantı adresi) **kimseye yazmayın**, bana da göndermeyin. Bana "tamam", çıktı özeti ya da değer
 > görünmeyen ekran görüntüsü yeter. Önceki sürüm (31.10) git geçmişinde; oradaki A bölümü (gece yedeği kurulumu) ve O-4 / PR #3
@@ -16,30 +16,35 @@
 | KI-24 hazırlığı | R2 okuma anahtarı (`RESTORE_S3_*`) ve `restore-drill` ortam onayı tanımlandı |
 | PR #2 | Kapalı |
 
-## Sizin yapacaklarınız (güncel, 02.11 K-54)
+## Sizin yapacaklarınız (güncel, 02.11 K-61)
 
-Tamamlananlar (02.11): köken sorgusu · KI-24 gerçek prova · gece yedeği · O-5a (9 migration) · KARAYS marka · O-5 Aşama 3 · duman testleri · `o5a-uygula` ve `ki23-canli-denetim` onay kuralı · şerit metinleri · O-6 kararı · Vercel takım erişimi · tam kod yayını (PR #4) · Mission Control ajan düzeltmesi (MC PR #4)
+Tamamlananlar (02.11): O-5 Aşama 1–4 canlıda ve doğrulandı · tam kod (PR #4) ve tanıtım videosu (PR #5) yayında · Sentry bağlandı ·
+`VERCEL_API_TOKEN` / `VERCEL_PROJECT_ID` / `VERCEL_TEAM_ID` tanımlandı · onay kuralları · O-6 · D-13 (müşteri siteleri kendi alan adlarıyla) ·
+Mission Control PR #4/#5 ve APK #13
 
-### 1. ✓ O-6 kararı verildi (02.11): Claude söyler, siz onaylarsınız, Claude Vercel'de önceki sürüme döner
+### 1. KARAYS alan adı ✓ (02.11 K-61) — alındı, siteye bağlandı, sahip kontrol etti
 
-### 2. ✓ Kod yayını PR #4 birleştirildi (02.11, production `6b698e9`, duman testi geçti)
+### 2. E-posta gönderimi ✓ (02.11 K-60) — Resend doğrulandı, şifre sıfırlama e-postası test edildi
 
-### 3. ✓ Hata bildirimi (Sentry) bağlandı (02.11) — deneme olayı sonra (sahip kararı)
-sentry.io (AB veri bölgesi) › Next.js projesi `karays` › DSN › Vercel › Settings › Environment Variables › `SENTRY_DSN` (Production) ›
-Redeploy. Bana "eklendi" yazın; deneme hatasıyla e-postayı birlikte doğrularız.
+### 2a. GitHub güvenlik ayarları (KI-41; 02.11 bağımsız güvenlik incelemesi) — ~5 dk
+1. https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/settings/rules › **New ruleset › New branch ruleset**.
+   Ad: `koruma`; **Enforcement status: Active**; **Target branches › Add target › Include by pattern**:
+   `claude/karays-mission-control-vn8g65` ve `claude/elvankent-real-estate-platform-vxq9dj`.
+   Kurallar: **Restrict deletions** ✓, **Block force pushes** ✓ (diğerlerine dokunmayın) › **Create**.
+2. https://github.com/MUSTAFAKARA0/MUSTAFAKARA0/settings/environments › **o5a-uygula** ›
+   **Deployment branches and tags › Selected branches and tags › Add rule**: `claude/karays-mission-control-vn8g65` › kaydet.
+3. Veritabanı adresinin onay ortamına taşınması yedek iş akışını da etkilediği için ayrı bir planla yapılacak (Claude hazırlar).
 
-### 4. ✓ Mission Control PR #5 birleştirildi (02.11) — APK #13'ü kurun
-https://github.com/MUSTAFAKARA0/ecc-mission-control/pull/5 (pano: Yapılanlar / Yapılacaklar / Sahibin yapacakları; Bugün ne oldu; Oturum karnesi).
+### 3. Elvankent alan adı — önce müşteriyle görüşün
+Onay sonrası konsol › Web Siteleri › Elvankent › Domain ekranındaki DNS kayıtları müşteriye iletilir.
 
-### 5. Aşama 4 (medya) onayı
-Önce yeni kodla bir ilanda fotoğraf yükleme + döndürme + silme denemesi; sonra onay cümlesi (iş akışı `elvankent-o5c-uygula`, hazır).
+### 4. Altyapı planları (D-11, ücretli; karar sahipte)
+Vercel Pro (Hobby ticari kullanıma kapalı) · Supabase Pro (günlük platform yedeği). Fiyatları sayfada teyit edin.
 
-### 6. Özel alan adı — sonra
-Vercel'e `www.elvankentgayrimenkul.com` eklemek + `VERCEL_API_TOKEN` (1 yıl), `VERCEL_PROJECT_ID`, `VERCEL_TEAM_ID` (Production).
+### 5. Avukat ve mali müşavir — [KARAR_ARASTIRMA_PAKETI.md](KARAR_ARASTIRMA_PAKETI.md) soru listesi
 
-### 7. Açık kararlar — araştırma paketi hazır
-[KARAR_ARASTIRMA_PAKETI.md](KARAR_ARASTIRMA_PAKETI.md): her karar için seçenek, öneri, kaynak ve avukat/mali müşavir soruları.
-En acil: D-11 (Supabase/Vercel ücretli plan: Vercel Hobby ticari kullanıma kapalı; Supabase Free'de platform yedeği yok).
+### 6. Sonraya bırakılanlar
+Sentry deneme olayı · tanıtım videosu Türkçe seslendirmesi ([metin](KARAYS_TANITIM_SESLENDIRME.md)).
 
 ## Benim yapacaklarım (onay gerektirmeyen)
 - Gece yedeğini izlemek ve sonucu yazmak.

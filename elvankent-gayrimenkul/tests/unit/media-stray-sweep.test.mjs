@@ -252,6 +252,19 @@ describe('SS-07 rota ve göç sözleşmesi', () => {
     assert.ok(STRAY_SCAN <= 10_000, 'D p_scan üst sınırı 10000');
     assert.ok(STRAY_BATCH <= 1000, 'D p_limit üst sınırı 1000');
   });
+  test('genel süre bütçesi: eski yüklemeler + kuyruk + süpürme 60 sn\'ye sığar; aşım yanıtta görünür', () => {
+    const stale = Number(route.match(/const CLEANUP_STALE_BUDGET_MS = ([\d_]+);/)?.[1].replace(/_/g, ''));
+    const queue = Number(route.match(/const CLEANUP_QUEUE_DEADLINE_MS = ([\d_]+);/)?.[1].replace(/_/g, ''));
+    assert.ok(stale > 0 && stale < queue, 'eski yükleme bütçesi kuyruk sınırından önce biter');
+    assert.ok(queue + STRAY_TIME_BUDGET_MS <= 50_000, 'kuyruk + süpürme + pay (son adımlar için ≥ 10 sn) ≤ 60 sn');
+    assert.match(route, /if \(Date\.now\(\) - startedAt >= CLEANUP_STALE_BUDGET_MS\) \{/);
+    assert.match(route, /if \(Date\.now\(\) >= deadline\) return \{ [^}]*timeBudgetHit: true \};/);
+    assert.match(route, /drainFileQueue\(service, startedAt \+ CLEANUP_QUEUE_DEADLINE_MS\)/);
+    assert.match(route, /timeBudgetHit, auditLogsPurged/);
+    assert.ok(route.indexOf("rpc('purge_old_audit_logs'") < route.indexOf('sweepStray(strayDeps(service))'), 'denetim temizliği süpürmeden önce');
+    assert.match(route, /if \(\(data\?\.length \?\? 0\) < CLAIM_BATCH\) break;\n\s*continue;/, 'yalnız güvensiz öğeli parti kuyruğu tıkamaz');
+    assert.doesNotMatch(route, /^export const CLEANUP_/m, 'rota dosyası yalnız Next.js alanlarını dışa aktarır');
+  });
   test('D: imleç tablosu, FOR UPDATE, C sıralaması, tek imza; 05 hepsini geri alır', () => {
     const pending = readFileSync(`${root}supabase/pending/20261031000001_media_stray_sweep.sql`, 'utf8');
     assert.match(pending, /create table if not exists public\.media_stray_cursor/);

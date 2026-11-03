@@ -9,15 +9,12 @@
 #
 # Elle başlatma (ikisi de yalnız sizin eyleminizle çalışır; kod değişikliği tetiklemez):
 #   a) Actions › elvankent-r2-diagnose › Run workflow (GitHub bu düğmeyi yalnız iş akışı varsayılan dalda da varsa gösterir)
-#   b) Çalışma dalında elvankent-gayrimenkul/ops-requests/r2-diagnose.request dosyasını düzenleyip commit etmek
-#      (telefondan tarayıcıyla: dosya › kalem › bir satır ekle › Commit changes)
+#   (b) istek dosyası tetiği KI-41 Aşama 1'de kaldırıldı: sırlar uretim-yedek ortamında, yalnız production dalından verilir.
 name: elvankent-r2-diagnose
 
 on:
+  # KI-41 Aşama 1: yalnız elle ve yalnız production dalından (uretim-yedek ortamının dal sınırı); istek dosyası tetiği kaldırıldı
   workflow_dispatch: {}
-  push:
-    branches: ['claude/karays-mission-control-vn8g65']
-    paths: ['elvankent-gayrimenkul/ops-requests/r2-diagnose.request']
 
 permissions:
   contents: read
@@ -30,8 +27,8 @@ jobs:
   r2:
     # Yalnız sahibin eylemi: Run workflow ya da istek dosyasını sahibin düzenlemesi. Geliştirme oturumunun commit'leri
     # ("Claude-Session:" satırı taşır) istek dosyasına dokunsa bile teşhis kendiliğinden çalışmaz.
-    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, 'Claude-Session:') }}
     runs-on: ubuntu-24.04
+    environment: uretim-yedek
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -59,8 +56,8 @@ jobs:
   # (sabit güncel rclone, --s3-no-head) sentetik dosyayla doğrular. Ayrıntı: elvankent-gayrimenkul/scripts/storage-transfer-probe.sh
   storage-probe:
     needs: r2
-    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, 'Claude-Session:') }}
     runs-on: ubuntu-24.04
+    environment: uretim-yedek
     timeout-minutes: 20
     env:
       RCLONE_NEW: v1.75.2

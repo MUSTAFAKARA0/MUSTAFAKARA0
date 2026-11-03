@@ -166,6 +166,14 @@ export function MediaManager({ propertyId, propertyTitle, initialMedia, canManag
         patch(item.key, { status: 'processing', progress: 100, error: undefined });
         const res = item.failedAt === 'process' ? await retryMediaProcessing(ticket.mediaId) : await finalizeMediaUpload({ mediaId: ticket.mediaId, replaceId: item.replaceId });
         if (!res.ok) {
+          if (res.code === 'not_uploaded') {
+            // Sunucu dosyayı bulamadı ve kaydı başarısız işaretledi (yükleme yuvası kapandı): aynı kayıtla yeniden işleme ya da
+            // yuvayı yenileme hep aynı hatayı verir. "Tekrar dene" yeni bir kayıtla dosyayı baştan yükler.
+            patch(item.key, { status: 'error', error: res.error, retryable: true, failedAt: undefined, ticket: undefined });
+            // Başarısız kaydı hemen bırak (bekleyen/başarısız 50 satır sınırını ve kotayı 24 saat tutmasın); hata önemsiz
+            void cancelMediaUpload(ticket.mediaId).catch(() => undefined);
+            return;
+          }
           const permanent = ['unsupported', 'too_small', 'too_large', 'corrupt'].includes(res.code ?? '');
           patch(item.key, { status: 'error', error: res.error, retryable: !permanent, failedAt: permanent ? 'upload' : 'process' });
           return;
@@ -313,6 +321,10 @@ export function MediaManager({ propertyId, propertyTitle, initialMedia, canManag
   async function retryStale(m: AdminMedia) {
     await withBusy(m.id, async () => {
       const res = await retryMediaProcessing(m.id);
+      if (!res.ok && res.code === 'not_uploaded') {
+        // Bu kayıtta dosya yok: yeniden işleme hep aynı hatayı verir; kaldırıp fotoğrafı yeniden yüklemek gerekir
+        return void toast.error('Bu fotoğrafın dosyası sunucuya ulaşmamış. "Kaldır" ile silip fotoğrafı yeniden yükleyin.');
+      }
       if (!res.ok) return void toast.error(res.error);
       upsertMedia(res.data);
       toast.success('Fotoğraf işlendi.');

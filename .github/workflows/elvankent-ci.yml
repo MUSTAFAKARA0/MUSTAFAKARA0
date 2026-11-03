@@ -103,6 +103,10 @@ jobs:
           # şablonu sürüme göre değişebildiği için sabit; yeni sürüm CI'da doğrulanıp ayrı commit'le seçilir.
           version: 2.121.0
       - run: npm ci
+      - name: Yerel yığın portları geçici port aralığından ayrılır
+        # 543xx (ana yığın) ve 553xx (canlı benzeri yığın) Linux'un geçici port aralığında (32768–60999): yoğun E2E sırasında
+        # bir giden bağlantı bu portlardan birini alabiliyor ve yığın "address already in use" ile başlayamıyordu (#184, #195).
+        run: sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329,55320-55329
       - name: Yerel Supabase (migration'lar sıfırdan uygulanır)
         run: |
           set -euo pipefail
@@ -246,6 +250,10 @@ jobs:
           # şablonu sürüme göre değişebildiği için sabit; yeni sürüm CI'da doğrulanıp ayrı commit'le seçilir.
           version: 2.121.0
       - run: npm ci
+      - name: Yerel yığın portları geçici port aralığından ayrılır
+        # 543xx (ana yığın) ve 553xx (canlı benzeri yığın) Linux'un geçici port aralığında (32768–60999): yoğun E2E sırasında
+        # bir giden bağlantı bu portlardan birini alabiliyor ve yığın "address already in use" ile başlayamıyordu (#184, #195).
+        run: sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329,55320-55329
       - name: Yerel Supabase (PENDING=none; supabase/pending UYGULANMAZ)
         run: |
           set -euo pipefail
