@@ -5,6 +5,7 @@ import { updateTag } from 'next/cache';
 import { z } from 'zod';
 import { cacheTags } from '@/lib/cache-tags';
 import { classifyFinalizeError, decideAfterFinalizeError, finalizeMedia, isMissingRpc, markMediaFailed } from '@/modules/media/finalize';
+import { countOtherReadyPhotos, isValidReplaceTarget, photoLimitReached } from '@/modules/media/photo-limit';
 import { MediaValidationError, processImage, type ProcessedImage } from '@/modules/media/processing';
 import {
   ADMIN_MEDIA_FIELDS,
@@ -25,6 +26,8 @@ import { requirePermission, type OrgContext } from '@/platform/auth/session';
 
 /** Bu boyutun üzerindeki dosyalar TUS (devam ettirilebilir) protokolüyle yüklenir */
 const RESUMABLE_THRESHOLD = 6 * 1024 * 1024;
+
+const LIMIT_MESSAGE = `Bir ilana en fazla ${MEDIA_LIMITS.maxImagesPerProperty} fotoğraf eklenebilir.`;
 
 export interface UploadTicket {
   mediaId: string;
@@ -103,7 +106,7 @@ export async function createMediaUpload(raw: z.input<typeof createSchema>): Prom
         .in('status', ['pending', 'ready']);
       assertNoDbError(error);
       if ((count ?? 0) >= MEDIA_LIMITS.maxImagesPerProperty) {
-        throw new ActionError(`Bir ilana en fazla ${MEDIA_LIMITS.maxImagesPerProperty} fotoğraf eklenebilir.`, 'limit');
+        throw new ActionError(LIMIT_MESSAGE, 'limit');
       }
     }
 
@@ -411,19 +414,67 @@ async function processMedia(ctx: OrgContext, media: ProcessInput, rotate: Rotati
   } as AdminMedia;
 }
 
+type LoadedMedia = Awaited<ReturnType<typeof loadMedia>>;
+
+/** Değiştirilecek kayıt: yoksa, başka ilana/kuruma aitse ya da kaydın kendisiyse null (değiştirme olmaz) */
+async function loadReplaceTarget(ctx: OrgContext, media: LoadedMedia, replaceId: string | undefined): Promise<LoadedMedia | null> {
+  if (!replaceId) return null;
+  try {
+    const target = await loadMedia(ctx, replaceId);
+    return isValidReplaceTarget(media, target) ? target : null;
+  } catch (error) {
+    if (error instanceof NotFoundError) return null;
+    throw error;
+  }
+}
+
+/** Sınırı aşan yüklemeyi atar: önce kayıt, sonra dosyalar (en iyi çaba; kalanları zamanlanmış temizlik alır) */
+async function discardUpload(
+  ctx: OrgContext,
+  media: { id: string; original_path: string | null; public_base: string | null; variant_widths: number[] | null },
+) {
+  const { error } = await ctx.supabase.from('media_assets').delete().eq('id', media.id);
+  if (error) console.error('[media] over-limit upload row removal failed', { mediaId: media.id, code: error.code });
+  await removeMediaFiles(ctx.supabase, media);
+}
+
+/**
+ * KI-45: değiştirme OLMAYAN her sonlandırmada ilan başına fotoğraf sınırı sunucuda yeniden denetlenir
+ * (createMediaUpload `replaceId` ile sınırı atlar; değiştirme niyeti yüklemeye ayrı bir sütunla bağlanamıyor).
+ * Aşılıyorsa yükleme atılır ve `limit` hatası döner. Sayım atomik değildir (bkz. photo-limit.ts).
+ */
+async function enforcePhotoLimit(
+  ctx: OrgContext,
+  media: { id: string; property_id: string | null; original_path: string | null; public_base: string | null; variant_widths: number[] | null },
+) {
+  if (!media.property_id) return;
+  const { count, error } = await countOtherReadyPhotos(ctx.supabase, media.property_id, media.id);
+  assertNoDbError(error);
+  if (!photoLimitReached(count, MEDIA_LIMITS.maxImagesPerProperty)) return;
+  await discardUpload(ctx, media);
+  throw new ActionError(LIMIT_MESSAGE, 'limit');
+}
+
 export async function finalizeMediaUpload(input: { mediaId: string; replaceId?: string }): Promise<ActionResult<AdminMedia>> {
   return runAction(async () => {
     const ctx = await requirePermission('media.manage');
     const media = await loadMedia(ctx, input.mediaId);
     if (media.status === 'ready') return media;
+
+    // Değiştirme yoksa sınır, işlemeden ÖNCE denetlenir (gereksiz varyant üretimi yok)
+    const old = await loadReplaceTarget(ctx, media, input.replaceId);
+    if (!old) await enforcePhotoLimit(ctx, media);
+
     let result = await processMedia(ctx, media);
 
     // "Fotoğrafı değiştir": yeni dosya eskisinin sırasını, kapak durumunu ve açıklamasını devralır
-    if (input.replaceId && input.replaceId !== media.id) {
-      const old = await loadMedia(ctx, input.replaceId);
-      if (old.property_id === media.property_id) {
-        const { error: deleteError } = await ctx.supabase.from('media_assets').delete().eq('id', old.id);
-        assertNoDbError(deleteError);
+    if (old) {
+      const { data: deleted, error: deleteError } = await ctx.supabase.from('media_assets').delete().eq('id', old.id).select('id');
+      assertNoDbError(deleteError);
+      if (!deleted?.length) {
+        // Eski kayıt bu arada başka bir istekle silinmiş/değiştirilmiş: değiştirme gerçekleşmedi → sınır yeniden denetlenir
+        await enforcePhotoLimit(ctx, { ...result, property_id: media.property_id, original_path: media.original_path });
+      } else {
         await removeMediaFiles(ctx.supabase, old);
         const { data: moved, error: moveError } = await ctx.supabase
           .from('media_assets')
@@ -447,6 +498,8 @@ export async function retryMediaProcessing(mediaId: string): Promise<ActionResul
     const ctx = await requirePermission('media.manage');
     const media = await loadMedia(ctx, mediaId);
     if (media.status === 'ready') return media;
+    // KI-45: yeniden işleme hiçbir kaydı değiştirmez → sınır burada da denetlenir
+    await enforcePhotoLimit(ctx, media);
     // Durum sıfırlaması yok: media_finalize failed satırı kabul eder (eski şemada yedek yol sıfırlar)
     const result = await processMedia(ctx, media, rotationOf(media.public_base));
     invalidate(ctx.org.id);

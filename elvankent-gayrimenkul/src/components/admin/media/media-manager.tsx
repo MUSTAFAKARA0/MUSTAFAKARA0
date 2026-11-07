@@ -164,7 +164,11 @@ export function MediaManager({ propertyId, propertyTitle, initialMedia, canManag
         }
 
         patch(item.key, { status: 'processing', progress: 100, error: undefined });
-        const res = item.failedAt === 'process' ? await retryMediaProcessing(ticket.mediaId) : await finalizeMediaUpload({ mediaId: ticket.mediaId, replaceId: item.replaceId });
+        // KI-45: değiştirme öğesinin yeniden denemesi de değiştirme niyetini taşır (retryMediaProcessing hiçbir kaydı değiştirmez)
+        const res =
+          item.failedAt === 'process' && !item.replaceId
+            ? await retryMediaProcessing(ticket.mediaId)
+            : await finalizeMediaUpload({ mediaId: ticket.mediaId, replaceId: item.replaceId });
         if (!res.ok) {
           if (res.code === 'not_uploaded') {
             // Sunucu dosyayı bulamadı ve kaydı başarısız işaretledi (yükleme yuvası kapandı): aynı kayıtla yeniden işleme ya da
@@ -174,7 +178,8 @@ export function MediaManager({ propertyId, propertyTitle, initialMedia, canManag
             void cancelMediaUpload(ticket.mediaId).catch(() => undefined);
             return;
           }
-          const permanent = ['unsupported', 'too_small', 'too_large', 'corrupt'].includes(res.code ?? '');
+          // limit: sunucu sınırı aşan yüklemeyi zaten attı (KI-45); aynı kayıtla yeniden deneme anlamsız
+          const permanent = ['unsupported', 'too_small', 'too_large', 'corrupt', 'limit'].includes(res.code ?? '');
           patch(item.key, { status: 'error', error: res.error, retryable: !permanent, failedAt: permanent ? 'upload' : 'process' });
           return;
         }
@@ -324,6 +329,11 @@ export function MediaManager({ propertyId, propertyTitle, initialMedia, canManag
       if (!res.ok && res.code === 'not_uploaded') {
         // Bu kayıtta dosya yok: yeniden işleme hep aynı hatayı verir; kaldırıp fotoğrafı yeniden yüklemek gerekir
         return void toast.error('Bu fotoğrafın dosyası sunucuya ulaşmamış. "Kaldır" ile silip fotoğrafı yeniden yükleyin.');
+      }
+      if (!res.ok && res.code === 'limit') {
+        // Sunucu sınırı aşan kaydı attı (KI-45): listeden de kalkar
+        setMedia((list) => list.filter((x) => x.id !== m.id));
+        return void toast.error(res.error);
       }
       if (!res.ok) return void toast.error(res.error);
       upsertMedia(res.data);
