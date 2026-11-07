@@ -96,7 +96,7 @@ Kişisel verileriniz KVKK'nın 5. maddesinin 2. fıkrasında yer alan "bir sözl
 Kişisel verileriniz yalnızca yukarıdaki amaçlarla sınırlı olmak üzere aşağıdaki alıcılara aktarılabilir:
 
 - Talebinizle ilgilenen ofis çalışanlarımız ve danışmanlarımız
-- Web sitesi ve yönetim yazılımı hizmet sağlayıcımız **KARAYS** ([KARAYS İŞLETME UNVANI]). KARAYS, verilerinizi yalnızca {{sirket}} adına ve talimatlarımız doğrultusunda **veri işleyen** sıfatıyla işler; veri sorumlusu {{unvan}}'dır.
+- Web sitesi ve yönetim yazılımı hizmet sağlayıcımız **KARAYS** (ticaret unvanı ve iletişim bilgileri KARAYS internet sitesindeki künye sayfasında yer alır). KARAYS, verilerinizi yalnızca {{sirket}} adına ve talimatlarımız doğrultusunda **veri işleyen** sıfatıyla işler; veri sorumlusu {{unvan}}'dır.
 - KARAYS'ın hizmeti sunarken kullandığı alt veri işleyenler: Supabase (veritabanı ve dosya depolama; sunucu konumu AB, Frankfurt / eu-central-1), Vercel (web sitesinin barındırılması; uygulama sunucusu AB, Frankfurt / fra1, içerik dağıtım ağı AB ve ABD dahil küresel), Resend (yeni talep bildirim e-postalarının iletilmesi), Sentry (hata kayıtlarının tutulması; e-posta ve telefon bilgileri maskelenir), Cloudflare R2 (şifreli yedeklerin saklanması) ve GitHub Actions (yedekleme işleminin çalıştırılması)
 - Talep edilmesi hâlinde, yasal olarak yetkili kamu kurum ve kuruluşları
 
@@ -126,7 +126,7 @@ KVKK'nın 11. maddesi uyarınca veri sorumlusuna başvurarak:
 
 haklarına sahipsiniz.
 
-Başvurularınızı Türkçe ve yazılı olarak {{adres}} adresine elden veya posta yoluyla, kayıtlı elektronik posta (KEP) ile **{{kep_adresi}}** adresine ya da daha önce bize bildirdiğiniz ve sistemimizde kayıtlı e-posta adresinizden **{{eposta}}** adresine iletebilirsiniz. Başvurunuz, talebin niteliğine göre en geç **30 gün** içinde ücretsiz olarak sonuçlandırılır (KVKK m.13); işlemin ayrıca bir maliyet gerektirmesi hâlinde Kurul'ca belirlenen tarifedeki ücret alınabilir. Web sitesi hizmet sağlayıcımız KARAYS'a ulaşan başvurular gecikmeksizin tarafımıza iletilir.`,
+Başvurularınızı Türkçe ve yazılı olarak {{adres}} adresine elden veya posta yoluyla, varsa kayıtlı elektronik posta (KEP) adresimize KEP ile ya da daha önce bize bildirdiğiniz ve sistemimizde kayıtlı e-posta adresinizden **{{eposta}}** adresine iletebilirsiniz. Başvurunuz, talebin niteliğine göre en geç **30 gün** içinde ücretsiz olarak sonuçlandırılır (KVKK m.13); işlemin ayrıca bir maliyet gerektirmesi hâlinde Kurul'ca belirlenen tarifedeki ücret alınabilir. Web sitesi hizmet sağlayıcımız KARAYS'a ulaşan başvurular gecikmeksizin tarafımıza iletilir.`,
   },
   privacy: {
     key: 'privacy',

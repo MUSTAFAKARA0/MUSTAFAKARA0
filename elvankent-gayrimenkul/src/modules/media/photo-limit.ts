@@ -19,12 +19,20 @@ export interface LimitMediaRef {
   id: string;
   organization_id: string;
   property_id: string | null;
+  status?: string;
 }
 
-/** Değiştirme yalnız aynı kurumun aynı ilanındaki BAŞKA bir kayıt için geçerlidir */
+/**
+ * Değiştirme yalnız aynı kurumun aynı ilanındaki BAŞKA ve HAZIR (`ready`) bir kayıt için geçerlidir.
+ * `failed`/`pending` kayıtlar sayıma girmez; onları "değiştirmek" sınırı aşmanın yolu olurdu.
+ */
 export function isValidReplaceTarget(media: LimitMediaRef, target: LimitMediaRef | null | undefined): target is LimitMediaRef {
   if (!target || !media.property_id) return false;
-  return target.id !== media.id && target.organization_id === media.organization_id && target.property_id === media.property_id;
+  return (
+    target.status === 'ready' &&
+    target.id !== media.id &&
+    target.organization_id === media.organization_id && target.property_id === media.property_id
+  );
 }
 
 /**

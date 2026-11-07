@@ -3,18 +3,9 @@
 import { useSyncExternalStore } from 'react';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { hasAnalyticsConsent } from '@/components/common/cookie-consent';
 
-const CONSENT_KEY = 'eg:consent';
 const CONSENT_EVENT = 'eg:consent-change';
-
-function analyticsConsent(): boolean {
-  try {
-    const raw = window.localStorage.getItem(CONSENT_KEY);
-    return raw ? Boolean((JSON.parse(raw) as { analytics?: boolean }).analytics) : false;
-  } catch {
-    return false;
-  }
-}
 
 function subscribe(callback: () => void) {
   window.addEventListener(CONSENT_EVENT, callback);
@@ -32,13 +23,21 @@ function subscribe(callback: () => void) {
  * betiği çalışmaz; çerez bildirimi ve çerez politikası bu davranışı anlatır — bkz.
  * common/cookie-consent.tsx, modules/content/default-pages.ts, docs/LEGAL_DATA_MAP.md).
  */
+/**
+ * Bileşen kaldırılsa da yüklenmiş betik sayfada kalır (SPA gezinmelerini dinlemeye devam eder);
+ * onay geri çekilince her olay burada düşürülür. Tek onay okuyucu: hasAnalyticsConsent (12 ay süresi dahil).
+ */
+function gate<T>(event: T): T | null {
+  return hasAnalyticsConsent() ? event : null;
+}
+
 export function VercelInsights() {
-  const consent = useSyncExternalStore(subscribe, analyticsConsent, () => false);
+  const consent = useSyncExternalStore(subscribe, hasAnalyticsConsent, () => false);
   if (!consent) return null;
   return (
     <>
-      <SpeedInsights />
-      <Analytics />
+      <SpeedInsights beforeSend={gate} />
+      <Analytics beforeSend={gate} />
     </>
   );
 }

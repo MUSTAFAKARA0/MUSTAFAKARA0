@@ -30,7 +30,12 @@ function functionBody(name) {
 describe('isValidReplaceTarget', () => {
   const media = { id: NEW, organization_id: ORG, property_id: P1 };
   test('aynı kurum + aynı ilan + başka kayıt → geçerli', () => {
-    assert.equal(isValidReplaceTarget(media, { id: OLD, organization_id: ORG, property_id: P1 }), true);
+    assert.equal(isValidReplaceTarget(media, { id: OLD, organization_id: ORG, property_id: P1, status: 'ready' }), true);
+  });
+  test('hazır olmayan hedef (failed / pending / durum yok) → değiştirme yok (sınır atlanamaz)', () => {
+    for (const status of ['failed', 'pending', undefined]) {
+      assert.equal(isValidReplaceTarget(media, { id: OLD, organization_id: ORG, property_id: P1, status }), false);
+    }
   });
   test('hedef yok / null / undefined → değiştirme yok', () => {
     assert.equal(isValidReplaceTarget(media, null), false);
@@ -40,12 +45,17 @@ describe('isValidReplaceTarget', () => {
     assert.equal(isValidReplaceTarget(media, { ...media }), false);
   });
   test('başka ilan / başka kurum → değiştirme yok', () => {
-    assert.equal(isValidReplaceTarget(media, { id: OLD, organization_id: ORG, property_id: P2 }), false);
-    assert.equal(isValidReplaceTarget(media, { id: OLD, organization_id: OTHER_ORG, property_id: P1 }), false);
+    assert.equal(isValidReplaceTarget(media, { id: OLD, organization_id: ORG, property_id: P2, status: 'ready' }), false);
+    assert.equal(isValidReplaceTarget(media, { id: OLD, organization_id: OTHER_ORG, property_id: P1, status: 'ready' }), false);
   });
   test('ilana bağlı olmayan kayıt (içerik görseli) hiçbir şeyi değiştiremez', () => {
     assert.equal(isValidReplaceTarget({ ...media, property_id: null }, { id: OLD, organization_id: ORG, property_id: null }), false);
   });
+});
+
+test('createMediaUpload: replaceId yalnız hazır hedefte sayımı atlar', () => {
+  assert.match(mediaSrc, /replacing = target\.status === 'ready';/);
+  assert.match(mediaSrc, /if \(!replacing\) \{/);
 });
 
 describe('photoLimitReached', () => {
@@ -141,7 +151,7 @@ describe('media.ts: değiştirme niyeti yüklemeye bağlı (KI-45)', () => {
   });
   test('createMediaUpload hâlâ replaceId hedefini doğrular, aksi halde sınırı sayar', () => {
     const body = functionBody('createMediaUpload');
-    assert.match(body, /if \(input\.replaceId\) \{[\s\S]*?target\.property_id !== property\.id[\s\S]*?\} else \{[\s\S]*?\.in\('status', \['pending', 'ready'\]\)/);
+    assert.match(body, /if \(input\.replaceId\) \{[\s\S]*?target\.property_id !== property\.id[\s\S]*?replacing = target\.status === 'ready';[\s\S]*?if \(!replacing\) \{[\s\S]*?\.in\('status', \['pending', 'ready'\]\)/);
     assert.match(body, /throw new ActionError\(LIMIT_MESSAGE, 'limit'\)/);
   });
   test('bilinen sınırlama belgelenmiş: sayım atomik değil, göç gerekir', () => {

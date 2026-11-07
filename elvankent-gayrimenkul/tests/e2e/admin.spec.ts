@@ -145,13 +145,13 @@ test('İlan fotoğrafı döndürülür (sağa/sola, kalıcı) ve silinir (KI-36/
   await page.getByRole('button', { name: 'Fotoğraf 3 işlemleri' }).click();
   await page.getByRole('menuitem', { name: 'Sağa döndür' }).click();
   await expect(card).toContainText('1200×1800', { timeout: 60_000 });
-  await expect(img).toHaveAttribute('src', /-r90\//);
+  await expect(img).toHaveAttribute('src', /-r90(\/|%2F)/i);
 
   // Kalıcı: yeniden yüklemede döndürülmüş hâli gelir
   await page.reload();
   await expect(cards).toHaveCount(3, { timeout: 30_000 });
   await expect(card).toContainText('1200×1800');
-  await expect(img).toHaveAttribute('src', /-r90\//);
+  await expect(img).toHaveAttribute('src', /-r90(\/|%2F)/i);
 
   // Sola döndür: başlangıç açısına döner (yeni sürüm klasörü, açı eki yok)
   await page.getByRole('button', { name: 'Fotoğraf 3 işlemleri' }).click();

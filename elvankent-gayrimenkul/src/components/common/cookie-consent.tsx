@@ -27,6 +27,8 @@ interface Consent {
 }
 
 let cachedRaw: string | null | undefined;
+/** Depolama kapalıysa her çağrıda AYNI nesne döner (useSyncExternalStore anlık görüntüsü sabit kalmalı) */
+const STORAGE_BLOCKED: Consent = { v: 1, analytics: false, at: '' };
 let cachedConsent: Consent | null = null;
 
 function readConsent(): Consent | null {
@@ -34,7 +36,7 @@ function readConsent(): Consent | null {
   try {
     raw = window.localStorage.getItem(CONSENT_KEY);
   } catch {
-    return { v: 1, analytics: false, at: '' };
+    return STORAGE_BLOCKED;
   }
   if (raw === cachedRaw) return cachedConsent;
   cachedRaw = raw;

@@ -95,10 +95,14 @@ export async function createMediaUpload(raw: z.input<typeof createSchema>): Prom
     const ctx = await requirePermission('media.manage');
     const property = await loadProperty(ctx, input.propertyId);
 
+    let replacing = false;
     if (input.replaceId) {
       const target = await loadMedia(ctx, input.replaceId);
       if (target.property_id !== property.id) throw new NotFoundError('Değiştirilecek fotoğraf bu ilana ait değil.');
-    } else {
+      // KI-45: yalnız hazır fotoğrafın değiştirilmesi sayıyı artırmaz; failed/pending hedef sınırı atlatamaz
+      replacing = target.status === 'ready';
+    }
+    if (!replacing) {
       const { count, error } = await ctx.supabase
         .from('media_assets')
         .select('id', { count: 'exact', head: true })

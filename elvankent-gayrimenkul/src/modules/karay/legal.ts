@@ -60,7 +60,7 @@ export const KARAY_LEGAL: KarayLegalDoc[] = [
       },
       {
         heading: 'Saklama süresi',
-        body: 'Müşteriye dönüşmeyen talepler son iletişimden itibaren [2 yıl]; müşteri sözleşme ve fatura kayıtları 10 yıl (TTK md.82, VUK md.253); panel giriş ve denetim kayıtları 2 yıl; spam olarak işaretlenen kayıtlar [90 gün]. Süre sonunda veriler silinir, yok edilir veya anonim hâle getirilir. Ayrıntı: Saklama ve imha özeti.',
+        body: 'Müşteriye dönüşmeyen talepler son iletişimden itibaren [2 yıl]; müşteri sözleşme ve fatura kayıtları 10 yıl (TTK md.82, VUK md.253); panel denetim kayıtları (yönetim işlemleri) 2 yıl; spam olarak işaretlenen kayıtlar [90 gün]. Süre sonunda veriler silinir, yok edilir veya anonim hâle getirilir. Ayrıntı: Saklama ve imha özeti.',
       },
       { heading: 'Haklarınız', body: `${HAKLAR} Başvuru yolu için "KVKK başvuru yolu" sayfasına bakınız.` },
     ],
@@ -90,7 +90,7 @@ export const KARAY_LEGAL: KarayLegalDoc[] = [
       },
       {
         heading: 'Analitik (yalnızca onayınızla)',
-        body: 'Vercel Web Analytics (anonim ziyaret istatistiği) ve Vercel Speed Insights (sayfa hızı ölçümü) yalnızca çerez bandında "Kabul et" demeniz hâlinde yüklenir; çerez kullanmazlar. Sağlayıcı Vercel Inc. (ABD). Reklam veya pazarlama çerezi kullanılmaz.',
+        body: 'Vercel Web Analytics (anonim ziyaret istatistiği) ve Vercel Speed Insights (sayfa hızı ölçümü) yalnızca çerez bandında "Kabul et" demeniz ya da tercihlerde "Analitik" seçeneğini açmanız hâlinde yüklenir; onayınızı "Çerez tercihleri" bağlantısından her zaman geri çekebilirsiniz; çerez kullanmazlar. Sağlayıcı Vercel Inc. (ABD). Reklam veya pazarlama çerezi kullanılmaz.',
       },
       { heading: 'Tercihinizi değiştirme', body: 'Kabul ve ret seçenekleri bantta eşit olarak sunulur. Tercihinizi sayfanın altındaki "Çerez tercihleri" bağlantısından her zaman değiştirebilir veya tarayıcı ayarlarınızdan silebilirsiniz; zorunlu çerezleri engellerseniz panele giriş yapılamayabilir.' },
       { heading: 'İletişim', body: `${C.eposta} · Ayrıntılar için KVKK aydınlatma metni.` },
