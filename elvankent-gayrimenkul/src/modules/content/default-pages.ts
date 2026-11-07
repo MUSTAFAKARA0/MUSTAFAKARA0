@@ -146,11 +146,18 @@ Gizlilikle ilgili sorularınız için **{{eposta}}** adresinden bize ulaşabilir
     title: 'Çerez Politikası',
     description: 'Web sitemizde kullanılan çerezler ve tarayıcı depolaması hakkında bilgilendirme.',
     legal: true,
-    template: `Bu sayfa, web sitemizde kullanılan çerezler ve benzeri teknolojiler hakkında sizi bilgilendirmek amacıyla hazırlanmıştır. Web sitemiz reklam veya pazarlama amaçlı üçüncü taraf çerez **kullanmamaktadır**.
+    template: `Bu sayfa, web sitemizde kullanılan çerezler ve benzeri teknolojiler (tarayıcı depolaması, ölçüm betikleri) hakkında sizi bilgilendirmek amacıyla hazırlanmıştır. Web sitemiz reklam veya pazarlama amaçlı çerez **kullanmamaktadır**.
 
 ## Zorunlu çerezler
 
-Yalnızca yönetim paneline giriş yapan yetkililer için oturum çerezleri kullanılır. Bu çerezler oturumun güvenli şekilde sürdürülmesi için gereklidir ve ziyaretçiler için oluşturulmaz.
+Aşağıdaki çerezler yalnızca yönetim paneline giriş yapan yetkililer için oluşturulur; oturumun güvenli şekilde sürdürülmesi için gereklidir ve izne tabi değildir. Siteyi ziyaret edenler için oluşturulmaz.
+
+| Çerez | Amaç | Süre |
+| --- | --- | --- |
+| sb-…-auth-token | Yönetici oturumu (Supabase kimlik doğrulama; büyük oturumlarda .0, .1 gibi parçalara bölünebilir) | Oturum kapatılana veya süresi dolana kadar |
+| eg_scope | Oturumun hangi panel için açıldığını işaretler (güvenlik) | Tarayıcı oturumu |
+| eg_active_org | Yöneticinin seçtiği ofis | 180 gün |
+| eg_site_preview | Yöneticinin kaydedilmemiş site değişikliklerini önizlemesi | 1 saat |
 
 ## Tarayıcı depolaması
 
@@ -159,14 +166,22 @@ Yalnızca yönetim paneline giriş yapan yetkililer için oturum çerezleri kull
 | eg:favorites | Favori ilanlarınızı hatırlamak | Siz silene kadar |
 | eg:compare | Karşılaştırma listeniz | Siz silene kadar |
 | eg:consent | Çerez tercihiniz | 12 ay |
+| eg:qr-source (oturum depolaması) | Talebin QR kod ile açılan sayfadan geldiğini belirtmek | Sekme kapanana kadar |
+
+Bu kayıtlar yalnızca tarayıcınızda tutulur ve sitenin istediğiniz işlevleri yerine getirmesi için gereklidir.
 
 ## İstatistik
 
 İlan görüntülenme ve iletişim tıklamaları çerez kullanılmadan, IP adresi ve tarayıcı bilgisinin günlük değişen, geri döndürülemez özeti ile sayılır. Bu özet kimliğinizi belirlemek için kullanılmaz.
 
-## Analitik çerezler
+## Analitik (yalnızca onayınızla)
 
-Analitik veya pazarlama amaçlı bir hizmet eklenirse yalnızca "Çerez tercihleri" penceresinden onay vermeniz hâlinde çalıştırılır. Onayınızı dilediğiniz zaman geri alabilirsiniz. [HUKUK DANIŞMANI TARAFINDAN DOĞRULANMALIDIR]`,
+| Hizmet | Amaç | Sağlayıcı |
+| --- | --- | --- |
+| Vercel Web Analytics | Anonim sayfa ziyareti istatistikleri (hangi sayfaların görüntülendiği) | Vercel Inc. (ABD) |
+| Vercel Speed Insights | Sayfa hızı ve performans ölçümü (Core Web Vitals) | Vercel Inc. (ABD) |
+
+Bu hizmetler çerez kullanmaz; ziyaretler kimliğinizle eşleştirilmeden toplu olarak sayılır. Yalnızca çerez bildiriminde "Kabul et" demeniz veya "Çerez tercihleri" penceresinde "Analitik" seçeneğini açmanız hâlinde yüklenir; onay vermezseniz hiç çalıştırılmaz. Onayınızı sayfanın alt kısmındaki "Çerez tercihleri" bağlantısından dilediğiniz zaman geri alabilirsiniz. [HUKUK DANIŞMANI TARAFINDAN DOĞRULANMALIDIR]`,
   },
   terms: {
     key: 'terms',

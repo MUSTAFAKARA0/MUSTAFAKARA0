@@ -11,7 +11,7 @@
 | 3 | Etkileşim sayaçları | günlük değişen anonim oturum özeti; ilan görüntüleme, tıklama | istatistik | `property_events` | Kişiyi tanımlamaz. |
 | 4 | Çerez tercihi, favoriler, karşılaştırma | tercih ve ilan kimlikleri | kullanıcı deneyimi | yalnızca ziyaretçinin tarayıcısı (localStorage) | Sunucuya gönderilmez. |
 | 5 | Vercel Web Analytics | sayfa görüntüleme (çerezsiz, kimlik yok) | istatistik | Vercel (ABD/AB) | Yalnızca "analitik" çerez tercihi onaylanırsa yüklenir. |
-| 6 | Vercel Speed Insights | sayfa performans ölçümleri (çerezsiz) | performans | Vercel | Onaysız yüklenir (kişisel veri yok). **Hukukçu kararı:** onaya bağlanmalı mı. |
+| 6 | Vercel Speed Insights | sayfa performans ölçümleri (çerezsiz) | performans | Vercel | Web Analytics ile aynı: yalnızca "analitik" çerez tercihi onaylanırsa yüklenir (kiracı siteleri ve KARAYS sayfası). |
 | 7 | Hata izleme (isteğe bağlı Sentry / webhook) | hata mesajı, sayfa yolu; e-posta/telefon maskelenir | hata giderme | Sentry (yurt dışı) | Kişisel veri gönderilmemesi için maskeleme var. |
 | 8 | Talep bildirim e-postası (Resend) | varsayılan: kişisel veri **yok** | ofisi haberdar etme | Resend (ABD) | `NOTIFY_EMAIL_DETAILS=full` kişisel veri içerir → **yurt dışına aktarım** (KVKK m.9). **Hukukçu kararı** olmadan açmayın. |
 | 9 | Panel kullanıcıları | ad, e-posta, giriş kayıtları, MFA faktörü | yetkilendirme, güvenlik | Supabase Auth, `audit_logs` | Denetim kayıtlarında e-posta maskelenir; 2 yıl saklama. |

@@ -42,7 +42,8 @@ const schema = z
     company: optional(160),
     city: optional(80),
     message: optional(3000),
-    kvkk: z.literal(true, { message: 'Devam etmek için aydınlatma metnini onaylayın.' }),
+    // Aydınlatma metninin okunduğunu bildirir; açık rıza DEĞİLDİR (hizmet açık rızaya bağlanmaz)
+    kvkk: z.literal(true, { message: 'Devam etmek için aydınlatma metnini okuduğunuzu işaretleyin.' }),
   })
   .refine((d) => d.email || d.phone, { message: 'E-posta veya telefon bilgilerinden en az birini yazın.', path: ['email'] });
 

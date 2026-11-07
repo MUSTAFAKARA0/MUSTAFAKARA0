@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { FacebookIcon, InstagramIcon, LinkedinIcon, TikTokIcon, XIcon, YoutubeIcon } from '@/components/common/brand-icons';
 import { Logo } from '@/components/brand/logo';
-import { CookiePreferencesLink } from '@/components/layout/site-extras';
+import { CookiePreferencesLink } from '@/components/common/cookie-consent';
 import { telHref, whatsappHref } from '@/lib/contact-links';
 import { formatPhoneDisplay } from '@/lib/format';
 import { formatOpeningHours, parseOpeningHours } from '@/modules/content/hours';

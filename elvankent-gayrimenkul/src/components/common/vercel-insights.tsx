@@ -27,17 +27,18 @@ function subscribe(callback: () => void) {
 
 /**
  * Vercel Speed Insights (Core Web Vitals: LCP, INP, CLS) ve Web Analytics.
- * Yalnızca Vercel'de çalışır (VERCEL=1). İkisi de çerez kullanmaz ve kişisel veri
- * toplamaz; Web Analytics yine de ziyaretçi "analitik" çerez tercihini onayladıysa
- * yüklenir. Speed Insights sayfa performansını ölçer (hukuk incelemesi için
- * docs/LEGAL_DATA_MAP.md).
+ * Yalnızca Vercel'de çalışır (VERCEL=1). İkisi de çerez kullanmaz; yine de ikisi de
+ * yalnızca ziyaretçi "Analitik" tercihini onayladıysa yüklenir (onaysız hiçbir ölçüm
+ * betiği çalışmaz; çerez bildirimi ve çerez politikası bu davranışı anlatır — bkz.
+ * common/cookie-consent.tsx, modules/content/default-pages.ts, docs/LEGAL_DATA_MAP.md).
  */
 export function VercelInsights() {
   const consent = useSyncExternalStore(subscribe, analyticsConsent, () => false);
+  if (!consent) return null;
   return (
     <>
       <SpeedInsights />
-      {consent && <Analytics />}
+      <Analytics />
     </>
   );
 }
