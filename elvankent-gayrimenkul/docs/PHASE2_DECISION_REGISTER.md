@@ -53,9 +53,11 @@
 | D-13 | Alan adı stratejisi | P0 | Production açılışı | PF-05, PF-06 | **Karar verildi (02.11.2026)** — müşteri siteleri kendi alan adlarıyla açılır; alt kararlar açık |
 | D-14 | Dal ve yayın stratejisi | P0 | Production açılışı | PF-04, PF-11 | Bekliyor |
 | D-15 | Güvenlik başlıkları ve görüntü yüzeyi (CSP, HSTS, SVG) | P1 | Sonraki faz | SEC-02, PF-10, SEC-06 | Bekliyor |
-| D-16 | Güvenlik güncellemesine onay | P0 | Hemen | PF-01 | Bekliyor |
+| D-16 | Güvenlik güncellemesine onay | P0 | Hemen | PF-01 | Karar verildi (O-4 yaması 01.11'de yayında) |
 | D-17 | İlk müşterilerde elle işletim ve otomasyon eşiği | P1 | İlk müşteri | OPS-03 | Bekliyor |
 | D-18 | Olay/destek sorumlusu ve hizmet taahhüdü | P1 | İlk müşteri | PF-07, PF-12, OPS-04, SEC-04 | Bekliyor |
+| D-19 | KARAYS'i hukuken kim satıyor (şirket türü, unvan, kod ve marka sahipliği) | P0 | İlk sözleşme/fatura öncesi | 07.11 PDF analizi | Bekliyor |
+| D-20 | EİDS (Elektronik İlan Doğrulama Sistemi) ve yetki belgesi alanları | P1 | İlk ofis müşterisi | 07.11 PDF analizi | Bekliyor |
 
 Öncelik ölçeği eş belgedekiyle aynı:
 
@@ -708,3 +710,26 @@ Karar verildikçe ilgili maddeye **"Karar: … (tarih)"** satırı eklenir ve ta
   - incident-response.md'de ad, kanal ve saatler yazılı.
   - Sözleşmede destek maddesi var.
   - Test uyarısı sorumluya ulaştı.
+
+
+### D-19 · KARAYS'i hukuken kim satıyor
+
+- **ID:** D-19
+- **Mevcut durum:** Yasal metinlerde veri sorumlusu olarak "KARAYS Gayrimenkul Teknolojileri" yazıyor; bu adla kayıtlı bir şirket yok. Satışı yapacak
+  kişi/şirket, şahıs şirketi olup olmayacağı, kodun ve markanın kime ait olduğu yazılı değil. KARAYS profilinde unvan, VKN, MERSİS alanı yok.
+- **Kanıt:** 07.11 PDF analizleri (KARAYS_84_Sayfa, KARAYS_Hukuk_KVKK); `src/modules/karay/legal.ts`, `src/modules/karay/profile-schema.ts`.
+- **Risk:** Sözleşme, fatura ve KVKK metinlerinde yanlış taraf; 6563 m.3 satıcı bilgisi yükümlülüğü; fikrî mülkiyet belirsizliği.
+- **Öncelik:** P0 (ödeme alınmadan önce)
+- **Benim vermem gereken karar:** satıcı kişi/şirket ve türü; unvan, adres, VKN, MERSİS (şirketse), KEP; kodun ve markanın sahibi;
+  kurucunun mevcut statüsünden doğan olası kısıtlar (yazılı hukuki görüş); faaliyet kodu (mali müşavir).
+
+### D-20 · EİDS ve yetki belgesi
+
+- **ID:** D-20
+- **Mevcut durum:** Kodda ve belgelerde EİDS geçmiyor; ofis ayarlarında yetki belgesi numarası alanı yok; sitede "doğrulanmış ilan" iddiası yok (iyi).
+- **Kanıt:** 07.11 PDF analizleri; `src/components/admin/settings/company-form.tsx`.
+- **Risk:** Taşınmaz Ticareti Hakkında Yönetmelik ve Bakanlık EİDS duyuruları ofislerin kendi sitelerindeki ilanları da kapsıyorsa uyumsuzluk.
+- **Öncelik:** P1
+- **Benim vermem gereken karar:** avukatın görüşüyle: EİDS ofis sitelerine uygulanıyor mu; uygulanıyorsa ürün kapsamı (yetki belgesi no
+  alanı ve ilanda gösterimi, ilan başına doğrulama kaydı, resmî doğrulama olmadan "doğrulanmış" rozeti gösterilmemesi). Bakanlık duyuru
+  tarihleri resmî kaynaktan teyit edilmeli.
