@@ -1,0 +1,40 @@
+# KARAYS — gece yedeği izleme (YALNIZ OKUMA; KI-41 L5)
+#
+# Her gün öğleden sonra, son 30 saatte BAŞARIYLA biten ve gerçek "backup" işi koşmuş bir elvankent-backup koşusu var mı bakar.
+# Yoksa kırmızı biter: GitHub, zamanlanmış iş akışı başarısız olunca depo sahibine e-posta gönderir (sessiz kalan yedek görünür olur).
+# Sır kullanmaz, veritabanına ya da depolamaya bağlanmaz; yalnız GitHub Actions koşu listesini okur.
+# Not: zamanlanmış iş akışları yalnız varsayılan (production) dalda çalışır; gece yedeği 01:23 UTC'de başlar, GitHub gecikmesi 5–6 saati bulabilir.
+name: elvankent-yedek-izleme
+
+on:
+  schedule:
+    - cron: '47 13 * * *' # her gün 13:47 UTC (16:47 TR)
+  workflow_dispatch: {}
+
+permissions:
+  actions: read
+
+jobs:
+  izle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Son başarılı gece yedeği (≤ 30 saat, gerçek yedek işi)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api() { curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${GITHUB_REPOSITORY}/$1"; }
+          api "actions/workflows/elvankent-backup.yml/runs?status=success&per_page=10" > runs.json
+          bulundu=""
+          for kosu in $(python3 -c 'import json; print(" ".join(str(r["id"]) + "|" + r["updated_at"] for r in json.load(open("runs.json"))["workflow_runs"]))'); do
+            id=${kosu%%|*}; zaman=${kosu#*|}
+            if api "actions/runs/$id/jobs?per_page=100" | python3 -c 'import json,sys; j=json.load(sys.stdin)["jobs"]; sys.exit(0 if any(x["name"] == "backup" and x["conclusion"] == "success" for x in j) else 1)'; then
+              bulundu=$zaman; break
+            fi
+          done
+          [ -n "$bulundu" ] || { echo "::error title=Gece yedeği yok::Son 10 başarılı koşuda gerçek yedek işi bulunamadı (yedek kapalı olabilir)"; exit 1; }
+          yas=$(( $(date -u +%s) - $(date -u -d "$bulundu" +%s) ))
+          echo "Son gerçek yedek: $bulundu ($(( yas / 3600 )) saat önce)"
+          [ "$yas" -le 108000 ] || { echo "::error title=Gece yedeği gecikti::Son başarılı yedek 30 saatten eski: Actions › elvankent-backup koşularına bakın"; exit 1; }
+          echo "### Gece yedeği izleme: TAMAM ($(( yas / 3600 )) saat önce)" >> "$GITHUB_STEP_SUMMARY"
