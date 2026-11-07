@@ -3,6 +3,8 @@ import { isIndexable } from './src/lib/site-env';
 import { contentSecurityPolicy } from './src/lib/csp';
 import { storageImagePatterns } from './src/lib/image-remote-patterns';
 import { storageUrlFor } from './src/lib/supabase-origins';
+import { karayHostConfigFromEnv } from './src/platform/tenant/host';
+import { STATIC_ASSET_PATHS, hstsStaticHeaderRules } from './src/platform/tenant/hsts';
 
 /** Değişken değeri (baştaki/sondaki boşluk ve satır sonları atılır) */
 function envValue(name: string): string {
@@ -73,8 +75,12 @@ const securityHeaders = [
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()' },
-  { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+  // Strict-Transport-Security burada YOK: alan adına göre değişir (D-15/PF-10). src/proxy.ts her yanıta
+  // hstsForHost ile ekler; proxy'nin atladığı yollar için aşağıdaki STATIC_ASSET_PATHS kuralları.
 ];
+
+// Proxy'nin atladığı statik yollar (STATIC_ASSET_PATHS) için aynı alan adı kararı
+const hstsStaticRules = hstsStaticHeaderRules(STATIC_ASSET_PATHS, karayHostConfigFromEnv(process.env));
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
@@ -115,6 +121,7 @@ const nextConfig: NextConfig = {
     );
     return [
       { source: '/:path*', headers: securityHeaders },
+      ...hstsStaticRules,
       { source: '/site-onizleme', headers: previewHeaders },
       // Ofis tasarım önizlemesi: yalnızca ofis panelinin kendi sayfasında (aynı köken) çerçevelenir
       { source: '/site-onizleme/ofis', headers: previewHeaders },
