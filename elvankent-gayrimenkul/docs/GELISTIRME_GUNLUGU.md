@@ -4,19 +4,19 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 > Depo herkese açıktır. Buraya proje veya dağıtım kimliği, ortam değişkeni değeri ya da varlığı, alan adı ayarı, kayıt sayısı veya sır yazılmaz.
 
-## Güncel durum (02.11.2026, K-53)
+## Güncel durum (07.11.2026, K-67)
 
 | Konu | Durum |
 | --- | --- |
-| Production dalı | `d6113e6` (03.11, PR #6); önceki `2eeb5e1` (02.11.2026 18:23 TR, PR #5: tanıtım videosu + Aşama 4 iş akışı). Vercel production READY, `SENTRY_DSN` tanımlı; geri dönüş adayı `6b698e9`. Önceki: `6b698e9` (PR #4), `a0f0a67` (PR #3), `74013a5` (KARAY-01), `650fd4e` (O-4 güvenlik yaması) |
-| Çalışma dalı | `claude/karays-mission-control-vn8g65`, production ile aynı noktadan devam ediyor (02.11 fast-forward) |
-| Son kod commit'i | `2eeb5e1` (production'daki kod) |
-| Canlı veritabanı | 39 migration: 21 temel + O-5a (9) + KARAYS marka + Aşama 3 (4) + Aşama 4 medya (4) — hepsi 02.11. `enforce_subscription_limits` = false. Bekleyen migration yok |
-| CI | Son yeşil: #181 (`666d515`), #179 (`236ef1c`), #177 (`1d79589`, production birleştirmesi). Her push sonrası koşu bu günlüğe yazılır |
-| Yedek | Gece yedeği (R2) çalışıyor: zamanlanmış #49; O-5 öncesi elle #50–#52. Gerçek geri yükleme provası KI-24 #2 başarılı |
-| Güvenlik | Canlıya yazan iş akışları sahip onaylı ortamda (`o5a-uygula`, `ki23-canli-denetim`: Required reviewers). O-6: geri dönüşü Claude önerir, sahip onaylar, Claude Vercel'de uygular |
-| Açık kapılar | Müşteri alan adı bağlama (müşteri onayı + DNS) · D-11 ücretli planlar · OPS-02 bayrağı (D-04/D-05 alt kararları) |
-| Bekleyen kararlar | D-04/D-05 alt kararları (hatırlatma zamanları, salt okunur kapsamı, saklama süresi — hukuki görüş) · D-01…D-03, D-06…D-14, D-16…D-18 ([PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md)) |
+| Production dalı | `d6113e6` (03.11, PR #6: medya düzeltmeleri, video sesi, KI-40, KI-41 Aşama 1). Vercel production READY; geri dönüş adayı `2eeb5e1` (PR #5). Önceki: `6b698e9` (PR #4), `a0f0a67` (PR #3), `74013a5`, `650fd4e` |
+| Çalışma dalı | `claude/karays-mission-control-vn8g65` (production'ın önünde: yedek izleme iş akışı ve belgeler) |
+| Canlı veritabanı | 39 migration (hepsi 02.11). `enforce_subscription_limits` = false. Bekleyen migration yok (KI-42 için hazırlanacak) |
+| Alan adı ve e-posta | karays.com siteye bağlı (K-61); e-posta Resend ile `bildirim@karays.com` (K-60) |
+| CI | Son yeşil: #203 (`e50bdab`), #198 (`f67815a`, PR #6'nın içeriği). Her push sonrası koşu bu günlüğe yazılır |
+| Yedek | Gece yedeği `uretim-yedek` ortamıyla (yalnız production dalı): #54–#58 (03–07.11) yeşil. Gerçek geri yükleme provası KI-24 #2 (O-5 öncesi yedekle) başarılı; güncel şemayla tekrar önerilir |
+| Güvenlik | Kural seti (silme/zorla gönderim kapalı), `o5a-uygula` dal sınırı ve onay, KI-40 kapandı. KI-41 Aşama 3–6 sahipte ([KI41_GUVENLIK_PLANI.md](KI41_GUVENLIK_PLANI.md)) |
+| Açık kapılar | D-11 ücretli planlar · KI-41 Aşama 3–4 · hukuk/KVKK (D-10) · müşteri alan adı (HSTS düzeltmesiyle) · OPS-02 (D-04/D-05 alt kararları) |
+| Bekleyen kararlar | [PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md): D-01…D-03, D-06…D-12, D-14, D-16…D-18; D-04/D-05 alt kararları |
 
 **Kalan işler:** [KALAN_ISLER.md](KALAN_ISLER.md) · **Sahibin adımları:** [SAHIP_ADIMLARI.md](SAHIP_ADIMLARI.md).
 
