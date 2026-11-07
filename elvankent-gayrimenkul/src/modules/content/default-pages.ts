@@ -93,7 +93,14 @@ Kişisel verileriniz KVKK'nın 5. maddesinin 2. fıkrasında yer alan "bir sözl
 
 ## 5. Aktarım
 
-Kişisel verileriniz, yalnızca yukarıdaki amaçlarla sınırlı olmak üzere barındırma ve veritabanı hizmeti alınan iş ortaklarına (bulut altyapı sağlayıcıları) ve yasal olarak yetkili kamu kurum ve kuruluşlarına aktarılabilir. Sunucuların yurt dışında bulunması hâlinde aktarım, KVKK'nın 9. maddesine uygun olarak gerçekleştirilir. [SAĞLAYICI VE SUNUCU KONUMU BİLGİSİ EKLENMELİDİR]
+Kişisel verileriniz yalnızca yukarıdaki amaçlarla sınırlı olmak üzere aşağıdaki alıcılara aktarılabilir:
+
+- Talebinizle ilgilenen ofis çalışanlarımız ve danışmanlarımız
+- Web sitesi ve yönetim yazılımı hizmet sağlayıcımız **KARAYS** ([KARAYS İŞLETME UNVANI]). KARAYS, verilerinizi yalnızca {{sirket}} adına ve talimatlarımız doğrultusunda **veri işleyen** sıfatıyla işler; veri sorumlusu {{unvan}}'dır.
+- KARAYS'ın hizmeti sunarken kullandığı alt veri işleyenler: Supabase (veritabanı ve dosya depolama; sunucu konumu AB, Frankfurt / eu-central-1), Vercel (web sitesinin barındırılması; uygulama sunucusu AB, Frankfurt / fra1, içerik dağıtım ağı AB ve ABD dahil küresel), Resend (yeni talep bildirim e-postalarının iletilmesi), Sentry (hata kayıtlarının tutulması; e-posta ve telefon bilgileri maskelenir), Cloudflare R2 (şifreli yedeklerin saklanması) ve GitHub Actions (yedekleme işleminin çalıştırılması)
+- Talep edilmesi hâlinde, yasal olarak yetkili kamu kurum ve kuruluşları
+
+Veritabanı ve uygulama sunucuları Türkiye dışında, Avrupa Birliği'nde (Almanya, Frankfurt) bulunur; bazı alt veri işleyenler ABD'de hizmet verir. Bu nedenle kişisel verileriniz yurt dışına aktarılmaktadır. Yurt dışına aktarım, KVKK'nın 9. maddesinde öngörülen uygun güvencelerden biri olan, Kişisel Verileri Koruma Kurulu tarafından ilan edilen standart sözleşmenin imzalanması ve sözleşmenin Kurum'a bildirilmesi yoluyla gerçekleştirilir. [HUKUK DANIŞMANI TARAFINDAN DOĞRULANMALIDIR: güvence türü, sözleşme ve bildirim tarihleri]
 
 ## 6. Toplama yöntemi
 
@@ -105,7 +112,21 @@ Talepler, sonuçlanmasından itibaren [SÜRE] boyunca saklanır; sürenin sonund
 
 ## 8. Haklarınız
 
-KVKK'nın 11. maddesi uyarınca kişisel verilerinizin işlenip işlenmediğini öğrenme, bilgi talep etme, düzeltilmesini veya silinmesini isteme, itiraz etme ve zararın giderilmesini talep etme haklarına sahipsiniz. Başvurularınızı **{{eposta}}** adresine veya yazılı olarak {{adres}} adresine iletebilirsiniz.`,
+KVKK'nın 11. maddesi uyarınca veri sorumlusuna başvurarak:
+
+- a) Kişisel verilerinizin işlenip işlenmediğini öğrenme,
+- b) Kişisel verileriniz işlenmişse buna ilişkin bilgi talep etme,
+- c) Kişisel verilerinizin işlenme amacını ve bunların amacına uygun kullanılıp kullanılmadığını öğrenme,
+- ç) Yurt içinde veya yurt dışında kişisel verilerinizin aktarıldığı üçüncü kişileri bilme,
+- d) Kişisel verilerinizin eksik veya yanlış işlenmiş olması hâlinde bunların düzeltilmesini isteme,
+- e) KVKK'nın 7. maddesinde öngörülen şartlar çerçevesinde kişisel verilerinizin silinmesini veya yok edilmesini isteme,
+- f) (d) ve (e) bentleri uyarınca yapılan işlemlerin, kişisel verilerinizin aktarıldığı üçüncü kişilere bildirilmesini isteme,
+- g) İşlenen verilerin münhasıran otomatik sistemler vasıtasıyla analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme,
+- ğ) Kişisel verilerinizin kanuna aykırı olarak işlenmesi sebebiyle zarara uğramanız hâlinde zararın giderilmesini talep etme
+
+haklarına sahipsiniz.
+
+Başvurularınızı Türkçe ve yazılı olarak {{adres}} adresine elden veya posta yoluyla, kayıtlı elektronik posta (KEP) ile **{{kep_adresi}}** adresine ya da daha önce bize bildirdiğiniz ve sistemimizde kayıtlı e-posta adresinizden **{{eposta}}** adresine iletebilirsiniz. Başvurunuz, talebin niteliğine göre en geç **30 gün** içinde ücretsiz olarak sonuçlandırılır (KVKK m.13); işlemin ayrıca bir maliyet gerektirmesi hâlinde Kurul'ca belirlenen tarifedeki ücret alınabilir. Web sitesi hizmet sağlayıcımız KARAYS'a ulaşan başvurular gecikmeksizin tarafımıza iletilir.`,
   },
   privacy: {
     key: 'privacy',
@@ -118,7 +139,7 @@ KVKK'nın 11. maddesi uyarınca kişisel verilerinizin işlenip işlenmediğini 
 ## Topladığımız bilgiler
 
 - Formlarla gönüllü olarak paylaştığınız ad, telefon, e-posta ve mesaj bilgileri
-- İlan görüntüleme ve iletişim tıklamaları gibi anonim kullanım istatistikleri (çerez kullanılmadan)
+- İlan görüntüleme ve iletişim tıklamaları gibi kullanım istatistikleri (çerez kullanılmadan). Sayım, IP adresi ve tarayıcı bilgisinin günlük değişen, geri döndürülemez özetiyle yapılır; bu özet kimliğinizi doğrudan belirlemez, ancak anonim değil **takma adlı** (pseudonymous) veridir ve kişisel veri olarak korunur.
 - Güvenlik amacıyla IP adresinizin geri döndürülemez özeti (ham IP adresi saklanmaz)
 
 ## Favoriler ve karşılaştırma listesi
@@ -127,8 +148,13 @@ Favorilerinize ve karşılaştırma listenize eklediğiniz ilanlar yalnızca ken
 
 ## Üçüncü taraf hizmetler
 
-- Veritabanı ve dosya depolama: [SAĞLAYICI ADI]
-- Barındırma: [SAĞLAYICI ADI]
+Web sitemiz ve yönetim yazılımımız, KARAYS tarafından veri işleyen sıfatıyla sağlanır. Kullanılan hizmetler:
+
+- Veritabanı ve dosya depolama: Supabase (AB, Frankfurt)
+- Barındırma: Vercel (uygulama sunucusu AB, Frankfurt; içerik dağıtım ağı AB/ABD)
+- Talep bildirim e-postası: Resend
+- Hata kaydı: Sentry (e-posta ve telefon bilgileri maskelenir)
+- Yedek saklama: Cloudflare R2; yedekleme işlemi: GitHub Actions
 - Harita görüntüleri: [HARİTA SAĞLAYICISI] (görüntüler sunucumuz üzerinden alınır, tarayıcınız sağlayıcıya doğrudan bağlanmaz)
 - WhatsApp ve sosyal medya paylaşım bağlantıları yalnızca tıkladığınızda ilgili hizmete yönlendirir.
 
@@ -138,7 +164,7 @@ Verileriniz şifreli bağlantı (HTTPS) üzerinden iletilir; veritabanı erişim
 
 ## İletişim
 
-Gizlilikle ilgili sorularınız için **{{eposta}}** adresinden bize ulaşabilirsiniz.`,
+Yurt dışına aktarım ve KVKK kapsamındaki haklarınızla ilgili ayrıntılar [KVKK Aydınlatma Metni](/kvkk)'nde yer alır. Gizlilikle ilgili sorularınız için **{{eposta}}** adresinden bize ulaşabilirsiniz.`,
   },
   cookies: {
     key: 'cookies',
