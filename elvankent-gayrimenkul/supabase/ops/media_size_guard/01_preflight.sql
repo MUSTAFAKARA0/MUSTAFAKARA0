@@ -69,6 +69,18 @@ select sira, kontrol, deger, durum from (
            false, false, '') columns n text path 'n') x limit 1), 'yok'),
          'BİLGİ: E mevcut nesneleri değiştirmez; 0 değilse bu satırlar sonlandırmada gerçek boyutla sayılır'
   union all
+  select 12, 'Storage gerçek boyutu yazıyor mu: son 30 günde media-originals''a kullanıcı oturumuyla yazılmış nesne / metadata.size sayısal olmayan  [KAYDET]',
+         coalesce((select x.n from xmltable('/table/row' passing query_to_xml(
+           'select count(*) || '' / '' || count(*) filter (where coalesce(metadata ->> ''size'', '''') !~ ''^[0-9]{1,18}$'') as n
+              from storage.objects where bucket_id = ''media-originals'' and owner_id is not null and created_at > now() - interval ''30 days''',
+           false, false, '') columns n text path 'n') x limit 1), 'yok'),
+         case when coalesce((select x.n from xmltable('/table/row' passing query_to_xml(
+                'select count(*) filter (where coalesce(metadata ->> ''size'', '''') !~ ''^[0-9]{1,18}$'') as n
+                   from storage.objects where bucket_id = ''media-originals'' and owner_id is not null and created_at > now() - interval ''30 days''',
+                false, false, '') columns n text path 'n') x limit 1), '0') = '0'
+              then 'TAMAM (0 ise Storage gerçek boyutu yazıyor; ilk sayı 0 ise kanıt yok — canlı deneme (a)/(b) zorunlu)'
+              else 'DUR: Storage bazı nesnelerde metadata.size yazmıyor; E bu nesneleri bildirilen boyutla karşılaştıramaz' end
+  union all
   select 10, '1 dakikadan uzun açık işlem',
          (select count(*)::text from pg_stat_activity where backend_type = 'client backend' and xact_start < now() - interval '1 minute' and pid <> pg_backend_pid()),
          case when (select count(*) from pg_stat_activity where backend_type = 'client backend' and xact_start < now() - interval '1 minute' and pid <> pg_backend_pid()) = 0
