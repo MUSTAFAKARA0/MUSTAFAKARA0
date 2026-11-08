@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { isSameOrigin } from '@/lib/same-origin';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getRequestFingerprint } from '@/lib/request';
+import { getTenantFromRequest } from '@/platform/tenant/tenant';
 
 const bodySchema = z.object({
   propertyId: z.uuid(),
@@ -34,6 +35,17 @@ export async function POST(request: Request) {
 
   const supabase = createServiceClient();
   if (!supabase) return noContent;
+  // P0-3 (KI-46 denetimi): olay yalnız isteğin geldiği sitenin (kiracının) ilanı için sayılır; A ofisinin sitesinden
+  // B ofisinin ilan sayaçları şişirilemez. Kiracı, proxy'nin sunucuda hesapladığı başlıktan çözülür (istemci değiştiremez).
+  const tenant = await getTenantFromRequest();
+  if (!tenant) return noContent;
+  const { data: owned, error: ownedError } = await supabase
+    .from('properties')
+    .select('id')
+    .eq('id', parsed.data.propertyId)
+    .eq('organization_id', tenant.id)
+    .maybeSingle();
+  if (ownedError || !owned) return noContent;
   const { sessionHash } = await getRequestFingerprint();
   await supabase.rpc('track_event', {
     p_property_id: parsed.data.propertyId,

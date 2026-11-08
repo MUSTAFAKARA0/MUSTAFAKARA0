@@ -325,3 +325,20 @@ async function loginPlatform(page: Page) {
   await page.getByRole('button', { name: 'Giriş yap' }).click();
   await expect(page).toHaveURL(/\/platform$/);
 }
+
+test('SURF-12: ilan sayacı yalnız kendi sitesinden — başka ofisin alan adından gönderilen olay sayılmaz (KI-46 denetimi)', async () => {
+  // Varsayılan kiracının (localhost) yayındaki bir ilanı; olay önce karşı kiracının alan adından, sonra kendi adresinden gönderilir
+  const def = await service!.from('organizations').select('id').eq('is_default', true).single();
+  expect(def.error).toBeNull();
+  const prop = await service!.from('properties').select('id').eq('organization_id', def.data!.id).eq('status', 'published').is('deleted_at', null).limit(1).single();
+  expect(prop.error).toBeNull();
+  const count = async () =>
+    (await service!.from('property_events').select('id', { count: 'exact', head: true }).eq('property_id', prop.data!.id).eq('event_type', 'share')).count ?? 0;
+  const send = (host: string) =>
+    raw(host, '/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: Buffer.from(JSON.stringify({ propertyId: prop.data!.id, event: 'share' })) });
+  const before = await count();
+  expect((await send(tenantHost())).status).toBe(204);
+  expect(await count(), 'başka ofisin sitesinden gelen olay sayılmamalı').toBe(before);
+  expect((await send(`localhost:${PORT}`)).status).toBe(204);
+  await expect.poll(count, { message: 'kendi sitesinden gelen olay sayılmalı (kontrol)' }).toBe(before + 1);
+});
