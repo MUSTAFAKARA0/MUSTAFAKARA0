@@ -252,7 +252,7 @@ test('P0-8 yetki belgesi numarası: kayıt sitede alt bilgide görünür; sütun
   await form.getByLabel('Yetki belgesi numarası').fill(` ${no.slice(0, 4)} ${no.slice(4)} `);
   await form.getByRole('button', { name: 'Kaydet' }).click();
   await expect(page.getByText('Yetki belgesi numarası kaydedildi')).toBeVisible();
-  await expect.poll(async () => (await (await page.request.get('/')).text()).includes(`Yetki belgesi no: ${no}`), { timeout: 30_000 }).toBe(true);
+  await expect.poll(async () => (await (await page.request.get('/')).text()).replace(/<!-- -->/g, '').includes(`Yetki belgesi no: ${no}`), { timeout: 30_000 }).toBe(true);
   // Geçersiz biçim reddedilir
   await form.getByLabel('Yetki belgesi numarası').fill('12<a>');
   await form.getByRole('button', { name: 'Kaydet' }).click();
@@ -261,6 +261,6 @@ test('P0-8 yetki belgesi numarası: kayıt sitede alt bilgide görünür; sütun
   await form.getByLabel('Yetki belgesi numarası').fill('');
   await form.getByRole('button', { name: 'Kaydet' }).click();
   await expect(page.getByText('Yetki belgesi numarası kaydedildi')).toBeVisible();
-  await expect.poll(async () => (await (await page.request.get('/')).text()).includes('Yetki belgesi no:'), { timeout: 30_000 }).toBe(false);
+  await expect.poll(async () => (await (await page.request.get('/')).text()).replace(/<!-- -->/g, '').includes('Yetki belgesi no:'), { timeout: 30_000 }).toBe(false);
 });
 
