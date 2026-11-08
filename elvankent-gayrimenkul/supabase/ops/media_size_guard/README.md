@@ -23,6 +23,11 @@ kovasında, kurum klasöründe, sahibi dolu (kullanıcı oturumu ya da imzalı a
 1. `../media_storage_slots/` (C) uygulanmış (E `apply C first` ile durur). Geri dönüşte **E, C'den önce** geri alınır
    (C'nin 05'i E varken `DUR: önce E geri alınır` ile durur).
 2. 01'de `DUR` yok; 02 saklandı; taze tam yedek alındı; yazılı sahip onayı.
+3. **Düşük trafikte çalıştırın:** CREATE/DROP TRIGGER `storage.objects` üzerinde kısa bir kilit alır; bu sürede yüklemeler
+   bekler (okumalar etkilenmez). `lock_timeout` 3 sn: kilit alınamazsa hiçbir şey değişmez, sakin anda yeniden deneyin.
+   01'in 10. satırı (uzun işlem) yalnız `pg_read_all_stats` yetkili rolde güvenilirdir; SQL Editor'ün `postgres` rolü yeterlidir.
+
+Tetikleyici `WHEN (media-originals, sahibi dolu)` koşuluyla yalnız ilgili yazımlarda çalışır; diğer kovalarda ek maliyet yoktur.
 
 | Adım | Dosya | Ne yapar | Beklenen çıktı |
 |---|---|---|---|

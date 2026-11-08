@@ -93,7 +93,8 @@ revoke all on function public.media_storage_size_guard() from public, anon, auth
 drop trigger if exists media_storage_size_guard on storage.objects;
 create trigger media_storage_size_guard
   before insert or update on storage.objects
-  for each row execute function public.media_storage_size_guard();
+  for each row when (new.bucket_id = 'media-originals' and new.owner_id is not null)
+  execute function public.media_storage_size_guard();
 
 notify pgrst, 'reload schema';
 -- ---- gövde sonu ---------------------------------------------------------------------

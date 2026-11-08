@@ -20,8 +20,8 @@ select sira, kontrol, deger, durum from (
   select 2, 'media_storage_size_guard tetikleyici tanımı',
          coalesce((select pg_get_triggerdef(oid) from pg_trigger where tgname = 'media_storage_size_guard' and not tgisinternal and tgrelid = to_regclass('storage.objects') limit 1), 'yok'),
          case when exists (select 1 from pg_trigger where tgname = 'media_storage_size_guard' and not tgisinternal and tgrelid = to_regclass('storage.objects')
-                              and pg_get_triggerdef(oid) like 'CREATE TRIGGER media_storage_size_guard BEFORE INSERT OR UPDATE ON storage.objects FOR EACH ROW EXECUTE FUNCTION %media_storage_size_guard()')
-              then 'TAMAM' else 'HATA: BEFORE INSERT OR UPDATE / FOR EACH ROW beklenir' end
+                              and pg_get_triggerdef(oid) like 'CREATE TRIGGER media_storage_size_guard BEFORE INSERT OR UPDATE ON storage.objects FOR EACH ROW WHEN (((new.bucket_id = ''media-originals''::text) AND (new.owner_id IS NOT NULL))) EXECUTE FUNCTION %media_storage_size_guard()')
+              then 'TAMAM' else 'HATA: BEFORE INSERT OR UPDATE / FOR EACH ROW / WHEN (media-originals, sahibi dolu) beklenir' end
   union all
   select 3, 'media_storage_size_guard(): güvenlik modu ve search_path (security definer, boş search_path)',
          coalesce((select case when prosecdef then 'security definer' else 'security invoker' end || ' · ' || coalesce(array_to_string(proconfig, ','), 'ayar yok') from f), 'yok'),
