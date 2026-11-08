@@ -8,11 +8,11 @@
 
 | # | Kapı | Durum | Kanıt |
 |---|---|---|---|
-| A1 | Yeni ofis uçtan uca: konsoldan aç → sahip daveti → aktivasyon → alan adı → yayın → ilan + 2 fotoğraf → ziyaretçi bilgi + randevu talebi doğru ofise → danışman ekle, sınırlı yetki → telefonda taşma yok | kod; CI bekliyor | `tests/e2e/pilot-journey.spec.ts` PJ-1…PJ-7 |
+| A1 | Yeni ofis uçtan uca: konsoldan aç → sahip daveti → aktivasyon → alan adı → yayın → ilan + 2 fotoğraf → ziyaretçi bilgi + randevu talebi doğru ofise → danışman ekle, sınırlı yetki → telefonda taşma yok | ✓ kod (CI #220, 7/7) | `tests/e2e/pilot-journey.spec.ts` PJ-1…PJ-7 |
 | A2 | Kiracı izolasyonu (uygulama + veritabanı) bağımsız denetim; kritik/yüksek yok | ✓ kod (F canlıda değil) | KALAN_ISLER KI-46; CI #214/#218 |
 | A3 | Depolama kotası atlatılamaz | ✓ kod (E canlıda değil) | KI-42; CI #214 |
 | A4 | Yetki belgesi no alanı ve sitede gösterim | ✓ kod (G canlıda değil) | KI-47; CI #218 |
-| A5 | Pilot süresi: deneme bitişi konsoldan (1–365 gün), ödeme yok | kod; CI bekliyor | H, `tests/security/pilot-trial-end.test.mjs` PT-01…05 |
+| A5 | Pilot süresi: deneme bitişi konsoldan (1–365 gün), ödeme yok | ✓ kod (CI #220, 5/5; H canlıda değil) | H, `tests/security/pilot-trial-end.test.mjs` PT-01…05 |
 | A6 | Yedek + gerçek geri yükleme provası | ✓ | KI-22/KI-24 (02.11), gece yedekleri |
 | A7 | Hata izleme | kısmen | Sentry bağlı; deneme olayı sahip onayıyla (KI-35) |
 
