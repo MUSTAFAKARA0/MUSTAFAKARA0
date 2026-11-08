@@ -37,6 +37,18 @@ Tetikleyici `WHEN (media-originals, sahibi dolu)` koşuluyla yalnız ilgili yaz�
 | 4 | `04_postflight.sql` | Okur | Tüm satırlar `TAMAM` |
 | 5 | `05_rollback.sql` | Yalnız geri dönüşte | Sonra 01: 7. satır 0, 8. satır uygulama öncesiyle aynı |
 
+## Kapsanan yollar ve bilinen sınır (güvenlik incelemesi 08.11)
+
+- Standart imzalı yükleme (panelin FormData PUT'u), oturumla doğrudan yükleme ve **TUS** (eşik üstü): hepsi storage-api'nin
+  `completeUpload`'ından geçer; nesne satırı arka uçtan okunan gerçek boyut ve yükleyenin kimliğiyle yazılır → E denetler
+  (SZ-01…SZ-08). **Kopyalama** (`/object/copy`): storage-api hedefi kaynağın metadata'sıyla (boyut dahil) ve çağıranın kimliğiyle
+  baytlar kopyalanmadan önce denetler → E reddeder (v1.82.1 kaynağından doğrulandı).
+- **Bilinen sınır:** reddedilen yüklemenin arka uca yazılmış baytlarını storage-api kendi silme kuyruğuyla (`ObjectAdminDelete`)
+  siler; bu, her başarısız yüklemede (yetki reddi dahil) zaten kullanılan mekanizmadır ve E ile yeni değildir. Kuyruk çalışmazsa
+  baytlar satırsız kalır; satırsız nesneler kotada görünmez ve D süpürmesi (`storage.objects` üzerinden listeler) onları göremez.
+  Supabase barındırmalı projede kuyruk açıktır. İzleme önerisi (ayrı iş): Storage kullanımı ile `storage.objects` toplamının
+  aylık karşılaştırması. Kurum başına imza hız sınırı ayrı iş olarak değerlendirilir (bekleyen satır sınırı 50 zaten var).
+
 ## Canlı deneme (uygulamadan sonra, sahip)
 
 Panelde bir ilana normal bir fotoğraf yükleyin: yükleme ve işleme her zamanki gibi tamamlanmalı (dürüst yol). Kötüye kullanım

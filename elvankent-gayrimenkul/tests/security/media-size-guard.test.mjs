@@ -10,6 +10,10 @@
  *   SZ-04  reddedilen yüklemeden sonra aynı satıra doğru boyutla yükleme çalışır
  *   SZ-05  service_role (sahibi boş: geri yükleme --apply) etkilenmez
  *   SZ-06  tetikleyici fonksiyonu hiçbir istemciye açık değil; E, C yokken 'apply C first' ile durur; dosya sırası
+ *   SZ-07  panelin standart yolu (FormData, istek gövdesi dosyadan büyük): dürüst kabul, fazlası red
+ *   SZ-08  panelin TUS yolu (eşik üstü, iki parça): dürüst kabul, 1 bayt bildirim tamamlamada red
+ *   Kopyalama (POST /object/copy) ayrıca test edilmedi: storage-api v1.82.1 copyObject hedefi kaynağın metadata'sı (boyut
+ *   dahil) ve çağıranın kimliğiyle canUpload'dan geçirir; E bayt kopyalanmadan reddeder (kaynaktan doğrulandı).
  *
  * CI'da (CI=true) atlanmaz, hata verir.
  */
@@ -256,6 +260,75 @@ describe('SZ-05 service_role', { skip }, () => {
     const row = await pendingRow(1);
     assert.ifError((await service.storage.from('media-originals').upload(row.original, Buffer.alloc(4096, 9), { contentType: JPEG })).error);
     assert.equal(await objectSize(row.original), 4096);
+  });
+});
+
+/** Panelin standart yolu (upload-engine.ts standardUpload): imzalı adrese çok parçalı (FormData) PUT */
+async function panelStandardUpload(path, token, size) {
+  const encoded = path.split('/').map(encodeURIComponent).join('/');
+  const body = new FormData();
+  body.append('cacheControl', '3600');
+  body.append('', new Blob([Buffer.alloc(size, 6)], { type: JPEG }));
+  const res = await fetch(`${url}/storage/v1/object/upload/sign/media-originals/${encoded}?token=${encodeURIComponent(token)}`, {
+    method: 'PUT',
+    headers: { apikey: anonKey },
+    body,
+  });
+  await res.arrayBuffer();
+  return res.status;
+}
+
+/** Panelin devam ettirilebilir yolu (upload-engine.ts resumableUpload): TUS, imza başlığıyla, 6 MB parça */
+async function panelResumableUpload(path, token, size) {
+  const tus = await import('tus-js-client');
+  return new Promise((resolve) => {
+    const upload = new tus.Upload(Buffer.alloc(size, 8), {
+      endpoint: `${url}/storage/v1/upload/resumable/sign`,
+      headers: { 'x-signature': token, apikey: anonKey },
+      chunkSize: 6 * 1024 * 1024,
+      uploadDataDuringCreation: true,
+      retryDelays: [],
+      storeFingerprintForResuming: false,
+      metadata: { bucketName: 'media-originals', objectName: path, contentType: JPEG, cacheControl: '3600' },
+      onError: (error) => resolve({ ok: false, status: error?.originalResponse?.getStatus?.() ?? 0 }),
+      onSuccess: () => resolve({ ok: true }),
+    });
+    upload.start();
+  });
+}
+
+describe('SZ-07 panelin çok parçalı (FormData) yolu: istek gövdesi dosyadan büyük olsa da dürüst yükleme kabul', { skip }, () => {
+  test('bildirilen = dosya boyutu: kabul, depodaki boyut dosyanınki; bildirilenden büyük: red', async () => {
+    const honest = await pendingRow(3333);
+    const s1 = await sign(honest.original);
+    assert.ifError(s1.error);
+    const st = await panelStandardUpload(honest.original, s1.data.token, 3333);
+    assert.ok(st >= 200 && st < 300, `dürüst çok parçalı yükleme kabul edilmeli (HTTP ${st})`);
+    assert.equal(await objectSize(honest.original), 3333);
+    const liar = await pendingRow(1);
+    const s2 = await sign(liar.original);
+    assert.ifError(s2.error);
+    const st2 = await panelStandardUpload(liar.original, s2.data.token, 3333);
+    assert.ok(st2 >= 400, `bildirilenden büyük reddedilmeli (HTTP ${st2})`);
+    assert.equal(await objectSize(liar.original), null);
+  });
+});
+
+describe('SZ-08 panelin devam ettirilebilir (TUS) yolu, eşik üstü dosya', { skip }, () => {
+  const SIZE = 7 * 1024 * 1024; // RESUMABLE_THRESHOLD (6 MB) üstü: iki parça
+  test('bildirilen = dosya boyutu: TUS ile kabul; 1 bayt bildirip aynı dosya: tamamlamada red, nesne yok', async () => {
+    const honest = await pendingRow(SIZE);
+    const s1 = await sign(honest.original);
+    assert.ifError(s1.error);
+    const ok = await panelResumableUpload(honest.original, s1.data.token, SIZE);
+    assert.deepEqual(ok, { ok: true }, 'dürüst TUS yüklemesi kabul edilmeli');
+    assert.equal(await objectSize(honest.original), SIZE);
+    const liar = await pendingRow(1);
+    const s2 = await sign(liar.original);
+    assert.ifError(s2.error);
+    const bad = await panelResumableUpload(liar.original, s2.data.token, SIZE);
+    assert.equal(bad.ok, false, 'bildirilenden büyük TUS yüklemesi reddedilmeli');
+    assert.equal(await objectSize(liar.original), null);
   });
 });
 
