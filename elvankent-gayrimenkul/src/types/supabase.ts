@@ -2761,6 +2761,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      platform_set_trial_end: {
+        Args: { p_ends_at: string; p_org: string }
+        Returns: string
+      }
       platform_set_org_plan: {
         Args: {
           p_org: string

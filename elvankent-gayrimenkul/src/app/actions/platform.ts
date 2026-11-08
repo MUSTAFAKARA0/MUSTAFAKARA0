@@ -83,6 +83,27 @@ export async function setOrganizationPlan(orgId: string, plan: string, status: s
 }
 
 /**
+ * PILOT · güncel deneme aboneliğinin bitiş tarihini belirler (bekleyen migration H; plan/durum/limit değişmez).
+ * Tarih yerel gün olarak gelir (YYYY-MM-DD) ve o günün sonu (İstanbul, UTC+3) olarak kaydedilir. Sınır veritabanında.
+ */
+export async function setOrganizationTrialEnd(orgId: string, day: string): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const session = await requireSuperAdmin();
+    if (!isUuid(orgId)) throw new ActionError('Organizasyon bulunamadı.');
+    const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Geçerli bir tarih seçin.' }).parse(day);
+    const endsAt = new Date(`${date}T23:59:59+03:00`);
+    if (Number.isNaN(endsAt.getTime())) throw new ActionError('Geçerli bir tarih seçin.');
+    const { error } = await session.supabase.rpc('platform_set_trial_end', { p_org: orgId, p_ends_at: endsAt.toISOString() });
+    if (error?.message?.includes('invalid_trial_end')) throw new ActionError('Deneme bitişi en az 1 gün, en çok 365 gün sonrası olmalıdır.', 'invalid_trial_end');
+    if (error?.message?.includes('no_trial_subscription')) throw new ActionError('Bu ofisin etkin bir deneme aboneliği yok; önce planı "Deneme" durumunda atayın.', 'no_trial');
+    if (error?.code === 'PGRST202') throw new ActionError('Pilot süresi ayarı henüz etkin değil (bekleyen migration H).', 'trial_end_unavailable');
+    assertNoDbError(error);
+    refreshTenants(orgId);
+    return null;
+  }, 'Deneme (pilot) bitiş tarihi güncellendi.');
+}
+
+/**
  * Özel alan adı (P0.5) — KARAY tarafı. Aynı yaşam döngüsü ofis paneliyle ortaktır
  * (modules/domains/service): ekle (bekliyor) → TXT doğrulama → bağlantı → birincil / kaldır.
  * Süper admin ek olarak bağlantıyı (barındırmada kontrol ettikten sonra) elle onaylayabilir.

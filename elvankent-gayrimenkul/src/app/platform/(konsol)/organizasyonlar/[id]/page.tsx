@@ -5,7 +5,7 @@ import { CheckCircle2, Circle, ExternalLink, Globe, Settings2 } from 'lucide-rea
 import { AutoSaveSelect } from '@/components/panel/action-controls';
 import { AuditList } from '@/components/panel/audit-list';
 import { AdminPageHeader, EmptyPanel, Panel } from '@/components/panel/ui';
-import { PlanForm } from '@/components/platform/org-controls';
+import { PlanForm, TrialEndForm } from '@/components/platform/org-controls';
 import { OrgNoteForm } from '@/components/platform/karay-forms';
 import { PlatformDomainsPanel } from '@/components/platform/domains-panel';
 import { OwnerInvitationCard } from '@/components/platform/owner-invitation';
@@ -130,6 +130,7 @@ export default async function PlatformOrgPage({ params }: PageProps<'/platform/o
               {org.trial_ends_at && org.subscription_status === 'trialing' && <span className="text-muted-foreground">deneme bitişi {formatDate(org.trial_ends_at)}</span>}
             </p>
             <PlanForm orgId={org.id} plans={plans.map((p) => ({ id: p.id, name: p.name }))} current={org.plan_id} status={org.subscription_status} />
+            {org.subscription_status === 'trialing' && <TrialEndForm orgId={org.id} endsAt={org.trial_ends_at} />}
           </Panel>
 
           <Panel title="Alan adları" description="TXT ile doğrulanan ve KARAYS'a yönlendirilen (aktif) alan adında site açılır.">

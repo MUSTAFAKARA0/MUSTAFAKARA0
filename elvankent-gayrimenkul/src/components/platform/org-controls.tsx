@@ -5,7 +5,7 @@ import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/form-controls';
-import { createOrganization, setOrganizationPlan } from '@/app/actions/platform';
+import { createOrganization, setOrganizationPlan, setOrganizationTrialEnd } from '@/app/actions/platform';
 import { OwnerInvitationCard } from '@/components/platform/owner-invitation';
 
 export function PlanForm({ orgId, plans, current, status }: { orgId: string; plans: { id: string; name: string }[]; current: string | null; status: string | null }) {
@@ -38,7 +38,7 @@ export function PlanForm({ orgId, plans, current, status }: { orgId: string; pla
       </Field>
       <Field label="Abonelik durumu" htmlFor="org-sub">
         <Select id="org-sub" value={sub} onChange={(e) => setSub(e.target.value)}>
-          <option value="trialing">Deneme (14 gün)</option>
+          <option value="trialing">Deneme (14 gün; bitiş aşağıdan değiştirilir)</option>
           <option value="active">Aktif</option>
           <option value="past_due">Ödeme gecikmiş</option>
         </Select>
@@ -139,6 +139,36 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
           Organizasyonu oluştur
         </Button>
       </div>
+    </form>
+  );
+}
+
+/** PILOT · deneme (pilot) bitiş tarihi; yalnız abonelik "Deneme" durumundayken gösterilir */
+export function TrialEndForm({ orgId, endsAt }: { orgId: string; endsAt: string | null }) {
+  const router = useRouter();
+  const [day, setDay] = useState(endsAt ? new Date(endsAt).toLocaleDateString('sv-SE', { timeZone: 'Europe/Istanbul' }) : '');
+  const [pending, setPending] = useState(false);
+  const [, startTransition] = useTransition();
+  return (
+    <form
+      data-testid="trial-end-form"
+      className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setPending(true);
+        const res = await setOrganizationTrialEnd(orgId, day);
+        setPending(false);
+        if (!res.ok) return void toast.error(res.error);
+        toast.success(res.message ?? 'Güncellendi.');
+        startTransition(() => router.refresh());
+      }}
+    >
+      <Field label="Deneme / pilot bitişi" htmlFor="org-trial-end" hint="Ödeme alınmaz; yalnız panelde gösterilen deneme süresi değişir (en çok 365 gün).">
+        <Input id="org-trial-end" type="date" value={day} onChange={(e) => setDay(e.target.value)} required />
+      </Field>
+      <Button type="submit" variant="outline" loading={pending} disabled={!day}>
+        Bitişi kaydet
+      </Button>
     </form>
   );
 }
