@@ -14,6 +14,15 @@ begin;
 set local lock_timeout = '3s';
 set local statement_timeout = '30s';
 
+-- E (KI-42, media_size_guard) C'nin bakım penceresi tablosunu okur: C silinirse E her yüklemede hata verir
+do $sira$
+begin
+  if exists (select 1 from pg_trigger where tgname = 'media_storage_size_guard' and not tgisinternal) then
+    raise exception 'DUR: önce E geri alınır (media_size_guard/05_rollback.sql)';
+  end if;
+end
+$sira$;
+
 drop trigger if exists media_storage_slot_guard on storage.objects;
 drop policy if exists "media_originals_insert" on storage.objects;
 drop policy if exists "media_originals_update" on storage.objects;

@@ -59,7 +59,8 @@ with checks(sira, dosya, kosul) as (
   (36, 'pending/20261027000001_media_finalize_rpc.sql', to_regclass('public.media_file_queue') is not null),
   (37, 'pending/20261027000002_media_column_privileges.sql', exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'media_assets_pending_shape')),
   (38, 'pending/20261027000003_media_storage_slots.sql', to_regclass('public.media_overwrite_window') is not null),
-  (39, 'pending/20261031000001_media_stray_sweep.sql', exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'media_stray_objects'))
+  (39, 'pending/20261031000001_media_stray_sweep.sql', exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'media_stray_objects')),
+  (40, 'pending/20261108000001_media_size_guard.sql', exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'media_storage_size_guard'))
 ),
 mig as (select * from checks where sira <= 31),
 first_missing as (select min(sira) as s from mig where not kosul),
