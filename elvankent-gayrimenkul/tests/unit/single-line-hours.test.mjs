@@ -111,3 +111,22 @@ describe('openingHoursSchema (çalışma saatleri)', () => {
     assert.equal(companySchema.safeParse({ ...base, opening_hours: row(['mo']) }).success, true);
   });
 });
+
+describe('P0-8 licenseSchema (yetki belgesi numarası)', async () => {
+  const { licenseSchema } = await import('../../src/modules/content/settings-schema.ts');
+  test('boşluklar kırpılır, büyük harfe çevrilir; boş değer null', () => {
+    assert.equal(licenseSchema.parse({ license_no: ' 06 00 123 ' }).license_no, '0600123');
+    assert.equal(licenseSchema.parse({ license_no: 'ab-12' }).license_no, 'AB-12');
+    assert.equal(licenseSchema.parse({ license_no: '' }).license_no, null);
+  });
+  test('geçersiz biçim reddedilir (veritabanı kısıtıyla aynı: ^[0-9A-Z-]{3,20}$)', () => {
+    for (const bad of ['12', '12<a>', 'x'.repeat(21), '06/123', 'Ç12']) {
+      assert.equal(licenseSchema.safeParse({ license_no: bad }).success, false, bad);
+    }
+  });
+  test('pending migration G ile aynı desen', async () => {
+    const { readFileSync } = await import('node:fs');
+    const sql = readFileSync(new URL('../../supabase/pending/20261108000003_license_no.sql', import.meta.url), 'utf8');
+    assert.match(sql, /check \(license_no ~ '\^\[0-9A-Z-\]\{3,20\}\$'\)/);
+  });
+});

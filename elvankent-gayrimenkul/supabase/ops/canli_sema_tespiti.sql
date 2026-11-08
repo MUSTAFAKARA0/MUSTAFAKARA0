@@ -62,7 +62,8 @@ with checks(sira, dosya, kosul) as (
   (39, 'pending/20261031000001_media_stray_sweep.sql', exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'media_stray_objects')),
   (40, 'pending/20261108000001_media_size_guard.sql', exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'media_storage_size_guard')
                                                        and exists (select 1 from pg_trigger where tgname = 'media_storage_size_guard' and not tgisinternal and tgrelid = to_regclass('storage.objects'))),
-  (41, 'pending/20261108000002_tenant_member_guard.sql', exists (select 1 from pg_trigger where tgname = 'organization_members_target_guard' and not tgisinternal))
+  (41, 'pending/20261108000002_tenant_member_guard.sql', exists (select 1 from pg_trigger where tgname = 'organization_members_target_guard' and not tgisinternal)),
+  (42, 'pending/20261108000003_license_no.sql', exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'organization_settings' and column_name = 'license_no'))
 ),
 mig as (select * from checks where sira <= 31),
 first_missing as (select min(sira) as s from mig where not kosul),

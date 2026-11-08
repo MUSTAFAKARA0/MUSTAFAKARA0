@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 import { expect, test, type Page } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * Yönetici senaryoları (V2): giriş ve yetki, ilan sihirbazı (konum, fotoğraf
@@ -232,3 +233,34 @@ test('Test ilanı çöp kutusuna taşınır ve sitede artık görünmez', async 
     expect(res.status()).toBe(404);
   }).toPass({ timeout: 30_000 });
 });
+
+test('P0-8 yetki belgesi numarası: kayıt sitede alt bilgide görünür; sütun yoksa (eski şema) kart gizli', async ({ page }) => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  test.skip(!url || !key, 'Supabase anahtarları tanımlı değil');
+  const probe = await createClient(url!, key!, { auth: { persistSession: false } }).from('organization_settings').select('license_no').limit(1);
+  await login(page);
+  await page.goto('/admin/sirket');
+  await expect(page.getByRole('heading', { name: 'Marka ve görünüm' })).toBeVisible();
+  const form = page.getByTestId('license-form');
+  if (probe.error) {
+    // Bekleyen migration G uygulanmamış şema (CI database-legacy-schema): yeni kod formu bozmaz, kartı göstermez
+    await expect(form).toHaveCount(0);
+    return;
+  }
+  const no = `06${Date.now().toString().slice(-6)}`;
+  await form.getByLabel('Yetki belgesi numarası').fill(` ${no.slice(0, 4)} ${no.slice(4)} `);
+  await form.getByRole('button', { name: 'Kaydet' }).click();
+  await expect(page.getByText('Yetki belgesi numarası kaydedildi')).toBeVisible();
+  await expect.poll(async () => (await (await page.request.get('/')).text()).includes(`Yetki belgesi no: ${no}`), { timeout: 30_000 }).toBe(true);
+  // Geçersiz biçim reddedilir
+  await form.getByLabel('Yetki belgesi numarası').fill('12<a>');
+  await form.getByRole('button', { name: 'Kaydet' }).click();
+  await expect(form.getByText(/yalnız rakam, harf ve tire/)).toBeVisible();
+  // Temizle: boş değer numarayı kaldırır, sitede görünmez
+  await form.getByLabel('Yetki belgesi numarası').fill('');
+  await form.getByRole('button', { name: 'Kaydet' }).click();
+  await expect(page.getByText('Yetki belgesi numarası kaydedildi')).toBeVisible();
+  await expect.poll(async () => (await (await page.request.get('/')).text()).includes('Yetki belgesi no:'), { timeout: 30_000 }).toBe(false);
+});
+

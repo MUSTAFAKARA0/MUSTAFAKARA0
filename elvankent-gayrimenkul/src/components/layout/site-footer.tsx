@@ -184,6 +184,7 @@ export function SiteFooter({ tenant, regions, hasBlog, view }: { tenant: Tenant;
       <div className="container-page flex flex-col gap-4 py-6 text-[13px] text-inverse-foreground/60 md:flex-row md:items-center md:justify-between">
         <p>
           © {new Date().getFullYear()} {f.copyright ?? `${s.legal_name ?? s.display_name}. Tüm hakları saklıdır.`}
+          {s.license_no ? <span data-testid="license-no"> · Yetki belgesi no: {s.license_no}</span> : null}
         </p>
         <ul className="flex flex-wrap gap-x-5 gap-y-2">
           {legalLinks.map((l) => (

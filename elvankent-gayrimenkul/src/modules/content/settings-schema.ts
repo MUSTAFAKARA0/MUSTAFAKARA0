@@ -101,3 +101,18 @@ export const siteSchema = z.object({
 });
 
 export type SiteSettingsInput = z.input<typeof siteSchema>;
+
+/**
+ * P0-8 · Taşınmaz ticareti yetki belgesi numarası (organization_settings.license_no; bekleyen migration G).
+ * Boşluklar kırpılır, büyük harfe çevrilir; boş değer numarayı kaldırır. Veritabanı kısıtıyla aynı biçim.
+ */
+export const licenseSchema = z.object({
+  license_no: z
+    .string()
+    .max(40, { error: 'Yetki belgesi numarası çok uzun.' })
+    .transform((v) => v.replace(/\s+/g, '').toLocaleUpperCase('tr-TR'))
+    .refine((v) => v === '' || /^[0-9A-Z-]{3,20}$/.test(v), { error: 'Yetki belgesi numarası yalnız rakam, harf ve tire içerebilir (3–20 karakter).' })
+    .transform((v) => (v === '' ? null : v)),
+});
+
+export type LicenseInput = z.input<typeof licenseSchema>;

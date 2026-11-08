@@ -1037,6 +1037,7 @@ export type Database = {
           organization_id: string
           display_name: string
           legal_name: string | null
+          license_no: string | null
           tagline: string | null
           description: string | null
           service_area: string | null
@@ -1079,6 +1080,7 @@ export type Database = {
           organization_id: string
           display_name: string
           legal_name?: string | null
+          license_no?: string | null
           tagline?: string | null
           description?: string | null
           service_area?: string | null
@@ -1121,6 +1123,7 @@ export type Database = {
           organization_id?: string
           display_name?: string
           legal_name?: string | null
+          license_no?: string | null
           tagline?: string | null
           description?: string | null
           service_area?: string | null

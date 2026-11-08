@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { removeBrandingImage } from '@/app/actions/admin-settings';
 import { BrandingImageField } from '@/components/panel/branding-image-field';
 import { CompanyForm } from '@/components/admin/settings/company-form';
+import { LicenseForm } from '@/components/admin/settings/license-form';
 import { AdminPageHeader } from '@/components/panel/ui';
 import { parseOpeningHours } from '@/modules/content/hours';
 import { publicMapConfig } from '@/modules/maps/providers';
@@ -21,7 +22,13 @@ export const metadata: Metadata = { title: 'Marka ve görünüm' };
  */
 export default async function CompanySettingsPage() {
   const ctx = await requirePagePermission('settings.manage');
-  const [site, taxonomy] = await Promise.all([getSiteAdmin(ctx, ctx.org.id), getTaxonomy()]);
+  const [site, taxonomy, legal] = await Promise.all([
+    getSiteAdmin(ctx, ctx.org.id),
+    getTaxonomy(),
+    // P0-8: '*' — bekleyen migration G uygulanmamışsa sütun yoktur; o zaman kart gösterilmez (sorgu hata vermez)
+    ctx.supabase.from('organization_settings').select('*').eq('organization_id', ctx.org.id).maybeSingle(),
+  ]);
+  const licenseNo = legal.data && 'license_no' in legal.data ? ((legal.data as { license_no: string | null }).license_no ?? '') : null;
   if (!site) notFound();
   const s = site.brand;
   const pending = new Set(Object.keys(site.draft.brand));
@@ -83,6 +90,7 @@ export default async function CompanySettingsPage() {
           </div>
         }
       />
+      {licenseNo !== null && <LicenseForm initial={licenseNo} />}
     </>
   );
 }

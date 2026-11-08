@@ -87,7 +87,8 @@ export function footerModel({ tenant, view, hasBlog, regions }: FooterPatternInp
     hours: f.showHours ? formatOpeningHours(parseOpeningHours(s.opening_hours)) : [],
     about: f.about ?? s.tagline ?? s.description,
     contactHref: available('/iletisim') ? '/iletisim' : null,
-    copyright: `© ${new Date().getFullYear()} ${f.copyright ?? `${s.legal_name ?? s.display_name}. Tüm hakları saklıdır.`}`,
+    // P0-8: yetki belgesi numarası (varsa) her sayfanın alt bilgisinde, ilan sayfaları dahil
+    copyright: `© ${new Date().getFullYear()} ${f.copyright ?? `${s.legal_name ?? s.display_name}. Tüm hakları saklıdır.`}${s.license_no ? ` · Yetki belgesi no: ${s.license_no}` : ''}`,
     logo: (className?: string) => (
       // Koyu/marka zeminde logo açık bir plaka üzerinde (mevcut footer ile aynı kural)
       <span className={logoUrl && !lightFooter ? 'inline-flex max-w-full min-w-0 rounded-2xl bg-white px-3.5 py-2.5 shadow-sm' : 'inline-flex max-w-full min-w-0'}>
