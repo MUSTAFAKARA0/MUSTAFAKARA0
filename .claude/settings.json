@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -41,7 +41,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -53,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -65,7 +65,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -77,7 +77,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -90,7 +90,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -103,7 +103,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -116,7 +116,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -128,7 +128,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -140,7 +140,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -152,7 +152,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -164,7 +164,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -176,7 +176,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
@@ -188,7 +188,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
+            "command": "d=\"$CLAUDE_PROJECT_DIR/.claude/mission-control\"; [ -f \"$d/relay.mjs\" ] || exit 0; [ -e \"$d/DISABLED\" ] && exit 0; [ \"${MC_DISABLED:-0}\" = 1 ] && exit 0; MC_DETAIL=safe MC_PROJECT_REPOS=MUSTAFAKARA0/MUSTAFAKARA0=MUSTAFAKARA0 node \"$d/relay.mjs\"; exit 0",
             "timeout": 10,
             "async": true
           }
