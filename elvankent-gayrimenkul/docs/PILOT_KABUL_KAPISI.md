@@ -15,6 +15,11 @@
 | A5 | Pilot süresi: deneme bitişi konsoldan (1–365 gün), ödeme yok | ✓ kod (CI #220, 5/5; H canlıda değil) | H, `tests/security/pilot-trial-end.test.mjs` PT-01…05 |
 | A6 | Yedek + gerçek geri yükleme provası | ✓ | KI-22/KI-24 (02.11), gece yedekleri |
 | A7 | Hata izleme | kısmen | Sentry bağlı; deneme olayı sahip onayıyla (KI-35) |
+| A8 | Otomatik sahip daveti: ofis açılınca tek kullanımlık, süreli davet otomatik gider; mükerrer yok; gönderim hatasında ofis kaybolmaz, konsoldan yeniden gönderilir; var olan hesabın şifresine dokunulmaz | **açık — geliştiriliyor** | — |
+| A9 | İlk giriş ve tema seçimi: ilk girişte kurulum akışı; yalnız izinli tasarımlar; masaüstü/mobil önizleme; seçim doğru ofise kaydedilir ve siteye yansır; yarım kalırsa devam | **açık — geliştiriliyor** | — |
+| A10 | Tek seferlik tasarım kilidi: seçimden sonra tasarım ailesi/tema paketi panelden, URL'den, sunucu işleminden ve veritabanından değiştirilemez; logo, renk, iletişim, içerik düzenlemesi çalışır | **açık — geliştiriliyor** | — |
+| A11 | Platform yöneticisinin güvenli yeniden açma işlemi: yalnız süper yönetici, denetim kaydıyla | **açık — geliştiriliyor** | — |
+| A12 | Mevcut ofislerle geriye dönük uyumluluk: önceki ofisler kuruluma zorlanmaz, siteleri değişmez; migration uygulanmamış şemada yeni kod çalışır | **açık — geliştiriliyor** | — |
 
 ## B. Canlı değişiklikler (sahip onayı) — pilottan önce
 
