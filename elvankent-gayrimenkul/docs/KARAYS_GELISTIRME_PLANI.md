@@ -74,7 +74,7 @@ Sınıflar: **A** tamamlanmış ve doğrulanmış · **B** kodda düzeltilmiş, 
 | P0-5 | Satıcı kimliği, yasal metinler, KVKK aktarım, saklama | P0 | sahip + avukat; Claude metne işler | karar |
 | P0-6 | Paket/fiyat ve abonelik durum makinesi (OPS-02 bayrağı) | P0 | sahip kararı → Claude | karar |
 | P0-7 | Ödeme katmanı (sağlayıcıdan bağımsız) + elle tahsilat kaydı | P0 | Claude (architect, database-reviewer) | sırada |
-| P0-8 | Yetki belgesi numarası alanı ve gösterimi; EİDS kapsamı | P0 | Claude (alan) + avukat (EİDS) | sırada |
+| P0-8 | Yetki belgesi numarası alanı ve gösterimi; EİDS kapsamı | P0 | Claude (alan) + avukat (EİDS) | **alan + sitede gösterim kodda (KI-47); migration G onay bekliyor; EİDS kapsamı avukatta** |
 | P0-9 | Ofis açılış runbook'u + uçtan uca prova | P0 | Claude + sahip | sırada |
 | P0-10 | R2 kova kilidi + prova takvimi | P0 | sahip + Claude | kısmen |
 | P1-1 | Canlı CWV / Sentry deneme olayı (KI-35) | P1 | sahip + Claude | — |
