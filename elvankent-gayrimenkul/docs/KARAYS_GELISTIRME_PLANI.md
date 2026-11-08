@@ -67,9 +67,9 @@ Sınıflar: **A** tamamlanmış ve doğrulanmış · **B** kodda düzeltilmiş, 
 
 | # | İş | Öncelik | Kim | Durum |
 |---|---|---|---|---|
-| P0-1 | KI-42 gerçek boyutla kota | P0 | Claude → sahip (canlı) | **devam ediyor** |
+| P0-1 | KI-42 gerçek boyutla kota | P0 | Claude → sahip (canlı) | **kod + test tamam; production migration onayı bekliyor** |
 | P0-2 | KI-41 sır sınırı Aşama 2–6 | P0 | sahip + Claude | sahip adımları |
-| P0-3 | Kiracı izolasyonu bağımsız denetimi + eksik negatif testler | P0 | Claude (security-reviewer, database-reviewer) | sırada (P0-1'den sonra) |
+| P0-3 | Kiracı izolasyonu bağımsız denetimi + eksik negatif testler | P0 | Claude (security-reviewer, database-reviewer) | **denetim tamam (kritik/yüksek yok); KI-46 düzeltmesi (F) kodda, onay bekliyor; düşük bulgular sırada** |
 | P0-4 | Ticari altyapı planları (Vercel Pro, Supabase Pro) | P0 | sahip (D-11) | karar |
 | P0-5 | Satıcı kimliği, yasal metinler, KVKK aktarım, saklama | P0 | sahip + avukat; Claude metne işler | karar |
 | P0-6 | Paket/fiyat ve abonelik durum makinesi (OPS-02 bayrağı) | P0 | sahip kararı → Claude | karar |
