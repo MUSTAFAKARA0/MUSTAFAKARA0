@@ -116,6 +116,19 @@ export function resumeStep(setup: OrgSetup): number {
   return setup.step;
 }
 
+/** Tasarım adımının numarası (SETUP_STEPS içinde 'design') */
+export const DESIGN_STEP = SETUP_STEPS.findIndex((s) => s.key === 'design');
+
+/**
+ * Sunucuya "seçim" olarak yazılacak aile. Ekranda önceden işaretli gelen aile (ofisin mevcut / varsayılan tasarımı) bir
+ * SEÇİM DEĞİLDİR: emlakçı tasarım adımından ileri geçtiğinde (önizleme / tamamla) onaylanmış olur. Tasarım adımına
+ * girerken ya da geri dönerken aile gönderilmez; durum 'theme_selection_pending' kalır (veritabanı önceki onaylı seçimi
+ * korur). İstemci ve sunucu işlemi aynı kuralı uygular.
+ */
+export function familyToRecord(step: number, family: string | null): string | null {
+  return step > DESIGN_STEP ? family : null;
+}
+
 /** İlk açılışta seçili gelecek aile: aday (izinliyse) → sitenin mevcut ailesi (izinliyse) → ilk izinli */
 export function initialFamily(allowed: readonly string[], candidate: string | null, current: string | null): string | null {
   if (candidate && allowed.includes(candidate)) return candidate;

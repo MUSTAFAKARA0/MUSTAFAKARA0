@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { createServer, type Server } from 'node:http';
 import { createClient } from '@supabase/supabase-js';
+import sharp from 'sharp';
 import { expect, test, type Browser, type BrowserContext, type Page, type Request } from '@playwright/test';
 
 /**
@@ -249,7 +250,8 @@ test('PO-3: aktivasyon → ilk giriş kurulum akışı; yalnız izinli aileler; 
   await expect(flow(page)).toHaveAttribute('data-step', 'welcome');
   await next(page, 'office');
   await next(page, 'design');
-  expect((await setupRow()).state).toBe('theme_selection_pending');
+  // Tasarım adımına girmek seçim değildir: önceden işaretli (varsayılan) aile kaydedilmez
+  expect(await setupRow()).toMatchObject({ state: 'theme_selection_pending', step: 2, selected_family: null });
 
   // Yalnız izinli iki aile; diğerlerinin adı sayfada da betiklerde de yok
   const radios = page.getByRole('radiogroup', { name: 'Tasarım aileleri' }).getByRole('radio');
@@ -383,7 +385,7 @@ test('PO-6: sonraki girişte kurulum yok; eski adres döner; tasarım sekmesi ki
   await ctx.close();
 });
 
-test('PO-7: kilit dışı düzenlemeler çalışır (şirket bilgisi, header, yayın); tasarım değişmez', async ({ browser }) => {
+test('PO-7: kilit dışı düzenlemeler çalışır (şirket bilgisi, header, logo, marka rengi, yayın); tasarım değişmez', async ({ browser }) => {
   test.setTimeout(120_000);
   const ctx = await freshContext(browser);
   const page = await ctx.newPage();
@@ -405,6 +407,29 @@ test('PO-7: kilit dışı düzenlemeler çalışır (şirket bilgisi, header, ya
   expect(site.published_version).toBe(S.version! + 1);
   expect(site.published.style?.origin?.family).toBe('sinematik-vitrin');
   expect(site.published.theme).toBe('rezidans');
+
+  // Kurulumdan sonra logo ve marka renkleri değiştirilebilir (mevcut ekranlar; kilit yalnız tema + tasarım ailesi)
+  await page.goto('/admin/sirket');
+  await page.locator('#branding-logo').setInputFiles({
+    name: 'pilot-logo.png',
+    mimeType: 'image/png',
+    buffer: await sharp({ create: { width: 600, height: 200, channels: 4, background: { r: 26, g: 93, b: 143, alpha: 1 } } }).png().toBuffer(),
+  });
+  await expect(page.getByText('Logo taslağa kaydedildi', { exact: false })).toBeVisible({ timeout: 30_000 });
+  await page.goto('/admin/site');
+  await page.getByLabel('Ana renk', { exact: true }).fill('#1a5d8f');
+  await page.getByRole('button', { name: 'Taslağa kaydet' }).click();
+  await expect(page.getByText('Taslağa kaydedildi', { exact: false }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Değişiklikleri yayınla' }).click();
+  await page.getByRole('button', { name: 'Yayınla', exact: true }).click();
+  await expect(page.getByText(/Yayınlandı \(sürüm \d+\)/)).toBeVisible({ timeout: 20_000 });
+  const { data: brand } = await service!.from('organization_settings').select('logo_url, primary_color').eq('organization_id', S.orgId!).single();
+  expect(brand!.logo_url).toMatch(new RegExp(`^organizations/${S.orgId}/branding/logo-`));
+  expect(brand!.primary_color).toBe('#1a5d8f');
+  const after = await siteRow();
+  expect(after.published_version).toBe(S.version! + 2);
+  expect(after.published.style?.origin?.family).toBe('sinematik-vitrin');
+  expect(after.published.theme).toBe('rezidans');
   await ctx.close();
 });
 

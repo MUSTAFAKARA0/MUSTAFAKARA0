@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import type { FamilyOption } from '@/components/site-editor/design-family-picker';
 import { LivePreview, type Brand } from '@/theme-engine/preview/live-preview';
 import { finishSetup, saveSetupStep } from '@/app/actions/setup';
+import { familyToRecord } from '@/modules/onboarding/setup-state';
 import { LAST_SETUP_STEP, SETUP_STEPS } from '@/modules/onboarding/setup-state';
 
 export interface SetupOffice {
@@ -57,7 +58,8 @@ export function SetupFlow({
     }
     setPending(true);
     setError(null);
-    const res = await saveSetupStep(next, next >= 2 ? (chosen?.id ?? null) : null);
+    // Önceden işaretli (varsayılan) aile seçim sayılmaz: yalnız tasarım adımından ileri geçerken kaydedilir
+    const res = await saveSetupStep(next, familyToRecord(next, chosen?.id ?? null));
     setPending(false);
     if (!res.ok) {
       if (res.code === 'setup_completed' || res.code === 'setup_not_required') return router.replace('/admin');

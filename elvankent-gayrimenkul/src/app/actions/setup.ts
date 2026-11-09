@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { ActionError, runAction, type ActionResult } from '@/platform/actions';
 import { requirePermission } from '@/platform/auth/session';
 import { completeSetup, saveSetupProgress } from '@/site-editor/setup';
-import { LAST_SETUP_STEP } from '@/modules/onboarding/setup-state';
+import { LAST_SETUP_STEP, familyToRecord } from '@/modules/onboarding/setup-state';
 import { refreshPublicSite } from '@/site-editor/cache';
 
 /**
@@ -23,7 +23,8 @@ export async function saveSetupStep(step: number, familyId: string | null): Prom
     if (!Number.isInteger(step) || step < 0 || step > LAST_SETUP_STEP) throw new ActionError('Geçersiz kurulum adımı.');
     const family = familySchema.safeParse(familyId ?? null);
     if (!family.success) throw new ActionError('Geçersiz tasarım ailesi.');
-    return { state: await saveSetupProgress(ctx.supabase, ctx.org.id, step, family.data) };
+    // Sunucu da aynı kuralı uygular: tasarım adımına girerken gelen aile seçim olarak yazılmaz
+    return { state: await saveSetupProgress(ctx.supabase, ctx.org.id, step, familyToRecord(step, family.data)) };
   });
 }
 

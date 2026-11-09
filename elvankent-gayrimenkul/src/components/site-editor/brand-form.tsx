@@ -7,6 +7,7 @@ import { Field, Input, Textarea } from "@/components/ui/form-controls";
 import { ColorInput } from "@/components/site-editor/appearance-forms";
 import { SaveBar, useSiteEditor } from "@/components/site-editor/site-actions";
 import type { BrandInput } from "@/site-editor/brand-input";
+import { sameValue } from "@/lib/same-value";
 
 type Values = { [K in keyof BrandInput]-?: string };
 
@@ -122,7 +123,7 @@ export function BrandForm({
   const [values, setValues] = useState<Values>(initial);
   const [pending, setPending] = useState(false);
   const [, startTransition] = useTransition();
-  const dirty = JSON.stringify(values) !== JSON.stringify(initial);
+  const dirty = !sameValue(values, initial);
   return (
     <div className="max-w-4xl space-y-6">
       {groups.includes("colors") && (

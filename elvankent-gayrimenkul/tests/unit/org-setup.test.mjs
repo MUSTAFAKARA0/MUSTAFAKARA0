@@ -21,6 +21,8 @@ import {
   sectionTouchesLockedKeys,
   resumeStep,
   initialFamily,
+  familyToRecord,
+  DESIGN_STEP,
   SETUP_STATES,
   SETUP_STEPS,
   LAST_SETUP_STEP,
@@ -101,6 +103,21 @@ describe('SU-04 devam ve ön seçim', () => {
     assert.equal(initialFamily(allowed, 'yalin-galeri', 'klasik-guven'), 'klasik-guven');
     assert.equal(initialFamily(allowed, 'yalin-galeri', 'editoryal-luks'), 'klasik-guven');
     assert.equal(initialFamily([], 'klasik-guven', 'klasik-guven'), null);
+  });
+});
+
+describe('SU-08 varsayılan tasarım ≠ emlakçının seçimi (CI #224 PO-3)', () => {
+  test('aile yalnız tasarım adımından ileri geçerken kaydedilir', () => {
+    assert.equal(DESIGN_STEP, 2);
+    for (const step of [0, 1, 2]) assert.equal(familyToRecord(step, 'sinematik-vitrin'), null, `adım ${step}`);
+    assert.equal(familyToRecord(3, 'sinematik-vitrin'), 'sinematik-vitrin');
+    assert.equal(familyToRecord(4, 'klasik-guven'), 'klasik-guven');
+    assert.equal(familyToRecord(3, null), null);
+  });
+  test('istemci ve sunucu işlemi aynı kuralı kullanır (önceden işaretli aile tasarım adımına girerken gönderilmez)', () => {
+    assert.match(read('src/components/admin/setup-flow.tsx'), /saveSetupStep\(next, familyToRecord\(next, chosen\?\.id \?\? null\)\)/);
+    assert.doesNotMatch(read('src/components/admin/setup-flow.tsx'), /next >= 2 \? \(chosen/);
+    assert.match(read('src/app/actions/setup.ts'), /saveSetupProgress\(ctx\.supabase, ctx\.org\.id, step, familyToRecord\(step, family\.data\)\)/);
   });
 });
 
