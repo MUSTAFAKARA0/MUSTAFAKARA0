@@ -88,6 +88,12 @@ const DB_MESSAGES: Record<string, string> = {
   media_busy: 'Fotoğraf şu anda başka bir işlemde; birkaç saniye sonra tekrar deneyin.',
   media_pending_limit: 'Çok fazla yarım kalmış yükleme var. Bekleyen yüklemeler tamamlandıktan sonra tekrar deneyin.',
   brand_requires_publish: 'Marka ve site bilgileri doğrudan değiştirilemez; taslağa kaydedip yayınlayın.',
+  // PILOT · ilk kurulum (bekleyen migration I)
+  setup_completed: 'Kurulum zaten tamamlandı; seçim değiştirilemez.',
+  setup_not_required: 'Bu ofis için açık bir kurulum yok.',
+  family_required: 'Devam etmek için bir tasarım seçin.',
+  invalid_setup_step: 'Geçersiz kurulum adımı.',
+  design_locked: 'Tasarım ailesi ve tema ilk kurulumda seçildi; değiştirmek için KARAYS ile iletişime geçin.',
 };
 
 export function mapDbError(error: DbErrorLike): string {

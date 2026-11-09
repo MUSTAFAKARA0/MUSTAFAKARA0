@@ -9,6 +9,9 @@ import { PlanForm, TrialEndForm } from '@/components/platform/org-controls';
 import { OrgNoteForm } from '@/components/platform/karay-forms';
 import { PlatformDomainsPanel } from '@/components/platform/domains-panel';
 import { OwnerInvitationCard } from '@/components/platform/owner-invitation';
+import { OrgSetupCard } from '@/components/platform/org-setup-card';
+import { getOrgSetup } from '@/site-editor/setup';
+import { findDesignFamily } from '@/site-factory/families';
 import { getOwnerInvitation } from '@/modules/platform/invitations/service';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,13 +39,17 @@ export default async function PlatformOrgPage({ params }: PageProps<'/platform/o
   const org = orgs.find((o) => o.id === id);
   if (!org) notFound();
 
-  const [usersRes, logs, tenant, invitation, notesRes] = await Promise.all([
+  const [usersRes, logs, tenant, invitation, notesRes, setupRead, siteRes] = await Promise.all([
     session.supabase.rpc('platform_users', { p_limit: 500 }),
     listAuditLogs(session.supabase, { orgId: id, page: 1 }),
     org.status === 'active' ? getTenant(org.slug) : Promise.resolve(null),
     getOwnerInvitation(session, id),
     session.supabase.from('platform_org_notes').select('id, body, created_at, author_id').eq('organization_id', id).order('created_at', { ascending: false }).limit(30),
+    getOrgSetup(session.supabase, id),
+    session.supabase.from('site_configs').select('published').eq('organization_id', id).maybeSingle(),
   ]);
+  const familyName = (fid: string | null | undefined) => (fid ? (findDesignFamily(fid)?.name ?? fid) : null);
+  const publishedFamily = ((siteRes.data?.published ?? null) as { style?: { origin?: { family?: string } } } | null)?.style?.origin?.family ?? null;
   const notes = notesRes.data ?? [];
   const emails = new Map((usersRes.data ?? []).map((u) => [u.user_id, u.email]));
   const steps = onboardingSteps(org.flags);
@@ -187,6 +194,15 @@ export default async function PlatformOrgPage({ params }: PageProps<'/platform/o
                   ? { status: invitation.status, expiresAt: invitation.expiresAt, lastSentAt: invitation.lastSentAt, acceptedAt: invitation.acceptedAt, accountPending: invitation.accountPending }
                   : null
               }
+            />
+          </Panel>
+          <Panel title="İlk kurulum" description="Sahibin ilk girişteki kurulum akışı ve tek seferlik tasarım seçimi.">
+            <OrgSetupCard
+              orgId={org.id}
+              available={setupRead.available}
+              setup={setupRead.setup}
+              currentFamily={familyName(publishedFamily)}
+              selectedFamily={familyName(setupRead.setup?.selectedFamily)}
             />
           </Panel>
           <Panel title="Kullanım">

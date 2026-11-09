@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { AdminShell } from '@/components/admin/admin-shell';
 import { SubscriptionStrip } from '@/components/admin/subscription-strip';
 import { subscriptionStrip } from '@/modules/billing/subscription-strip';
@@ -9,6 +10,8 @@ import { ROLE_LABELS } from '@/platform/auth/permissions';
 import { buildTheme, themeCss } from '@/platform/branding/theme';
 import { getOrgBrand, requirePageContext } from '@/platform/auth/session';
 import { getTenantFromRequest } from '@/platform/tenant/tenant';
+import { getOrgSetup } from '@/site-editor/setup';
+import { shouldRedirectToSetup } from '@/modules/onboarding/setup-state';
 
 /** Panel simgesi = aktif ofisin simgesi (yüklenmişse), yoksa ofis adından üretilen otomatik simge */
 export async function generateMetadata(): Promise<Metadata> {
@@ -23,7 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function PanelLayout({ children }: LayoutProps<'/admin'>) {
   const ctx = await requirePageContext();
   // Marka (tema/logo) oturum bağlamıyla aynı çağrıda gelir (ek sorgu yok); rozet sayımı paralel
-  const [tenant, newLeads, brand, subscription] = await Promise.all([
+  const [tenant, newLeads, brand, subscription, setup] = await Promise.all([
     getTenantFromRequest().catch(() => null),
     // Menüde "yeni talep" rozeti: ofisin henüz ilgilenmediği talepler
     ctx.can('leads.read')
@@ -45,7 +48,11 @@ export default async function PanelLayout({ children }: LayoutProps<'/admin'>) {
       .limit(1)
       .maybeSingle()
       .then((r) => r.data ?? null),
+    // PILOT · ilk kurulum: kurulumu açık YENİ ofiste ayar yetkili kullanıcı odaklı akışa yönlenir. Tablo yoksa
+    // (bekleyen migration I uygulanmamış) ya da eski ofiste satır 'legacy' → yönlendirme yok.
+    ctx.can('settings.manage') ? getOrgSetup(ctx.supabase, ctx.org.id).then((r) => r.setup) : Promise.resolve(null),
   ]);
+  if (shouldRedirectToSetup(setup, ctx.can('settings.manage'))) redirect('/admin/kurulum');
   // "Verilerinizi indirin" Ayarlar › Veri dışa aktarma'ya gider: o sayfa settings.manage, dışa aktarma data.export ister
   const strip = subscriptionStrip(subscription, { canExport: ctx.can('data.export') && ctx.can('settings.manage') });
   const nav = filterNav(ctx.can, ctx.plan.features);

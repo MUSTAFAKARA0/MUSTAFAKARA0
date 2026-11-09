@@ -6,7 +6,7 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
 /**
  * P0.4 — Müşteri daveti ve güvenli hesap aktivasyonu (gerçek uygulama + yerel veritabanı).
  *
- *  INV-1  Yeni müşteri: platform → organizasyon oluştur → sahip daveti "bekliyor", geçici şifre YOK
+ *  INV-1  Yeni müşteri: platform → organizasyon oluştur → sahip daveti kendiliğinden gider, "bekliyor", geçici şifre YOK
  *  INV-5  Tekrar gönder: eski bağlantı geçersiz, yeni bağlantı çalışır
  *  INV-2  Aktivasyon: bağlantı → şifre → oturum → /admin → doğru ofis, doğru rol; normal giriş çalışır
  *  INV-6  Tekrar kullanım: kabul edilmiş bağlantı ikinci kez çalışmaz
@@ -139,14 +139,18 @@ test('INV-1: yeni müşteri — davet bekliyor, geçici şifre gösterilmez', as
   await page.getByLabel('İlan no öneki').fill(`V${String.fromCharCode(65 + (parseInt(RUN.slice(0, 2), 16) % 26))}${String.fromCharCode(65 + (parseInt(RUN.slice(2, 4), 16) % 26))}`);
   await page.getByLabel('Sahip adı soyadı').fill('Davet Sahibi');
   await page.getByLabel('Sahip e-postası').fill(ORG.owner);
+  // PILOT: davet açılışla birlikte kendiliğinden gönderilir; ekran "e-posta sağlayıcıya teslim edildi" der
+  const before = mails.length;
   await page.getByRole('button', { name: 'Organizasyonu oluştur' }).click();
   await expect(page.getByText('Organizasyon oluşturuldu.')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('initial-invitation')).toHaveAttribute('data-status', 'sent');
+  await expect(page.getByTestId('initial-invitation')).toContainText('e-posta sağlayıcıya teslim edildi');
 
   const card = page.getByTestId('owner-invitation');
   await expect(card).toHaveAttribute('data-status', 'pending');
   await expect(card).toContainText(ORG.owner);
   await expect(card).toContainText('Davet bekliyor');
-  await expect(card).toContainText('Davet gönderilmeye hazır.');
+  await expect(card).toContainText('e-posta sağlayıcıya teslim edildi');
   // Geçici şifre / kopyalanacak kod yok
   await expect(page.locator('code')).toHaveCount(0);
   await expect(page.getByText(/geçici şifre/i)).toHaveCount(0);
@@ -154,8 +158,10 @@ test('INV-1: yeni müşteri — davet bekliyor, geçici şifre gösterilmez', as
   const { data: org } = await service!.from('organizations').select('id').eq('slug', ORG.slug).single();
   S.orgId = org!.id;
   created.orgs.push(org!.id);
+  // İlk kurulum akışı (pilot-onboarding.spec.ts) bu dosyanın konusu değil: tamamlanmış sayılır (tablo yoksa yok sayılır)
+  await service!.from('organization_setup').update({ state: 'setup_completed', step: 4, completed_at: new Date().toISOString() }).eq('organization_id', S.orgId);
   const { data: inv } = await service!.from('organization_invitations').select('status, email, role, token_hash, expires_at, last_sent_at').eq('organization_id', S.orgId).single();
-  expect(inv).toMatchObject({ status: 'pending', email: ORG.owner, role: 'owner', last_sent_at: null });
+  expect(inv).toMatchObject({ status: 'pending', email: ORG.owner, role: 'owner' });
   expect(inv!.token_hash).toMatch(/^[0-9a-f]{64}$/);
   // Süre politikası: 72 saat (± birkaç dakika)
   const hours = (new Date(inv!.expires_at).getTime() - Date.now()) / 3_600_000;
@@ -168,10 +174,9 @@ test('INV-1: yeni müşteri — davet bekliyor, geçici şifre gösterilmez', as
   const { data: profile } = await service!.from('profiles').select('password_change_required, is_super_admin').eq('id', owner.id).single();
   expect(profile).toMatchObject({ password_change_required: false, is_super_admin: false });
 
-  // Davet gönder → e-posta (sahte sunucu) → bağlantı
-  const before = mails.length;
-  await card.getByRole('button', { name: 'Davet gönder' }).click();
+  // Otomatik davet → e-posta (sahte sunucu) → bağlantı; tek e-posta (yinelenen davet yok)
   S.link1 = await lastLinkFor(ORG.owner, before);
+  expect(mails.slice(before).filter((m) => m.to?.includes(ORG.owner))).toHaveLength(1);
   await expect(card.getByRole('button', { name: 'Daveti tekrar gönder' })).toBeVisible();
   const { data: sent } = await service!.from('organization_invitations').select('token_hash, last_sent_at').eq('organization_id', S.orgId).single();
   // Veritabanında ham token değil, özeti var

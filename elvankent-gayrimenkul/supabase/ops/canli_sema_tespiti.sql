@@ -64,7 +64,8 @@ with checks(sira, dosya, kosul) as (
                                                        and exists (select 1 from pg_trigger where tgname = 'media_storage_size_guard' and not tgisinternal and tgrelid = to_regclass('storage.objects'))),
   (41, 'pending/20261108000002_tenant_member_guard.sql', exists (select 1 from pg_trigger where tgname = 'organization_members_target_guard' and not tgisinternal)),
   (42, 'pending/20261108000003_license_no.sql', exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'organization_settings' and column_name = 'license_no')),
-  (43, 'pending/20261108000004_pilot_trial_end.sql', exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'platform_set_trial_end'))
+  (43, 'pending/20261108000004_pilot_trial_end.sql', exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'platform_set_trial_end')),
+  (44, 'pending/20261108000005_org_setup.sql', to_regclass('public.organization_setup') is not null)
 ),
 mig as (select * from checks where sira <= 31),
 first_missing as (select min(sira) as s from mig where not kosul),

@@ -6,7 +6,8 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/form-controls';
 import { createOrganization, setOrganizationPlan, setOrganizationTrialEnd } from '@/app/actions/platform';
-import { OwnerInvitationCard } from '@/components/platform/owner-invitation';
+import { InitialInvitationResult } from '@/components/platform/owner-invitation';
+import type { InitialInvitation } from '@/modules/platform/invitations/service';
 
 export function PlanForm({ orgId, plans, current, status }: { orgId: string; plans: { id: string; name: string }[]; current: string | null; status: string | null }) {
   const router = useRouter();
@@ -55,7 +56,7 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [done, setDone] = useState<{ id: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account' } | null>(null);
+  const [done, setDone] = useState<{ id: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account'; invitation: InitialInvitation } | null>(null);
 
   if (done) {
     return (
@@ -63,11 +64,11 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
         <p className="rounded-xl bg-success-soft p-4 text-[14px] text-success">Organizasyon oluşturuldu.</p>
         {done.ownerAccount === 'invitation_pending' ? (
           <div className="rounded-xl border border-border p-4">
-            <OwnerInvitationCard orgId={done.id} email={done.email} invitation={{ status: 'pending', expiresAt: null, lastSentAt: null, acceptedAt: null, accountPending: true }} />
+            <InitialInvitationResult orgId={done.id} email={done.email} invitation={done.invitation} />
             <p className="mt-3 text-[12.5px] text-muted-foreground">Sahip şifresini davet e-postasındaki tek kullanımlık bağlantıyla kendisi belirler; şifre kimseye gösterilmez.</p>
           </div>
         ) : (
-          <p className="text-[13.5px] text-muted-foreground">{done.email} adresli mevcut hesap sahip olarak eklendi; mevcut şifresiyle giriş yapar.</p>
+          <p className="text-[13.5px] text-muted-foreground">{done.email} adresli mevcut hesap sahip olarak eklendi; mevcut şifresiyle giriş yapar. Hesabına ve şifresine dokunulmadı; davet e-postası gönderilmedi.</p>
         )}
         <Button onClick={() => router.push(`/platform/organizasyonlar/${done.id}`)}>Organizasyona git</Button>
       </div>
@@ -100,7 +101,7 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
           if (!Object.keys(next).length) setFormError(res.error);
           return;
         }
-        setDone({ id: res.data.id, email: res.data.ownerEmail, ownerAccount: res.data.ownerAccount });
+        setDone({ id: res.data.id, email: res.data.ownerEmail, ownerAccount: res.data.ownerAccount, invitation: res.data.invitation });
         router.refresh();
       }}
     >
@@ -126,7 +127,7 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
       <Field label="Sahip adı soyadı" htmlFor="co-owner-name" required error={errors.owner_name}>
         <Input id="co-owner-name" name="owner_name" maxLength={100} required autoComplete="off" />
       </Field>
-      <Field label="Sahip e-postası" htmlFor="co-owner-email" required error={errors.owner_email} hint="Hesap yoksa oluşturulur; sahibe şifresini kendisinin belirleyeceği aktivasyon daveti gönderilir.">
+      <Field label="Sahip e-postası" htmlFor="co-owner-email" required error={errors.owner_email} hint="Hesap yoksa oluşturulur ve sahibe şifresini kendisinin belirleyeceği aktivasyon daveti açılışla birlikte otomatik gönderilir.">
         <Input id="co-owner-email" name="owner_email" type="email" maxLength={160} required autoComplete="off" />
       </Field>
       {formError && (

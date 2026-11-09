@@ -9,7 +9,10 @@ import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/pl
 import { requireSuperAdmin } from '@/platform/auth/session';
 import type { CreateOrgInput } from '@/modules/platform/org-schema';
 import { provisionOrganization, type OwnerAccountState } from '@/modules/platform/provisioning';
-import { revokeOwnerInvitation, sendOwnerInvitation } from '@/modules/platform/invitations/service';
+import { revokeOwnerInvitation, sendInitialOwnerInvitation, sendOwnerInvitation, type InitialInvitation } from '@/modules/platform/invitations/service';
+import { disabledFamilies } from '@/modules/platform/design-access';
+import { getOrgSetup, reopenSetup } from '@/site-editor/setup';
+import { DESIGN_FAMILIES } from '@/site-factory/families';
 
 /**
  * Süper admin işlemleri. Yetki hem burada (requireSuperAdmin) hem de her
@@ -22,14 +25,42 @@ function refreshTenants(orgId?: string) {
   revalidatePath('/platform', 'layout');
 }
 
-/** Yeni organizasyon + sahip hesabı (yoksa etkinleştirilmemiş açılır ve bekleyen davet oluşturulur) */
-export async function createOrganization(raw: CreateOrgInput): Promise<ActionResult<{ id: string; ownerEmail: string; ownerAccount: OwnerAccountState }>> {
+/**
+ * Yeni organizasyon + sahip hesabı (yoksa etkinleştirilmemiş açılır ve bekleyen davet oluşturulur).
+ * PILOT: davet e-postası açılıştan hemen sonra KENDİLİĞİNDEN gönderilir; gönderilemezse organizasyon kalır, sonuç
+ * ekranda gösterilir ve "Davet gönder" ile yeniden denenir. İlk kurulum açıksa (bekleyen migration I) ofisin seçebileceği
+ * tasarımlar başlangıçta katalogda açık ailelerin tamamıdır; KARAYS Site › Tema › "Ofisin seçebileceği tasarımlar"
+ * bölümünden daraltır (aynı izin mekanizması).
+ */
+export async function createOrganization(raw: CreateOrgInput): Promise<ActionResult<{ id: string; ownerEmail: string; ownerAccount: OwnerAccountState; invitation: InitialInvitation }>> {
   return runAction(async () => {
     const session = await requireSuperAdmin();
     const created = await provisionOrganization(session, raw);
     refreshTenants();
-    return created;
+    const { setup } = await getOrgSetup(session.supabase, created.id);
+    if (setup && setup.state !== 'setup_completed') {
+      const { disabled } = await disabledFamilies(session.supabase);
+      const families = DESIGN_FAMILIES.map((f) => f.id).filter((id) => !disabled.has(id));
+      const grant = await session.supabase.rpc('platform_set_org_design_families', { p_org: created.id, p_families: families });
+      if (grant.error) console.warn('[setup] family grant failed', { org: created.id, code: grant.error.code });
+    }
+    const invitation = await sendInitialOwnerInvitation(session, created.id, created.ownerAccount);
+    return { ...created, invitation };
   });
+}
+
+/**
+ * PILOT · Tek seferlik tasarım seçimini yeniden açar (yalnız süper admin; veritabanı assert_super_admin ve
+ * site.setup_reopened denetim kaydı). Sahip bir sonraki girişte kurulumun tasarım adımına yönlenir.
+ */
+export async function reopenOrgSetupAction(orgId: string): Promise<ActionResult<{ state: string }>> {
+  return runAction(async () => {
+    const session = await requireSuperAdmin();
+    if (!isUuid(orgId)) throw new ActionError('Organizasyon bulunamadı.');
+    const state = await reopenSetup(session.supabase, orgId);
+    revalidatePath(`/platform/organizasyonlar/${orgId}`);
+    return { state };
+  }, 'Tasarım seçimi yeniden açıldı. Ofis sahibi bir sonraki girişte tasarımını yeniden seçer.');
 }
 
 /**
@@ -43,7 +74,7 @@ export async function sendOwnerInvitationAction(orgId: string): Promise<ActionRe
     const sent = await sendOwnerInvitation(session, orgId);
     revalidatePath(`/platform/organizasyonlar/${orgId}`);
     return sent;
-  }, 'Davet e-postası gönderildi. Önceki davet bağlantıları artık geçersiz.');
+  }, 'Davet e-postası sağlayıcıya teslim edildi. Önceki davet bağlantıları artık geçersiz.');
 }
 
 /** Bekleyen sahip davetini iptal eder (bağlantı geçersiz olur; hesap ve organizasyon silinmez) */

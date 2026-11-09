@@ -1,9 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { runAction, type ActionResult } from '@/platform/actions';
+import { ActionError, runAction, type ActionResult } from '@/platform/actions';
 import { requirePermission } from '@/platform/auth/session';
 import { selectableFamilies } from '@/modules/platform/design-access';
+import { getOrgSetup } from '@/site-editor/setup';
+import { designLocked, isLockedSection } from '@/modules/onboarding/setup-state';
 import type { SiteSection } from '@/site-config/schema';
 import type { BrandInput } from '@/site-editor/brand-input';
 import type { SavedDraft } from '@/site-editor/types';
@@ -38,9 +40,22 @@ async function editor() {
   return requirePermission('settings.manage');
 }
 
+/**
+ * PILOT · ilk kurulumda seçilen tasarım ailesi / tema kilitlidir (bekleyen migration I). Burada anlaşılır mesajla
+ * reddedilir; veritabanı (site_configs_design_lock) doğrudan RPC ile atlatılmasını ayrıca reddeder. Marka, renk,
+ * metin, menü, header/footer, ana sayfa bölümleri ve SEO serbesttir.
+ */
+async function assertDesignUnlocked(ctx: Awaited<ReturnType<typeof editor>>) {
+  const { setup } = await getOrgSetup(ctx.supabase, ctx.org.id);
+  if (designLocked(setup)) {
+    throw new ActionError('Tasarım ailesi ve tema ilk kurulumda seçildi; değiştirmek için KARAYS ile iletişime geçin.', 'design_locked');
+  }
+}
+
 export async function saveOfficeSiteSection(section: SiteSection, value: unknown, expected?: string | null): Promise<ActionResult<SavedDraft>> {
   return runAction(async () => {
     const ctx = await editor();
+    if (isLockedSection(section)) await assertDesignUnlocked(ctx);
     const draftToken = await saveDraftSection(ctx.supabase, ctx.org.id, section, value, expected);
     revalidatePath(PANEL, 'layout');
     return { draftToken };
@@ -59,6 +74,7 @@ export async function updateOfficeSiteBrand(input: BrandInput, expected?: string
 export async function applyOfficeDesignFamily(familyId: string, expected?: string | null): Promise<ActionResult<SavedDraft>> {
   return runAction(async () => {
     const ctx = await editor();
+    await assertDesignUnlocked(ctx);
     const access = await selectableFamilies(ctx.supabase, ctx.org.id);
     const draftToken = await applyFamilyToDraft(ctx.supabase, ctx.org.id, familyId, access.families, expected);
     revalidatePath(PANEL, 'layout');

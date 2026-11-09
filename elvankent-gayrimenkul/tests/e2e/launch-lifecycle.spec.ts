@@ -7,7 +7,7 @@ import { expect, test, type Browser, type BrowserContext, type Page } from '@pla
  * FAZ 0 — Ticari yayın provası: yeni müşterinin KARAY'a girişinden yayındaki sitesine kadar TEK zincir
  * (gerçek uygulama + yerel veritabanı + sahte e-posta (Resend) ve sahte DNS (DoH) sunucuları).
  *
- *  LC-1  KARAY yöneticisi yeni müşteri açar (kurumsal plan) → sahip daveti e-postası
+ *  LC-1  KARAY yöneticisi yeni müşteri açar (kurumsal plan) → sahip daveti e-postası kendiliğinden gider
  *  LC-2  Hata yolu: bozuk davet bağlantısı reddedilir → geçerli bağlantıyla aktivasyon → /admin
  *  LC-3  Özel alan adı: ekle (bekliyor, site kapalı) → TXT → doğrulandı → CNAME → aktif → site "çok yakında"
  *        (FAZ 1: yeni müşteri sitesi taslak açılır) → KARAY teslimi: Yayın durumu › Yayında → site açılır
@@ -159,6 +159,11 @@ async function publish(page: Page, note: string) {
 
 const row = (page: Page) => page.locator(`[data-testid="domain-row"][data-hostname="${DOMAIN}"]`);
 
+/** PILOT · ilk kurulum (bekleyen migration I) tamamlanmış sayılır; tablo yoksa (eski şema) yok sayılır */
+async function skipSetup(orgId: string) {
+  await service!.from('organization_setup').update({ state: 'setup_completed', step: 4, completed_at: new Date().toISOString() }).eq('organization_id', orgId);
+}
+
 // --- Zincir ------------------------------------------------------------------------
 test('LC-1: KARAY yöneticisi yeni müşteri açar ve sahip davetini gönderir', async ({ page }) => {
   await loginPlatform(page);
@@ -169,6 +174,8 @@ test('LC-1: KARAY yöneticisi yeni müşteri açar ve sahip davetini gönderir',
   await page.getByLabel('Sahip adı soyadı').fill('Yayin Sahibi');
   await page.getByLabel('Sahip e-postası').fill(OWNER);
   await page.locator('#co-plan').selectOption('kurumsal');
+  // PILOT: sahip daveti açılışla birlikte kendiliğinden gönderilir (elle "Davet gönder" yok)
+  const before = mails.length;
   await page.getByRole('button', { name: 'Organizasyonu oluştur' }).click();
   await expect(page.getByText('Organizasyon oluşturuldu.')).toBeVisible({ timeout: 30_000 });
   const { data: org } = await service!.from('organizations').select('id, status').eq('slug', SLUG).single();
@@ -181,8 +188,9 @@ test('LC-1: KARAY yöneticisi yeni müşteri açar ve sahip davetini gönderir',
   // FAZ 1: yeni müşterinin sitesi ziyaretçiye kapalı (taslak) açılır; yayına açmak KARAY'ın teslim adımı
   expect(site!.site_status).toBe('draft');
 
-  const before = mails.length;
-  await page.getByTestId('owner-invitation').getByRole('button', { name: 'Davet gönder' }).click();
+  await expect(page.getByTestId('initial-invitation')).toHaveAttribute('data-status', 'sent');
+  // İlk kurulum akışı (pilot-onboarding.spec.ts) bu zincirin konusu değil: tamamlanmış sayılır
+  await skipSetup(S.orgId!);
   const { mail, link } = await mailFor(OWNER, before, /https?:\/\/[^\s"<>]+\/admin\/davet#t=[A-Za-z0-9_-]{43}/);
   S.link = link;
   // Bağlantı ofisin kendi adresi yokken panel köküne gider (yerelde NEXT_PUBLIC_SITE_URL); token konu satırında yok

@@ -13,7 +13,7 @@ import { expect, test, type Browser, type BrowserContext, type Page } from '@pla
  * sunucuları launch-lifecycle.spec.ts ile aynı desende kurulur (playwright.config: workers=1, fullyParallel=false →
  * spec dosyaları sırayla koşar, portlar çakışmaz).
  *
- *  PJ-1  KARAY yöneticisi konsoldan yeni ofisi açar → sahip daveti e-postası gider
+ *  PJ-1  KARAY yöneticisi konsoldan yeni ofisi açar → sahip daveti e-postası kendiliğinden gider
  *  PJ-2  Sahip davet bağlantısıyla hesabı etkinleştirir, şifre belirler → /admin
  *  PJ-3  Özel alan adı bağlanır (TXT + CNAME) ve KARAY "Yayında" yapar → ofis sitesi kendi alan adında açılır
  *  PJ-4  Alan adı üzerinden sahip 2 fotoğraflı ilan oluşturup yayınlar → ilan sayfası ofis alan adında fotoğraflarıyla açılır
@@ -192,7 +192,7 @@ const overflow = (page: Page) => page.evaluate(() => document.documentElement.sc
 const row = (page: Page) => page.locator(`[data-testid="domain-row"][data-hostname="${DOMAIN}"]`);
 
 // --- Yolculuk ------------------------------------------------------------------------
-test('PJ-1: KARAY yöneticisi yeni ofisi açar ve sahip davetini gönderir', async ({ page }) => {
+test('PJ-1: KARAY yöneticisi yeni ofisi açar; sahip daveti kendiliğinden gider', async ({ page }) => {
   await loginPlatform(page);
   await page.goto('/platform/organizasyonlar/yeni');
   await page.getByLabel('Organizasyon adı').fill(NAME);
@@ -201,15 +201,16 @@ test('PJ-1: KARAY yöneticisi yeni ofisi açar ve sahip davetini gönderir', asy
   await page.getByLabel('Sahip adı soyadı').fill('Pilot Sahibi');
   await page.getByLabel('Sahip e-postası').fill(OWNER);
   await page.locator('#co-plan').selectOption('kurumsal');
+  // Davet açılışla birlikte kendiliğinden gönderilir
+  const before = mails.length;
   await page.getByRole('button', { name: 'Organizasyonu oluştur' }).click();
   await expect(page.getByText('Organizasyon oluşturuldu.')).toBeVisible({ timeout: 30_000 });
   const { data: org } = await service!.from('organizations').select('id, status, is_default').eq('slug', SLUG).single();
   S.orgId = org!.id;
   expect(org).toMatchObject({ status: 'active', is_default: false });
-
-  const before = mails.length;
-  await page.getByTestId('owner-invitation').getByRole('button', { name: 'Davet gönder' }).click();
   S.ownerLink = await mailFor(OWNER, before);
+  // İlk kurulum akışı ayrı yolculukta sınanır (pilot-onboarding.spec.ts PO-*); burada tamamlanmış sayılır
+  await service!.from('organization_setup').update({ state: 'setup_completed', step: 4, completed_at: new Date().toISOString() }).eq('organization_id', S.orgId!);
 });
 
 test('PJ-2: sahip davetle hesabını etkinleştirir, şifre belirler ve /admin açılır', async ({ browser }) => {

@@ -891,6 +891,56 @@ export type Database = {
           },
         ]
       }
+      organization_setup: {
+        Row: {
+          organization_id: string
+          state: string
+          origin: string
+          step: number
+          selected_family: string | null
+          completed_at: string | null
+          completed_by: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          state?: string
+          origin?: string
+          step?: number
+          selected_family?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          organization_id?: string
+          state?: string
+          origin?: string
+          step?: number
+          selected_family?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          reopened_at?: string | null
+          reopened_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_setup_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_domains: {
         Row: {
           id: string
@@ -2760,6 +2810,18 @@ export type Database = {
           p_families: string[]
         }
         Returns: undefined
+      }
+      org_setup_progress: {
+        Args: { p_org: string; p_step: number; p_family?: string }
+        Returns: string
+      }
+      org_setup_complete: {
+        Args: { p_org: string; p_family: string; p_sections: Json }
+        Returns: number
+      }
+      platform_reopen_org_setup: {
+        Args: { p_org: string; p_reason?: string }
+        Returns: string
       }
       platform_set_trial_end: {
         Args: { p_ends_at: string; p_org: string }

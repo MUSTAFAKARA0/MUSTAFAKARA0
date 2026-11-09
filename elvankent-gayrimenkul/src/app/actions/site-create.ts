@@ -9,6 +9,7 @@ import { addDomain } from '@/modules/domains/service';
 import { orgSchema, type CreateOrgInput } from '@/modules/platform/org-schema';
 import { disabledFamilies, isMissingDesignAccessSchema } from '@/modules/platform/design-access';
 import { provisionOrganization, type OwnerAccountState } from '@/modules/platform/provisioning';
+import { sendInitialOwnerInvitation, type InitialInvitation } from '@/modules/platform/invitations/service';
 import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/platform/actions';
 import { requireSuperAdmin } from '@/platform/auth/session';
 import type { BrandDraft } from '@/site-config/schema';
@@ -60,7 +61,7 @@ function brandDraft(info: SiteInfo): BrandDraft {
   return Object.fromEntries(Object.entries(draft).filter(([, v]) => typeof v === 'string' && v)) as BrandDraft;
 }
 
-export async function createSite(raw: CreateSiteInput): Promise<ActionResult<{ id: string; slug: string; ownerEmail: string; ownerAccount: OwnerAccountState; warnings: string[] }>> {
+export async function createSite(raw: CreateSiteInput): Promise<ActionResult<{ id: string; slug: string; ownerEmail: string; ownerAccount: OwnerAccountState; warnings: string[]; invitation: InitialInvitation }>> {
   return runAction(async () => {
     const session = await requireSuperAdmin();
     // Her şey organizasyon açılmadan ÖNCE doğrulanır (yarım kayıt bırakmamak için)
@@ -114,7 +115,9 @@ export async function createSite(raw: CreateSiteInput): Promise<ActionResult<{ i
     }
     updateTag(cacheTags.tenants);
     revalidatePath('/platform', 'layout');
-    return { id: orgId, slug: account.slug, ownerEmail: created.ownerEmail, ownerAccount: created.ownerAccount, warnings };
+    // PILOT: sahip daveti açılışla birlikte kendiliğinden gider; gönderilemezse site kalır, sonuç ekranından yeniden denenir
+    const invitation = await sendInitialOwnerInvitation(session, orgId, created.ownerAccount);
+    return { id: orgId, slug: account.slug, ownerEmail: created.ownerEmail, ownerAccount: created.ownerAccount, warnings, invitation };
   });
 }
 

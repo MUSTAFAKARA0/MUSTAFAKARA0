@@ -6,7 +6,7 @@ import { expect, test, type Browser, type BrowserContext, type Page } from '@pla
 /**
  * FAZ 1 — Müşteri operasyonları (gerçek uygulama + yerel veritabanı + sahte e-posta sunucusu).
  *
- *  CO-1  KARAY: yeni müşteri → listede "Dikkat: sahip daveti gönderilmedi"; arama + durum filtresi;
+ *  CO-1  KARAY: yeni müşteri → sahip daveti kendiliğinden gider → listede "Davet bekliyor"; arama + durum filtresi;
  *        detayda müşteri durumu paneli; site taslak; "Siteyi aç" başka müşterinin adresine gitmez
  *  CO-2  Kendi adresi olmayan sitede önizleme açık hatayla reddedilir (başka müşterinin adresine gitmez)
  *  CO-3  KARAY notları: ekleme → listede ve sayı; ofis paneli notları görmez
@@ -113,18 +113,23 @@ test('CO-1: yeni müşteri listede "Dikkat"; arama ve filtre; detayda durum pane
   await page.getByLabel('İlan no öneki').fill(`M${String.fromCharCode(65 + (parseInt(RUN.slice(0, 2), 16) % 26))}${String.fromCharCode(65 + (parseInt(RUN.slice(2, 4), 16) % 26))}`);
   await page.getByLabel('Sahip adı soyadı').fill('Musteri Sahibi');
   await page.getByLabel('Sahip e-postası').fill(OWNER);
+  // PILOT: sahip daveti açılışla birlikte kendiliğinden gider
+  const before = mails.length;
   await page.getByRole('button', { name: 'Organizasyonu oluştur' }).click();
   await expect(page.getByText('Organizasyon oluşturuldu.')).toBeVisible({ timeout: 30_000 });
   const { data: org } = await service!.from('organizations').select('id').eq('slug', SLUG).single();
   S.orgId = org!.id;
+  S.ownerLink = await linkFor(OWNER, before);
+  // İlk kurulum akışı (pilot-onboarding.spec.ts) bu dosyanın konusu değil: tamamlanmış sayılır (tablo yoksa yok sayılır)
+  await service!.from('organization_setup').update({ state: 'setup_completed', step: 4, completed_at: new Date().toISOString() }).eq('organization_id', S.orgId);
   const { data: site } = await service!.from('site_configs').select('site_status').eq('organization_id', S.orgId).single();
   expect(site!.site_status).toBe('draft');
 
-  // Detay: müşteri durumu paneli; davet gönderilmedi → Dikkat; kurulum adımları
+  // Detay: müşteri durumu paneli; davet gönderildi → Davet bekliyor (dikkat yok); kurulum adımları
   await page.goto(`/platform/organizasyonlar/${S.orgId}`);
   const status = page.locator('[data-customer-status]').first();
-  await expect(status).toHaveAttribute('data-customer-status', 'attention');
-  await expect(page.getByText('Sahip daveti gönderilmedi').first()).toBeVisible();
+  await expect(status).toHaveAttribute('data-customer-status', 'invited');
+  await expect(page.getByText('Sahip daveti gönderilmedi')).toHaveCount(0);
   await expect(page.locator('[data-step="company"]')).toBeVisible();
   // Kendi adresi olmayan sitede "Siteyi aç" yok (başka müşterinin adresine gitmez)
   await expect(page.getByRole('link', { name: 'Siteyi aç' })).toHaveCount(0);
@@ -133,22 +138,24 @@ test('CO-1: yeni müşteri listede "Dikkat"; arama ve filtre; detayda durum pane
   await page.goto(`/platform/organizasyonlar?q=${encodeURIComponent(SLUG)}`);
   const row = page.locator('tr[data-customer-status]').filter({ hasText: NAME });
   await expect(row).toHaveCount(1);
-  await expect(row).toHaveAttribute('data-customer-status', 'attention');
+  await expect(row).toHaveAttribute('data-customer-status', 'invited');
   await expect(row).toContainText('Taslak (kapalı)');
-  await expect(row).toContainText('davet gönderilmedi');
+  await expect(row).toContainText('davet gönderildi');
   await page.goto(`/platform/organizasyonlar?q=${encodeURIComponent(SLUG)}&durum=live`);
   await expect(page.locator('tr[data-customer-status]').filter({ hasText: NAME })).toHaveCount(0);
   await page.goto(`/platform/organizasyonlar?q=${encodeURIComponent(SLUG)}&durum=attention`);
+  await expect(page.locator('tr[data-customer-status]').filter({ hasText: NAME })).toHaveCount(0);
+  await page.goto(`/platform/organizasyonlar?q=${encodeURIComponent(SLUG)}&durum=invited`);
   await expect(page.locator('tr[data-customer-status]').filter({ hasText: NAME })).toHaveCount(1);
   // Geçersiz filtre yok sayılır
   await page.goto(`/platform/organizasyonlar?q=${encodeURIComponent(SLUG)}&durum=%27%3Bdrop`);
   await expect(page.locator('tr[data-customer-status]').filter({ hasText: NAME })).toHaveCount(1);
 
-  // Davet gönderilince durum "Davet bekliyor"
+  // Konsolda güvenli "tekrar gönder" çalışır: yeni bağlantı, eski bağlantı geçersiz; durum yine "Davet bekliyor"
   await page.goto(`/platform/organizasyonlar/${S.orgId}`);
-  const before = mails.length;
-  await page.getByTestId('owner-invitation').getByRole('button', { name: 'Davet gönder' }).click();
-  S.ownerLink = await linkFor(OWNER, before);
+  const resent = mails.length;
+  await page.getByTestId('owner-invitation').getByRole('button', { name: 'Daveti tekrar gönder' }).click();
+  S.ownerLink = await linkFor(OWNER, resent);
   await page.reload();
   await expect(page.locator('[data-customer-status]').first()).toHaveAttribute('data-customer-status', 'invited');
 });

@@ -6,6 +6,7 @@ import { ActionButton } from '@/components/panel/action-controls';
 import { Badge } from '@/components/ui/badge';
 import { revokeOwnerInvitationAction, sendOwnerInvitationAction } from '@/app/actions/platform';
 import { formatDateTime } from '@/lib/format';
+import type { InitialInvitation } from '@/modules/platform/invitations/service';
 
 export type OwnerInvitationView = {
   status: 'pending' | 'expired' | 'accepted' | 'revoked';
@@ -54,7 +55,7 @@ export function OwnerInvitationCard({ orgId, email, invitation: initial }: { org
 
       {status === 'pending' && (
         <p className="text-[12.5px] text-muted-foreground">
-          {invitation!.lastSentAt ? `Davet ${formatDateTime(invitation!.lastSentAt)} tarihinde gönderildi.` : 'Davet gönderilmeye hazır.'}
+          {invitation!.lastSentAt ? `Davet e-postası ${formatDateTime(invitation!.lastSentAt)} tarihinde e-posta sağlayıcıya teslim edildi.` : 'Davet gönderilmeye hazır.'}
           {invitation!.expiresAt && invitation!.lastSentAt ? ` Bağlantı ${formatDateTime(invitation!.expiresAt)} tarihine kadar geçerli.` : ''}
         </p>
       )}
@@ -95,6 +96,32 @@ export function OwnerInvitationCard({ orgId, email, invitation: initial }: { org
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * PILOT · Açılış ekranı: davet açılışla birlikte kendiliğinden gönderildi. "Teslim edildi" e-posta sağlayıcısının kabulüdür
+ * (alıcının gelen kutusuna düştüğü anlamına gelmez). Gönderilemediyse organizasyon açılmıştır; buradan yeniden gönderilir.
+ */
+export function InitialInvitationResult({ orgId, email, invitation }: { orgId: string; email: string; invitation: InitialInvitation }) {
+  const sent = invitation.status === 'sent';
+  return (
+    <div className="space-y-3">
+      {sent ? (
+        <p className="rounded-xl bg-success-soft px-3.5 py-2.5 text-[13.5px] text-success" data-testid="initial-invitation" data-status="sent">
+          Aktivasyon daveti {invitation.email} adresine gönderildi: e-posta sağlayıcıya teslim edildi.
+        </p>
+      ) : (
+        <p role="alert" className="rounded-xl bg-warning-soft px-3.5 py-2.5 text-[13.5px] text-warning" data-testid="initial-invitation" data-status="failed">
+          Organizasyon açıldı ancak davet e-postası gönderilemedi: {invitation.status === 'failed' ? invitation.error : ''} Davet bekliyor; aşağıdan yeniden gönderebilirsiniz.
+        </p>
+      )}
+      <OwnerInvitationCard
+        orgId={orgId}
+        email={email}
+        invitation={{ status: 'pending', expiresAt: sent ? invitation.expiresAt : null, lastSentAt: sent ? invitation.sentAt : null, acceptedAt: null, accountPending: true }}
+      />
     </div>
   );
 }

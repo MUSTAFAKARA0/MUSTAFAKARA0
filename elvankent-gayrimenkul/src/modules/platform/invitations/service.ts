@@ -82,3 +82,26 @@ export async function revokeOwnerInvitation(session: SessionUser, orgId: string)
   if (error?.code === 'P0002') throw new ActionError('İptal edilecek bekleyen davet yok.', 'not_found');
   assertNoDbError(error);
 }
+
+/** Açılıştan hemen sonra gönderilen ilk sahip daveti: teslim sonucu (e-posta sağlayıcıya teslim, hata ya da gereksiz) */
+export type InitialInvitation =
+  | { status: 'sent'; email: string; expiresAt: string; sentAt: string }
+  | { status: 'failed'; error: string }
+  | { status: 'not_applicable' };
+
+/**
+ * PILOT · Yeni ofis açılınca sahip daveti KENDİLİĞİNDEN gönderilir (aynı güvenli davet: tek kullanımlık, süreli, özeti
+ * saklanan token, ofise bağlı; e-postada şifre yok). Yalnız yeni açılan, henüz etkinleşmemiş hesap için ('invitation_pending');
+ * kayıtlı (mevcut) hesaba davet açılmaz, şifresine / hesabına dokunulmaz. Gönderim başarısız olursa organizasyon KALIR,
+ * davet bekler ve konsoldaki "Daveti tekrar gönder" aynı davet kaydını yeni tokenla kullanır (yinelenen davet satırı yok).
+ * "sent" = e-posta sağlayıcıya teslim edildi (alıcının kutusuna ulaştığı anlamına gelmez).
+ */
+export async function sendInitialOwnerInvitation(session: SessionUser, orgId: string, ownerAccount: 'invitation_pending' | 'existing_account'): Promise<InitialInvitation> {
+  if (ownerAccount !== 'invitation_pending') return { status: 'not_applicable' };
+  try {
+    const sent = await sendOwnerInvitation(session, orgId);
+    return { status: 'sent', email: sent.email, expiresAt: sent.expiresAt, sentAt: new Date().toISOString() };
+  } catch (e) {
+    return { status: 'failed', error: e instanceof ActionError ? e.message : 'Davet e-postası gönderilemedi. Davet bekliyor; "Davet gönder" ile yeniden deneyin.' };
+  }
+}
