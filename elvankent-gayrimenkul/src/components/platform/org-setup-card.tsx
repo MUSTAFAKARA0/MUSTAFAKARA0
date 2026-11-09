@@ -36,7 +36,7 @@ export function OrgSetupCard({
         <>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={state === 'setup_completed' ? 'success' : state ? 'warning' : 'neutral'}>{state ? SETUP_STATE_LABELS[state] : 'Kurulum kaydı yok'}</Badge>
-            {setup?.origin === 'legacy' && <span className="text-muted-foreground">(mevcut ofis — tasarım kilitli değil)</span>}
+            {setup?.origin === 'legacy' && <span className="text-muted-foreground">(mevcut ofis — tasarım kilitli değil; yeniden açılıp tamamlanırsa kilitlenir)</span>}
           </div>
           <dl className="space-y-1.5">
             <div className="flex justify-between gap-3">
@@ -75,7 +75,8 @@ export function OrgSetupCard({
               action={() => reopenOrgSetupAction(orgId)}
               confirm={{
                 title: 'Tasarım seçimi yeniden açılsın mı?',
-                description: 'Ofis sahibi bir sonraki girişte kurulumun tasarım adımına yönlenir ve izinli tasarımlardan yeniden seçer. İşlem denetim kaydına yazılır.',
+                description:
+                  'Ofis sahibi bir sonraki girişte kurulumun tasarım adımına yönlenir ve izinli tasarımlardan yeniden seçer. Seçim tamamlanınca tasarım ailesi ve tema kilitlenir (daha önce kilitli olmayan mevcut ofisler dahil). İşlem denetim kaydına yazılır.',
                 confirmLabel: 'Yeniden aç',
               }}
             >

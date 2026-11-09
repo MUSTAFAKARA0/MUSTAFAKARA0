@@ -55,7 +55,7 @@ export function OwnerInvitationCard({ orgId, email, invitation: initial }: { org
 
       {status === 'pending' && (
         <p className="text-[12.5px] text-muted-foreground">
-          {invitation!.lastSentAt ? `Davet e-postası ${formatDateTime(invitation!.lastSentAt)} tarihinde e-posta sağlayıcıya teslim edildi.` : 'Davet gönderilmeye hazır.'}
+          {invitation!.lastSentAt ? `Davet e-postası ${formatDateTime(invitation!.lastSentAt)} tarihinde e-posta sağlayıcısı tarafından kabul edildi.` : 'Davet gönderilmeye hazır.'}
           {invitation!.expiresAt && invitation!.lastSentAt ? ` Bağlantı ${formatDateTime(invitation!.expiresAt)} tarihine kadar geçerli.` : ''}
         </p>
       )}
@@ -101,8 +101,8 @@ export function OwnerInvitationCard({ orgId, email, invitation: initial }: { org
 }
 
 /**
- * PILOT · Açılış ekranı: davet açılışla birlikte kendiliğinden gönderildi. "Teslim edildi" e-posta sağlayıcısının kabulüdür
- * (alıcının gelen kutusuna düştüğü anlamına gelmez). Gönderilemediyse organizasyon açılmıştır; buradan yeniden gönderilir.
+ * PILOT · Açılış ekranı: davet açılışla birlikte kendiliğinden gönderildi. "Kabul edildi" e-posta sağlayıcısının kabulüdür
+ * (alıcının gelen kutusuna teslim garantisi değildir). Gönderilemediyse organizasyon açılmıştır; buradan yeniden gönderilir.
  */
 export function InitialInvitationResult({ orgId, email, invitation }: { orgId: string; email: string; invitation: InitialInvitation }) {
   const sent = invitation.status === 'sent';
@@ -110,7 +110,7 @@ export function InitialInvitationResult({ orgId, email, invitation }: { orgId: s
     <div className="space-y-3">
       {sent ? (
         <p className="rounded-xl bg-success-soft px-3.5 py-2.5 text-[13.5px] text-success" data-testid="initial-invitation" data-status="sent">
-          Aktivasyon daveti {invitation.email} adresine gönderildi: e-posta sağlayıcıya teslim edildi.
+          Aktivasyon daveti {invitation.email} adresine gönderildi: e-posta sağlayıcısı tarafından kabul edildi (gelen kutusuna teslim garantisi değildir).
         </p>
       ) : (
         <p role="alert" className="rounded-xl bg-warning-soft px-3.5 py-2.5 text-[13.5px] text-warning" data-testid="initial-invitation" data-status="failed">

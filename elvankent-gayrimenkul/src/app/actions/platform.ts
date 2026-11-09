@@ -32,20 +32,32 @@ function refreshTenants(orgId?: string) {
  * tasarımlar başlangıçta katalogda açık ailelerin tamamıdır; KARAYS Site › Tema › "Ofisin seçebileceği tasarımlar"
  * bölümünden daraltır (aynı izin mekanizması).
  */
-export async function createOrganization(raw: CreateOrgInput): Promise<ActionResult<{ id: string; ownerEmail: string; ownerAccount: OwnerAccountState; invitation: InitialInvitation }>> {
+export async function createOrganization(
+  raw: CreateOrgInput,
+): Promise<ActionResult<{ id: string; ownerEmail: string; ownerAccount: OwnerAccountState; invitation: InitialInvitation; warnings: string[] }>> {
   return runAction(async () => {
     const session = await requireSuperAdmin();
     const created = await provisionOrganization(session, raw);
     refreshTenants();
-    const { setup } = await getOrgSetup(session.supabase, created.id);
-    if (setup && setup.state !== 'setup_completed') {
-      const { disabled } = await disabledFamilies(session.supabase);
-      const families = DESIGN_FAMILIES.map((f) => f.id).filter((id) => !disabled.has(id));
-      const grant = await session.supabase.rpc('platform_set_org_design_families', { p_org: created.id, p_families: families });
-      if (grant.error) console.warn('[setup] family grant failed', { org: created.id, code: grant.error.code });
+    // Organizasyon açıldı: bundan sonraki adımların hatası açılışı geri almaz, sonuç ekranında uyarı olarak gösterilir
+    const warnings: string[] = [];
+    try {
+      const { setup } = await getOrgSetup(session.supabase, created.id);
+      if (setup && setup.state !== 'setup_completed') {
+        const { disabled } = await disabledFamilies(session.supabase);
+        const families = DESIGN_FAMILIES.map((f) => f.id).filter((id) => !disabled.has(id));
+        const grant = await session.supabase.rpc('platform_set_org_design_families', { p_org: created.id, p_families: families });
+        if (grant.error) {
+          console.warn('[setup] family grant failed', { org: created.id, code: grant.error.code });
+          warnings.push('Ofisin seçebileceği tasarımlar kaydedilemedi; sahip kurulumu tamamlayamaz. Site › Tema › "Ofisin seçebileceği tasarımlar" bölümünden kaydedin.');
+        }
+      }
+    } catch {
+      warnings.push('İlk kurulum durumu okunamadı; Site › Tema bölümünden ofisin seçebileceği tasarımları kontrol edin.');
     }
     const invitation = await sendInitialOwnerInvitation(session, created.id, created.ownerAccount);
-    return { ...created, invitation };
+    if (invitation.status === 'sent' && invitation.warning) warnings.push(invitation.warning);
+    return { ...created, invitation, warnings };
   });
 }
 
@@ -74,7 +86,7 @@ export async function sendOwnerInvitationAction(orgId: string): Promise<ActionRe
     const sent = await sendOwnerInvitation(session, orgId);
     revalidatePath(`/platform/organizasyonlar/${orgId}`);
     return sent;
-  }, 'Davet e-postası sağlayıcıya teslim edildi. Önceki davet bağlantıları artık geçersiz.');
+  }, 'Davet e-postası, e-posta sağlayıcısı tarafından kabul edildi. Önceki davet bağlantıları artık geçersiz.');
 }
 
 /** Bekleyen sahip davetini iptal eder (bağlantı geçersiz olur; hesap ve organizasyon silinmez) */

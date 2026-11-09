@@ -51,7 +51,7 @@ export function SetupFlow({
 
   async function go(next: number) {
     if (next < 0 || next > LAST_SETUP_STEP || pending) return;
-    if (next > 2 && families.length > 0 && !chosen) {
+    if (next > 2 && !chosen) {
       setError('Devam etmek için bir tasarım seçin.');
       return;
     }
@@ -130,7 +130,7 @@ export function SetupFlow({
             <h1 className="font-display text-[1.5rem] leading-tight">Tasarımınızı seçin</h1>
             {families.length === 0 ? (
               <p className="rounded-xl bg-surface-muted px-4 py-3 text-[13.5px] text-muted-foreground" data-testid="setup-no-families">
-                Ofisiniz için açılmış bir tasarım yok; siteniz KARAYS&apos;in hazırladığı mevcut tasarımla devam eder.
+                Ofisiniz için henüz bir tasarım açılmadı. Kurulumu tamamlamak için KARAYS ile iletişime geçin; tasarımlar açıldığında bu sayfadan devam edebilirsiniz.
               </p>
             ) : (
               <ul role="radiogroup" aria-label="Tasarım aileleri" className="grid gap-4 sm:grid-cols-2">
@@ -169,7 +169,7 @@ export function SetupFlow({
               <div>
                 <h1 className="font-display text-[1.5rem] leading-tight">Önizleyin</h1>
                 <p className="mt-1 text-[13.5px] text-muted-foreground">
-                  {chosen ? `${chosen.name} tasarımı, sitenizin gerçek bilgileriyle. Önizleme hiçbir şeyi değiştirmez.` : 'Siteniz mevcut tasarımıyla devam eder.'}
+                  {chosen ? `${chosen.name} tasarımı, sitenizin gerçek bilgileriyle. Önizleme hiçbir şeyi değiştirmez.` : 'Önce bir tasarım seçin.'}
                 </p>
               </div>
               <div role="group" aria-label="Cihaz" className="flex rounded-full bg-surface-muted p-1 ring-1 ring-border">
@@ -218,7 +218,7 @@ export function SetupFlow({
                   Seçilen tasarım: <strong className="text-foreground">{chosen.name}</strong>. Onayladığınızda tasarım sitenize uygulanır.
                 </>
               ) : (
-                'Siteniz mevcut tasarımıyla devam eder.'
+                'Önce bir tasarım seçin.'
               )}
             </p>
             <p className="text-[13px] text-muted-foreground">
@@ -242,11 +242,11 @@ export function SetupFlow({
             <span />
           )}
           {step < LAST_SETUP_STEP ? (
-            <Button type="button" onClick={() => void go(step + 1)} loading={pending} disabled={step === 2 && families.length > 0 && !chosen}>
+            <Button type="button" onClick={() => void go(step + 1)} loading={pending} disabled={step === 2 && !chosen}>
               Devam <ArrowRight />
             </Button>
           ) : (
-            <Button type="button" onClick={() => void finish()} loading={pending}>
+            <Button type="button" onClick={() => void finish()} loading={pending} disabled={!chosen}>
               <Check /> Kurulumu tamamla
             </Button>
           )}

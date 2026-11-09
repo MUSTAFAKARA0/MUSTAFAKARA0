@@ -210,7 +210,11 @@ test('PJ-1: KARAY yöneticisi yeni ofisi açar; sahip daveti kendiliğinden gide
   expect(org).toMatchObject({ status: 'active', is_default: false });
   S.ownerLink = await mailFor(OWNER, before);
   // İlk kurulum akışı ayrı yolculukta sınanır (pilot-onboarding.spec.ts PO-*); burada tamamlanmış sayılır
-  await service!.from('organization_setup').update({ state: 'setup_completed', step: 4, completed_at: new Date().toISOString() }).eq('organization_id', S.orgId!);
+  {
+    // Yalnız tablo yoksa (eski şema: PGRST205 / 42P01) yok sayılır; başka her hata testi düşürür
+    const done = await service!.from('organization_setup').update({ state: 'setup_completed', step: 4, completed_at: new Date().toISOString() }).eq('organization_id', S.orgId!);
+    if (done.error && !['PGRST205', '42P01'].includes(done.error.code)) throw new Error(`organization_setup: ${done.error.code} ${done.error.message}`);
+  }
 });
 
 test('PJ-2: sahip davetle hesabını etkinleştirir, şifre belirler ve /admin açılır', async ({ browser }) => {

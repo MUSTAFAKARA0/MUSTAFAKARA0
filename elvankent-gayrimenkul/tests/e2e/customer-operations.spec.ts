@@ -121,7 +121,11 @@ test('CO-1: yeni müşteri listede "Dikkat"; arama ve filtre; detayda durum pane
   S.orgId = org!.id;
   S.ownerLink = await linkFor(OWNER, before);
   // İlk kurulum akışı (pilot-onboarding.spec.ts) bu dosyanın konusu değil: tamamlanmış sayılır (tablo yoksa yok sayılır)
-  await service!.from('organization_setup').update({ state: 'setup_completed', step: 4, completed_at: new Date().toISOString() }).eq('organization_id', S.orgId);
+  {
+    // Yalnız tablo yoksa (eski şema: PGRST205 / 42P01) yok sayılır; başka her hata testi düşürür
+    const done = await service!.from('organization_setup').update({ state: 'setup_completed', step: 4, completed_at: new Date().toISOString() }).eq('organization_id', S.orgId);
+    if (done.error && !['PGRST205', '42P01'].includes(done.error.code)) throw new Error(`organization_setup: ${done.error.code} ${done.error.message}`);
+  }
   const { data: site } = await service!.from('site_configs').select('site_status').eq('organization_id', S.orgId).single();
   expect(site!.site_status).toBe('draft');
 

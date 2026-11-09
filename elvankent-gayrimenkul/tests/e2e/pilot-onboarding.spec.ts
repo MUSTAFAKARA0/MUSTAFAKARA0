@@ -7,7 +7,7 @@ import { expect, test, type Browser, type BrowserContext, type Page, type Reques
  * PILOT READY · Yeni ofisin ilk kurulumu (bekleyen migration I: supabase/pending/20261108000005_org_setup.sql).
  * pilot-journey.spec.ts ile aynı desen: sahte e-posta (Resend, 127.0.0.1:4010), yalnız sahte veri, sonda silinir.
  *
- *  PO-1  KARAY yeni ofisi açar → davet e-postası KENDİLİĞİNDEN doğru adrese gider ("sağlayıcıya teslim edildi"); kurulum
+ *  PO-1  KARAY yeni ofisi açar → davet e-postası KENDİLİĞİNDEN doğru adrese gider ("e-posta sağlayıcısı tarafından kabul edildi"); kurulum
  *        bekler; KARAY ofisin seçebileceği aileleri daraltır (mevcut Site › Tema izin ekranı)
  *  PO-2  Aynı açılış tekrar gönderilirse ikinci davet / e-posta yok; konsolda "Daveti tekrar gönder" çalışır
  *  PO-3  Aktivasyon → ilk giriş /admin/kurulum; /admin de oraya yönlenir; yalnız izinli aileler (diğerleri HTML'de yok);
@@ -19,6 +19,8 @@ import { expect, test, type Browser, type BrowserContext, type Page, type Reques
  *        bildirimi gösterir, aile önizlemesi kapalı
  *  PO-7  Kilit dışı düzenlemeler çalışır: şirket bilgisi (slogan), header, yayınla; tasarım değişmez
  *  PO-8  KARAY seçimi yeniden açar (denetim kaydı) → sahip tasarım adımına döner, başka aile seçer → yayında
+ *  PO-9  E-posta sağlayıcısı hata verirse ofis açılmış kalır, konsol uyarır (data-status="failed"); "Davet gönder" ile
+ *        yeniden gönderim çalışır ve tek e-posta gider
  */
 const adminEmail = process.env.E2E_ADMIN_EMAIL;
 const adminPassword = process.env.E2E_ADMIN_PASSWORD;
@@ -45,17 +47,30 @@ const ALLOWED = ['Klasik Güven', 'Sinematik Vitrin'];
 const OTHERS = ['Editoryal Lüks', 'Kurumsal Portföy', 'Yalın Galeri', 'Doğal Yaşam'];
 const opts = { auth: { persistSession: false, autoRefreshToken: false } };
 const service = url && serviceKey ? createClient(url, serviceKey, opts) : null;
-const S: { orgId?: string; ownerLink?: string; version?: number } = {};
+const S: { orgId?: string; ownerLink?: string; version?: number; failOrgId?: string } = {};
+// PO-9: davet gönderimi başarısız olan ikinci ofis
+const FAIL_SLUG = `kurulum-hata-${RUN}`;
+const FAIL_OWNER = `kurulum-hata-sahip-${RUN}@example.test`;
+const FAIL_PREFIX = [...randomBytes(5)].map((b) => String.fromCharCode(65 + (b % 26))).join('');
 
 type Mail = { to: string[]; subject: string; html: string; text: string };
 const mails: Mail[] = [];
 let mailServer: Server | null = null;
+let mailFailing = false;
+let failedRequests = 0;
 
 test.beforeAll(async () => {
   mailServer = createServer((req, res) => {
     let body = '';
     req.on('data', (c) => (body += c));
     req.on('end', () => {
+      // PO-9: sağlayıcı hatası (5xx; uygulama yeniden dener, hepsi başarısız) — e-posta kabul edilmez
+      if (mailFailing) {
+        failedRequests += 1;
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ name: 'internal_server_error' }));
+        return;
+      }
       try {
         mails.push(JSON.parse(body || '{}') as Mail);
       } catch {
@@ -74,9 +89,9 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await new Promise<void>((resolve) => (mailServer ? mailServer.close(() => resolve()) : resolve()));
   if (!service) return;
-  if (S.orgId) await service.from('organizations').delete().eq('id', S.orgId);
+  for (const id of [S.orgId, S.failOrgId]) if (id) await service.from('organizations').delete().eq('id', id);
   const { data } = await service.auth.admin.listUsers({ perPage: 1000 });
-  for (const u of data?.users ?? []) if (u.email === OWNER) await service.auth.admin.deleteUser(u.id);
+  for (const u of data?.users ?? []) if (u.email === OWNER || u.email === FAIL_OWNER) await service.auth.admin.deleteUser(u.id);
 });
 
 // --- Yardımcılar (pilot-journey.spec.ts ile aynı) ---------------------------------------
@@ -144,7 +159,7 @@ test('PO-1: yeni ofis açılır; davet kendiliğinden gider; kurulum bekler; izi
   await page.getByRole('button', { name: 'Organizasyonu oluştur' }).click();
   await expect(page.getByText('Organizasyon oluşturuldu.')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId('initial-invitation')).toHaveAttribute('data-status', 'sent');
-  await expect(page.getByTestId('initial-invitation')).toContainText('e-posta sağlayıcıya teslim edildi');
+  await expect(page.getByTestId('initial-invitation')).toContainText('e-posta sağlayıcısı tarafından kabul edildi');
   await expect(page.getByTestId('initial-invitation')).not.toContainText('ulaştı');
   S.ownerLink = await mailFor(OWNER, before);
   // Yalnız sahibin adresine, tek e-posta
@@ -200,7 +215,7 @@ test('PO-2: tekrar açılış yinelenen davet üretmez; konsoldan tekrar gönder
 
   await page.goto(`/platform/organizasyonlar/${S.orgId}`);
   const card = page.getByTestId('owner-invitation');
-  await expect(card).toContainText('e-posta sağlayıcıya teslim edildi');
+  await expect(card).toContainText('e-posta sağlayıcısı tarafından kabul edildi');
   const resent = mails.length;
   await card.getByRole('button', { name: 'Daveti tekrar gönder' }).click();
   const link = await mailFor(OWNER, resent);
@@ -418,4 +433,46 @@ test('PO-8: KARAY seçimi yeniden açar (denetim kaydı); sahip yeniden seçer',
   expect(await setupRow()).toMatchObject({ state: 'setup_completed', selected_family: 'klasik-guven' });
   expect((await siteRow()).published.style?.origin?.family).toBe('klasik-guven');
   await ctx.close();
+});
+
+test('PO-9: davet gönderilemezse ofis kalır, konsol uyarır; yeniden gönderim tek e-posta gönderir', async ({ page }) => {
+  test.setTimeout(120_000);
+  await loginPlatform(page);
+  await page.goto('/platform/organizasyonlar/yeni');
+  await page.getByLabel('Organizasyon adı').fill(`${NAME} Hata`);
+  await page.getByLabel('Kısa ad (alt alan adı)').fill(FAIL_SLUG);
+  await page.getByLabel('İlan no öneki').fill(FAIL_PREFIX);
+  await page.getByLabel('Sahip adı soyadı').fill('Hata Sahibi');
+  await page.getByLabel('Sahip e-postası').fill(FAIL_OWNER);
+  const before = mails.length;
+  mailFailing = true;
+  try {
+    await page.getByRole('button', { name: 'Organizasyonu oluştur' }).click();
+    await expect(page.getByText('Organizasyon oluşturuldu.')).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId('initial-invitation')).toHaveAttribute('data-status', 'failed');
+    await expect(page.getByTestId('initial-invitation')).toContainText('davet e-postası gönderilemedi');
+  } finally {
+    mailFailing = false;
+  }
+  expect(failedRequests).toBeGreaterThan(0);
+  expect(mailsTo(FAIL_OWNER, before)).toHaveLength(0);
+
+  // Ofis ve bekleyen davet duruyor (gönderilmedi işaretli)
+  const { data: org } = await service!.from('organizations').select('id, status').eq('slug', FAIL_SLUG).single();
+  S.failOrgId = org!.id;
+  expect(org!.status).toBe('active');
+  const { data: inv } = await service!.from('organization_invitations').select('status, last_sent_at').eq('organization_id', S.failOrgId!);
+  expect(inv).toEqual([{ status: 'pending', last_sent_at: null }]);
+
+  // Konsoldan yeniden gönder: tek e-posta, doğru adres, davet satırı tek
+  const card = page.getByTestId('owner-invitation');
+  await card.getByRole('button', { name: 'Davet gönder' }).click();
+  await mailFor(FAIL_OWNER, before);
+  await page.waitForTimeout(1_000);
+  expect(mailsTo(FAIL_OWNER, before)).toHaveLength(1);
+  const { data: after } = await service!.from('organization_invitations').select('status, last_sent_at').eq('organization_id', S.failOrgId!);
+  expect(after).toHaveLength(1);
+  expect(after![0].last_sent_at).not.toBeNull();
+  await page.goto(`/platform/organizasyonlar/${S.failOrgId}`);
+  await expect(page.getByTestId('owner-invitation')).toContainText('e-posta sağlayıcısı tarafından kabul edildi');
 });

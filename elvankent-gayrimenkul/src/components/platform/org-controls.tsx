@@ -56,12 +56,19 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [done, setDone] = useState<{ id: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account'; invitation: InitialInvitation } | null>(null);
+  const [done, setDone] = useState<{ id: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account'; invitation: InitialInvitation; warnings: string[] } | null>(null);
 
   if (done) {
     return (
       <div className="space-y-4">
         <p className="rounded-xl bg-success-soft p-4 text-[14px] text-success">Organizasyon oluşturuldu.</p>
+        {done.warnings.length > 0 && (
+          <ul role="alert" className="space-y-1.5 rounded-xl bg-warning-soft p-4 text-[13.5px] text-warning" data-testid="create-warnings">
+            {done.warnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        )}
         {done.ownerAccount === 'invitation_pending' ? (
           <div className="rounded-xl border border-border p-4">
             <InitialInvitationResult orgId={done.id} email={done.email} invitation={done.invitation} />
@@ -101,7 +108,7 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
           if (!Object.keys(next).length) setFormError(res.error);
           return;
         }
-        setDone({ id: res.data.id, email: res.data.ownerEmail, ownerAccount: res.data.ownerAccount, invitation: res.data.invitation });
+        setDone({ id: res.data.id, email: res.data.ownerEmail, ownerAccount: res.data.ownerAccount, invitation: res.data.invitation, warnings: res.data.warnings });
         router.refresh();
       }}
     >

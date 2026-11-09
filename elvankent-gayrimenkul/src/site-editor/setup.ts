@@ -33,8 +33,11 @@ async function readSetup(db: Db, orgId: string): Promise<OrgSetupRead> {
     .eq('organization_id', orgId)
     .maybeSingle();
   if (error) {
-    if (!isMissingDesignAccessSchema(error)) console.warn('[setup] read failed', { org: orgId, code: error.code });
-    return { available: !isMissingDesignAccessSchema(error), setup: null };
+    // Yalnız eksik şema (bekleyen migration I uygulanmamış: PGRST202/205, 42883, 42P01) eski davranışa döner. Diğer
+    // hatalar (geçici bağlantı, yetki) yutulmaz: "kurulum yok" sanılıp panel ↔ kurulum arasında gidip gelinmez.
+    if (isMissingDesignAccessSchema(error)) return { available: false, setup: null };
+    console.warn('[setup] read failed', { org: orgId, code: error.code });
+    throw new ActionError('Kurulum durumu okunamadı. Lütfen sayfayı yenileyin.', 'setup_read_failed');
   }
   return { available: true, setup: parseOrgSetup(data) };
 }
@@ -65,13 +68,10 @@ export async function saveSetupProgress(db: Db, orgId: string, step: number, fam
  * aile iznini, bölümleri ve kurulum durumunu tek işlemde doğrular. Tamamlanmış kurulumda 'setup_completed' döner.
  */
 export async function completeSetup(db: Db, orgId: string, familyId: string | null): Promise<number> {
-  // İzinli aile yoksa (KARAYS hiç açmadıysa) mevcut tasarımla tamamlanır: aile ve bölümler null gider
-  let args: { p_org: string; p_family: string | null; p_sections: Json } = { p_org: orgId, p_family: null, p_sections: null };
-  if (familyId) {
-    const { family, sections } = await compileSetupDesign(db, orgId, familyId);
-    args = { p_org: orgId, p_family: family.id, p_sections: sections as unknown as Json };
-  }
-  const { data, error } = await db.rpc('org_setup_complete', args as { p_org: string; p_family: string; p_sections: Json });
+  // Aile zorunlu: izinli aile yoksa kurulum tamamlanmaz ve kilitlenmez (veritabanı da 'family_required' ile reddeder)
+  if (!familyId) throw new ActionError('Devam etmek için bir tasarım seçin.', 'family_required');
+  const { family, sections } = await compileSetupDesign(db, orgId, familyId);
+  const { data, error } = await db.rpc('org_setup_complete', { p_org: orgId, p_family: family.id, p_sections: sections as unknown as Json });
   assertNoDbError(error);
   return (data as number) ?? 0;
 }

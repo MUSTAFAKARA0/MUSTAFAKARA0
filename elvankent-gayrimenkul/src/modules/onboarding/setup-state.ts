@@ -70,10 +70,44 @@ export function designLocked(setup: OrgSetup | null): boolean {
   return !!setup && setup.state === 'setup_completed' && setup.origin === 'onboarding';
 }
 
-/** Kilitliyken ofisin yazamayacağı taslak bölümleri (aile paketi). Renk, marka, metinler, menü vb. serbest. */
-export const LOCKED_DESIGN_SECTIONS = ['theme', 'style', 'typography'] as const;
-export function isLockedSection(section: string): boolean {
-  return (LOCKED_DESIGN_SECTIONS as readonly string[]).includes(section);
+/**
+ * Kilit kapsamı (veritabanındaki site_configs_design_lock ile AYNI): yalnız tema (theme) ve tasarım ailesi
+ * (style.origin.family). Renkler, yazı tipi, bileşen stilleri (style'ın diğer anahtarları), marka, metinler, menü vb. serbest.
+ */
+export const LOCKED_DESIGN_KEYS = ['theme', 'style.origin.family'] as const;
+
+/** Bölüm yazımı kilitli değeri değiştirebilecek mi (yalnız bu bölümlerde mevcut değer okunur) */
+export function sectionTouchesLockedKeys(section: string): boolean {
+  return section === 'theme' || section === 'style';
+}
+
+export interface LockedDesignValues {
+  draftTheme: string | null;
+  publishedTheme: string | null;
+  draftFamily: string | null;
+  publishedFamily: string | null;
+}
+
+function familyOf(style: unknown): string | null {
+  const origin = style && typeof style === 'object' ? (style as { origin?: unknown }).origin : null;
+  const family = origin && typeof origin === 'object' ? (origin as { family?: unknown }).family : null;
+  return typeof family === 'string' ? family : null;
+}
+
+/**
+ * Bu yazım kilitli bir değeri YENİ bir değere çevirir mi. Veritabanıyla aynı kural: mevcut taslak ya da yayındaki
+ * değerden biri yazılabilir (yayınla / taslağı geri al), başka bir tema / aile yazılamaz.
+ */
+export function isLockedDesignChange(section: string, value: unknown, current: LockedDesignValues): boolean {
+  if (section === 'theme') {
+    const theme = typeof value === 'string' ? value : null;
+    return theme !== current.draftTheme && theme !== current.publishedTheme;
+  }
+  if (section === 'style') {
+    const family = familyOf(value);
+    return family !== current.draftFamily && family !== current.publishedFamily;
+  }
+  return false;
 }
 
 /** Akışın açılacağı adım: kaydedilmiş adım; tasarım adımı ve sonrası aday aile yoksa tasarım adımına döner */

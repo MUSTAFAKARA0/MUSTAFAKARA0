@@ -5,7 +5,7 @@ import { ActionError, runAction, type ActionResult } from '@/platform/actions';
 import { requirePermission } from '@/platform/auth/session';
 import { selectableFamilies } from '@/modules/platform/design-access';
 import { getOrgSetup } from '@/site-editor/setup';
-import { designLocked, isLockedSection } from '@/modules/onboarding/setup-state';
+import { designLocked, isLockedDesignChange, sectionTouchesLockedKeys } from '@/modules/onboarding/setup-state';
 import type { SiteSection } from '@/site-config/schema';
 import type { BrandInput } from '@/site-editor/brand-input';
 import type { SavedDraft } from '@/site-editor/types';
@@ -45,17 +45,41 @@ async function editor() {
  * reddedilir; veritabanı (site_configs_design_lock) doğrudan RPC ile atlatılmasını ayrıca reddeder. Marka, renk,
  * metin, menü, header/footer, ana sayfa bölümleri ve SEO serbesttir.
  */
+const DESIGN_LOCKED = 'Tasarım ailesi ve tema ilk kurulumda seçildi; değiştirmek için KARAYS ile iletişime geçin.';
+
 async function assertDesignUnlocked(ctx: Awaited<ReturnType<typeof editor>>) {
   const { setup } = await getOrgSetup(ctx.supabase, ctx.org.id);
-  if (designLocked(setup)) {
-    throw new ActionError('Tasarım ailesi ve tema ilk kurulumda seçildi; değiştirmek için KARAYS ile iletişime geçin.', 'design_locked');
-  }
+  if (designLocked(setup)) throw new ActionError(DESIGN_LOCKED, 'design_locked');
 }
+
+/** Kapsam veritabanıyla aynı: yalnız tema ve style.origin.family; style'ın diğer anahtarları (bileşen stilleri) serbest */
+async function assertSectionAllowed(ctx: Awaited<ReturnType<typeof editor>>, section: SiteSection, value: unknown) {
+  if (!sectionTouchesLockedKeys(section)) return;
+  const { setup } = await getOrgSetup(ctx.supabase, ctx.org.id);
+  if (!designLocked(setup)) return;
+  const { data } = await ctx.supabase.from('site_configs').select('draft, published').eq('organization_id', ctx.org.id).maybeSingle();
+  // Ham değerler (veritabanı tetikleyicisi de ham jsonb'yi karşılaştırır; şema varsayılanı kullanılmaz)
+  type Raw = { theme?: unknown; style?: { origin?: { family?: unknown } } } | null;
+  const draft = (data?.draft ?? null) as Raw;
+  const published = (data?.published ?? null) as Raw;
+  const str = (v: unknown) => (typeof v === 'string' ? v : null);
+  const current = {
+    draftTheme: str(draft?.theme),
+    publishedTheme: str(published?.theme),
+    draftFamily: str(draft?.style?.origin?.family),
+    publishedFamily: str(published?.style?.origin?.family),
+  };
+  if (isLockedDesignChange(section, value, current)) throw new ActionError(DESIGN_LOCKED, 'design_locked');
+}
+
+/** Geri almada kilit reddi: sürüm farklı bir tasarım kullanıyor */
+const ROLLBACK_DESIGN_LOCKED =
+  'Bu sürüm farklı bir tasarım kullanıyor; tasarım kilitli olduğu için bu sürüme dönülemez. İçerik değişikliklerini elle geri alabilir ya da KARAYS\'tan tasarım kilidini açmasını isteyebilirsiniz.';
 
 export async function saveOfficeSiteSection(section: SiteSection, value: unknown, expected?: string | null): Promise<ActionResult<SavedDraft>> {
   return runAction(async () => {
     const ctx = await editor();
-    if (isLockedSection(section)) await assertDesignUnlocked(ctx);
+    await assertSectionAllowed(ctx, section, value);
     const draftToken = await saveDraftSection(ctx.supabase, ctx.org.id, section, value, expected);
     revalidatePath(PANEL, 'layout');
     return { draftToken };
@@ -95,7 +119,10 @@ export async function publishOfficeSite(note?: string): Promise<ActionResult<{ v
 export async function rollbackOfficeSite(version: number): Promise<ActionResult<{ version: number }>> {
   return runAction(async () => {
     const ctx = await editor();
-    const next = await rollbackToVersion(ctx.supabase, ctx.org.id, version);
+    const next = await rollbackToVersion(ctx.supabase, ctx.org.id, version).catch((e: unknown) => {
+      if (e instanceof ActionError && e.code === 'design_locked') throw new ActionError(ROLLBACK_DESIGN_LOCKED, 'design_locked');
+      throw e;
+    });
     refreshPublicSite(ctx.org.id);
     revalidatePath(PANEL, 'layout');
     return { version: next };

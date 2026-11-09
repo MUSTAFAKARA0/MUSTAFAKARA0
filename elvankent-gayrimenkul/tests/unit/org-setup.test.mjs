@@ -7,7 +7,7 @@
  *  SU-04  Devam: aday aile yoksa tasarım adımına döner; ön seçim yalnız izinli ailelerden
  *  SU-05  Sunucu sınırları: organizasyon oturumdan; panel düzeni yönlendirir; ofis işlemleri kilidi denetler; konsol akışı
  *  SU-06  Migration: var olan ofisler legacy+tamamlandı; definer + boş search_path; yetkiler; kilit tetikleyicisi; satır kilidi
- *  SU-07  Otomatik davet: açılışta mevcut güvenli davet servisi; yalnız yeni hesap; hata organizasyonu silmez; "teslim edildi" dili
+ *  SU-07  Otomatik davet: açılışta mevcut güvenli davet servisi; yalnız yeni hesap; hata organizasyonu silmez; "sağlayıcı kabul etti" dili
  */
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,7 +17,8 @@ import {
   setupRequired,
   shouldRedirectToSetup,
   designLocked,
-  isLockedSection,
+  isLockedDesignChange,
+  sectionTouchesLockedKeys,
   resumeStep,
   initialFamily,
   SETUP_STATES,
@@ -70,9 +71,21 @@ describe('SU-03 tasarım kilidi', () => {
     assert.equal(designLocked(null), false);
     for (const state of ['setup_pending', 'theme_selection_pending', 'theme_selected', 'reopened_by_platform']) assert.equal(designLocked(parseOrgSetup(row({ state }))), false, state);
   });
-  test('kilitli bölümler aile paketi; renk, marka, metin, menü, ana sayfa, SEO serbest', () => {
-    for (const s of ['theme', 'style', 'typography']) assert.equal(isLockedSection(s), true, s);
-    for (const s of ['colors', 'brand', 'header', 'navigation', 'home', 'footer', 'pages', 'seo']) assert.equal(isLockedSection(s), false, s);
+  test('kapsam veritabanıyla aynı: yalnız tema ve style.origin.family; yazı tipi, renk, bileşen stili, marka, metin serbest', () => {
+    const cur = { draftTheme: 'rezidans', publishedTheme: 'rezidans', draftFamily: 'sinematik-vitrin', publishedFamily: 'sinematik-vitrin' };
+    assert.equal(isLockedDesignChange('theme', 'klasik', cur), true);
+    assert.equal(isLockedDesignChange('theme', 'rezidans', cur), false);
+    assert.equal(isLockedDesignChange('style', { origin: { family: 'klasik-guven' } }, cur), true);
+    assert.equal(isLockedDesignChange('style', { hero: 'centered' }, cur), true, 'aile kaldırılamaz');
+    assert.equal(isLockedDesignChange('style', { hero: 'centered', origin: { family: 'sinematik-vitrin' } }, cur), false);
+    // Yayınla / taslağı geri al: mevcut taslak ya da yayın değeri yazılabilir
+    assert.equal(isLockedDesignChange('theme', 'klasik', { ...cur, draftTheme: 'klasik' }), false);
+    for (const s of ['typography', 'colors', 'brand', 'header', 'navigation', 'home', 'footer', 'pages', 'seo']) {
+      assert.equal(sectionTouchesLockedKeys(s), false, s);
+      assert.equal(isLockedDesignChange(s, { theme: 'x' }, cur), false, s);
+    }
+    assert.equal(sectionTouchesLockedKeys('theme'), true);
+    assert.equal(sectionTouchesLockedKeys('style'), true);
   });
 });
 
@@ -107,15 +120,33 @@ describe('SU-05 sunucu sınırları', () => {
   });
   test('ofis tasarım işlemleri ve sayfaları kilidi denetler; tasarım sekmesi kilitliyken menüde yok', () => {
     const actions = read('src/app/actions/admin-site.ts');
-    assert.match(actions, /if \(isLockedSection\(section\)\) await assertDesignUnlocked\(ctx\);/);
+    assert.match(actions, /await assertSectionAllowed\(ctx, section, value\);/);
+    assert.match(actions, /if \(isLockedDesignChange\(section, value, current\)\) throw new ActionError\(DESIGN_LOCKED, 'design_locked'\);/);
+    // Geri almada kilit reddi bağlama özel mesajla
+    assert.match(actions, /Bu sürüm farklı bir tasarım kullanıyor; tasarım kilitli olduğu için bu sürüme dönülemez\./);
+    assert.match(actions, /e\.code === 'design_locked'\) throw new ActionError\(ROLLBACK_DESIGN_LOCKED, 'design_locked'\)/);
     assert.match(actions, /export async function applyOfficeDesignFamily[\s\S]*?await assertDesignUnlocked\(ctx\);/);
     assert.match(read('src/app/admin/(panel)/site/tasarim/page.tsx'), /data-testid="design-locked"/);
     assert.match(read('src/app/admin/(panel)/site/layout.tsx'), /TABS\.filter\(\(t\) => t\.slug !== 'tasarim'\)/);
     assert.match(read('src/app/admin/(panel)/tasarim/onizleme/page.tsx'), /designLocked\([\s\S]*redirect\('\/admin\/site\/tasarim'\)/);
   });
-  test('eski şemada okuma hata vermez (tablo / fonksiyon yok → akış ve kilit yok)', () => {
+  test('eski şemada okuma hata vermez (yalnız eksik şema → akış ve kilit yok); diğer hatalar fırlatılır', () => {
     const server = read('src/site-editor/setup.ts');
-    assert.match(server, /return \{ available: !isMissingDesignAccessSchema\(error\), setup: null \};/);
+    assert.match(server, /if \(isMissingDesignAccessSchema\(error\)\) return \{ available: false, setup: null \};/);
+    assert.match(server, /throw new ActionError\('Kurulum durumu okunamadı\. Lütfen sayfayı yenileyin\.', 'setup_read_failed'\);/);
+    assert.match(read('src/modules/platform/design-access.ts'), /\['PGRST202', 'PGRST205', '42883', '42P01'\]/);
+    // Aile seçilmeden tamamlanmaz
+    assert.match(server, /if \(!familyId\) throw new ActionError\('Devam etmek için bir tasarım seçin\.', 'family_required'\);/);
+  });
+  test('sihirbazla açılan ofis: yalnız seçilen aile izinli; kurulumda o aile önceden seçili', () => {
+    assert.match(read('src/app/actions/site-create.ts'), /platform_set_org_design_families', \{ p_org: orgId, p_families: \[family\] \}/);
+    assert.match(read('src/app/admin/kurulum/page.tsx'), /initialFamily\(allowed, setup\.selectedFamily, site\.published\.style\.origin\?\.family \?\? null\)/);
+    assert.equal(initialFamily(['sinematik-vitrin'], null, 'sinematik-vitrin'), 'sinematik-vitrin');
+  });
+  test('açılışta aile izni yazılamazsa uyarı sonuca taşınır (yutulmaz)', () => {
+    const code = read('src/app/actions/platform.ts');
+    assert.match(code, /if \(grant\.error\) \{[\s\S]*?warnings\.push\(/);
+    assert.match(read('src/components/platform/org-controls.tsx'), /data-testid="create-warnings"/);
   });
   test('önizleme mevcut ofis önizleme çerçevesini kullanır (ikinci motor yok)', () => {
     const flow = read('src/components/admin/setup-flow.tsx');
@@ -151,7 +182,9 @@ describe('SU-06 migration', () => {
       assert.match(body, /where s\.organization_id = p_org for update;/, name);
       assert.match(body, /if v_row\.state = 'setup_completed' then\s+raise exception 'setup_completed'/, name);
     }
+    assert.match(fn('org_setup_complete'), /if p_family is null then\s+raise exception 'family_required'/);
     assert.match(fn('org_setup_complete'), /v_version := public\.site_apply_design\(p_org, p_family, p_sections\);/);
+    assert.match(fn('platform_reopen_org_setup'), /completed_at = null, completed_by = null,/);
     const reopen = fn('platform_reopen_org_setup');
     assert.match(reopen, /perform public\.assert_super_admin\(\);/);
     assert.match(reopen, /perform public\.write_audit\(p_org, 'site\.setup_reopened'/);
@@ -162,6 +195,19 @@ describe('SU-06 migration', () => {
     assert.match(lock, /s\.state = 'setup_completed' and s\.origin = 'onboarding'/);
     assert.match(lock, /raise exception 'design_locked' using errcode = '42501'/);
     assert.match(sql, /before update of draft, published on public\.site_configs/);
+    // Ucuz jsonb karşılaştırması oturum / süper yönetici denetiminden önce
+    assert.ok(lock.indexOf("(new.draft -> 'theme') is not distinct from v_old_draft_theme") < lock.indexOf('public.is_super_admin()'));
+    // Kapsam: yalnız tema ve aile
+    assert.doesNotMatch(lock, /typography|colors|'hero'/);
+  });
+  test('tetikleyiciler işlemin sonunda; yalnız varsa (pg_trigger) kaldırılır, koşulsuz drop trigger yok', () => {
+    const body = sql.slice(sql.indexOf('\ncreate table if not exists public.organization_setup ('));
+    assert.doesNotMatch(body, /^drop trigger if exists/m);
+    assert.match(body, /if exists \(select 1 from pg_trigger where tgname = 'organization_setup_init'/);
+    const lastFn = body.lastIndexOf('create or replace function');
+    for (const t of ['create trigger organization_setup_init', 'create trigger site_configs_design_lock']) assert.ok(body.indexOf(t) > lastFn, t);
+    const rollback = read('supabase/ops/org_setup/05_rollback.sql');
+    assert.match(rollback, /if exists \(select 1 from pg_trigger where tgname = 'site_configs_design_lock'[\s\S]*?drop trigger if exists site_configs_design_lock on public\.site_configs;/);
   });
 });
 
@@ -177,9 +223,12 @@ describe('SU-07 otomatik davet', () => {
     }
     assert.doesNotMatch(service, /deleteUser|delete\(\)/);
   });
-  test('arayüz "e-posta sağlayıcıya teslim edildi" der, "ulaştı" demez', () => {
+  test('arayüz "e-posta sağlayıcısı tarafından kabul edildi" der; "ulaştı" / "teslim edildi" demez', () => {
     const card = read('src/components/platform/owner-invitation.tsx');
-    assert.match(card, /e-posta sağlayıcıya teslim edildi/);
-    assert.doesNotMatch(card, /ulaştı/);
+    assert.match(card, /e-posta sağlayıcısı tarafından kabul edildi/);
+    assert.doesNotMatch(card, /ulaştı|teslim edildi/);
+  });
+  test('gönderildi işareti yazılamazsa uyarı döner', () => {
+    assert.match(service, /const marked = await session\.supabase\.rpc\('platform_mark_invitation_sent'[\s\S]*?if \(marked\.error\) \{[\s\S]*?warning:/);
   });
 });

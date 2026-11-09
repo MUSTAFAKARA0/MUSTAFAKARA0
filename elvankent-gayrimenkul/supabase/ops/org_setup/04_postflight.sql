@@ -25,11 +25,12 @@ select sira, kontrol, deger, durum from (
          coalesce((select c.relrowsecurity::text from pg_class c where c.oid = to_regclass('public.organization_setup')), 'yok') as deger,
          case when exists (select 1 from pg_class c where c.oid = to_regclass('public.organization_setup') and c.relrowsecurity) then 'TAMAM' else 'HATA' end as durum
   union all
-  select 2, 'Kurulum satırı olmayan ofis sayısı (03 hepsini işaretler)',
+  select 2, 'Kurulum satırı olmayan ofis sayısı (03 hepsini işaretler; sonradan konsol dışı açılanlar satırsız)',
          (select count(*)::text from public.organizations o where not exists (select 1 from satir s where s.organization_id = o.id)),
-         case when to_regclass('public.organization_setup') is not null
-                and (select count(*) from public.organizations o where not exists (select 1 from satir s where s.organization_id = o.id)) = 0
-              then 'TAMAM' else 'HATA: satırsız ofis var' end
+         case when to_regclass('public.organization_setup') is null then 'HATA: organization_setup yok'
+              when (select count(*) from public.organizations o where not exists (select 1 from satir s where s.organization_id = o.id)) = 0
+              then 'BİLGİ: 03 sonrası 0; sonra service_role ile açılan ofisler satırsız kalır (eski davranış)'
+              else 'BİLGİ: satırsız ofisler kurulum akışına girmez, kilitlenmez (konsol dışı açılış)' end
   union all
   select 3, 'site_configs_design_lock tetikleyici tanımı',
          coalesce((select pg_get_triggerdef(oid) from pg_trigger where tgname = 'site_configs_design_lock' and not tgisinternal limit 1), 'yok'),
@@ -49,12 +50,22 @@ select sira, kontrol, deger, durum from (
   union all
   select 6, 'org_setup_complete() gövde özeti (md5)',
          coalesce((select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f where ad = 'org_setup_complete'), 'yok'),
-         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f where ad = 'org_setup_complete') = 'c2395fe66ecc6eb91926abc17aed6129'
+         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f where ad = 'org_setup_complete') = '7a742d3472f3e550b9822ecfebadf708'
               then 'TAMAM' else 'HATA: gövde bekleneni içermiyor' end
   union all
   select 7, 'site_configs_design_lock() gövde özeti (md5)',
          coalesce((select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f where ad = 'site_configs_design_lock'), 'yok'),
-         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f where ad = 'site_configs_design_lock') = '0dbbaae8bad14cb683ef8a59d5c38ab3'
+         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f where ad = 'site_configs_design_lock') = '0f911d49868b165f81b0debb4cb3b867'
+              then 'TAMAM' else 'HATA: gövde bekleneni içermiyor' end
+  union all
+  select 12, 'org_setup_progress() gövde özeti (md5)',
+         coalesce((select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f where ad = 'org_setup_progress'), 'yok'),
+         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f where ad = 'org_setup_progress') = '3a7eec5f80ccb91bd03f1e30c592b8b5'
+              then 'TAMAM' else 'HATA: gövde bekleneni içermiyor' end
+  union all
+  select 13, 'platform_reopen_org_setup() gövde özeti (md5)',
+         coalesce((select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f where ad = 'platform_reopen_org_setup'), 'yok'),
+         case when (select md5(btrim(regexp_replace(prosrc, '\s+', ' ', 'g'))) from f where ad = 'platform_reopen_org_setup') = 'c776170ffc0aad37f945431ec3a0ad63'
               then 'TAMAM' else 'HATA: gövde bekleneni içermiyor' end
   union all
   select 8, 'Yetkiler: üç RPC anon / service_role kapalı, authenticated açık (yetki içeride)',

@@ -5,12 +5,14 @@
  *   OS-01  konsoldan (süper yönetici) açılan ofis 'setup_pending'; migration'dan önce var olan ofis (varsayılan kiracı)
  *          'setup_completed' + 'legacy'; service_role ile açılan ofis satır almaz (eski davranış)
  *   OS-02  sahip kendi ofisi için bir kez seçer: adım + aday kaydedilir, onayda tasarım yayına yazılır, denetim kaydı
- *   OS-03  ikinci seçim ve tamamlanmış kurulumda adım kaydı reddedilir (setup_completed); izinsiz aile reddedilir
+ *   OS-03  ikinci seçim ve tamamlanmış kurulumda adım kaydı reddedilir (setup_completed); izinsiz aile reddedilir; aile
+ *          seçmeden tamamlanmaz (family_required)
  *   OS-04  başka ofisin sahibi A için seçemez / adım kaydedemez (forbidden); A'nın durumu değişmez
  *   OS-05  danışman (agent), görüntüleyici (viewer) ve anon seçemez; istemci tabloya doğrudan yazamaz
- *   OS-06  kilit: sahip tema / aile değiştiremez (site_save_draft, site_apply_design, eski sürüme dönüş); marka, logo, iletişim,
- *          header, ana sayfa ve yayınlama çalışır
- *   OS-07  yeniden açma: yalnız süper yönetici; denetim kaydı (site.setup_reopened, işlemi yapan); sahip çağıramaz
+ *   OS-06  kilit (yalnız tema + style.origin.family): sahip tema / aile değiştiremez (site_save_draft, site_apply_design,
+ *          eski sürüme dönüş); yazı tipi, renk, aynı aileyle bileşen stili, marka, logo, iletişim, header, ana sayfa, yayın çalışır
+ *   OS-07  yeniden açma: yalnız süper yönetici; tamamlanma bilgisi temizlenir; denetim kaydı (site.setup_reopened, işlemi
+ *          yapan, önceki tamamlanma); sahip çağıramaz
  *   OS-08  yeniden açıldıktan sonra sahip yeniden seçer; yeni aile yayında; tekrar kilitlenir
  *   OS-09  eşzamanlı çift onay: tam olarak biri kazanır, yayın sürümü bir kez artar
  *   OS-10  eski / satırsız ofis: kurulum gerekmiyor (setup_not_required), tasarım kilitli değil
@@ -29,6 +31,7 @@ if (url && !/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(url)) {
   throw new Error(`${process.env.CI ? 'CI: ' : ''}NEXT_PUBLIC_SUPABASE_URL yerel değil; kurulum testleri yalnızca yerel Supabase ile çalışır`);
 }
 const missing = !url || !anonKey || !serviceKey;
+if (process.env.CI && missing) throw new Error('CI: kurulum güvenlik testleri için Supabase anahtarları tanımlı değil');
 const opts = { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } };
 const service = missing ? null : createClient(url, serviceKey, opts);
 const anon = missing ? null : createClient(url, anonKey, opts);
@@ -164,6 +167,9 @@ describe('OS ilk kurulum ve tasarım kilidi', () => {
     assert.match(errText(await c.rpc('org_setup_progress', { p_org: O.A, p_step: 2, p_family: 'klasik-guven' })), /setup_completed/);
     assert.equal((await siteRow(O.A)).published.style.origin.family, 'sinematik-vitrin');
     assert.match(errText(await U.ownerC.client.rpc('org_setup_progress', { p_org: O.C, p_step: 2, p_family: 'yalin-galeri' })), /family_not_allowed/);
+    // Aile seçmeden tamamlanmaz ve kilitlenmez (family_required)
+    assert.match(errText(await U.ownerC.client.rpc('org_setup_complete', { p_org: O.C, p_family: null, p_sections: null })), /family_required/);
+    assert.equal((await setupRow(O.C)).state, 'setup_pending');
   });
 
   test('OS-04 başka ofisin sahibi A için seçemez', async (t) => {
@@ -204,6 +210,10 @@ describe('OS ilk kurulum ve tasarım kilidi', () => {
     let site = await siteRow(O.A);
     assert.equal(site.draft.theme, 'rezidans');
     assert.equal(site.draft.style.origin.family, 'sinematik-vitrin');
+    // Kilit kapsamı yalnız tema + aile: yazı tipi, renkler ve AYNI aileyle bileşen stilleri serbest
+    assert.ifError((await c.rpc('site_save_draft', { p_org: O.A, p_section: 'typography', p_value: { heading: 'manrope', body: 'manrope' } })).error);
+    assert.ifError((await c.rpc('site_save_draft', { p_org: O.A, p_section: 'colors', p_value: { mode: 'preset', preset: 'premium-gold', scheme: 'dark' } })).error);
+    assert.ifError((await c.rpc('site_save_draft', { p_org: O.A, p_section: 'style', p_value: { hero: 'centered', origin: { siteType: 'residential-office', family: 'sinematik-vitrin', homepage: 'family' } } })).error);
     // Kilit dışı: marka (logo + iletişim) taslağı, header, ana sayfa bölümleri ve yayın
     assert.ifError((await c.rpc('site_save_draft', { p_org: O.A, p_section: 'brand', p_value: { phone: '+90 555 111 22 33', logo_url: 'https://cdn.example.test/logo.png', tagline: `Kilit ${RUN}` } })).error);
     assert.ifError((await c.rpc('site_save_draft', { p_org: O.A, p_section: 'header', p_value: { style: 'dark' } })).error);
@@ -229,11 +239,15 @@ describe('OS ilk kurulum ve tasarım kilidi', () => {
     assert.equal(row.state, 'reopened_by_platform');
     assert.equal(row.step, 2);
     assert.ok(row.reopened_at);
+    // Önceki tamamlanma satırdan temizlenir, denetim kaydında kalır
+    assert.equal(row.completed_at, null);
     const { data: audit } = await service.from('audit_logs').select('actor_id, metadata').eq('organization_id', O.A).eq('action', 'site.setup_reopened');
     assert.equal(audit.length, 1);
     assert.equal(audit[0].actor_id, U.admin.id);
     assert.equal(audit[0].metadata.previous_state, 'setup_completed');
     assert.equal(audit[0].metadata.reason, 'müşteri talebi');
+    assert.ok(audit[0].metadata.previous_completed_at);
+    assert.equal(audit[0].metadata.previous_completed_by, U.ownerA.id);
   });
 
   test('OS-08 yeniden açıldıktan sonra sahip yeniden seçer ve yeniden kilitlenir', async (t) => {

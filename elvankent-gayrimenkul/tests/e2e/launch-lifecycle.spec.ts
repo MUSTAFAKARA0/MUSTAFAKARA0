@@ -161,7 +161,9 @@ const row = (page: Page) => page.locator(`[data-testid="domain-row"][data-hostna
 
 /** PILOT · ilk kurulum (bekleyen migration I) tamamlanmış sayılır; tablo yoksa (eski şema) yok sayılır */
 async function skipSetup(orgId: string) {
-  await service!.from('organization_setup').update({ state: 'setup_completed', step: 4, completed_at: new Date().toISOString() }).eq('organization_id', orgId);
+  // Yalnız tablo yoksa (eski şema: PGRST205 / 42P01) yok sayılır; başka her hata testi düşürür
+  const done = await service!.from('organization_setup').update({ state: 'setup_completed', step: 4, completed_at: new Date().toISOString() }).eq('organization_id', orgId);
+  if (done.error && !['PGRST205', '42P01'].includes(done.error.code)) throw new Error(`organization_setup: ${done.error.code} ${done.error.message}`);
 }
 
 // --- Zincir ------------------------------------------------------------------------

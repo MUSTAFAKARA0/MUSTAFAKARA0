@@ -117,6 +117,7 @@ export async function createSite(raw: CreateSiteInput): Promise<ActionResult<{ i
     revalidatePath('/platform', 'layout');
     // PILOT: sahip daveti açılışla birlikte kendiliğinden gider; gönderilemezse site kalır, sonuç ekranından yeniden denenir
     const invitation = await sendInitialOwnerInvitation(session, orgId, created.ownerAccount);
+    if (invitation.status === 'sent' && invitation.warning) warnings.push(invitation.warning);
     return { id: orgId, slug: account.slug, ownerEmail: created.ownerEmail, ownerAccount: created.ownerAccount, warnings, invitation };
   });
 }
