@@ -119,6 +119,11 @@ bulunduğu için). Önce yerelde: pg_dump'ın bu kullanıcıyla tüm şemaları 
 
 **Aşama 6 · Claude için ayrı GitHub hesabı — T2 için zorunlu** (madde 3.5).
 
+**Durum (11.11.2026, salt okunur denetim):** Aşama 0 ve 1 tamam (production `d6113e6`; gece yedekleri #54–#62 yeşil). Aşama 2
+**açık**: `koruma` kural seti yalnız silme ve zorla push'u engelliyor, PR zorunluluğu yok; `koruma` eski çalışma dalını da kapsadığı
+için PR kuralı ayrı bir kural setiyle (`uretim-pr`, yalnız production) eklenir — adımlar [PILOT_YAYIN_GO_NOGO.md](PILOT_YAYIN_GO_NOGO.md) §2.1.
+Aşama 3, 3b, 4, 5, 6 açık. Hiçbir iş akışı depoya push etmediği için PR zorunluluğu otomasyonu etkilemez.
+
 ## 5. CI, yayın, yedek ve kurtarma uyumu
 
 - **CI** (`elvankent-ci`, PR'lar): hiç sır kullanmıyor → etkilenmez.
