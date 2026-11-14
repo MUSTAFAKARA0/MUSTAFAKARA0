@@ -10,13 +10,13 @@ Ayrıntı ve gerekçe: [PILOT_YAYIN_GO_NOGO.md](PILOT_YAYIN_GO_NOGO.md). Her can
 
 | # | Ne | Nerede | Süre | Canlıya etkisi |
 |---|---|---|---|---|
-| 1 | KI-41 Aşama 2: `uretim-pr` kural seti (production'a PR zorunlu) + `koruma`'ya geliştirme dalını ekleme | GitHub › Settings › Rules (GO_NOGO §2.1) | 5 dk | Yok |
+| 1 ✓ | (14.11 tamam) KI-41 Aşama 2: `uretim-pr` kural seti (production'a PR zorunlu) + `koruma`'ya geliştirme dalını ekleme | GitHub › Settings › Rules (GO_NOGO §2.1) | 5 dk | Yok |
 | 2 | Hukuki/ticari işleri **paralel** başlatmak: avukat (taraf, pilot sözleşmesi + DPA, yurt dışı aktarım, metinler, EİDS) ve D-11 plan kararı | GO_NOGO §6 | günler | Yok |
 | 3 | Canlı şema doğrulaması (salt okunur): `supabase/ops/canli_sema_tespiti.sql` ve beş `01_preflight.sql` (`media_size_guard`, `tenant_member_guard`, `license_no`, `pilot_trial_end`, `org_setup`); çıktıyı bana iletin | Supabase › SQL Editor | 15 dk | Yok (yalnız okur) |
 | 4 | A7 Sentry deneme olayına onay ("A7 deneme olayına onay veriyorum") | bana yazılı | 10 dk | Tek deneme isteği |
 | 5 | Kod yayını: PR'ın açılmasına onay → CI yeşil → taze yedek → birleştirme | GitHub (GO_NOGO §4.1) | 30 dk | Production yayını; geri dönüş Vercel › Promote |
 | 6 | Migration'lar F → E → G → H → I (her biri: taze yedek, 01→04, kabul testi) | Supabase › SQL Editor (runbook README) | her biri 20 dk | Canlı şema; her birinin `05` geri dönüşü var |
-| 7 | KI-41 Aşama 3–4: yedek sırlarını ortamlara taşıma, anahtar döndürme, depo sırlarını silme (migration'larla aynı gün değil) | GitHub, Supabase, Cloudflare (KI41 planı §4) | 1 saat | Yedek işi; site etkilenmez |
+| 7 | KI-41 Aşama 3–4: yedek sırlarını ortamlara taşıma, anahtar döndürme, depo sırlarını silme (migration'larla aynı gün değil) | [KI41_ASAMA_3_4_UYGULAMA.md](KI41_ASAMA_3_4_UYGULAMA.md) | 1 saat | Yedek işi; site etkilenmez |
 | 8 | Vercel Pro ve Supabase Pro'yu etkinleştirmek (ücretli; karar 2'de) | Vercel, Supabase faturalama | 15 dk | Yok |
 | 9 | Pilot günü: sözleşme imzalı ve 1–8 tamamsa ofisi açmak | `operations/customer-onboarding.md` §0 | 1 saat + DNS | Gerçek ofis ve veri |
 

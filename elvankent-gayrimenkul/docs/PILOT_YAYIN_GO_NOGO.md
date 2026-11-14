@@ -25,8 +25,8 @@
 |---|---|---|
 | 0 | `uretim-yedek` ortamı + dal sınırı | ✓ (02.11) |
 | 1 | Yedek işi ortamda; R2 teşhisi yalnız elle + ortamda; CI sır kullanmıyor | ✓ production'da (`workflow-secrets.test.mjs`) |
-| 2 | Production dalına **PR zorunluluğu** | **AÇIK — ilk sahip adımı (§2.1)** |
-| 3 | Yedek sırları `uretim-yedek` ortamına, **yeni değerlerle** (Supabase S3 + R2 anahtarı yeniden üretilir) | açık (sahip; Aşama 4 ile aynı oturum) |
+| 2 | Production dalına **PR zorunluluğu** | ✓ 14.11 (`uretim-pr` etkin; `koruma` geliştirme dalını da kapsıyor; Claude GitHub API ile doğruladı) |
+| 3 | Yedek sırları `uretim-yedek` ortamına, **yeni değerlerle** (Supabase S3 + R2 anahtarı yeniden üretilir) | açık — adım adım plan: [KI41_ASAMA_3_4_UYGULAMA.md](KI41_ASAMA_3_4_UYGULAMA.md) (onay bekliyor) |
 | 3b | R2 `db/` saklama kilidi + yaşam döngüsü; sonra iş akışındaki silme adımı kaldırılır (kod, PR) | açık (sahip Cloudflare + küçük PR) |
 | 4 | Diğer ortam sırları, depo düzeyindeki hassas sırların silinmesi, eski anahtarların iptali, veritabanı parolası döndürme | açık (sahip) |
 | 5 | Yedek/denetim için salt okunur veritabanı kullanıcısı (canlıya yazar; runbook + yerel prova gerekir) | açık (hazırlığı Claude, uygulaması sahip) |
@@ -134,7 +134,7 @@ Bir satır "hayır" ise o adım ve sonrası yapılmaz.
 
 | # | Koşul | Durum (11.11) |
 |---|---|---|
-| G1 | KI-41 Aşama 2: production'a PR zorunluluğu etkin (`uretim-pr`) | ☐ sahip (§2.1) |
+| G1 | KI-41 Aşama 2: production'a PR zorunluluğu etkin (`uretim-pr`) | ✓ 14.11 |
 | G2 | A7: deneme olayı Sentry'de görüldü, içerik temiz, bildirim geldi | ☐ ayrı onay (§3) |
 | G3 | Canlı şema: 1–39 `VAR`, 40–44 `YOK`; beş `01_preflight` `DUR` içermiyor | ☐ sahip çalıştırır (salt okunur) |
 | G4 | CI: yayınlanacak commit'te üç iş yeşil | ✓ `ec051db` CI #228 (PR'da yeni commit olursa yeniden) |

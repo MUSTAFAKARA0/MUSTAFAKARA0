@@ -123,6 +123,7 @@ bulunduğu için). Önce yerelde: pg_dump'ın bu kullanıcıyla tüm şemaları 
 **açık**: `koruma` kural seti yalnız silme ve zorla push'u engelliyor, PR zorunluluğu yok; `koruma` eski çalışma dalını da kapsadığı
 için PR kuralı ayrı bir kural setiyle (`uretim-pr`, yalnız production) eklenir — adımlar [PILOT_YAYIN_GO_NOGO.md](PILOT_YAYIN_GO_NOGO.md) §2.1.
 Aşama 3, 3b, 4, 5, 6 açık. Hiçbir iş akışı depoya push etmediği için PR zorunluluğu otomasyonu etkilemez.
+**14.11:** Aşama 2 ✓ (sahip; `uretim-pr` etkin, onay 0; `koruma` geliştirme dalını kapsıyor). Aşama 3–4 adım adım uygulama planı: [KI41_ASAMA_3_4_UYGULAMA.md](KI41_ASAMA_3_4_UYGULAMA.md).
 
 ## 5. CI, yayın, yedek ve kurtarma uyumu
 
