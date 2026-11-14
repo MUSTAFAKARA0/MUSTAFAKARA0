@@ -1,6 +1,6 @@
 # KARAYS · Kalan işler (tek liste)
 
-> 07.11.2026 · son güncelleme K-67 · production `d6113e6` (03.11, PR #6) · çalışma dalı `claude/karays-refocus-t84k81` (08.11; önceki `claude/karays-mission-control-vn8g65`) · güncel öncelik listesi [KARAYS_GELISTIRME_PLANI.md](KARAYS_GELISTIRME_PLANI.md) · canlı veritabanı 39 migration, bekleyen yok.
+> 07.11.2026 · son güncelleme K-67 · production `d6113e6` (03.11, PR #6) · çalışma dalı `claude/karays-refocus-t84k81` (08.11; önceki `claude/karays-mission-control-vn8g65`) · güncel öncelik listesi [KARAYS_GELISTIRME_PLANI.md](KARAYS_GELISTIRME_PLANI.md) · canlı veritabanı 39 migration; **14.11: bekleyen 5 migration (E, F, G, H, I) kodda hazır, canlı onayı bekliyor** — sıra ve GO/NO-GO: [PILOT_YAYIN_GO_NOGO.md](PILOT_YAYIN_GO_NOGO.md).
 > Kaynaklar: K-19 durum raporu (PDF, 25.10, 12 s.), K-21 bağımsız inceleme (26.10), [K19_YAYIN_HAZIRLIK.md](K19_YAYIN_HAZIRLIK.md), [GELISTIRME_GUNLUGU.md](GELISTIRME_GUNLUGU.md), [K17_KARAYS_RELEASE.md](K17_KARAYS_RELEASE.md), [OPS02_ABONELIK_DURUMLARI.md](OPS02_ABONELIK_DURUMLARI.md), [PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md), [drafts/wpa2/README.md](drafts/wpa2/README.md).
 > Liste `ecc:planner` tarafından çıkarıldı, koordinatör tarafından düzeltildi. Her oturum durumu ve kanıtı günceller; kapanan madde yeniden açılmaz.
 

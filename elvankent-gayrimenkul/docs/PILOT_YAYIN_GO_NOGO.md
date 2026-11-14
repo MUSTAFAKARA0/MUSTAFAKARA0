@@ -1,17 +1,19 @@
 # PILOT READY · son aşama: güvenlik, hata izleme, canlıya geçiş sırası ve GO / NO-GO
 
-> 11.11.2026 · dal `claude/karays-refocus-t84k81` · **bu belge onay değildir; hiçbir adım uygulanmadı.**
+> 11.11.2026, güncelleme 14.11.2026 · dal `claude/karays-refocus-t84k81` · **bu belge onay değildir; hiçbir adım uygulanmadı.**
 > Her satır ayrı sahip onayıyla yapılır. Ayrıntı tekrarlanmaz; ilgili runbook ve belgeye bağlanır.
 > Kapsam dışı (bu aşamada yapılmaz): ödeme/POS, yeni tema sistemi, müşteri kazanımı, Mission Control, yeni pano, görsel değişiklik.
 
-## 1. Denetimde görülen gerçek durum (11.11, salt okunur)
+## 1. Denetimde görülen gerçek durum (14.11, salt okunur)
 
 | Konu | Durum | Kanıt |
 |---|---|---|
-| Production | `d6113e6` (PR #6, 03.11); bu dal 34 commit önde, birleştirme denemesi çakışmasız | `git merge-tree` (yazmadan) |
+| Production | `d6113e6` (PR #6, 03.11), Vercel production dağıtımı READY; bu dal `ec051db` itibarıyla 35 commit önde, production'da bu dalda olmayan tek commit PR #6'nın birleştirme commit'i; birleştirme denemesi çakışmasız | `git merge-tree` (yazmadan), Vercel dağıtım listesi |
 | Yayın bekleyen kod | 119 dosya; `supabase/migrations` değişmiyor (E–I `supabase/pending` altında, kendiliğinden uygulanmaz); yeni ortam değişkeni gerekmiyor | `git diff`, `process.env` karşılaştırması |
-| CI | #225 / #226 üç iş yeşil: birim 952, güvenlik 240, E2E 231 (4 atlandı, 0 hata); bu commit'le birim 964 | Actions |
-| Gece yedeği | #54–#62 yeşil, production dalından, `uretim-yedek` ortamıyla | Actions |
+| CI | **#228 (`ec051db`) üç iş yeşil**: quality (gitleaks dahil), database (E2E 231 geçti, 4 atlandı, 0 hata), database-legacy-schema. Yerel birim 964/964. #227 kırmızısı (test dosyasında anahtar biçimli uydurma değer) sahip onayıyla son commit yeniden yazılarak giderildi | Actions |
+| Gece yedeği | #54–#65 yeşil (son: 14.11), production dalından, `uretim-yedek` ortamıyla | Actions |
+| Vercel önizleme | Bu dalın önizleme derlemelerinin hepsi `ERROR`: önizleme ortamında Supabase/site değişkenleri yok ve `next.config.ts › checkDeploymentEnv` derlemeyi bilerek durduruyor. Kod hatası değil; ama yeni kod **gerçek Vercel + Supabase üzerinde ilk kez production'da** çalışacak. Önlem: §4.1 duman testi ve hazır geri dönüş (Promote) | Vercel derleme logu `dpl_kR5V…` |
+| Node sürümü | Vercel `engines: >=20.9.0` yüzünden proje ayarındaki 22.x yerine **26.x** kullanıyor; production `d6113e6` da 26.x ile derlendi (yeni değil). CI 22 ile test ediyor: bilinen, düşük risk; değiştirilmedi | Vercel derleme uyarısı |
 | KI-41 kural seti | `koruma` (etkin, istisna listesi boş): production + eski çalışma dalı; kurallar yalnız **silme** ve **zorla push** engeli. **PR zorunluluğu yok.** Bu dalda hiç kural yok | GitHub `rulesets` ve `rules/branches` (herkese açık, salt okunur) |
 | İş akışları | Hiçbiri depoya push etmiyor, `contents: write` yok → PR zorunluluğu hiçbir otomasyonu kırmaz | `.github/workflows/*` |
 | Canlı veritabanı | Bu oturumdan **erişilemiyor** (bilinçli). Canlı şema doğrulaması sahibin çalıştıracağı salt okunur sorgularla yapılır | — |
@@ -45,7 +47,7 @@ için ayrı bir kural seti açılır:
 4. Rules: yalnız **Require a pull request before merging** işaretlenir; **Required approvals: 0**; altındaki diğer kutular boş.
 5. **Create**.
 6. (Önerilen, aynı ekranda) `koruma` › Target branches › **Add target** › `claude/karays-refocus-t84k81` › **Save** — yayın bekleyen
-   34 commit'in dalı silinmeye ve zorla push'a karşı korunur; olağan push etkilenmez.
+   35 commit'in dalı silinmeye ve zorla push'a karşı korunur; olağan push etkilenmez.
 7. Claude'a "Aşama 2 tamam" yazın. Claude kural setlerini salt okunur okuyup doğrular (production'a deneme push'u **yapılmaz**).
 
 | | |
@@ -105,6 +107,19 @@ Kod önce yayınlanırsa her migration, kendi kabul testiyle (yeni ekranlar) hem
 | 5 | **H** · pilot deneme bitişi | Yok | Serbest | Yalnız fonksiyon; veri değişmez | `pilot_trial_end/05` (girilmiş tarihler kalır) | Deneme ofisinde bitişi değiştir → şerit yeni tarihi gösterir |
 | 6 | **I** · ilk kurulum + tasarım kilidi | Yok (aile yetkileri ve `site_apply_design` canlıda) | Serbest; **pilot ofis I'dan SONRA açılmalı** (önce açılan her ofis `legacy` sayılır: kurulum akışı ve kilit olmaz) | Yalnız `organization_setup` satırları eklenir; `organizations` ve `site_configs`'e tetikleyici (kısa kilit, `lock_timeout` 3 sn). Elvankent `legacy`: akışa girmez, kilitlenmez | `org_setup/05` (kurulum durumu silinir, seçilmiş tasarımlar kalır; yeniden 03'te tüm ofisler `legacy`) | Deneme ofisi aç → davet → `/admin/kurulum` → tasarım seç → kilit → konsoldan yeniden aç (README sırası) |
 
+### 4.1 Kod yayını PR'ı (B1 / G5) — hazır, açılmadı
+
+| | |
+|---|---|
+| Kaynak → hedef | `claude/karays-refocus-t84k81` → `claude/elvankent-real-estate-platform-vxq9dj` (production, varsayılan dal) |
+| Kapsam | ~36 commit (bu güncelleme dahil), ~124 dosya. Değişmeyen: `supabase/migrations` (E–I `supabase/pending` altında, kendiliğinden uygulanmaz), `.claude/`, Vercel ortam değişkenleri. Yeni iş akışı: `elvankent-yedek-izleme` (sırsız, günlük; yedek koşularını izler) |
+| Başlık önerisi | `Pilot hazırlığı: ofis açılışı, ilk kurulum ve tasarım kilidi, kiracı/medya korumaları, yetki belgesi no, izleme düzeltmesi` |
+| Birleştirme yöntemi | **Create a merge commit** (önceki PR #3–#6 ile aynı; geçmiş korunur) |
+| Birleştirmeden önce | PR'ın CI koşusu üç iş yeşil · G3 canlı şema çıktısı alındı · taze yedek yeşil · düşük trafik saati |
+| Birleştirmeden hemen sonra (≤ 15 dk) | Vercel production dağıtımı READY · `/api/health` 200 · Elvankent ana sayfası, bir ilan, iletişim formu · ofis paneli girişi · KARAYS sayfası · yanıt başlığında `Strict-Transport-Security` · Vercel › Logs'ta yeni `"level":"error"` yok · A7 deneme olayı (ayrı onaylıysa) |
+| Geri dönüş | Vercel › Deployments › `d6113e6` dağıtımı › **Promote** (Instant Rollback adayı). Veritabanı değişmediği için güvenli; git'te geri alma gerekmez |
+| Kim | Claude PR'ı açar (**sahip onayıyla**); sahip birleştirir; Claude duman testini yapar ve raporlar |
+
 **Her migration için ortak kural** (runbook `README.md`): production dalından **taze yedek** (yeşil, ≤ 3 saat; bir öncekinin 04'ü
 `TAMAM` olduktan sonra alınmış) → `01` (sakla) → `02` (sakla) → `03` → `04` hepsi `TAMAM` → canlı sonrası testler → 24 saat gözlem.
 Sahip, Supabase SQL Editor'de çalıştırır; 01 / 02 / 04 yazmaz. Düşük trafik saatinde; bir pencerede en çok iki migration; I tek başına.
@@ -122,7 +137,7 @@ Bir satır "hayır" ise o adım ve sonrası yapılmaz.
 | G1 | KI-41 Aşama 2: production'a PR zorunluluğu etkin (`uretim-pr`) | ☐ sahip (§2.1) |
 | G2 | A7: deneme olayı Sentry'de görüldü, içerik temiz, bildirim geldi | ☐ ayrı onay (§3) |
 | G3 | Canlı şema: 1–39 `VAR`, 40–44 `YOK`; beş `01_preflight` `DUR` içermiyor | ☐ sahip çalıştırır (salt okunur) |
-| G4 | CI: yayınlanacak commit'te üç iş yeşil | ☐ (bu commit'in koşusu) |
+| G4 | CI: yayınlanacak commit'te üç iş yeşil | ✓ `ec051db` CI #228 (PR'da yeni commit olursa yeniden) |
 | G5 | Kod yayını onayı: PR açılması ve birleştirme | ☐ ayrı onay |
 | G6 | Kod yayını sonrası duman testi ve A7 tekrarı temiz; 24 saat hata artışı yok | ☐ |
 | G7 | F: onay + taze yedek + 01'in 7. ve 8. satırları sahipçe görüldü | ☐ ayrı onay |
@@ -138,3 +153,33 @@ pilot ofis açılışı · C2 (sözleşme / veri işleme) tamamlanmadan gerçek 
 
 KI-41 Aşama 5 ve 6 pilot açılışını **engellemez** ama açık risktir (yedek tam yetkili veritabanı adresiyle çalışıyor; Claude'un
 push'ları sahibin kimliğiyle); pilot süresince kapatılması önerilir.
+
+## 6. Gerçek pilotu engelleyen kararlar (14.11)
+
+Teknik hazırlık kodda tamam (A1–A6, A8–A12 ✓; A7 kısmen). Kalan engellerin hiçbiri Claude'un tek başına kapatabileceği iş değildir.
+
+**Teknik (sahip işlemi veya onayı):**
+1. KI-41 Aşama 2 — production'a PR zorunluluğu (§2.1).
+2. A7 — Sentry deneme olayı (§3).
+3. Canlı şema doğrulaması — `canli_sema_tespiti.sql` + beş `01_preflight` (salt okunur, SQL Editor).
+4. Kod yayını — PR'ın açılması ve birleştirilmesi (§4.1).
+5. Migration'lar F → E → G → H → I — her biri taze yedek + ayrı onay.
+6. KI-41 Aşama 3–4 — yedek sırlarının ortamlara taşınması, anahtar döndürme, depo sırlarının silinmesi (migration'larla aynı gün değil).
+
+**Hukuki (sahip + avukat; kod tarafı karar gelince işlenir):**
+1. Hizmeti veren taraf: şahıs/şirket, unvan, VKN, adres, KEP (C1 / D-19).
+2. Pilot sözleşmesi ve veri işleme sözleşmesi: ofis veri sorumlusu, KARAYS veri işleyen (C2 / D-10).
+3. Yurt dışı aktarım (KVKK m.9): Supabase, Vercel, Resend, Sentry, Cloudflare için standart sözleşme + 5 iş günü içinde Kurum'a bildirim.
+4. KARAYS ve ofis sitesi aydınlatma/çerez metinlerinin avukat onayı (C3; metinler kodda taslak).
+5. Yetki belgesi numarasının gösterileceği kanal ve EİDS kapsamı (C4 / D-20).
+6. Saklama süreleri ve pilot sonunda verinin akıbeti (D-05 / D-10).
+
+**Ticari (sahip; ödeme gerektirenler ayrıca onaylanır):**
+1. Barındırma planı: Vercel Pro (Hobby ticari kullanıma kapalı) ve Supabase Pro (platform yedeği) — ücretli (D-11).
+2. Pilot süresi, ücretsiz olup olmadığı ve sonunda ne olacağı; ofise yazılı söz (C5).
+3. Destek kanalı ve olay sorumlusu, yanıt süresi (C6 / D-18).
+4. Pilot ofisin alan adı ve DNS geçişi (ofisin onayıyla; MX korunur).
+
+Pilot için **gerekmeyen** kararlar: fiyat listesi ve ödeme sağlayıcısı (D-01…D-03, D-07…D-09), OPS-02 bayrağı (kapalı kalır),
+CSP joker kaldırma (KI-32), KI-41 Aşama 5–6 (pilot süresince kapatılması önerilir).
+
