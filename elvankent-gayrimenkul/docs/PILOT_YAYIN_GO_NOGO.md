@@ -10,7 +10,7 @@
 |---|---|---|
 | Production | `d6113e6` (PR #6, 03.11), Vercel production dağıtımı READY; bu dal `ec051db` itibarıyla 35 commit önde, production'da bu dalda olmayan tek commit PR #6'nın birleştirme commit'i; birleştirme denemesi çakışmasız | `git merge-tree` (yazmadan), Vercel dağıtım listesi |
 | Yayın bekleyen kod | 119 dosya; `supabase/migrations` değişmiyor (E–I `supabase/pending` altında, kendiliğinden uygulanmaz); yeni ortam değişkeni gerekmiyor | `git diff`, `process.env` karşılaştırması |
-| CI | **#228 (`ec051db`) üç iş yeşil**: quality (gitleaks dahil), database (E2E 231 geçti, 4 atlandı, 0 hata), database-legacy-schema. Yerel birim 964/964. #227 kırmızısı (test dosyasında anahtar biçimli uydurma değer) sahip onayıyla son commit yeniden yazılarak giderildi | Actions |
+| CI | **#233 (`e2edf71`, 14.11) üç iş yeşil**: quality, database (güvenlik, KI-24/KI-23 provaları, E2E 231 geçti, 4 atlandı, 0 hata), database-legacy-schema. Önceki: **#228 (`ec051db`) üç iş yeşil**: quality (gitleaks dahil), database (E2E 231 geçti, 4 atlandı, 0 hata), database-legacy-schema. Yerel birim 964/964. #227 kırmızısı (test dosyasında anahtar biçimli uydurma değer) sahip onayıyla son commit yeniden yazılarak giderildi | Actions |
 | Gece yedeği | #54–#65 yeşil (son: 14.11), production dalından, `uretim-yedek` ortamıyla | Actions |
 | Vercel önizleme | Bu dalın önizleme derlemelerinin hepsi `ERROR`: önizleme ortamında Supabase/site değişkenleri yok ve `next.config.ts › checkDeploymentEnv` derlemeyi bilerek durduruyor. Kod hatası değil; ama yeni kod **gerçek Vercel + Supabase üzerinde ilk kez production'da** çalışacak. Önlem: §4.1 duman testi ve hazır geri dönüş (Promote) | Vercel derleme logu `dpl_kR5V…` |
 | Node sürümü | Vercel `engines: >=20.9.0` yüzünden proje ayarındaki 22.x yerine **26.x** kullanıyor; production `d6113e6` da 26.x ile derlendi (yeni değil). CI 22 ile test ediyor: bilinen, düşük risk; değiştirilmedi | Vercel derleme uyarısı |
@@ -137,7 +137,7 @@ Bir satır "hayır" ise o adım ve sonrası yapılmaz.
 | G1 | KI-41 Aşama 2: production'a PR zorunluluğu etkin (`uretim-pr`) | ☐ sahip (§2.1) |
 | G2 | A7: deneme olayı Sentry'de görüldü, içerik temiz, bildirim geldi | ☐ ayrı onay (§3) |
 | G3 | Canlı şema: 1–39 `VAR`, 40–44 `YOK`; beş `01_preflight` `DUR` içermiyor | ☐ sahip çalıştırır (salt okunur) |
-| G4 | CI: yayınlanacak commit'te üç iş yeşil | ✓ `ec051db` CI #228 (PR'da yeni commit olursa yeniden) |
+| G4 | CI: yayınlanacak commit'te üç iş yeşil | ✓ `e2edf71` CI #233 (önceki `ec051db` #228; PR'da yeni commit olursa yeniden) |
 | G5 | Kod yayını onayı: PR açılması ve birleştirme | ☐ ayrı onay |
 | G6 | Kod yayını sonrası duman testi ve A7 tekrarı temiz; 24 saat hata artışı yok | ☐ |
 | G7 | F: onay + taze yedek + 01'in 7. ve 8. satırları sahipçe görüldü | ☐ ayrı onay |
