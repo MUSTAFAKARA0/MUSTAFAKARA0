@@ -31,6 +31,23 @@
 ortamlarına tam yetkili veritabanı adresi **konmaz**. Tam yetkili adresin tek kopyası `uretim-yedek`'te kalır. İleride o iş akışları
 gerekirse adres o gün eklenir ve iş bitince silinir. Böylece canlıya yazabilen adres yalnız production dalından çalışan yedek işinde durur.
 
+### Adım 0 sonuçları (sahip, 14.11) ve değerlendirme
+
+| Bulgu | Plana göre | Risk / sonuç |
+|---|---|---|
+| 11 hassas sırrın tamamı **depo düzeyinde** | Beklenen (Aşama 3–4 bunu kapatır) | T1 açık: herhangi bir daldaki herhangi bir iş akışı bu sırları okuyabilir. Öncelik doğru |
+| `ELVANKENT_BACKUP_ENABLED=true`, `BACKUP_BUCKET`, `BACKUP_S3_PROVIDER` depo değişkeni; `BACKUP_RETENTION_DAYS` yok (varsayılan 30 gün) | Uyumlu; değişkenlere dokunulmaz | Yok |
+| `uretim-yedek`: yalnız production dalı, sırlar boş | Uyumlu (Aşama 0 ✓) | Aşama 2 ile birlikte: bu ortamın sırlarını yalnız **PR ile birleşmiş** iş akışı kodu okuyabilir. İnceleyici eklenmez (gece yedeği her gece onay bekler) |
+| `restore-drill`: zorunlu inceleyici açık, **dal kısıtı yok**, sırlar boş | Plan dal kuralını öngörmüyordu → **eksik** | Sır konursa her daldan bu ortamı isteyen iş akışı yalnız onay ekranıyla durdurulur; tek koruma insan onayı. → Adım 0b: production dalıyla sınırlanır (iş akışı production'da `workflow_dispatch` ile çalışır; prova bozulmaz) |
+| `ki23-canli-denetim`: inceleyici açık, **dal kısıtı yok**, sırlar boş | Önerilen sadeleştirmede sır konmaz | Sır yokken risk yok. Yine de Adım 0b'de production dalıyla sınırlanır (ileride adres eklenirse açık kalmasın); iş akışı production'da `workflow_dispatch` ile çalışır |
+| `o5a-uygula`: inceleyici açık, tek dal (adı doğrulanmadı), sırlar boş | Önerilen sadeleştirmede sır konmaz | Sır yokken risk yok. Eski çalışma dalı hâlâ push alıyor (12.11, PR #7); o5 iş akışları o dala push'ta tetiklenir ama ortamda sır olmadığı ve istek dosyası kapısı kapalı olduğu için hiçbir şey yazamaz. Dal adı Adım 0b'de okunur |
+| **Ortamlarda yönetici bypass seçeneği açık** | Planda yoktu → **eksik** | Depoda tek yönetici sahip. Bypass açıkken korumalar (inceleyici onayı, büyük olasılıkla dal kuralı da) yönetici tarafından atlanabilir; Claude sahibin kimliğiyle çalıştığı için (T2) bu kapı insan kararına değil yetkiye dayanır. Kapatmanın maliyeti yok: sahip zaten inceleyici olarak onay verebilir. → Adım 0b: dört ortamda kapatılır |
+
+**Sıra değerlendirmesi:** (1) Ortam korumaları (dal kuralı, bypass kapalı) **sır konmadan önce** sıkılaştırılır; aksi hâlde sır gevşek
+kurala sahip bir ortama girer. (2) Yeni anahtarlar eskiler geçerliyken üretilir ve önce ortama konur; doğrulanmadan depo sırları
+silinmez; depo sırları silinmeden eski anahtarlar iptal edilmez. Bu sıra her adımda çalışan bir yedek yolunu korur. (3) Veritabanı
+parolası en sona kalır: tek geri dönüşü olmayan adım budur ve yalnız `uretim-yedek`'teki tek adresi etkiler.
+
 **Değişkenler:** `ELVANKENT_BACKUP_ENABLED` **depo düzeyinde kalır** (iş düzeyindeki `if` ortamdan önce değerlendirilir; taşınırsa yedek
 hiç çalışmaz). `BACKUP_BUCKET`, `BACKUP_S3_PROVIDER`, `BACKUP_RETENTION_DAYS` gizli değildir; depo düzeyinde kalmaları güvenlidir (değişiklik yok).
 
@@ -38,6 +55,7 @@ hiç çalışmaz). `BACKUP_BUCKET`, `BACKUP_S3_PROVIDER`, `BACKUP_RETENTION_DAYS
 
 | # | Koşul |
 |---|---|
+| P0 | Adım 0b tamam (bypass kapalı, dal kuralları sıkı) |
 | P1 | Son gece yedeği yeşil (aynı sabah) ve önceki iki gece de yeşil |
 | P2 | Aynı gün migration (E–I) ya da kod yayını **yok** (yedek kırılırsa "taze yedek" koşulu sağlanamaz) |
 | P3 | Pencere: **14:00–23:00 TR** (gece yedeğiyle çakışmaz); 2 saat ayrılır |
@@ -56,6 +74,19 @@ Her adımın sonunda **Doğrulama** geçmeden sonrakine geçilmez. Geri dönüş
 3. Settings › **Environments** › her ortam (`uretim-yedek`, `restore-drill`, `ki23-canli-denetim`, `o5a-uygula`): *Deployment branches* kuralı ve *Environment secrets* **adları**.
 4. Listeyi bana yazın (yalnız adlar). Claude beklenen listeyle karşılaştırır. `uretim-yedek` dal kuralı tam olarak
    `claude/elvankent-real-estate-platform-vxq9dj` değilse burada durulur.
+
+### Adım 0b · Ortam korumalarını sıkılaştırmak (sır yok, anahtar yok; 10 dk)
+Settings › Environments:
+1. **Dört ortamda** (`uretim-yedek`, `restore-drill`, `ki23-canli-denetim`, `o5a-uygula`) *Deployment protection rules* altındaki
+   **Allow administrators to bypass configured protection rules** işaretini kaldırın › Save protection rules.
+2. `restore-drill` › *Deployment branches and tags* › **Selected branches and tags** › Add rule › tam ad
+   `claude/elvankent-real-estate-platform-vxq9dj` › kaydedin.
+3. `ki23-canli-denetim` › aynı kural (tam production dal adı).
+4. `o5a-uygula` › seçili dalın **tam adını** okuyun ve bana yazın (değiştirmeyin). Beklenen: `claude/karays-mission-control-vn8g65`.
+
+Doğrulama: her ortam sayfasında bypass işareti boş; `restore-drill` ve `ki23-canli-denetim` dal listesinde yalnız production dalı.
+Etki: gece yedeği değişmez (dalı zaten production). Gelecekteki prova/denetim Actions › Run workflow › **production dalı** ile başlatılır.
+Geri dönüş: işaretleri ve kuralları eski hâline getirmek (sır olmadığı için risk yok).
 
 ### Adım 1 · Yeni anahtarlar sağlayıcıda (eskiler ÇALIŞMAYA DEVAM EDER, 15 dk)
 1. **Supabase S3 anahtarı:** Supabase › proje › Storage › Settings (S3 Connection) › Access keys › **New access key** (ad: `yedek-2026-11`).
@@ -132,7 +163,7 @@ ortam işlerinde okunduğunu sabitleyen kontrolü ekler (kod, geliştirme dalı)
 
 ## 4. Özet sıra
 
-`0 envanter → 1 yeni anahtarlar → 2 uretim-yedek + elle yedek ✓ → 3 restore-drill → 4 depo sırlarını sil + iki yönlü doğrulama →
+`0 envanter ✓ → 0b ortam korumaları → 1 yeni anahtarlar → 2 uretim-yedek + elle yedek ✓ → 3 restore-drill → 4 depo sırlarını sil + iki yönlü doğrulama →
 5 eski anahtarları iptal + elle yedek ✓ → 6 DB parolası + elle yedek ✓ → 7 ertesi gece yedeği ✓`
 
 Her ok bir durma noktasıdır: doğrulama kırmızıysa o adımın geri dönüşü uygulanır, sonrasına geçilmez.
