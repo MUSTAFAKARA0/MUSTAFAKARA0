@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { ArrowLeft, Lock, Monitor, Smartphone } from 'lucide-react';
 import { AdminPageHeader } from '@/components/panel/ui';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,8 @@ import { selectableFamilies } from '@/modules/platform/design-access';
 import { requirePagePermission } from '@/platform/auth/session';
 import { parseSiteConfig } from '@/site-config/schema';
 import { DESIGN_FAMILIES } from '@/site-factory/families';
+import { getOrgSetup } from '@/site-editor/setup';
+import { designLocked } from '@/modules/onboarding/setup-state';
 
 export const metadata: Metadata = { title: 'Tasarım önizlemesi' };
 
@@ -30,6 +33,8 @@ const pick = <T extends { id: string }>(list: readonly T[], raw: unknown): T => 
  */
 export default async function OfficeDesignPreviewPage({ searchParams }: PageProps<'/admin/tasarim/onizleme'>) {
   const ctx = await requirePagePermission('settings.manage');
+  // PILOT · tasarım ilk kurulumda seçildiyse aile önizlemesi yerine kilit bildirimi (Site yönetimi › Tasarım)
+  if (designLocked((await getOrgSetup(ctx.supabase, ctx.org.id)).setup)) redirect('/admin/site/tasarim');
   const sp = await searchParams;
   const [access, site] = await Promise.all([
     selectableFamilies(ctx.supabase, ctx.org.id),

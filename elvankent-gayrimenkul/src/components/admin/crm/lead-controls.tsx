@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { STAFF_SENSITIVE_HINT } from '@/lib/sensitive-data-hint';
 import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { CalendarPlus, MessageSquarePlus } from 'lucide-react';
@@ -96,6 +97,7 @@ export function ActivityComposer({ leadId }: { leadId: string }) {
         maxLength={4000}
         placeholder={kind === 'call' ? 'Görüşmenin özeti, müşterinin beklentileri…' : 'Not ekleyin…'}
       />
+      <p className="text-[12.5px] text-muted-foreground">{STAFF_SENSITIVE_HINT}</p>
       <div className="flex justify-end">
         <Button type="submit" loading={pending} disabled={!body.trim()}>
           {!pending && <MessageSquarePlus />} Kaydet

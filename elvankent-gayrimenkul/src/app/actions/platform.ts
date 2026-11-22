@@ -9,7 +9,10 @@ import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/pl
 import { requireSuperAdmin } from '@/platform/auth/session';
 import type { CreateOrgInput } from '@/modules/platform/org-schema';
 import { provisionOrganization, type OwnerAccountState } from '@/modules/platform/provisioning';
-import { revokeOwnerInvitation, sendOwnerInvitation } from '@/modules/platform/invitations/service';
+import { revokeOwnerInvitation, sendInitialOwnerInvitation, sendOwnerInvitation, type InitialInvitation } from '@/modules/platform/invitations/service';
+import { disabledFamilies } from '@/modules/platform/design-access';
+import { getOrgSetup, reopenSetup } from '@/site-editor/setup';
+import { DESIGN_FAMILIES } from '@/site-factory/families';
 
 /**
  * Süper admin işlemleri. Yetki hem burada (requireSuperAdmin) hem de her
@@ -22,14 +25,54 @@ function refreshTenants(orgId?: string) {
   revalidatePath('/platform', 'layout');
 }
 
-/** Yeni organizasyon + sahip hesabı (yoksa etkinleştirilmemiş açılır ve bekleyen davet oluşturulur) */
-export async function createOrganization(raw: CreateOrgInput): Promise<ActionResult<{ id: string; ownerEmail: string; ownerAccount: OwnerAccountState }>> {
+/**
+ * Yeni organizasyon + sahip hesabı (yoksa etkinleştirilmemiş açılır ve bekleyen davet oluşturulur).
+ * PILOT: davet e-postası açılıştan hemen sonra KENDİLİĞİNDEN gönderilir; gönderilemezse organizasyon kalır, sonuç
+ * ekranda gösterilir ve "Davet gönder" ile yeniden denenir. İlk kurulum açıksa (bekleyen migration I) ofisin seçebileceği
+ * tasarımlar başlangıçta katalogda açık ailelerin tamamıdır; KARAYS Site › Tema › "Ofisin seçebileceği tasarımlar"
+ * bölümünden daraltır (aynı izin mekanizması).
+ */
+export async function createOrganization(
+  raw: CreateOrgInput,
+): Promise<ActionResult<{ id: string; ownerEmail: string; ownerAccount: OwnerAccountState; invitation: InitialInvitation; warnings: string[] }>> {
   return runAction(async () => {
     const session = await requireSuperAdmin();
     const created = await provisionOrganization(session, raw);
     refreshTenants();
-    return created;
+    // Organizasyon açıldı: bundan sonraki adımların hatası açılışı geri almaz, sonuç ekranında uyarı olarak gösterilir
+    const warnings: string[] = [];
+    try {
+      const { setup } = await getOrgSetup(session.supabase, created.id);
+      if (setup && setup.state !== 'setup_completed') {
+        const { disabled } = await disabledFamilies(session.supabase);
+        const families = DESIGN_FAMILIES.map((f) => f.id).filter((id) => !disabled.has(id));
+        const grant = await session.supabase.rpc('platform_set_org_design_families', { p_org: created.id, p_families: families });
+        if (grant.error) {
+          console.warn('[setup] family grant failed', { org: created.id, code: grant.error.code });
+          warnings.push('Ofisin seçebileceği tasarımlar kaydedilemedi; sahip kurulumu tamamlayamaz. Site › Tema › "Ofisin seçebileceği tasarımlar" bölümünden kaydedin.');
+        }
+      }
+    } catch {
+      warnings.push('İlk kurulum durumu okunamadı; Site › Tema bölümünden ofisin seçebileceği tasarımları kontrol edin.');
+    }
+    const invitation = await sendInitialOwnerInvitation(session, created.id, created.ownerAccount);
+    if (invitation.status === 'sent' && invitation.warning) warnings.push(invitation.warning);
+    return { ...created, invitation, warnings };
   });
+}
+
+/**
+ * PILOT · Tek seferlik tasarım seçimini yeniden açar (yalnız süper admin; veritabanı assert_super_admin ve
+ * site.setup_reopened denetim kaydı). Sahip bir sonraki girişte kurulumun tasarım adımına yönlenir.
+ */
+export async function reopenOrgSetupAction(orgId: string): Promise<ActionResult<{ state: string }>> {
+  return runAction(async () => {
+    const session = await requireSuperAdmin();
+    if (!isUuid(orgId)) throw new ActionError('Organizasyon bulunamadı.');
+    const state = await reopenSetup(session.supabase, orgId);
+    revalidatePath(`/platform/organizasyonlar/${orgId}`);
+    return { state };
+  }, 'Tasarım seçimi yeniden açıldı. Ofis sahibi bir sonraki girişte tasarımını yeniden seçer.');
 }
 
 /**
@@ -43,7 +86,7 @@ export async function sendOwnerInvitationAction(orgId: string): Promise<ActionRe
     const sent = await sendOwnerInvitation(session, orgId);
     revalidatePath(`/platform/organizasyonlar/${orgId}`);
     return sent;
-  }, 'Davet e-postası gönderildi. Önceki davet bağlantıları artık geçersiz.');
+  }, 'Davet e-postası, e-posta sağlayıcısı tarafından kabul edildi. Önceki davet bağlantıları artık geçersiz.');
 }
 
 /** Bekleyen sahip davetini iptal eder (bağlantı geçersiz olur; hesap ve organizasyon silinmez) */
@@ -80,6 +123,27 @@ export async function setOrganizationPlan(orgId: string, plan: string, status: s
     refreshTenants(orgId);
     return null;
   }, 'Plan güncellendi.');
+}
+
+/**
+ * PILOT · güncel deneme aboneliğinin bitiş tarihini belirler (bekleyen migration H; plan/durum/limit değişmez).
+ * Tarih yerel gün olarak gelir (YYYY-MM-DD) ve o günün sonu (İstanbul, UTC+3) olarak kaydedilir. Sınır veritabanında.
+ */
+export async function setOrganizationTrialEnd(orgId: string, day: string): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const session = await requireSuperAdmin();
+    if (!isUuid(orgId)) throw new ActionError('Organizasyon bulunamadı.');
+    const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: 'Geçerli bir tarih seçin.' }).parse(day);
+    const endsAt = new Date(`${date}T23:59:59+03:00`);
+    if (Number.isNaN(endsAt.getTime())) throw new ActionError('Geçerli bir tarih seçin.');
+    const { error } = await session.supabase.rpc('platform_set_trial_end', { p_org: orgId, p_ends_at: endsAt.toISOString() });
+    if (error?.message?.includes('invalid_trial_end')) throw new ActionError('Deneme bitişi en az 1 gün, en çok 365 gün sonrası olmalıdır.', 'invalid_trial_end');
+    if (error?.message?.includes('no_trial_subscription')) throw new ActionError('Bu ofisin etkin bir deneme aboneliği yok; önce planı "Deneme" durumunda atayın.', 'no_trial');
+    if (error?.code === 'PGRST202') throw new ActionError('Pilot süresi ayarı henüz etkin değil (bekleyen migration H).', 'trial_end_unavailable');
+    assertNoDbError(error);
+    refreshTenants(orgId);
+    return null;
+  }, 'Deneme (pilot) bitiş tarihi güncellendi.');
 }
 
 /**

@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { bulkPropertyAction } from '@/app/actions/admin-properties';
 import { cacheTags } from '@/lib/cache-tags';
 import { createServiceClient } from '@/lib/supabase/server';
-import { companySchema, siteSchema, type CompanySettingsInput, type SiteSettingsInput } from '@/modules/content/settings-schema';
+import { companySchema, licenseSchema, siteSchema, type CompanySettingsInput, type LicenseInput, type SiteSettingsInput } from '@/modules/content/settings-schema';
 import { BRANDING_KINDS, BRANDING_LABEL, BRANDING_PERMISSION, type BrandingKind } from '@/modules/media/branding';
 import { isEmailConfigured, sendEmail } from '@/modules/notifications/email';
 import { leadNotificationRecipients } from '@/modules/notifications/lead';
@@ -13,6 +13,7 @@ import { ActionError, assertNoDbError, runAction, type ActionResult } from '@/pl
 import { requirePermission } from '@/platform/auth/session';
 import type { BrandDraft } from '@/site-config/schema';
 import { removeBrandingDraft } from '@/site-editor/branding';
+import { refreshPublicSite } from '@/site-editor/cache';
 import { saveBrandFields } from '@/site-editor/service';
 
 /**
@@ -194,4 +195,29 @@ export async function sendTestNotification(): Promise<ActionResult<null>> {
     if (!result.ok) throw new ActionError('Test e-postası gönderilemedi. Sağlayıcı ayarlarını ve gönderici alan adı doğrulamasını kontrol edin.');
     return null;
   }, 'Test e-postası gönderildi.');
+}
+
+/**
+ * P0-8 · Yetki belgesi numarası. Yasal bilgi olduğu için taslak/yayın akışına girmez: doğrudan kaydedilir ve sitede hemen
+ * görünür (organization_settings_guard bu sütunu yalnız settings.manage ile serbest bırakır; organizasyon oturumdan gelir).
+ * Sütun canlıda henüz yoksa (bekleyen migration G) panel kartı gösterilmez; yine de çağrılırsa anlaşılır hata döner.
+ */
+export async function saveLicenseNumber(raw: LicenseInput): Promise<ActionResult<null>> {
+  return runAction(async () => {
+    const ctx = await requirePermission('settings.manage');
+    const input = licenseSchema.parse(raw);
+    const { data, error } = await ctx.supabase
+      .from('organization_settings')
+      .update({ license_no: input.license_no })
+      .eq('organization_id', ctx.org.id)
+      .select('organization_id');
+    if (error?.code === 'PGRST204' || error?.code === '42703') {
+      throw new ActionError('Yetki belgesi numarası alanı henüz etkin değil. KARAYS destek ile iletişime geçin.', 'license_unavailable');
+    }
+    assertNoDbError(error);
+    if (!data?.length) throw new ActionError('Ofis ayarları bulunamadı.');
+    refreshPublicSite(ctx.org.id);
+    revalidatePath('/admin', 'layout');
+    return null;
+  }, 'Yetki belgesi numarası kaydedildi; sitenizde hemen görünür.');
 }

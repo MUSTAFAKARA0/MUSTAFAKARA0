@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { selectableFamilies } from '@/modules/platform/design-access';
 import { familyOptions } from '@/site-editor/families';
 import { getOfficeSite, previewBrand } from '@/app/admin/(panel)/site/site-data';
+import { getOrgSetup } from '@/site-editor/setup';
+import { designLocked } from '@/modules/onboarding/setup-state';
+import { findDesignFamily } from '@/site-factory/families';
 
 export const metadata: Metadata = { title: 'Tasarım · Site yönetimi' };
 
@@ -17,6 +20,19 @@ export const metadata: Metadata = { title: 'Tasarım · Site yönetimi' };
  */
 export default async function Page() {
   const { ctx, site } = await getOfficeSite();
+  // PILOT · ilk kurulumda seçilen tasarım kilitli: aile ve tema seçicileri gösterilmez (sunucu işlemi ve veritabanı da reddeder)
+  if (designLocked((await getOrgSetup(ctx.supabase, ctx.org.id)).setup)) {
+    const current = findDesignFamily(site.published.style.origin?.family ?? '');
+    return (
+      <div className="rounded-2xl border border-border bg-surface px-5 py-4 text-[13.5px]" data-testid="design-locked">
+        <p className="font-semibold">Tasarımınız ilk kurulumda seçildi{current ? `: ${current.name}` : ''}.</p>
+        <p className="mt-1 text-muted-foreground">
+          Tasarım ailesi ve tema değiştirilemez; değiştirmek isterseniz KARAYS ile iletişime geçin. Logo, renkler, iletişim bilgileri, sayfa metinleri, menü,
+          header ve footer ayarlarını ilgili sekmelerden düzenlemeye devam edebilirsiniz.
+        </p>
+      </div>
+    );
+  }
   const access = await selectableFamilies(ctx.supabase, ctx.org.id);
   const d = site.draft;
   const families = familyOptions(d, access.families);

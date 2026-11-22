@@ -14,6 +14,8 @@ import {
 } from '@/app/actions/admin-site';
 import { getTenantFromRequest } from '@/platform/tenant/tenant';
 import { getOfficeSite } from '@/app/admin/(panel)/site/site-data';
+import { getOrgSetup } from '@/site-editor/setup';
+import { designLocked } from '@/modules/onboarding/setup-state';
 
 const TABS = [
   { slug: '', label: 'Genel' },
@@ -50,7 +52,10 @@ const SECTION_TABS: Record<string, string[]> = {
  * organizasyon oturumdan gelir. Değişiklikler önce taslağa kaydedilir; "Yayınla" ile canlıya çıkar.
  */
 export default async function OfficeSiteLayout({ children }: LayoutProps<'/admin/site'>) {
-  const [{ site }, tenant] = await Promise.all([getOfficeSite(), getTenantFromRequest().catch(() => null)]);
+  const [{ ctx, site }, tenant] = await Promise.all([getOfficeSite(), getTenantFromRequest().catch(() => null)]);
+  // PILOT · ilk kurulumda seçilen tasarım kilitliyse Tasarım sekmesi menüde yok (adres yine kilit bildirimi gösterir)
+  const locked = designLocked((await getOrgSetup(ctx.supabase, ctx.org.id)).setup);
+  const tabs = locked ? TABS.filter((t) => t.slug !== 'tasarim') : TABS;
   const pending = [...new Set(site.pendingSections.flatMap((k) => SECTION_TABS[k] ?? []))];
   const pendingLabels = [...new Set(pending.map((slug) => TABS.find((t) => t.slug === slug)?.label).filter((x): x is string => !!x))];
   const siteUrl = tenant?.id === site.org.id ? '/' : site.primaryDomain ? `https://${site.primaryDomain}` : null;
@@ -91,7 +96,7 @@ export default async function OfficeSiteLayout({ children }: LayoutProps<'/admin
         hasUnpublishedChanges={site.hasUnpublishedChanges}
         pendingLabels={pendingLabels}
       />
-      <SiteTabs base="/admin/site" tabs={TABS} pending={pending} />
+      <SiteTabs base="/admin/site" tabs={tabs} pending={pending} />
       <SiteEditorProvider draftToken={site.draftUpdatedAt} actions={{ saveSection: saveOfficeSiteSection, saveBrand: updateOfficeSiteBrand, applyFamily: applyOfficeDesignFamily }}>
         <div className="pt-6">{children}</div>
       </SiteEditorProvider>

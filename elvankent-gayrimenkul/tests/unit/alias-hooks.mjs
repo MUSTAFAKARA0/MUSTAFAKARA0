@@ -1,5 +1,6 @@
 /**
  * Birim testleri için "@/…" yol takma adını (tsconfig paths) çözer: @/x → src/x(.ts|.tsx|/index.ts).
+ * Göreli uzantısız TypeScript içe aktarmaları (./host → ./host.ts) da çözülür.
  * Yalnızca test çalıştırıcısı yükler (package.json › test:unit → --import ./tests/unit/register-alias.mjs).
  */
 import { existsSync } from 'node:fs';
@@ -19,6 +20,10 @@ export async function resolve(specifier, context, next) {
         }
       }
     }
+  }
+  if ((specifier.startsWith('./') || specifier.startsWith('../')) && !/\.[cm]?[jt]sx?$/.test(specifier) && context.parentURL?.endsWith('.ts')) {
+    const candidate = new URL(`${specifier}.ts`, context.parentURL);
+    if (existsSync(fileURLToPath(candidate))) return next(candidate.href, context);
   }
   return next(specifier, context);
 }

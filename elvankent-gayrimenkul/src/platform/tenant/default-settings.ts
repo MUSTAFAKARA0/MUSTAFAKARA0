@@ -8,6 +8,7 @@ export function defaultSettings(orgId: string, name: string): OrgSettings {
     organization_id: orgId,
     display_name: name,
     legal_name: null,
+    license_no: null,
     tagline: null,
     description: null,
     service_area: null,

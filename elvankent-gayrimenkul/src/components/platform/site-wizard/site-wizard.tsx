@@ -5,7 +5,8 @@ import Link from '@/components/common/intent-link';
 import { toast } from 'sonner';
 import { ArrowLeft, ArrowRight, Check, ExternalLink, ImagePlus, Laptop, LayoutTemplate, Loader2, Monitor, Smartphone, Sparkles, Tablet, X } from 'lucide-react';
 import { createSite, publishNewSite } from '@/app/actions/site-create';
-import { OwnerInvitationCard } from '@/components/platform/owner-invitation';
+import { InitialInvitationResult } from '@/components/platform/owner-invitation';
+import type { InitialInvitation } from '@/modules/platform/invitations/service';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox, Field, Input, Select, Textarea } from '@/components/ui/form-controls';
@@ -103,7 +104,7 @@ export function SiteWizard({ catalog }: { catalog: WizardCatalog }) {
   const [activate, setActivate] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [creating, setCreating] = useState<null | 'hesap' | 'logo' | 'yayin'>(null);
-  const [done, setDone] = useState<{ id: string; slug: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account'; warnings: string[]; published: boolean } | null>(null);
+  const [done, setDone] = useState<{ id: string; slug: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account'; warnings: string[]; published: boolean; invitation: InitialInvitation } | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
   const family = catalog.families.find((f) => f.id === familyId) ?? null;
@@ -204,7 +205,7 @@ export function SiteWizard({ catalog }: { catalog: WizardCatalog }) {
     const pub = await publishNewSite(res.data.id, activate);
     if (!pub.ok) warnings.push(`Site oluşturuldu ancak yayınlanamadı: ${pub.error}`);
     setCreating(null);
-    setDone({ id: res.data.id, slug: res.data.slug, email: res.data.ownerEmail, ownerAccount: res.data.ownerAccount, warnings, published: pub.ok });
+    setDone({ id: res.data.id, slug: res.data.slug, email: res.data.ownerEmail, ownerAccount: res.data.ownerAccount, warnings, published: pub.ok, invitation: res.data.invitation });
     topRef.current?.scrollIntoView({ block: 'start' });
   }
 
@@ -864,7 +865,7 @@ function ConfirmStep(props: {
   );
 }
 
-function Result({ done, activate, rootDomain, customDomain }: { done: { id: string; slug: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account'; warnings: string[]; published: boolean }; activate: boolean; rootDomain: string | null; customDomain: string | null }) {
+function Result({ done, activate, rootDomain, customDomain }: { done: { id: string; slug: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account'; warnings: string[]; published: boolean; invitation: InitialInvitation }; activate: boolean; rootDomain: string | null; customDomain: string | null }) {
   // Özel alan adı doğrulanana kadar site varsayılan (alt alan adı) adresinde açılır
   const url = rootDomain ? `https://${done.slug}.${rootDomain}` : null;
   return (
@@ -890,7 +891,7 @@ function Result({ done, activate, rootDomain, customDomain }: { done: { id: stri
       )}
       {done.ownerAccount === 'invitation_pending' ? (
         <div className="mt-5 rounded-xl border border-border p-4">
-          <OwnerInvitationCard orgId={done.id} email={done.email} invitation={{ status: 'pending', expiresAt: null, lastSentAt: null, acceptedAt: null, accountPending: true }} />
+          <InitialInvitationResult orgId={done.id} email={done.email} invitation={done.invitation} />
           <p className="mt-3 text-[12.5px] text-muted-foreground">Sahip şifresini davet e-postasındaki tek kullanımlık bağlantıyla kendisi belirler; şifre kimseye gösterilmez.</p>
         </div>
       ) : (

@@ -3,7 +3,36 @@
 Satış tamamlandıktan sonra KARAY yöneticisinin yaptığı işler. Teknik bilgi gerektiren tek adım
 alan adıdır ([domain-connection.md](domain-connection.md)).
 
-## 1. Müşteriyi aç (KARAY konsolu)
+> **14.11.2026 güncellemesi (pilot):** Aşağıdaki §0, geliştirme dalı `claude/karays-refocus-t84k81` production'a
+> çıktıktan ve migration'lar G, H, I canlıda uygulandıktan **sonra** geçerlidir. Bunlardan önce §1–§5 (eski akış) geçerlidir.
+> Pilot ofis I uygulanmadan **açılmaz**: I'dan önce açılan her ofis "eski ofis" (legacy) sayılır; ilk kurulum akışı ve
+> tasarım kilidi o ofiste çalışmaz. Sıra ve onaylar: [../PILOT_YAYIN_GO_NOGO.md](../PILOT_YAYIN_GO_NOGO.md).
+
+## 0. Pilot ofis açılışı (kod yayını + E/F/G/H/I sonrası)
+
+Ön koşul: [PILOT_YAYIN_GO_NOGO.md](../PILOT_YAYIN_GO_NOGO.md) §5'te G1–G12 tamam; ofisle yazılı pilot sözleşmesi (C2) imzalı.
+Her adımın kabul testi CI'da `tests/e2e/pilot-journey.spec.ts` PJ-1…7 ve `pilot-onboarding.spec.ts` PO-1…9 olarak koşar;
+aşağıdaki "Kontrol" sütunu canlıda gözle yapılacak olanıdır.
+
+| # | Kim | Ekran / işlem | Kontrol |
+|---|---|---|---|
+| 1 | KARAY | Konsol › **Organizasyonlar › Yeni**: Organizasyon adı, Kısa ad, İlan no öneki, Sahip adı soyadı, Sahip e-postası › **Organizasyonu oluştur** | "Organizasyon oluşturuldu." Sahip daveti **kendiliğinden** gider (tek kullanımlık, 72 saat, e-postada şifre yok). Gönderim başarısızsa ofis kalır; organizasyon sayfasında **Daveti tekrar gönder** |
+| 2 | KARAY | Organizasyon › Plan ve abonelik: plan **Deneme**, **Deneme / pilot bitişi** (1–365 gün; ödeme alınmaz) | Sahip panelinde şerit doğru tarihi gösterir. Pilot bitince otomatik kısıtlama yoktur (OPS-02 kapalı) |
+| 3 | KARAY | (İsteğe bağlı) Site › Tema: ofise açık tasarım aileleri daraltılır | Kurulumda yalnız izinli aileler görünür |
+| 4 | Ofis sahibi | E-postadaki bağlantı › Yeni şifre (iki kez) › **Hesabımı etkinleştir** | Giriş sonrası panel yerine `/admin/kurulum` açılır |
+| 5 | Ofis sahibi | Kurulum: Hoş geldiniz › Ofis bilgileri › **Tasarım** › Önizleme (masaüstü/mobil) › **Tamamla** | Yarıda bırakılırsa kaldığı adımdan devam eder. Önceden işaretli aile "seçim" sayılmaz; sahibin onayı gerekir |
+| 6 | Ofis sahibi | Tamamlayınca tasarım ailesi ve tema paketi **kilitlenir**; logo, renk, iletişim, metin, menü, ilan serbest | Site yönetimi › Tasarım kilitli görünür. Değişiklik isteğinde KARAY konsolu › Organizasyon › İlk kurulum › **Tasarım seçimini yeniden aç** (denetim kaydı yazılır) |
+| 7 | Ofis sahibi | Marka ve görünüm › **Yasal bilgiler** › Yetki belgesi numarası | Ofis sitesinin alt bilgisinde "Yetki belgesi no: …". Hangi kanalda zorunlu olduğu avukat görüşüne bağlı (D-20) |
+| 8 | Ofis sahibi | İlanlar › Yeni ilan (en az 2 fotoğraf) › **Yayınla** | İlan ofis sitesinde açılır; telefondan 6 MB üstü fotoğraf da yüklenir (E canlıda) |
+| 9 | Ofis + KARAY | Site › Alan adı › **Alan adı ekle** › DNS kayıtları ofise iletilir › **Doğrula** › **Bağlantıyı kontrol et** ([domain-connection.md](domain-connection.md)) | Durum *Aktif*; HTTPS açılır; ofisin e-postası (MX) etkilenmez |
+| 10 | KARAY | Konsol › Web Siteleri › site › **Durumu kaydet** (Yayında) | "Sitemiz çok yakında yayında" sayfası kalkar |
+| 11 | Ofis sahibi | Kullanıcılar › **Yeni kullanıcı** (rol: danışman) | Danışmana davet gider; danışman sahip sayfalarını açamaz (F canlıda: başka ofise bağlı hesap eklenemez) |
+| 12 | KARAY + ofis | Kendi telefonundan: ofis sitesinde bilgi formu ve randevu talebi | Talep yalnız bu ofisin panelinde görünür; telefonda yatay taşma yok |
+
+Pilot süresince: Sentry e-posta bildirimi ve günlük yedek sonucu izlenir; sorun önem derecesine göre
+[incident-response.md](incident-response.md). Ofisten gelen her talep **KARAY notları** paneline yazılır.
+
+## 1. Müşteriyi aç (KARAY konsolu) — eski akış (I canlıda değilken)
 
 İki yol vardır, ikisi aynı çekirdeği kullanır (`provisionOrganization`):
 

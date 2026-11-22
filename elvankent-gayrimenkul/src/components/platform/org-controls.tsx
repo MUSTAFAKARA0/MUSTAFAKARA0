@@ -5,8 +5,9 @@ import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/form-controls';
-import { createOrganization, setOrganizationPlan } from '@/app/actions/platform';
-import { OwnerInvitationCard } from '@/components/platform/owner-invitation';
+import { createOrganization, setOrganizationPlan, setOrganizationTrialEnd } from '@/app/actions/platform';
+import { InitialInvitationResult } from '@/components/platform/owner-invitation';
+import type { InitialInvitation } from '@/modules/platform/invitations/service';
 
 export function PlanForm({ orgId, plans, current, status }: { orgId: string; plans: { id: string; name: string }[]; current: string | null; status: string | null }) {
   const router = useRouter();
@@ -38,7 +39,7 @@ export function PlanForm({ orgId, plans, current, status }: { orgId: string; pla
       </Field>
       <Field label="Abonelik durumu" htmlFor="org-sub">
         <Select id="org-sub" value={sub} onChange={(e) => setSub(e.target.value)}>
-          <option value="trialing">Deneme (14 gün)</option>
+          <option value="trialing">Deneme (14 gün; bitiş aşağıdan değiştirilir)</option>
           <option value="active">Aktif</option>
           <option value="past_due">Ödeme gecikmiş</option>
         </Select>
@@ -55,19 +56,26 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [done, setDone] = useState<{ id: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account' } | null>(null);
+  const [done, setDone] = useState<{ id: string; email: string; ownerAccount: 'invitation_pending' | 'existing_account'; invitation: InitialInvitation; warnings: string[] } | null>(null);
 
   if (done) {
     return (
       <div className="space-y-4">
         <p className="rounded-xl bg-success-soft p-4 text-[14px] text-success">Organizasyon oluşturuldu.</p>
+        {done.warnings.length > 0 && (
+          <ul role="alert" className="space-y-1.5 rounded-xl bg-warning-soft p-4 text-[13.5px] text-warning" data-testid="create-warnings">
+            {done.warnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        )}
         {done.ownerAccount === 'invitation_pending' ? (
           <div className="rounded-xl border border-border p-4">
-            <OwnerInvitationCard orgId={done.id} email={done.email} invitation={{ status: 'pending', expiresAt: null, lastSentAt: null, acceptedAt: null, accountPending: true }} />
+            <InitialInvitationResult orgId={done.id} email={done.email} invitation={done.invitation} />
             <p className="mt-3 text-[12.5px] text-muted-foreground">Sahip şifresini davet e-postasındaki tek kullanımlık bağlantıyla kendisi belirler; şifre kimseye gösterilmez.</p>
           </div>
         ) : (
-          <p className="text-[13.5px] text-muted-foreground">{done.email} adresli mevcut hesap sahip olarak eklendi; mevcut şifresiyle giriş yapar.</p>
+          <p className="text-[13.5px] text-muted-foreground">{done.email} adresli mevcut hesap sahip olarak eklendi; mevcut şifresiyle giriş yapar. Hesabına ve şifresine dokunulmadı; davet e-postası gönderilmedi.</p>
         )}
         <Button onClick={() => router.push(`/platform/organizasyonlar/${done.id}`)}>Organizasyona git</Button>
       </div>
@@ -100,7 +108,7 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
           if (!Object.keys(next).length) setFormError(res.error);
           return;
         }
-        setDone({ id: res.data.id, email: res.data.ownerEmail, ownerAccount: res.data.ownerAccount });
+        setDone({ id: res.data.id, email: res.data.ownerEmail, ownerAccount: res.data.ownerAccount, invitation: res.data.invitation, warnings: res.data.warnings });
         router.refresh();
       }}
     >
@@ -126,7 +134,7 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
       <Field label="Sahip adı soyadı" htmlFor="co-owner-name" required error={errors.owner_name}>
         <Input id="co-owner-name" name="owner_name" maxLength={100} required autoComplete="off" />
       </Field>
-      <Field label="Sahip e-postası" htmlFor="co-owner-email" required error={errors.owner_email} hint="Hesap yoksa oluşturulur; sahibe şifresini kendisinin belirleyeceği aktivasyon daveti gönderilir.">
+      <Field label="Sahip e-postası" htmlFor="co-owner-email" required error={errors.owner_email} hint="Hesap yoksa oluşturulur ve sahibe şifresini kendisinin belirleyeceği aktivasyon daveti açılışla birlikte otomatik gönderilir.">
         <Input id="co-owner-email" name="owner_email" type="email" maxLength={160} required autoComplete="off" />
       </Field>
       {formError && (
@@ -139,6 +147,36 @@ export function CreateOrgForm({ plans }: { plans: { id: string; name: string }[]
           Organizasyonu oluştur
         </Button>
       </div>
+    </form>
+  );
+}
+
+/** PILOT · deneme (pilot) bitiş tarihi; yalnız abonelik "Deneme" durumundayken gösterilir */
+export function TrialEndForm({ orgId, endsAt }: { orgId: string; endsAt: string | null }) {
+  const router = useRouter();
+  const [day, setDay] = useState(endsAt ? new Date(endsAt).toLocaleDateString('sv-SE', { timeZone: 'Europe/Istanbul' }) : '');
+  const [pending, setPending] = useState(false);
+  const [, startTransition] = useTransition();
+  return (
+    <form
+      data-testid="trial-end-form"
+      className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setPending(true);
+        const res = await setOrganizationTrialEnd(orgId, day);
+        setPending(false);
+        if (!res.ok) return void toast.error(res.error);
+        toast.success(res.message ?? 'Güncellendi.');
+        startTransition(() => router.refresh());
+      }}
+    >
+      <Field label="Deneme / pilot bitişi" htmlFor="org-trial-end" hint="Ödeme alınmaz; yalnız panelde gösterilen deneme süresi değişir (en çok 365 gün).">
+        <Input id="org-trial-end" type="date" value={day} onChange={(e) => setDay(e.target.value)} required />
+      </Field>
+      <Button type="submit" variant="outline" loading={pending} disabled={!day}>
+        Bitişi kaydet
+      </Button>
     </form>
   );
 }

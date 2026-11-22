@@ -137,6 +137,19 @@ export async function createMember(raw: MemberInput): Promise<ActionResult<Creat
       }
       const found = await findUserIdByEmail(service, input.email);
       if (!found) throw new ActionError('Bu e-posta adresiyle kayıtlı hesap bulunamadı. Lütfen tekrar deneyin.');
+      // P0-3: başka bir ofise bağlı ya da KARAYS platform hesabı onayı olmadan bu ofise eklenemez (izinsiz üyelik).
+      // Yalnız hiçbir ofise bağlı olmayan hesap (ör. bu ofisten çıkarılıp yeniden eklenen kişi) bağlanır.
+      const [{ count: otherOrgs, error: orgsError }, { data: profile, error: profileError }] = await Promise.all([
+        service.from('organization_members').select('user_id', { count: 'exact', head: true }).eq('user_id', found).neq('organization_id', ctx.org.id),
+        service.from('profiles').select('is_super_admin').eq('id', found).maybeSingle(),
+      ]);
+      if (orgsError || profileError) throw new ActionError('Kullanıcı hesabı kontrol edilemedi. Lütfen tekrar deneyin.');
+      if ((otherOrgs ?? 0) > 0 || profile?.is_super_admin) {
+        throw new ActionError(
+          'Bu e-posta adresi ekibinize eklenemiyor. Kişi başka bir ofiste de çalışıyorsa KARAYS destek ile iletişime geçin.',
+          'account_unavailable',
+        );
+      }
       userId = found;
       existing = true;
     } else {

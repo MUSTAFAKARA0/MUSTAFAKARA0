@@ -380,7 +380,7 @@ describe('LR-08 CI E2E ortamı', () => {
 describe('LR-09 sabit çalıştırıcı imajı (K-16)', () => {
   // ubuntu-latest 19.10.2026'dan itibaren Ubuntu 26'ya taşınıyor. CI'nin doğruladığı ortam ubuntu-24.04'tür;
   // yeni imaj, CI'da doğrulanıp ayrı bir commit'le seçilir (etiket kendiliğinden kaymaz).
-  const LR09 = [['elvankent-ci.yml', 2], ['elvankent-backup.yml', 2], ['elvankent-security-candidate.yml', 1], ['elvankent-r2-diagnose.yml', 1], ['elvankent-restore-drill.yml', 1], ['elvankent-o4-onkontrol.yml', 1], ['elvankent-o4-e2e.yml', 1], ['elvankent-uretim-saglik.yml', 1], ['elvankent-ki23-canli-denetim.yml', 1], ['elvankent-o5a-uygula.yml', 1], ['elvankent-o5b-uygula.yml', 1], ['elvankent-o5c-uygula.yml', 1]];
+  const LR09 = [['elvankent-ci.yml', 2], ['elvankent-backup.yml', 2], ['elvankent-security-candidate.yml', 1], ['elvankent-r2-diagnose.yml', 1], ['elvankent-restore-drill.yml', 1], ['elvankent-o4-onkontrol.yml', 1], ['elvankent-o4-e2e.yml', 1], ['elvankent-uretim-saglik.yml', 1], ['elvankent-ki23-canli-denetim.yml', 1], ['elvankent-o5a-uygula.yml', 1], ['elvankent-o5b-uygula.yml', 1], ['elvankent-o5c-uygula.yml', 1], ['elvankent-yedek-izleme.yml', 1]];
   const LR09_FILES = LR09.map(([f]) => f);
   test('depodaki her iş akışı LR-09 listesinde', () => {
     const all = readdirSync(new URL('../.github/workflows/', root)).filter((f) => /^elvankent-.*\.yml$/.test(f));
@@ -569,7 +569,7 @@ describe('LR-13 bekleyen migration\'lar (K-19)', () => {
   });
 });
 
-describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, company_name, media_finalize_rpc, media_privileges, media_storage_slots ve media_stray_sweep (supabase/ops)', () => {
+describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, company_name, media_finalize_rpc, media_privileges, media_storage_slots, media_stray_sweep, media_size_guard, tenant_member_guard, license_no, pilot_trial_end ve org_setup (supabase/ops)', () => {
   // Bekleyen migration'ları canlıda tek başına uygulayan betikler (karays_brand ile aynı düzen, LR-10).
   // Pending dosya değişip 03/04/05 değişmezse canlıya provası yapılmamış bir gövde gider.
   const runbooks = [
@@ -583,6 +583,16 @@ describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, compan
     { dir: 'supabase/ops/media_storage_slots/', pending: '20261027000003_media_storage_slots.sql', first: 'do $guard$', fn: 'public.media_storage_slot_guard', hashFrom: 'create or replace function public.media_storage_slot_guard' },
     // KI-38: D (başıboş dosya listesi) yalnız A'ya dayanır
     { dir: 'supabase/ops/media_stray_sweep/', pending: '20261031000001_media_stray_sweep.sql', first: 'do $guard$', fn: 'public.media_stray_objects', hashFrom: 'create or replace function public.media_stray_objects' },
+    // KI-42: E (orijinal boyut koruması) 'apply C first' ile başlar; C'den sonra sıralanır, C'den önce geri alınır
+    { dir: 'supabase/ops/media_size_guard/', pending: '20261108000001_media_size_guard.sql', first: 'do $guard$', fn: 'public.media_storage_size_guard', hashFrom: 'create or replace function public.media_storage_size_guard' },
+    // P0-3: F (izinsiz üyelik, yabancı og_media_id) bağımsız
+    // P0-8: G (yetki belgesi numarası sütunu) bağımsız; fonksiyon gövdesi yok
+    // PILOT: H (deneme bitişi) bağımsız
+    { dir: 'supabase/ops/pilot_trial_end/', pending: '20261108000004_pilot_trial_end.sql', first: 'create or replace function public.platform_set_trial_end', fn: 'public.platform_set_trial_end', hashFrom: 'create or replace function public.platform_set_trial_end' },
+    // PILOT: I (ilk kurulum + tasarım kilidi) bağımsız
+    { dir: 'supabase/ops/org_setup/', pending: '20261108000005_org_setup.sql', first: 'create table if not exists public.organization_setup (', fn: 'public.org_setup_complete', hashFrom: 'create or replace function public.org_setup_complete' },
+    { dir: 'supabase/ops/license_no/', pending: '20261108000003_license_no.sql', first: 'alter table public.organization_settings', fn: null, hashFrom: null },
+    { dir: 'supabase/ops/tenant_member_guard/', pending: '20261108000002_tenant_member_guard.sql', first: 'create or replace function public.organization_members_target_guard', fn: 'public.organization_members_target_guard', hashFrom: 'create or replace function public.organization_members_target_guard' },
     // 03b_validate.sql isteğe bağlı ayrı adım (VALIDATE tabloyu tarar); varsa aşağıda ayrıca denetlenir
     { dir: 'supabase/ops/company_name/', pending: '20261026000002_company_name_check.sql', first: 'alter table public.platform_settings drop constraint', fn: null, hashFrom: null, optional: ['03b_validate.sql'] },
   ];
@@ -715,7 +725,11 @@ describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, compan
       const def = v2.slice(v2.indexOf(`create policy "${name}"`)).match(/^[\s\S]*?\);/)[0];
       assert.ok(rollback.includes(norm(def)), `05: ${name} birebir`);
     }
-    assert.match(read('scripts/rehearse-runbooks.sh'), /RUNBOOKS=\([^)]*media_privileges media_storage_slots media_stray_sweep\)/);
+    assert.match(read('scripts/rehearse-runbooks.sh'), /RUNBOOKS=\([^)]*media_privileges media_storage_slots media_stray_sweep media_size_guard tenant_member_guard license_no pilot_trial_end org_setup\)/);
+    // KI-42: E varken C'nin 05'i durur (E, C'nin bakım penceresi tablosunu okur)
+    assert.match(read('supabase/ops/media_storage_slots/05_rollback.sql'), /media_storage_size_guard[\s\S]*DUR: önce E geri alınır[\s\S]*drop trigger if exists media_storage_slot_guard/);
+    assert.match(read('supabase/ops/media_size_guard/01_preflight.sql'), /DUR: apply C first/);
+    assert.match(read('supabase/ops/media_size_guard/03_apply.sql'), /has_table_privilege\(current_user, 'storage\.objects', 'trigger'\)/);
   });
   test('quota_lock: yetkiler anon/authenticated/PUBLIC için kapalı denetlenir (03 ve 04)', () => {
     for (const f of ['03_apply.sql', '04_postflight.sql']) {

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { RootDocument, rootMetadata, rootViewport } from '@/components/common/root-document';
 import { KarayFooter } from '@/components/karay/karay-footer';
 import { KarayHeader } from '@/components/karay/karay-header';
+import { CookieConsent } from '@/components/common/cookie-consent';
 import { karaySiteUrl } from '@/modules/karay/site';
 import { getKarayProfile } from '@/modules/karay/profile';
 import { PLATFORM_BRAND, PLATFORM_SCOPE, platformThemeCss } from '@/platform/branding/platform-brand';
@@ -50,6 +51,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/** KARAYS çerez politikası (metni modules/karay/legal.ts içinde 'cerez-politikasi' belgesidir) */
+const KARAY_COOKIE_POLICY_HREF = '/karay/yasal/cerez-politikasi';
+
 export const viewport: Viewport = rootViewport('#ffffff');
 
 export default async function KarayLayout({ children }: LayoutProps<'/karay'>) {
@@ -67,6 +71,8 @@ export default async function KarayLayout({ children }: LayoutProps<'/karay'>) {
         <KarayHeader />
         <main id="icerik">{children}</main>
         <KarayFooter profile={profile} />
+        {/* Vercel Web Analytics / Speed Insights (RootDocument) bu sayfada da yalnızca onayla yüklenir */}
+        <CookieConsent policyHref={KARAY_COOKIE_POLICY_HREF} />
       </div>
     </RootDocument>
   );

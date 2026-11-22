@@ -14,6 +14,7 @@ import { PALETTES, findPalette } from '@/theme-engine/palettes';
 import { FONT_IDS, type ColorTokens, type ColorsConfig, type FontId, type SiteConfig, type StyleConfig, type ThemeId, type TypographyConfig } from '@/site-config/schema';
 import { resolveStyle, THEME_LIST, THEMES } from '@/theme-engine/themes';
 import { resolveColors } from '@/theme-engine/tokens';
+import { sameValue } from '@/lib/same-value';
 
 export { LivePreview, type Brand } from '@/theme-engine/preview/live-preview';
 
@@ -61,7 +62,7 @@ export function ThemeForm({ draft, brand, darkAllowed, name }: { draft: SiteConf
   const styleSave = useSectionSave('style');
   const colorsSave = useSectionSave('colors');
   const themeDirty = theme !== draft.theme;
-  const styleDirty = JSON.stringify(style) !== JSON.stringify(draft.style);
+  const styleDirty = !sameValue(style, draft.style);
   const paletteColors: ColorsConfig = { mode: 'preset', preset: THEMES[theme].palette, scheme: 'light' };
   const colors = usePalette ? paletteColors : draft.colors;
   const themeDefaults = resolveStyle({ theme, style: {} });
@@ -215,7 +216,7 @@ export function ColorsForm({ draft, brand, darkAllowed, name }: { draft: SiteCon
   const initial = draft.colors;
   const [colors, setColors] = useState<ColorsConfig>(initial);
   const { save, pending } = useSectionSave('colors');
-  const dirty = JSON.stringify(colors) !== JSON.stringify(initial);
+  const dirty = !sameValue(colors, initial);
   const resolved = resolveColors({ ...draft, colors }, brand, darkAllowed).tokens;
   const palettes = PALETTES.filter((p) => p.scheme === 'light' || darkAllowed);
   const setToken = (k: keyof ColorTokens, v: string) => setColors((c) => ({ ...c, mode: 'custom', preset: c.preset ?? 'modern-green', tokens: { ...(c.tokens ?? {}), [k]: v } }));
@@ -340,7 +341,7 @@ export function TypographyForm({ draft, brand, darkAllowed, name }: { draft: Sit
   const [t, setT] = useState<TypographyConfig>(initial);
   const { save, pending } = useSectionSave('typography');
   const theme = THEMES[draft.theme];
-  const dirty = JSON.stringify(t) !== JSON.stringify(initial);
+  const dirty = !sameValue(t, initial);
   const fontOptions = (value: FontId | undefined, fallback: FontId, onChange: (v: FontId | undefined) => void, id: string) => (
     <Select id={id} value={value ?? ''} onChange={(e) => onChange((e.target.value || undefined) as FontId | undefined)}>
       <option value="">Tema varsayılanı ({FONT_CATALOG[fallback].name})</option>

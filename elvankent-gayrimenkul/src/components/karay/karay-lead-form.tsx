@@ -100,11 +100,14 @@ export function KarayLeadForm() {
         defaultChecked={v.kvkk === 'on'}
         aria-invalid={Boolean(e.kvkk) || undefined}
         label={
+          // Aydınlatma (bilgilendirme) onayıdır, açık rıza değildir: veriler talebin yanıtlanması
+          // için KVKK m.5/2 kapsamında işlenir; rıza/onay dili kullanılmaz.
           <>
+            Talebimin yanıtlanması amacıyla kişisel verilerimin işlenmesine ilişkin{' '}
             <Link href="/karay/yasal/kvkk" className="font-semibold underline underline-offset-2" target="_blank">
-              Aydınlatma metnini
-            </Link>{' '}
-            okudum; talebime yanıt verilmesi için bilgilerimin işlenmesini kabul ediyorum.
+              Aydınlatma Metni
+            </Link>
+            &apos;ni okudum.
           </>
         }
       />

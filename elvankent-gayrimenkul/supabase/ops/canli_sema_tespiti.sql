@@ -59,7 +59,13 @@ with checks(sira, dosya, kosul) as (
   (36, 'pending/20261027000001_media_finalize_rpc.sql', to_regclass('public.media_file_queue') is not null),
   (37, 'pending/20261027000002_media_column_privileges.sql', exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'media_assets_pending_shape')),
   (38, 'pending/20261027000003_media_storage_slots.sql', to_regclass('public.media_overwrite_window') is not null),
-  (39, 'pending/20261031000001_media_stray_sweep.sql', exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'media_stray_objects'))
+  (39, 'pending/20261031000001_media_stray_sweep.sql', exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'media_stray_objects')),
+  (40, 'pending/20261108000001_media_size_guard.sql', exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'media_storage_size_guard')
+                                                       and exists (select 1 from pg_trigger where tgname = 'media_storage_size_guard' and not tgisinternal and tgrelid = to_regclass('storage.objects'))),
+  (41, 'pending/20261108000002_tenant_member_guard.sql', exists (select 1 from pg_trigger where tgname = 'organization_members_target_guard' and not tgisinternal)),
+  (42, 'pending/20261108000003_license_no.sql', exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'organization_settings' and column_name = 'license_no')),
+  (43, 'pending/20261108000004_pilot_trial_end.sql', exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and proname = 'platform_set_trial_end')),
+  (44, 'pending/20261108000005_org_setup.sql', to_regclass('public.organization_setup') is not null)
 ),
 mig as (select * from checks where sira <= 31),
 first_missing as (select min(sira) as s from mig where not kosul),

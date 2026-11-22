@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { STAFF_SENSITIVE_HINT } from '@/lib/sensitive-data-hint';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, Save } from 'lucide-react';
@@ -28,7 +29,7 @@ function CustomerFields({ initial, errors }: { initial?: CustomerValues; errors:
       <Field label="E-posta" htmlFor="c-email" error={errors.email}>
         <Input id="c-email" name="email" type="email" defaultValue={initial?.email ?? ''} maxLength={160} />
       </Field>
-      <Field label="Notlar (yalnızca ekip görür)" htmlFor="c-notes" error={errors.notes} className="sm:col-span-2">
+      <Field label="Notlar (yalnızca ekip görür)" htmlFor="c-notes" error={errors.notes} hint={STAFF_SENSITIVE_HINT} className="sm:col-span-2">
         <Textarea id="c-notes" name="notes" defaultValue={initial?.notes ?? ''} rows={4} maxLength={4000} />
       </Field>
     </div>

@@ -236,7 +236,12 @@ export function PropertyDetailView({ tenant, p, similar, mode = 'public', delete
                 />
               )}
             </div>
-            <p className="mt-4 px-1 text-[12.5px] leading-relaxed text-muted-foreground">
+            {s.license_no ? (
+              <p data-testid="listing-license-no" className="mt-4 px-1 text-[13px] font-medium text-foreground/85">
+                Taşınmaz Ticareti Yetki Belgesi No: {s.license_no}
+              </p>
+            ) : null}
+            <p className="mt-2 px-1 text-[12.5px] leading-relaxed text-muted-foreground">
               {s.display_name} · İlan bilgileri bilgilendirme amaçlıdır; işlem öncesinde tapu ve imar bilgileri resmi kurumlardan
               teyit edilmelidir.
             </p>

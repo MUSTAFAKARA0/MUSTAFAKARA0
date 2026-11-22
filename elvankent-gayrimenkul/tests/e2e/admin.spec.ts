@@ -2,10 +2,11 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 import { expect, test, type Page } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * Yönetici senaryoları (V2): giriş ve yetki, ilan sihirbazı (konum, fotoğraf
- * yükleme ve işleme, fiyat, açıklama, yayın), sitede görünme, fiyat
+ * yükleme ve işleme, fiyat, açıklama, yayın), fotoğraf döndürme ve silme, sitede görünme, fiyat
  * değişikliği, çöp kutusu, talepler, blog yazısı ve yönetim sayfaları.
  *
  * Gerekli: E2E_ADMIN_EMAIL, E2E_ADMIN_PASSWORD (organizasyonda owner/admin rolü)
@@ -16,6 +17,8 @@ const email = process.env.E2E_ADMIN_EMAIL;
 const password = process.env.E2E_ADMIN_PASSWORD;
 const fixtureDir = path.join(__dirname, '.fixtures');
 const images = ['bir', 'iki'].map((n) => path.join(fixtureDir, `foto-${n}.jpg`));
+// KI-45 döndürme/silme testi için ayrı ölçülü fotoğraf: boyut yazısı (1800×1200 ↔ 1200×1800) diğer kartlarla karışmaz
+const rotateImage = path.join(fixtureDir, 'foto-dondur.jpg');
 
 test.describe.configure({ mode: 'serial' });
 test.skip(!email || !password, 'E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD tanımlı değil');
@@ -36,6 +39,9 @@ test.beforeAll(async () => {
         .toFile(file),
     ),
   );
+  await sharp({ create: { width: 1800, height: 1200, channels: 3, background: '#4a5d8c' } })
+    .jpeg({ quality: 85 })
+    .toFile(rotateImage);
 });
 
 async function login(page: Page) {
@@ -120,6 +126,55 @@ test('Yayındaki ilan sitede görünür; fiyat değişikliği yansır', async ({
   }).toPass({ timeout: 30_000 });
 });
 
+test('İlan fotoğrafı döndürülür (sağa/sola, kalıcı) ve silinir (KI-36/KI-45)', async ({ page }) => {
+  test.skip(!editorUrl, 'Test ilanı oluşturulmadı');
+  test.setTimeout(180_000);
+  await login(page);
+  await page.goto(`${editorUrl}?adim=fotograflar`);
+  const cards = page.locator('li[draggable="true"]');
+  await expect(cards).toHaveCount(2, { timeout: 30_000 });
+
+  // Ayrı bir fotoğraf eklenir; yayındaki ilanın iki fotoğrafına dokunulmaz
+  await page.locator('input[type=file][multiple]').setInputFiles(rotateImage);
+  await expect(cards).toHaveCount(3, { timeout: 120_000 });
+  const card = cards.filter({ has: page.getByRole('button', { name: 'Fotoğraf 3 işlemleri' }) });
+  await expect(card).toContainText('1800×1200');
+  const img = card.locator('img').first();
+  await expect(img).not.toHaveAttribute('src', /-r(90|180|270)\//);
+
+  // Sağa döndür: varyantlar orijinalden 90° ile yeniden üretilir, boyutlar yer değiştirir, adres değişir
+  await page.getByRole('button', { name: 'Fotoğraf 3 işlemleri' }).click();
+  await page.getByRole('menuitem', { name: 'Sağa döndür' }).click();
+  await expect(card).toContainText('1200×1800', { timeout: 60_000 });
+  await expect(img).toHaveAttribute('src', /-r90(\/|%2F)/i);
+
+  // Kalıcı: yeniden yüklemede döndürülmüş hâli gelir
+  await page.reload();
+  await expect(cards).toHaveCount(3, { timeout: 30_000 });
+  await expect(card).toContainText('1200×1800');
+  await expect(img).toHaveAttribute('src', /-r90(\/|%2F)/i);
+
+  // Sola döndür: başlangıç açısına döner (yeni sürüm klasörü, açı eki yok)
+  await page.getByRole('button', { name: 'Fotoğraf 3 işlemleri' }).click();
+  await page.getByRole('menuitem', { name: 'Sola döndür' }).click();
+  await expect(card).toContainText('1800×1200', { timeout: 60_000 });
+  await expect(img).not.toHaveAttribute('src', /-r(90|180|270)\//);
+
+  // Sil: onay penceresi → kart kalkar, yeniden yüklemede de yok
+  await page.getByRole('button', { name: 'Fotoğraf 3 işlemleri' }).click();
+  await page.getByRole('menuitem', { name: 'Sil' }).click();
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toContainText('Fotoğraf silinsin mi?');
+  await dialog.getByRole('button', { name: 'Sil', exact: true }).click();
+  await expect(page.getByText('Fotoğraf silindi.').first()).toBeVisible({ timeout: 20_000 });
+  await expect(cards).toHaveCount(2);
+  await expect(page.getByRole('button', { name: 'Fotoğraf 3 işlemleri' })).toHaveCount(0);
+  await page.reload();
+  await expect(cards).toHaveCount(2, { timeout: 30_000 });
+  await expect(page.getByText('1800×1200')).toHaveCount(0);
+  await expect(page.getByText('1200×1800')).toHaveCount(0);
+});
+
 test('Talepler listesi ve yönetim sayfaları hatasız açılır', async ({ page }) => {
   await login(page);
   for (const [url, heading] of [
@@ -178,3 +233,34 @@ test('Test ilanı çöp kutusuna taşınır ve sitede artık görünmez', async 
     expect(res.status()).toBe(404);
   }).toPass({ timeout: 30_000 });
 });
+
+test('P0-8 yetki belgesi numarası: kayıt sitede alt bilgide görünür; sütun yoksa (eski şema) kart gizli', async ({ page }) => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  test.skip(!url || !key, 'Supabase anahtarları tanımlı değil');
+  const probe = await createClient(url!, key!, { auth: { persistSession: false } }).from('organization_settings').select('license_no').limit(1);
+  await login(page);
+  await page.goto('/admin/sirket');
+  await expect(page.getByRole('heading', { name: 'Marka ve görünüm' })).toBeVisible();
+  const form = page.getByTestId('license-form');
+  if (probe.error) {
+    // Bekleyen migration G uygulanmamış şema (CI database-legacy-schema): yeni kod formu bozmaz, kartı göstermez
+    await expect(form).toHaveCount(0);
+    return;
+  }
+  const no = `06${Date.now().toString().slice(-6)}`;
+  await form.getByLabel('Yetki belgesi numarası').fill(` ${no.slice(0, 4)} ${no.slice(4)} `);
+  await form.getByRole('button', { name: 'Kaydet' }).click();
+  await expect(page.getByText('Yetki belgesi numarası kaydedildi')).toBeVisible();
+  await expect.poll(async () => (await (await page.request.get('/')).text()).replace(/<!-- -->/g, '').includes(`Yetki belgesi no: ${no}`), { timeout: 30_000 }).toBe(true);
+  // Geçersiz biçim reddedilir
+  await form.getByLabel('Yetki belgesi numarası').fill('12<a>');
+  await form.getByRole('button', { name: 'Kaydet' }).click();
+  await expect(form.getByText(/yalnız rakam, harf ve tire/)).toBeVisible();
+  // Temizle: boş değer numarayı kaldırır, sitede görünmez
+  await form.getByLabel('Yetki belgesi numarası').fill('');
+  await form.getByRole('button', { name: 'Kaydet' }).click();
+  await expect(page.getByText('Yetki belgesi numarası kaydedildi')).toBeVisible();
+  await expect.poll(async () => (await (await page.request.get('/')).text()).replace(/<!-- -->/g, '').includes('Yetki belgesi no:'), { timeout: 30_000 }).toBe(false);
+});
+

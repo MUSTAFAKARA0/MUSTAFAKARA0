@@ -41,6 +41,7 @@ import {
   type SeoConfig,
   type SiteConfig,
 } from "@/site-config/schema";
+import { sameValue } from "@/lib/same-value";
 
 const newId = (prefix: string) =>
   `${prefix}-${Math.random().toString(36).slice(2, 8)}`;
@@ -140,7 +141,7 @@ export function HeaderForm({
   const { save, pending } = useSectionSave("header");
   const value = { ...h, cta: ctaOn ? cta : undefined };
   const dirty =
-    JSON.stringify(value) !== JSON.stringify({ ...initial, cta: initial.cta });
+    !sameValue(value, { ...initial, cta: initial.cta });
   const set = <K extends keyof HeaderConfig>(k: K, v: HeaderConfig[K]) =>
     setH((x) => ({ ...x, [k]: v }));
   return (
@@ -408,7 +409,7 @@ export function NavigationForm({
   const [items, setItems] = useState<NavItemConfig[]>(start);
   const { save, pending } = useSectionSave("navigation");
   const dirty =
-    JSON.stringify(items) !== JSON.stringify(start) || initial === null;
+    !sameValue(items, start) || initial === null;
   const update = (i: number, patch: Partial<NavItemConfig>) =>
     setItems((list) =>
       list.map((it, j) => (j === i ? { ...it, ...patch } : it)),
@@ -584,7 +585,7 @@ export function HomeForm({
   const [open, setOpen] = useState<string | null>(null);
   const { save, pending } = useSectionSave("home");
   const dirty =
-    JSON.stringify(sections) !== JSON.stringify(start) || initial === null;
+    !sameValue(sections, start) || initial === null;
   const update = (i: number, patch: Partial<HomeSectionConfig>) =>
     setSections((l) => l.map((s, j) => (j === i ? { ...s, ...patch } : s)));
   const missing = [...DEFAULT_HOME_SECTIONS, ...OPTIONAL_HOME_SECTIONS].filter(
@@ -806,7 +807,7 @@ export function FooterForm({
   const [f, setF] = useState<FooterConfig>(initial);
   const { save, pending } = useSectionSave("footer");
   const columns = f.columns ?? [];
-  const dirty = JSON.stringify(f) !== JSON.stringify(initial);
+  const dirty = !sameValue(f, initial);
   const setColumns = (cols: NonNullable<FooterConfig["columns"]>) =>
     setF((x) => ({ ...x, columns: cols }));
   return (
@@ -1067,7 +1068,7 @@ export function PagesForm({
   const [pages, setPages] = useState(initial);
   const [open, setOpen] = useState<PageKey | null>(null);
   const { save, pending } = useSectionSave("pages");
-  const dirty = JSON.stringify(pages) !== JSON.stringify(initial);
+  const dirty = !sameValue(pages, initial);
   const get = (k: PageKey): PageSettings =>
     pages[k] ?? {
       visible: true,
@@ -1220,7 +1221,7 @@ export function SeoForm({
 }) {
   const [s, setS] = useState<SeoConfig>(initial);
   const { save, pending } = useSectionSave("seo");
-  const dirty = JSON.stringify(s) !== JSON.stringify(initial);
+  const dirty = !sameValue(s, initial);
   const title = s.title ?? fallback.title;
   const description = s.description ?? fallback.description;
   return (

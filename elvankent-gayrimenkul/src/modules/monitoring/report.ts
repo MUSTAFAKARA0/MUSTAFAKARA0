@@ -67,7 +67,7 @@ function parseDsn(dsn: string): { endpoint: string; publicKey: string } | null {
 
 async function toSentry(report: ErrorReport, dsn: string): Promise<void> {
   const target = parseDsn(dsn);
-  if (!target) return;
+  if (!target) throw new Error('DSN çözülemedi');
   const eventId = crypto.randomUUID().replace(/-/g, '');
   const event = {
     event_id: eventId,
@@ -83,7 +83,7 @@ async function toSentry(report: ErrorReport, dsn: string): Promise<void> {
     extra: report.stack ? { stack: report.stack } : undefined,
   };
   const body = [JSON.stringify({ event_id: eventId, sent_at: new Date().toISOString() }), JSON.stringify({ type: 'event' }), JSON.stringify(event)].join('\n');
-  await fetch(target.endpoint, {
+  const res = await fetch(target.endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-sentry-envelope',
@@ -92,16 +92,18 @@ async function toSentry(report: ErrorReport, dsn: string): Promise<void> {
     body,
     signal: AbortSignal.timeout(4000),
   });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
 
 async function toWebhook(report: ErrorReport, webhook: string): Promise<void> {
   const text = `[${siteEnv()}] ${report.kind === 'client' ? 'Tarayıcı' : 'Sunucu'} hatası: ${report.message}${report.path ? ` (${report.method ?? ''} ${report.path})` : ''}${report.digest ? ` digest=${report.digest}` : ''}`;
-  await fetch(webhook, {
+  const res = await fetch(webhook, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text: text.slice(0, 1500), ...report, environment: siteEnv() }),
     signal: AbortSignal.timeout(4000),
   });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
 }
 
 // Kullanıcının bağlantıyı kesmesi gibi uygulama hatası olmayan durumlar
@@ -120,9 +122,15 @@ export async function reportError(input: ErrorReport): Promise<void> {
 
   const key = `${report.kind}:${report.digest ?? report.message}:${report.path ?? ''}`;
   if (!shouldForward(key)) return;
-  const tasks: Promise<void>[] = [];
-  if (process.env.SENTRY_DSN) tasks.push(toSentry(report, process.env.SENTRY_DSN));
-  if (process.env.ERROR_WEBHOOK_URL) tasks.push(toWebhook(report, process.env.ERROR_WEBHOOK_URL));
-  // Raporlama hatası uygulamayı etkilemez
-  await Promise.allSettled(tasks);
+  const targets: [string, Promise<void>][] = [];
+  if (process.env.SENTRY_DSN) targets.push(['sentry', toSentry(report, process.env.SENTRY_DSN)]);
+  if (process.env.ERROR_WEBHOOK_URL) targets.push(['webhook', toWebhook(report, process.env.ERROR_WEBHOOK_URL)]);
+  // Raporlama hatası uygulamayı etkilemez; ama sessiz de kalmaz: yanlış/süresi dolmuş DSN, kota (429) veya ağ hatası
+  // Vercel loglarında "source":"monitoring" satırıyla görünür. Adres ve anahtar loglanmaz: yalnız hedef adı ve neden.
+  const results = await Promise.allSettled(targets.map(([, task]) => task));
+  results.forEach((r, i) => {
+    if (r.status !== 'rejected') return;
+    const reason = r.reason instanceof Error ? (/^(HTTP \d{3}|DSN çözülemedi)$/.test(r.reason.message) ? r.reason.message : r.reason.name) : 'bilinmiyor';
+    console.error(JSON.stringify({ level: 'warn', source: 'monitoring', message: 'Hata raporu iletilemedi', target: targets[i][0], reason, env: siteEnv() }));
+  });
 }

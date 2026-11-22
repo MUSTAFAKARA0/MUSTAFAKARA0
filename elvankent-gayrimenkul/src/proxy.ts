@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { DEFAULT_TENANT_KEY, defaultHostsFromSiteUrl, isUnderPath, karayHostConfigFromEnv, resolveRequestSurface, tenantKeyForHost, type TenantHostConfig } from '@/platform/tenant/host';
+import { hstsForHost } from '@/platform/tenant/hsts';
 
 /**
  * İstek yönlendirici (Next.js 16 proxy, Node.js çalışma zamanı).
@@ -16,6 +17,8 @@ import { DEFAULT_TENANT_KEY, defaultHostsFromSiteUrl, isUnderPath, karayHostConf
  *    oturum yoksa giriş sayfasına yönlendirilir. Yetki (rol/izin) kontrolü
  *    ayrıca sunucuda ve veritabanında (RLS) yapılır — proxy tek başına
  *    güvenlik sınırı değildir.
+ * 4) Strict-Transport-Security alan adına göre her yanıta eklenir (hstsForHost, D-15/PF-10):
+ *    KARAYS alan adlarında includeSubDomains; preload, müşteri alan adlarında yalnızca max-age.
  */
 
 const TENANT_HEADER = 'x-tenant-key';
@@ -78,6 +81,14 @@ async function withSession(request: NextRequest, requestHeaders: Headers, rewrit
 }
 
 export async function proxy(request: NextRequest) {
+  const response = await handle(request);
+  const hsts = hstsForHost(request.headers.get('host'), SURFACE_CONFIG);
+  if (hsts) response.headers.set('Strict-Transport-Security', hsts);
+  else response.headers.delete('Strict-Transport-Security');
+  return response;
+}
+
+async function handle(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl;
   const host = request.headers.get('host');
 

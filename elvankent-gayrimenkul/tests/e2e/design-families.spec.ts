@@ -85,7 +85,7 @@ test.beforeAll(async () => {
   if (pair.error || (pair.data?.length ?? 0) < 2) throw pair.error ?? new Error('İkinci ilçe yok');
   const districts = pair.data!;
   for (const [i, s] of SITES.entries()) {
-    const org = await service!.from('organizations').insert({ slug: `fam${i}-${RUN}`, name: `E2E Aile ${key(s.family)} ${RUN}`, reference_prefix: `F${letters(2)}`, status: 'active' }).select('id').single();
+    const org = await service!.from('organizations').insert({ slug: `fam${i}-${RUN}`, name: `E2E Aile ${key(s.family)} ${RUN}`, reference_prefix: `F${letters(4)}`, status: 'active' }).select('id').single();
     if (org.error) throw org.error;
     s.orgId = org.data.id;
     await service!.from('organization_settings').insert({ organization_id: s.orgId, display_name: `Aile Testi ${key(s.family)}`, address_city: 'Ankara', address_district: 'Çankaya', service_area: 'Ankara' });

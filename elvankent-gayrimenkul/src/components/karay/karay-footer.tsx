@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { PlatformWordmark } from '@/components/brand/platform-wordmark';
+import { CookiePreferencesLink } from '@/components/common/cookie-consent';
 import { KARAY_NAV } from '@/modules/karay/nav';
 import { KARAY_LEGAL } from '@/modules/karay/legal';
 import type { KarayProfile } from '@/modules/karay/profile';
@@ -62,6 +63,9 @@ export function KarayFooter({ profile }: { profile: KarayProfile }) {
                 </Link>
               </li>
             ))}
+            <li>
+              <CookiePreferencesLink className="cursor-pointer text-white/80 hover:text-white" />
+            </li>
           </ul>
           {profile.socials.length > 0 && (
             <>

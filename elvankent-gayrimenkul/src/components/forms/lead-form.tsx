@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { VISITOR_SENSITIVE_HINT } from '@/lib/sensitive-data-hint';
 import { useActionState, useEffect, useId, useRef, useState } from 'react';
 import { CalendarCheck, CheckCircle2, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -250,6 +251,7 @@ export function LeadForm({ kind, property, compact, className }: LeadFormProps) 
         label={kind === 'contact' ? 'Mesajınız' : 'Notunuz'}
         htmlFor={fid('message')}
         error={err.message}
+        hint={VISITOR_SENSITIVE_HINT}
         required={kind === 'contact'}
         optional={kind !== 'contact'}
       >

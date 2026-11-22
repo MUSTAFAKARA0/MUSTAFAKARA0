@@ -152,7 +152,8 @@ async function pendingRow(org, kind = 'property_photo') {
     status: 'pending',
     original_path: `${folder}/original`,
     mime_type: JPEG,
-    byte_size: 1000,
+    // KI-42 (E): imzalı/oturumla yüklenen orijinal bildirilen boyutu aşamaz; bu dosyadaki başarılı yüklemeler ≤ 2048 bayt
+    byte_size: 4096,
     original_filename: 'x.jpg',
     created_by: org.owner.id,
   });

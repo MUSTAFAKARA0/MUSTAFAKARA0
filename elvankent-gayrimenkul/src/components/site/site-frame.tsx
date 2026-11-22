@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { CompareBar, CookieConsent, FloatingWhatsApp } from '@/components/layout/site-extras';
+import { CookieConsent } from '@/components/common/cookie-consent';
+import { CompareBar, FloatingWhatsApp } from '@/components/layout/site-extras';
 import { PreviewBar } from '@/components/layout/site-status';
 import { FooterSurface } from '@/components/patterns/footer/surface';
 import { HeaderSurface } from '@/components/patterns/header/surface';
