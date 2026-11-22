@@ -4,25 +4,37 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 > Depo herkese açıktır. Buraya proje veya dağıtım kimliği, ortam değişkeni değeri ya da varlığı, alan adı ayarı, kayıt sayısı veya sır yazılmaz.
 
-## Güncel durum (07.11.2026, K-67)
+## Güncel durum (22.11.2026)
 
 | Konu | Durum |
 | --- | --- |
-| Production dalı | `d6113e6` (03.11, PR #6: medya düzeltmeleri, video sesi, KI-40, KI-41 Aşama 1). Vercel production READY; geri dönüş adayı `2eeb5e1` (PR #5). Önceki: `6b698e9` (PR #4), `a0f0a67` (PR #3), `74013a5`, `650fd4e` |
-| Çalışma dalı | `claude/karays-mission-control-vn8g65` (production'ın önünde: yedek izleme iş akışı ve belgeler) |
-| Canlı veritabanı | 39 migration (hepsi 02.11). `enforce_subscription_limits` = false. Bekleyen migration yok (KI-42 için hazırlanacak) |
-| Alan adı ve e-posta | karays.com siteye bağlı (K-61); e-posta Resend ile `bildirim@karays.com` (K-60) |
-| CI | Son yeşil: #203 (`e50bdab`), #198 (`f67815a`, PR #6'nın içeriği). Her push sonrası koşu bu günlüğe yazılır |
-| Yedek | Gece yedeği `uretim-yedek` ortamıyla (yalnız production dalı): #54–#58 (03–07.11) yeşil. Gerçek geri yükleme provası KI-24 #2 (O-5 öncesi yedekle) başarılı; güncel şemayla tekrar önerilir |
-| Güvenlik | Kural seti (silme/zorla gönderim kapalı), `o5a-uygula` dal sınırı ve onay, KI-40 kapandı. KI-41 Aşama 3–6 sahipte ([KI41_GUVENLIK_PLANI.md](KI41_GUVENLIK_PLANI.md)) |
-| Açık kapılar | D-11 ücretli planlar · KI-41 Aşama 3–4 · hukuk/KVKK (D-10) · müşteri alan adı (HSTS düzeltmesiyle) · OPS-02 (D-04/D-05 alt kararları) |
-| Bekleyen kararlar | [PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md): D-01…D-03, D-06…D-12, D-14, D-16…D-18; D-04/D-05 alt kararları |
+| Production dalı | `567a0dd` (22.11, PR #8: pilot ofis akışı, ilk kurulum ve tasarım kilidi, KI-45/46 uygulama tarafı, yetki belgesi no, hukuk uyum düzeltmeleri, A7 izleme). Vercel production READY; sağlık 200; çalışma zamanı hatası 0. Geri dönüş adayı `d6113e6` (PR #6) |
+| Son kod commit'i | `32bde53` (CI #239 üç iş yeşil; PR #8 ile production'da) |
+| Çalışma dalı | `claude/karays-refocus-t84k81` (production + belgeler) |
+| Canlı veritabanı | 39 migration. Bekleyen 5 migration E, F, G, H, I kodda hazır; sahip SQL Editor ile uygular ([operations/pilot-migrations-sql-editor.md](operations/pilot-migrations-sql-editor.md)) |
+| Alan adı ve e-posta | karays.com siteye bağlı; e-posta Resend ile. Elvankent kendi alan adına henüz bağlı değil |
+| CI | Son yeşil: #239 (`32bde53`), #237 (`8fc507a`) |
+| Yedek | Gece yedeği her gün yeşil (#54–#73, 22.11) |
+| Güvenlik | KI-41 Aşama 0–2 ✓ (`uretim-pr` 14.11); Aşama 3–4 planı hazır, Adım 0b sahipte |
+| Açık kapılar | migration'lar E–I · avukat (EİDS, yurt dışı aktarım, sözleşme) · satıcı kimliği bilgileri · Vercel ücretsiz plan kararı · KI-41 Aşama 3–4 |
+| Bekleyen kararlar | [PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md); pilot için gereken: D-10, D-11, D-18, D-19, D-20 |
 
 **Kalan işler:** [KALAN_ISLER.md](KALAN_ISLER.md) · **Sahibin adımları:** [SAHIP_ADIMLARI.md](SAHIP_ADIMLARI.md).
 
-**Sıradaki adım:** müşteri (Elvankent) alan adı — müşteri onayı ve DNS erişimi; D-11 planları.
+**Sıradaki adım:** sahip migration'ları F → E → G → H → I uygular (Claude her adımda GO/NO-GO); paralelde avukat görüşmesi.
 
 ## Girişler
+
+### 22.11.2026 (43) · PR #8 production'da: pilot hazırlığı ve hukuk uyum düzeltmeleri
+
+- Hukuk doğrulaması: [legal/HUKUK_UYUM_2026-11-22.md](legal/HUKUK_UYUM_2026-11-22.md); EİDS bulgusu Ticaret Bakanlığı duyurusuyla teyit
+  edildi. Koda işlendi: metinler yurt dışı aktarımı doğru anlatır, sosyal ağ paylaşım düğmeleri kaldırıldı, çerez bandı eşit,
+  ilanda yetki belgesi no, özel nitelikli veri uyarısı. Pilot sözleşmesi taslağı: [legal/PILOT_SOZLESMESI_TASLAK.md](legal/PILOT_SOZLESMESI_TASLAK.md).
+- Sahip PR #8'i birleştirdi: production `567a0dd`, Vercel READY; sağlık 200, ilan sayfası ve KARAYS sayfası açılıyor, hata 0.
+
+**CI:** #239 (`32bde53`) üç iş yeşil; #237 (`8fc507a`) üç iş yeşil.
+
+**Açık (sahip):** migration'lar E–I · avukat görüşmesi · satıcı kimliği bilgileri · Vercel ücretsiz plan kararı · KI-41 Aşama 3–4.
 
 ### 07.11.2026 (42) · K-66: KI-41 Aşama 1 sonrası gece yedekleri yeşil
 
