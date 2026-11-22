@@ -237,7 +237,12 @@ export function ContactBlock({ tenant, p, m, summary = true }: { tenant: Tenant;
           />
         )}
       </div>
-      <p className="mt-4 px-1 text-[12.5px] leading-relaxed text-muted-foreground">
+      {tenant.settings.license_no ? (
+        <p data-testid="listing-license-no" className="mt-4 px-1 text-[13px] font-medium text-foreground/85">
+          Taşınmaz Ticareti Yetki Belgesi No: {tenant.settings.license_no}
+        </p>
+      ) : null}
+      <p className="mt-2 px-1 text-[12.5px] leading-relaxed text-muted-foreground">
         {tenant.settings.display_name} · İlan bilgileri bilgilendirme amaçlıdır; işlem öncesinde tapu ve imar bilgileri resmi kurumlardan teyit edilmelidir.
       </p>
     </>

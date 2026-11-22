@@ -123,11 +123,12 @@ export function CookieConsent({ raised, policyHref = '/cerez-politikasi' }: { ra
             </Link>
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button size="sm" onClick={() => saveConsent(true)}>
+            {/* KVKK Çerez Rehberi (2025): reddetmek kabul etmek kadar kolay ve görünür olmalı → iki düğme aynı görünüm ve büyüklükte */}
+            <Button size="sm" variant="outline" onClick={() => saveConsent(true)}>
               Kabul et
             </Button>
             <Button size="sm" variant="outline" onClick={() => saveConsent(false)}>
-              Yalnızca zorunlu
+              Reddet
             </Button>
             <Button size="sm" variant="ghost" onClick={openPreferences}>
               Tercihler

@@ -164,7 +164,7 @@ test.describe('Ziyaretçi (telefon)', () => {
       await expect(wa.first()).toHaveAttribute('href', /^https:\/\/wa\.me\/90\d{10}\?text=/);
       await expect(page.locator('a[href^="tel:+90"]').first()).toHaveAttribute('href', /^tel:\+90\d{10}$/);
     }
-    await expect(page.getByRole('button', { name: 'İlanı paylaş' }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'İlan bağlantısını kopyala' }).first()).toBeVisible();
   });
 
   test('23–24: favoriler ve karşılaştırma', async ({ page }) => {

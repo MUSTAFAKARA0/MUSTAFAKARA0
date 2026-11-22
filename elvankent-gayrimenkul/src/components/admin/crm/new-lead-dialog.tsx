@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { STAFF_SENSITIVE_HINT } from '@/lib/sensitive-data-hint';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Plus } from 'lucide-react';
@@ -158,7 +159,7 @@ export function NewLeadDialog({ customers, properties, members }: { customers: O
               </Select>
             </Field>
           </div>
-          <Field label="Not" htmlFor="nl-message" optional>
+          <Field label="Not" htmlFor="nl-message" optional hint={STAFF_SENSITIVE_HINT}>
             <Textarea id="nl-message" name="message" maxLength={3000} rows={3} />
           </Field>
           <div className="flex justify-end gap-2">

@@ -166,6 +166,16 @@ Teknik hazırlık kodda tamam (A1–A6, A8–A12 ✓; A7 kısmen). Kalan engelle
 5. Migration'lar F → E → G → H → I — her biri taze yedek + ayrı onay.
 6. KI-41 Aşama 3–4 — yedek sırlarının ortamlara taşınması, anahtar döndürme, depo sırlarının silinmesi (migration'larla aynı gün değil).
 
+**22.11 hukuk doğrulaması** ([legal/HUKUK_UYUM_2026-11-22.md](legal/HUKUK_UYUM_2026-11-22.md), pilot sözleşmesi taslağı
+[legal/PILOT_SOZLESMESI_TASLAK.md](legal/PILOT_SOZLESMESI_TASLAK.md)). Koda işlenenler (ücretsiz): metinler yurt dışı aktarımı ve
+sağlayıcı konumlarını doğru yazar (standart sözleşme "imzalandı" denmez; Resend kayıtları ABD); ofis sitelerinden WhatsApp/Facebook/X
+paylaşım düğmeleri kaldırıldı (EİDS); çerez bandında Kabul et / Reddet eşit; yetki belgesi no ilan sayfasında; serbest metin
+alanlarında özel nitelikli veri uyarısı; KVKK md.14 şikâyet hakkı ve EİDS hükmü şablonlarda. **Pilotu en çok etkileyen açık
+riskler:** (1) **EİDS** — ofis sitesindeki ilanlar da kapsamda sayılabilir (entegre firma listesinde ofis ağları var); avukat + İl
+Müdürlüğüne yazılı soru; (2) **yurt dışı aktarım** — sağlayıcılarla KVKK standart sözleşmesi yok; gerçek müşteri verisi girilmeden
+avukat kararı (sözleşme taslağı m.8.4 A/B); (3) **Vercel Hobby** ticari kullanıma kapalı (ücretsiz pilot da ticari sayılır) —
+kesinti riski; ücretsiz kalınacaksa risk kabulü yazılı olmalı; (4) **VUK 595** ve **5651** bildirimleri — avukat / mali müşavir.
+
 **Hukuki (sahip + avukat; kod tarafı karar gelince işlenir):**
 1. Hizmeti veren taraf: şahıs/şirket, unvan, VKN, adres, KEP (C1 / D-19).
 2. Pilot sözleşmesi ve veri işleme sözleşmesi: ofis veri sorumlusu, KARAYS veri işleyen (C2 / D-10).

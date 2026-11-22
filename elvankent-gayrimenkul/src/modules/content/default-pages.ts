@@ -77,7 +77,8 @@ Alım-satım ve kiralama işlemlerinde gerekli belgeler ve resmi adımlar konusu
 
 - Kimlik bilgisi: ad, soyad
 - İletişim bilgisi: telefon numarası, e-posta adresi
-- Talep bilgisi: form mesajı, ilgilendiğiniz ilan, randevu tercihi, değerleme talebinde paylaştığınız mülk bilgileri
+- Talep bilgisi: form mesajı, ilgilendiğiniz ilan, randevu tercihi, değerleme talebinde paylaştığınız mülk bilgileri (adres/konum, mülk özellikleri)
+- WhatsApp veya telefonla iletişimde: mesaj içeriği, telefon numarası
 - İşlem güvenliği bilgisi: IP adresinin geri döndürülemez özeti (hash), tarayıcı bilgisi
 
 ## 3. İşleme amaçları
@@ -89,7 +90,7 @@ Alım-satım ve kiralama işlemlerinde gerekli belgeler ve resmi adımlar konusu
 
 ## 4. Hukuki sebepler
 
-Kişisel verileriniz KVKK'nın 5. maddesinin 2. fıkrasında yer alan "bir sözleşmenin kurulması veya ifasıyla doğrudan doğruya ilgili olması", "veri sorumlusunun hukuki yükümlülüğünü yerine getirebilmesi" ve "ilgili kişinin temel hak ve özgürlüklerine zarar vermemek kaydıyla veri sorumlusunun meşru menfaatleri" hukuki sebeplerine dayanılarak işlenir. [HUKUK DANIŞMANI TARAFINDAN DOĞRULANMALIDIR]
+Kişisel verileriniz KVKK'nın 5. maddesinin 2. fıkrasında yer alan "bir sözleşmenin kurulması veya ifasıyla doğrudan doğruya ilgili olması", "veri sorumlusunun hukuki yükümlülüğünü yerine getirebilmesi" ve "ilgili kişinin temel hak ve özgürlüklerine zarar vermemek kaydıyla veri sorumlusunun meşru menfaatleri" ve olası uyuşmazlıklar bakımından "bir hakkın tesisi, kullanılması veya korunması için veri işlemenin zorunlu olması" hukuki sebeplerine dayanılarak işlenir. Talebinizin yanıtlanması için açık rızanız gerekmez; formdaki kutu yalnızca bu metni okuduğunuzu belirtir. [HUKUK DANIŞMANI TARAFINDAN DOĞRULANMALIDIR]
 
 ## 5. Aktarım
 
@@ -97,18 +98,18 @@ Kişisel verileriniz yalnızca yukarıdaki amaçlarla sınırlı olmak üzere a�
 
 - Talebinizle ilgilenen ofis çalışanlarımız ve danışmanlarımız
 - Web sitesi ve yönetim yazılımı hizmet sağlayıcımız **KARAYS** (ticaret unvanı ve iletişim bilgileri KARAYS internet sitesindeki künye sayfasında yer alır). KARAYS, verilerinizi yalnızca {{sirket}} adına ve talimatlarımız doğrultusunda **veri işleyen** sıfatıyla işler; veri sorumlusu {{unvan}}'dır.
-- KARAYS'ın hizmeti sunarken kullandığı alt veri işleyenler: Supabase (veritabanı ve dosya depolama; sunucu konumu AB, Frankfurt / eu-central-1), Vercel (web sitesinin barındırılması; uygulama sunucusu AB, Frankfurt / fra1, içerik dağıtım ağı AB ve ABD dahil küresel), Resend (yeni talep bildirim e-postalarının iletilmesi), Sentry (hata kayıtlarının tutulması; e-posta ve telefon bilgileri maskelenir), Cloudflare R2 (şifreli yedeklerin saklanması) ve GitHub Actions (yedekleme işleminin çalıştırılması)
+- KARAYS'ın hizmeti sunarken kullandığı alt veri işleyenler: Supabase (veritabanı ve dosya depolama; sunucu konumu AB, Frankfurt / eu-central-1), Vercel (web sitesinin barındırılması; uygulama sunucusu AB, Frankfurt / fra1, içerik dağıtım ağı AB ve ABD dahil küresel), Resend (yeni talep bildirim e-postalarının iletilmesi; gönderim AB/İrlanda, kayıtlar ABD'de saklanır), Sentry (hata kayıtlarının tutulması; e-posta ve telefon bilgileri maskelenir), Cloudflare R2 (şifreli yedeklerin saklanması) ve GitHub Actions (yedekleme işleminin çalıştırılması)
 - Talep edilmesi hâlinde, yasal olarak yetkili kamu kurum ve kuruluşları
 
-Veritabanı ve uygulama sunucuları Türkiye dışında, Avrupa Birliği'nde (Almanya, Frankfurt) bulunur; bazı alt veri işleyenler ABD'de hizmet verir. Bu nedenle kişisel verileriniz yurt dışına aktarılmaktadır. Yurt dışına aktarım, KVKK'nın 9. maddesinde öngörülen uygun güvencelerden biri olan, Kişisel Verileri Koruma Kurulu tarafından ilan edilen standart sözleşmenin imzalanması ve sözleşmenin Kurum'a bildirilmesi yoluyla gerçekleştirilir. [HUKUK DANIŞMANI TARAFINDAN DOĞRULANMALIDIR: güvence türü, sözleşme ve bildirim tarihleri]
+Veritabanı ve uygulama sunucuları Türkiye dışında, Avrupa Birliği'nde (Almanya, Frankfurt) bulunur; bazı alt veri işleyenler ABD'de hizmet verir. Bu nedenle kişisel verileriniz yurt dışına aktarılmaktadır; Avrupa Birliği'nde barındırma da KVKK bakımından yurt dışına aktarımdır. Bu aktarımlar, hizmet sağlayıcımız KARAYS tarafından KVKK'nın 9. maddesi uyarınca Kişisel Verileri Koruma Kurulu'nun ilan ettiği standart sözleşmeler esas alınarak yürütülmektedir; güncel imza ve bildirim durumu hakkında {{eposta}} adresinden bilgi alabilirsiniz. [HUKUK DANIŞMANI TARAFINDAN DOĞRULANMALIDIR: güvence türü, sözleşme ve bildirim tarihleri]
 
 ## 6. Toplama yöntemi
 
-Kişisel verileriniz web sitesindeki formlar, telefon ve WhatsApp üzerinden elektronik ortamda toplanır.
+Kişisel verileriniz web sitesindeki formlar, telefon ve WhatsApp üzerinden elektronik ortamda toplanır. WhatsApp üzerinden yazmanız hâlinde mesajlarınız WhatsApp LLC / Meta Platforms altyapısında (yurt dışı) işlenir; bu kanalı kullanmak isteğinize bağlıdır.
 
 ## 7. Saklama süresi
 
-Talepler, sonuçlanmasından itibaren [SÜRE] boyunca saklanır; sürenin sonunda silinir, yok edilir veya anonim hâle getirilir.
+Sözleşmeye dönüşmeyen talepler son iletişimden itibaren [2 yıl]; sözleşmeye dönüşen işlemlere ait kayıtlar ilgili mevzuat (TTK md.82, VUK md.253) gereği [10 yıl]; spam olarak işaretlenen kayıtlar [90 gün] saklanır; sürenin sonunda silinir, yok edilir veya anonim hâle getirilir.
 
 ## 8. Haklarınız
 
@@ -126,7 +127,9 @@ KVKK'nın 11. maddesi uyarınca veri sorumlusuna başvurarak:
 
 haklarına sahipsiniz.
 
-Başvurularınızı Türkçe ve yazılı olarak {{adres}} adresine elden veya posta yoluyla, varsa kayıtlı elektronik posta (KEP) adresimize KEP ile ya da daha önce bize bildirdiğiniz ve sistemimizde kayıtlı e-posta adresinizden **{{eposta}}** adresine iletebilirsiniz. Başvurunuz, talebin niteliğine göre en geç **30 gün** içinde ücretsiz olarak sonuçlandırılır (KVKK m.13); işlemin ayrıca bir maliyet gerektirmesi hâlinde Kurul'ca belirlenen tarifedeki ücret alınabilir. Web sitesi hizmet sağlayıcımız KARAYS'a ulaşan başvurular gecikmeksizin tarafımıza iletilir.`,
+Başvurularınızı Türkçe ve yazılı olarak {{adres}} adresine elden veya posta yoluyla, varsa kayıtlı elektronik posta (KEP) adresimize KEP ile ya da daha önce bize bildirdiğiniz ve sistemimizde kayıtlı e-posta adresinizden **{{eposta}}** adresine iletebilirsiniz. Başvurunuz, talebin niteliğine göre en geç **30 gün** içinde ücretsiz olarak sonuçlandırılır (KVKK m.13); işlemin ayrıca bir maliyet gerektirmesi hâlinde Kurul'ca belirlenen tarifedeki ücret alınabilir. Web sitesi hizmet sağlayıcımız KARAYS'a ulaşan başvurular gecikmeksizin tarafımıza iletilir.
+
+Başvurunuzun reddedilmesi, cevabı yetersiz bulmanız veya süresinde cevap verilmemesi hâlinde, cevabı öğrendiğiniz tarihten itibaren 30 gün ve her hâlde başvuru tarihinden itibaren 60 gün içinde Kişisel Verileri Koruma Kurulu'na şikâyette bulunabilirsiniz (KVKK md.14).`,
   },
   privacy: {
     key: 'privacy',
@@ -152,11 +155,11 @@ Web sitemiz ve yönetim yazılımımız, KARAYS tarafından veri işleyen sıfat
 
 - Veritabanı ve dosya depolama: Supabase (AB, Frankfurt)
 - Barındırma: Vercel (uygulama sunucusu AB, Frankfurt; içerik dağıtım ağı AB/ABD)
-- Talep bildirim e-postası: Resend
+- Talep bildirim e-postası: Resend (gönderim AB/İrlanda; kayıtlar ABD'de saklanır)
 - Hata kaydı: Sentry (e-posta ve telefon bilgileri maskelenir)
 - Yedek saklama: Cloudflare R2; yedekleme işlemi: GitHub Actions
 - Harita görüntüleri: [HARİTA SAĞLAYICISI] (görüntüler sunucumuz üzerinden alınır, tarayıcınız sağlayıcıya doğrudan bağlanmaz)
-- WhatsApp ve sosyal medya paylaşım bağlantıları yalnızca tıkladığınızda ilgili hizmete yönlendirir.
+- WhatsApp iletişim bağlantısı yalnızca tıkladığınızda WhatsApp'a yönlendirir; sitede sosyal medya paylaşım düğmesi bulunmaz.
 
 ## Güvenlik
 
@@ -215,11 +218,11 @@ Bu hizmetler çerez kullanmaz; ziyaretler kimliğinizle eşleştirilmeden toplu 
     title: 'Kullanım Koşulları',
     description: 'Web sitesinin kullanımına ilişkin koşullar.',
     legal: true,
-    template: `Bu web sitesini kullanarak aşağıdaki koşulları kabul etmiş sayılırsınız. Site, {{unvan}} ({{sirket}}) tarafından işletilmektedir.
+    template: `Bu web sitesini kullanarak aşağıdaki koşulları kabul etmiş sayılırsınız. Site, {{unvan}} ({{sirket}}) tarafından işletilmektedir. Site altyapısı KARAYS tarafından yer sağlayıcı sıfatıyla sunulmaktadır.
 
 ## İlan bilgileri
 
-İlanlardaki bilgiler mülk sahiplerinden alınan bilgiler ve yerinde yapılan incelemelere dayanarak hazırlanır. Buna rağmen fiyat, metrekare, imar durumu ve benzeri bilgiler değişebilir veya hata içerebilir. İşlem öncesinde tapu kaydı, imar durumu ve ilgili belgeler resmi kurumlardan teyit edilmelidir. Site içeriği yatırım tavsiyesi değildir.
+İlanlardaki bilgiler mülk sahiplerinden alınan bilgiler ve yerinde yapılan incelemelere dayanarak hazırlanır. Buna rağmen fiyat, metrekare, imar durumu ve benzeri bilgiler değişebilir veya hata içerebilir. İşlem öncesinde tapu kaydı, imar durumu ve ilgili belgeler resmi kurumlardan teyit edilmelidir. Site içeriği yatırım tavsiyesi değildir. İlanlar, mülk sahibiyle yapılan yazılı yetkilendirme sözleşmesine ve mevzuatın gerektirdiği hâllerde Elektronik İlan Doğrulama Sistemi (EİDS) yetkisine dayanılarak yayımlanır.
 
 ## Demo ilanlar
 

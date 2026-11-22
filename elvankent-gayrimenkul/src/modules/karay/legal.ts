@@ -4,8 +4,10 @@
  * arama motorlarına kapalıdır. Kiracı (ofis) sitelerinin yasal metinlerinden ayrıdır: ofis siteleri için veri
  * sorumlusu ofistir, KARAYS veri işleyendir (ofis metinleri: src/modules/content/default-pages.ts).
  *
- * Kaynak: 07.11.2026 hukuk araştırması (KVKK md.5, 9, 10, 11, 12, 13; Aydınlatma Yükümlülüğü Tebliği; Çerez
- * Uygulamaları Rehberi; 6563 md.3; TTK md.39; 5651) — avukat incelemesi için taslak, hukuki tavsiye değildir.
+ * Kaynak: 07.11.2026 hukuk araştırması ve 22.11.2026 doğrulaması (docs/legal/HUKUK_UYUM_2026-11-22.md: KVKK md.5, 6, 9,
+ * 10, 11, 12, 13; Aydınlatma Yükümlülüğü Tebliği; Kurul İlke Kararı 2026/347; Çerez Uygulamaları Rehberi (2025); 6563 md.3;
+ * TTK md.39; 5651 md.3) — avukat incelemesi için taslak, hukuki tavsiye değildir. İlke: metin yalnız gerçekte yapılanı
+ * söyler (ör. standart sözleşme imzalanmadan "imzalandı" denmez).
  * Şirket bilgileri TEK yerden doldurulur: KARAYS_COMPANY.
  */
 export interface KarayLegalDoc {
@@ -17,7 +19,7 @@ export interface KarayLegalDoc {
 /** Şirket bilgileri (D-19): sahip bildirene kadar yer tutucu. Doldurulunca tüm metinlere yansır. */
 export const KARAYS_COMPANY = {
   unvan: '[KARAYS ticaret unvanı]',
-  mersis: '[MERSİS no / şahıs işletmesiyse TC kimlik no yerine vergi no]',
+  mersis: '[MERSİS no – ticaret siciline kayıtlı değilse bu alan kaldırılır]',
   vergi: '[vergi dairesi ve vergi kimlik no]',
   adres: '[açık adres]',
   kep: '[KEP adresi]',
@@ -30,7 +32,7 @@ const C = KARAYS_COMPANY;
 const KIMLIK = `${C.unvan} · ${C.mersis} · ${C.vergi} · Adres: ${C.adres} · E-posta: ${C.eposta} · KEP: ${C.kep} · Telefon: ${C.telefon}`;
 
 const ALT_ISLEYENLER =
-  'Supabase Inc. (veritabanı, kimlik doğrulama, dosya depolama; sunucu AB/Almanya – Frankfurt), Vercel Inc. (barındırma ve içerik dağıtımı; AB/Almanya – Frankfurt bölgesi, şirket ABD), Resend (bildirim e-postası iletimi; AB), Functional Software Inc. – Sentry (hata kaydı; e-posta ve telefon maskelenir; AB), Cloudflare Inc. – R2 (şifreli yedek depolama), GitHub Inc. (gece yedeğini çalıştıran otomasyon; ABD), Google LLC – Gmail (destek e-postası; ABD).';
+  "Supabase Inc. (veritabanı, kimlik doğrulama, dosya depolama; birincil sunucu AB/Almanya – Frankfurt; şirket ABD; yedek, kayıt ve destek işlemleri bölge dışında da yapılabilir), Vercel Inc. (barındırma ve içerik dağıtımı; sunucu işlevleri AB/Almanya – Frankfurt, içerik dağıtım ağı ve hizmet kayıtları ABD dahil küresel; şirket ABD), Resend, Inc. (bildirim e-postası iletimi; gönderim AB/İrlanda üzerinden, hesap ve ileti kayıtları ABD'de saklanır), Functional Software Inc. – Sentry (hata kaydı; e-posta ve telefon maskelenir; veri bölgesi AB; şirket ABD), Cloudflare Inc. – R2 (şifreli yedek depolama; şirket ABD), GitHub Inc. (gece yedeğini çalıştıran otomasyon; ABD), Google LLC – Gmail (destek e-postası; ABD).";
 
 const HAKLAR =
   "KVKK md.11 uyarınca: kişisel verilerinizin işlenip işlenmediğini öğrenme; işlenmişse bilgi talep etme; işlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme; yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme; eksik veya yanlış işlenmişse düzeltilmesini isteme; KVKK md.7'deki şartlar çerçevesinde silinmesini veya yok edilmesini isteme; düzeltme, silme ve yok etme işlemlerinin aktarıldığı üçüncü kişilere bildirilmesini isteme; münhasıran otomatik sistemlerle analiz edilmesi sonucu aleyhinize bir sonuç ortaya çıkmasına itiraz etme; kanuna aykırı işleme sebebiyle zarara uğramanız hâlinde zararın giderilmesini talep etme haklarına sahipsiniz.";
@@ -51,16 +53,16 @@ export const KARAY_LEGAL: KarayLegalDoc[] = [
       },
       {
         heading: 'İşleme amaçları ve hukuki sebepler',
-        body: "Bilgi/demo talebinize yanıt vermek ve teklif hazırlamak — KVKK md.5/2-(c) bir sözleşmenin kurulmasıyla doğrudan ilgili olması. Hizmet sözleşmesinin ifası, hesap açma, destek ve faturalama — md.5/2-(c) ve (ç) hukuki yükümlülük (Vergi Usul Kanunu, Türk Ticaret Kanunu). Panel güvenliği, yetkilendirme, denetim kayıtları ve kötüye kullanımın önlenmesi — md.5/2-(f) meşru menfaat ve md.12 veri güvenliği yükümlülüğü. Uyuşmazlıklarda hakların korunması — md.5/2-(e). Yetkili kurumların taleplerinin karşılanması — md.5/2-(a) ve (ç). Formdaki onay kutusu bu metni okuduğunuzu belirtir; açık rıza değildir.",
+        body: "Bilgi/demo talebinize yanıt vermek ve teklif hazırlamak — KVKK md.5/2-(c) bir sözleşmenin kurulmasıyla doğrudan ilgili olması. Hizmet sözleşmesinin ifası, hesap açma, destek ve faturalama — md.5/2-(c) ve (ç) hukuki yükümlülük (Vergi Usul Kanunu, Türk Ticaret Kanunu). Panel güvenliği, yetkilendirme, denetim kayıtları ve kötüye kullanımın önlenmesi — md.5/2-(f) meşru menfaat ve md.12 veri güvenliği yükümlülüğü. Uyuşmazlıklarda hakların korunması — md.5/2-(e). Yetkili kurumların taleplerinin karşılanması — md.5/2-(a) ve (ç). Formdaki kutu yalnızca bu metni okuduğunuzu belirtir; onay veya açık rıza değildir. Talebinizin yanıtlanması için açık rızanız gerekmez.",
       },
       { heading: 'Toplama yöntemi', body: "Kişisel verileriniz karays.com'daki formlar, KARAYS paneli, e-posta, telefon ve WhatsApp aracılığıyla elektronik ortamda; sözleşme süreçlerinde yazılı olarak toplanır." },
       {
         heading: 'Aktarım ve yurt dışına aktarım',
-        body: `Kişisel verileriniz yukarıdaki amaçlarla sınırlı olarak hizmet sağlayıcılarımıza (veri işleyenler) aktarılır: ${ALT_ISLEYENLER} Ayrıca müşteriler için mali müşavir, avukat ve bankalara; talep hâlinde yetkili kamu kurumlarına aktarılabilir. Bu sağlayıcıların sunucuları veya şirketleri Türkiye dışında bulunduğundan aktarım, KVKK md.9 ve Kişisel Verilerin Yurt Dışına Aktarılmasına İlişkin Usul ve Esaslar Hakkında Yönetmelik uyarınca Kurul'ca ilan edilen standart sözleşmeler ve Kurum'a bildirim gibi uygun güvencelerle yapılır. [HUKUK DANIŞMANI: sağlayıcı bazında imza ve bildirim durumu teyit edilmelidir.]`,
+        body: `Kişisel verileriniz yukarıdaki amaçlarla sınırlı olarak hizmet sağlayıcılarımıza (veri işleyenler) aktarılır: ${ALT_ISLEYENLER} Ayrıca müşteriler için mali müşavir, avukat ve bankalara; talep hâlinde yetkili kamu kurumlarına aktarılabilir. Bu sağlayıcıların sunucuları veya şirket merkezleri Türkiye dışında (Avrupa Birliği ve Amerika Birleşik Devletleri) bulunduğundan verileriniz yurt dışına aktarılmaktadır; Avrupa Birliği'nde barındırma da KVKK bakımından yurt dışına aktarımdır. Türkiye için yeterlilik kararı bulunmadığından KARAYS, KVKK md.9 ve Kişisel Verilerin Yurt Dışına Aktarılmasına İlişkin Usul ve Esaslar Hakkında Yönetmelik uyarınca Kurul'un ilan ettiği standart sözleşmeleri sağlayıcılarla imzalamak ve imzadan itibaren beş iş günü içinde Kurum'a bildirmek için gerekli işlemleri yürütmektedir. Sağlayıcı bazında güncel durum: [imza/bildirim tarihi veya "süreç devam ediyor"]. [HUKUK DANIŞMANI: süreç tamamlanmadan bu metinle yayına çıkılıp çıkılmayacağına karar verilmelidir.]`,
       },
       {
         heading: 'Saklama süresi',
-        body: 'Müşteriye dönüşmeyen talepler son iletişimden itibaren [2 yıl]; müşteri sözleşme ve fatura kayıtları 10 yıl (TTK md.82, VUK md.253); panel denetim kayıtları (yönetim işlemleri) 2 yıl; spam olarak işaretlenen kayıtlar [90 gün]. Süre sonunda veriler silinir, yok edilir veya anonim hâle getirilir. Ayrıntı: Saklama ve imha özeti.',
+        body: 'Müşteriye dönüşmeyen talepler son iletişimden itibaren [2 yıl]; müşteri sözleşme ve fatura kayıtları 10 yıl (TTK md.82, VUK md.253); panel denetim kayıtları (yönetim işlemleri) 2 yıl; spam olarak işaretlenen kayıtlar [90 gün]; destek e-postaları son yazışmadan itibaren [2 yıl]. Süre sonunda veriler silinir, yok edilir veya anonim hâle getirilir. Ayrıntı: Saklama ve imha özeti.',
       },
       { heading: 'Haklarınız', body: `${HAKLAR} Başvuru yolu için "KVKK başvuru yolu" sayfasına bakınız.` },
     ],
@@ -72,7 +74,7 @@ export const KARAY_LEGAL: KarayLegalDoc[] = [
       { heading: 'Kapsam', body: `Bu politika ${C.unvan} ("KARAYS") tarafından işletilen karays.com sitesi ve KARAYS yönetim paneli için geçerlidir. KARAYS altyapısıyla yayımlanan emlak ofisi web sitelerinde ilgili ofisin gizlilik politikası ve aydınlatma metni geçerlidir.` },
       { heading: 'Topladığımız bilgiler', body: 'Formlarda kendi isteğinizle verdiğiniz bilgiler (ad soyad, e-posta, telefon, ofis adı, şehir, mesaj); müşterilerimiz için hesap, abonelik ve fatura bilgileri; güvenlik için gerekli teknik kayıtlar (IP adresinin geri döndürülemez özeti, tarayıcı bilgisi, giriş kayıtları). Ham IP adresini form kayıtlarında saklamayız.' },
       { heading: 'Kullanım amaçları', body: 'Talebinize yanıt vermek, hizmeti sunmak ve geliştirmek, güvenliği sağlamak ve yasal yükümlülükleri yerine getirmek. Ayrıntılar KVKK aydınlatma metnindedir.' },
-      { heading: 'Paylaşım', body: `Kişisel verilerinizi satmayız ve reklam amacıyla paylaşmayız. Yalnızca hizmeti sunmak için çalıştığımız alt hizmet sağlayıcılarla ve mevzuat gereği yetkili kurumlarla paylaşırız: ${ALT_ISLEYENLER}` },
+      { heading: 'Paylaşım', body: `Kişisel verilerinizi satmayız ve reklam amacıyla paylaşmayız. Yalnızca hizmeti sunmak için çalıştığımız alt hizmet sağlayıcılarla ve mevzuat gereği yetkili kurumlarla paylaşırız: ${ALT_ISLEYENLER} Sağlayıcıların bir kısmı yurt dışındadır; ayrıntı ve güvenceler KVKK aydınlatma metnindedir.` },
       { heading: 'Ofis verileri', body: 'Emlak ofislerinin panelde tuttuğu müşteri, talep, randevu ve ilan verileri ofise aittir. KARAYS bu verileri yalnızca veri işleme sözleşmesi çerçevesinde, ofisin talimatıyla ve hizmetin sunulması için işler; kendi amaçları için kullanmaz ve satmaz.' },
       { heading: 'Güvenlik', body: 'Şifreli bağlantı (HTTPS), veritabanında ofisler arası satır bazlı yetkilendirme, rol bazlı yetki, iki adımlı doğrulama, işlem denetim kayıtları, düzenli yedekleme ve geri yükleme provası, hata kayıtlarında kişisel verinin maskelenmesi.' },
       { heading: 'Çerezler, saklama ve haklarınız', body: `Çerezler için Çerez politikası, saklama süreleri için Saklama ve imha özeti, KVKK haklarınız için KVKK başvuru yolu sayfalarına bakınız. Sorularınız: ${C.eposta}.` },
@@ -92,7 +94,7 @@ export const KARAY_LEGAL: KarayLegalDoc[] = [
         heading: 'Analitik (yalnızca onayınızla)',
         body: 'Vercel Web Analytics (anonim ziyaret istatistiği) ve Vercel Speed Insights (sayfa hızı ölçümü) yalnızca çerez bandında "Kabul et" demeniz ya da tercihlerde "Analitik" seçeneğini açmanız hâlinde yüklenir; onayınızı "Çerez tercihleri" bağlantısından her zaman geri çekebilirsiniz; çerez kullanmazlar. Sağlayıcı Vercel Inc. (ABD). Reklam veya pazarlama çerezi kullanılmaz.',
       },
-      { heading: 'Tercihinizi değiştirme', body: 'Kabul ve ret seçenekleri bantta eşit olarak sunulur. Tercihinizi sayfanın altındaki "Çerez tercihleri" bağlantısından her zaman değiştirebilir veya tarayıcı ayarlarınızdan silebilirsiniz; zorunlu çerezleri engellerseniz panele giriş yapılamayabilir.' },
+      { heading: 'Tercihinizi değiştirme', body: 'Bantta "Kabul et" ve "Reddet" seçenekleri aynı görünüm ve büyüklükte sunulur. Tercihinizi sayfanın altındaki "Çerez tercihleri" bağlantısından her zaman değiştirebilir veya tarayıcı ayarlarınızdan silebilirsiniz; zorunlu çerezleri engellerseniz panele giriş yapılamayabilir.' },
       { heading: 'İletişim', body: `${C.eposta} · Ayrıntılar için KVKK aydınlatma metni.` },
     ],
   },
@@ -100,14 +102,14 @@ export const KARAY_LEGAL: KarayLegalDoc[] = [
     slug: 'kullanim-kosullari',
     title: 'Kullanım koşulları ve hizmet sözleşmesi özeti',
     sections: [
-      { heading: 'Taraflar ve nitelik', body: `${C.unvan} ("KARAYS") ile hizmeti satın alan emlak işletmesi ("Müşteri"). Müşteri sözleşmeyi ticari veya mesleki faaliyeti kapsamında kurar ve tüketici sıfatı taşımaz; bu nedenle tüketici mevzuatı (6502 sayılı Kanun, Mesafeli Sözleşmeler Yönetmeliği) uygulanmaz. Bu özet, taraflarca kabul edilecek tam hizmet sözleşmesinin yerini tutmaz.` },
+      { heading: 'Taraflar ve nitelik', body: `${C.unvan} ("KARAYS") ile hizmeti satın alan emlak işletmesi ("Müşteri"). Müşteri sözleşmeyi ticari veya mesleki faaliyeti kapsamında kurduğunu ve tüketici sıfatı taşımadığını beyan eder; bu beyan doğru olduğu sürece 6502 sayılı Kanun ve Mesafeli Sözleşmeler Yönetmeliği uygulanmaz. Bu özet, taraflarca kabul edilecek tam hizmet sözleşmesinin yerini tutmaz.` },
       { heading: 'Hizmet', body: 'Müşterinin alan adında barındırılan web sitesi, ilan yönetimi, müşteri/talep ve randevu modülleri, site düzenleyici, yedekleme ve teknik destek. Plan kapsamı, limitler ve ücretler teklif ve sipariş özetinde belirtilir.' },
-      { heading: 'Müşterinin sorumlulukları', body: "İlan ve site içeriğinin (fiyat, metrekare, imar, fotoğraf, telif) doğruluğu ve hukuka uygunluğu Müşteriye aittir. Müşteri; Taşınmaz Ticareti Hakkında Yönetmelik'e uygun olarak ilanlarında yetki belgesi numarasını ve iletişim bilgilerini göstermeyi, mülk sahibiyle yazılı yetkilendirme sözleşmesi olmadan ilan yayımlamamayı, ticari elektronik ileti mevzuatına uymayı ve kendi sitesinin veri sorumlusu olarak KVKK yükümlülüklerini yerine getirmeyi kabul eder." },
-      { heading: 'İçerik bildirimleri', body: `KARAYS, Müşteri içeriğini önceden denetlemekle yükümlü değildir; hukuka aykırı içeriğin usulüne uygun bildirimi veya yetkili merci kararı hâlinde içeriği yayından kaldırabilir ve Müşteriyi bilgilendirir. Bildirimler: ${C.eposta}.` },
+      { heading: 'Müşterinin sorumlulukları', body: "İlan ve site içeriğinin (fiyat, metrekare, imar, fotoğraf, telif) doğruluğu ve hukuka uygunluğu Müşteriye aittir. Müşteri; Taşınmaz Ticareti Hakkında Yönetmelik'e uygun olarak ilanlarında yetki belgesi numarasını ve iletişim bilgilerini göstermeyi, mülk sahibiyle yazılı yetkilendirme sözleşmesi olmadan ilan yayımlamamayı, elektronik ortamda yayımlanan ve paylaşılan ilanlar için Elektronik İlan Doğrulama Sistemi (EİDS) kapsamındaki kimlik ve yetki doğrulama yükümlülüklerine uymayı, ilan fotoğraf ve metinleri üzerinde gerekli haklara sahip olmayı, ticari elektronik ileti mevzuatına uymayı ve kendi sitesinin veri sorumlusu olarak KVKK yükümlülüklerini yerine getirmeyi kabul eder." },
+      { heading: 'İçerik bildirimleri', body: `KARAYS, Müşteri içeriğini önceden denetlemekle yükümlü değildir; hukuka aykırı içeriğin usulüne uygun bildirimi veya yetkili merci kararı hâlinde içeriği yayından kaldırabilir ve Müşteriyi bilgilendirir. KARAYS, 5651 sayılı Kanun kapsamında yer sağlayıcı sıfatıyla hareket eder. Bildirimler: ${C.eposta}.` },
       { heading: 'Kişisel veriler', body: 'Müşterinin site ve panel verileri bakımından Müşteri veri sorumlusu, KARAYS veri işleyendir; ilişki "Veri işleme sözleşmesi" sayfasındaki hükümlere tabidir.' },
       { heading: 'Fikri mülkiyet', body: 'Yazılım, tema ve şablonlar KARAYS\'a aittir; Müşteriye sözleşme süresince devredilemez, münhasır olmayan kullanım lisansı verilir. Müşteri içeriği ve alan adı Müşteriye aittir.' },
       { heading: 'Fesih ve verilerin iadesi', body: 'Fesih sonrası Müşteri [30] gün boyunca verilerini dışa aktarabilir; ardından veriler canlı sistemden ve yedeklerden en geç [90] gün içinde silinir (yasal saklama zorunluluğu olanlar hariç).' },
-      { heading: 'Sorumluluk, değişiklik ve yetki', body: `KARAYS'ın sorumluluğu, kast ve ağır ihmal hâlleri hariç (TBK md.115), zarar tarihinden önceki [12] ayda ödenen ücretle sınırlıdır. Müşteri aleyhine değişiklikler en az [30] gün önceden bildirilir. Türk hukuku uygulanır; ${C.il} mahkemeleri ve icra daireleri yetkilidir; ticari uyuşmazlıklarda dava şartı arabuluculuk uygulanır.` },
+      { heading: 'Sorumluluk, değişiklik ve yetki', body: `KARAYS'ın sorumluluğu, kast ve ağır ihmal hâlleri hariç (TBK md.115), zarar tarihinden önceki [12] ayda ödenen ücretle sınırlıdır; ücretsiz kullanım (pilot/deneme) dönemlerinde, kast ve ağır ihmal hâlleri saklı kalmak üzere [● TL] ile sınırlıdır. Müşteri aleyhine değişiklikler en az [30] gün önceden bildirilir. Türk hukuku uygulanır; ${C.il} mahkemeleri ve icra daireleri yetkilidir; ticari uyuşmazlıklarda kanunen gerekli olduğu hâllerde dava şartı arabuluculuk uygulanır.` },
     ],
   },
   {
@@ -115,9 +117,9 @@ export const KARAY_LEGAL: KarayLegalDoc[] = [
     title: 'Veri işleme sözleşmesi (özet)',
     sections: [
       { heading: 'Taraflar ve konu', body: `Veri sorumlusu: hizmet alan emlak ofisi ("Ofis"). Veri işleyen: ${C.unvan} ("KARAYS"). KARAYS, hizmet sözleşmesi kapsamında Ofis adına ve Ofis'in talimatıyla kişisel verileri işler; bu sözleşme hizmet sözleşmesinin eki ve ayrılmaz parçasıdır.` },
-      { heading: 'İşlemenin niteliği', body: "İlgili kişiler: Ofis web sitesi ziyaretçileri ve form dolduranlar, Ofis'in müşterileri ve adayları, Ofis çalışanları ve panel kullanıcıları. Veriler: kimlik, iletişim, talep ve müşteri işlem bilgileri, işlem güvenliği kayıtları, gayrimenkul bilgileri. Özel nitelikli kişisel veri işlenmesi amaçlanmaz; Ofis serbest metin alanlarına bu tür veri girmemeyi taahhüt eder." },
+      { heading: 'İşlemenin niteliği', body: "İlgili kişiler: Ofis web sitesi ziyaretçileri ve form dolduranlar, Ofis'in müşterileri ve adayları, Ofis çalışanları ve panel kullanıcıları. Veriler: kimlik, iletişim, talep ve müşteri işlem bilgileri, işlem güvenliği kayıtları, gayrimenkul bilgileri. Özel nitelikli kişisel veri işlenmesi amaçlanmaz; Ofis serbest metin alanlarına bu tür veri girmemeyi taahhüt eder. Buna rağmen girilmesi hâlinde Ofis, KVKK md.6/3'teki işleme şartının ve Kurul'un belirlediği yeterli önlemlerin varlığından sorumludur; KARAYS, Ofis talimatıyla bu verileri siler." },
       { heading: "KARAYS'ın yükümlülükleri", body: "Verileri yalnızca Ofis'in talimatıyla ve hizmet amacıyla işler, kendi amaçları için kullanmaz ve satmaz; personelini gizlilikle yükümlü kılar; KVKK md.12 kapsamındaki teknik ve idari tedbirleri alır; ilgili kişi başvurularının yanıtlanması için dışa aktarma, düzeltme ve silme işlevlerini sağlar ve KARAYS'a gelen başvuruları [3] iş günü içinde Ofis'e iletir." },
-      { heading: 'Alt veri işleyenler ve yurt dışı aktarım', body: `Ofis şu alt veri işleyenlere onay verir: ${ALT_ISLEYENLER} Yeni bir alt veri işleyen en az [30] gün önce bildirilir; Ofis haklı gerekçeyle itiraz edebilir. Yurt dışına aktarım KVKK md.9'daki uygun güvencelerle (standart sözleşme ve Kurum'a bildirim) yapılır.` },
+      { heading: 'Alt veri işleyenler ve yurt dışı aktarım', body: `Ofis şu alt veri işleyenlere onay verir: ${ALT_ISLEYENLER} Yeni bir alt veri işleyen en az [30] gün önce bildirilir; Ofis haklı gerekçeyle itiraz edebilir. KARAYS, yurt dışındaki alt veri işleyenlerle Kurul'un ilan ettiği Standart Sözleşme – Modül 3'ü (veri işleyenden veri işleyene) imzalamak ve imzadan itibaren beş iş günü içinde Kurum'a bildirmekle yükümlüdür; imza ve bildirim durumunu Ofis'e yazılı olarak bildirir.` },
       { heading: 'Veri ihlali', body: "KARAYS, Ofis verilerini etkileyen bir ihlali öğrendiği andan itibaren gecikmeksizin ve en geç 24 saat içinde Ofis'e bildirir ve Ofis'in Kurul'a 72 saat içinde bildirim yapabilmesi için gereken bilgiyi sağlar." },
       { heading: 'Sözleşme sonu', body: 'Hizmet sona erdiğinde Ofis [30] gün boyunca verilerini dışa aktarabilir; ardından KARAYS verileri canlı sistemden ve yedeklerden en geç [90] gün içinde siler ve talep hâlinde silme beyanı verir.' },
       { heading: 'Teknik tedbirler', body: 'TLS şifreleme; ofisler arası satır bazlı yetkilendirme; rol bazlı erişim ve iki adımlı doğrulama; denetim kayıtları; form kayıtlarında ham IP yerine geri döndürülemez özet; hız sınırlama; günlük yedekleme ve geri yükleme provası; hata kayıtlarında e-posta ve telefon maskelenmesi.' },
@@ -147,7 +149,7 @@ export const KARAY_LEGAL: KarayLegalDoc[] = [
     title: 'Künye ve iletişim',
     sections: [
       { heading: 'Hizmet sağlayıcı', body: `${KIMLIK}` },
-      { heading: 'Bilgilendirme', body: "Bu bilgiler 6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun md.3 ve Türk Ticaret Kanunu md.39 kapsamındaki zorunlu bilgilerdir. Meslek odası ve meslek kuralları: [varsa]." },
+      { heading: 'Bilgilendirme', body: "Bu bilgiler 5651 sayılı Kanun md.3, 6563 sayılı Elektronik Ticaretin Düzenlenmesi Hakkında Kanun md.3 ve, tacir olunması hâlinde, Türk Ticaret Kanunu md.39 kapsamında yayımlanır. Meslek odası ve meslek kuralları: [varsa]." },
     ],
   },
 ];

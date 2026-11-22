@@ -130,17 +130,14 @@ test.describe('Ziyaretçi', () => {
     await noHorizontalOverflow(page);
   });
 
-  test('Paylaşım menüsü ve bağlantı kopyalama', async ({ page, context, isMobile }) => {
-    test.skip(isMobile, 'Mobilde cihazın yerel paylaşım menüsü açılır');
+  test('İlan bağlantısı kopyalanır; sosyal ağ paylaşım düğmesi yok (EİDS)', async ({ page, context, isMobile }) => {
+    test.skip(isMobile, 'Pano izni yalnız masaüstü Chromium projesinde verilir');
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.goto('/satilik');
     await cards(page).first().getByRole('link').click();
-    await page.getByRole('button', { name: 'İlanı paylaş' }).first().click();
-    const menu = page.getByRole('menu');
-    await expect(menu.getByRole('menuitem', { name: 'WhatsApp' })).toHaveAttribute('href', /wa\.me\/\?text=/);
-    await expect(menu.getByRole('menuitem', { name: 'Facebook' })).toHaveAttribute('href', /facebook\.com\/sharer/);
-    await expect(menu.getByRole('menuitem', { name: 'X' })).toHaveAttribute('href', /x\.com\/intent/);
-    await menu.getByRole('menuitem', { name: 'Bağlantıyı kopyala' }).click();
+    // Ofis sitesindeki ilan bağlantısı EİDS doğrulamalı değil: WhatsApp / Facebook / X'e gönderen paylaşım bağlantısı olmamalı
+    await expect(page.locator('a[href*="wa.me/?text="], a[href*="facebook.com/sharer"], a[href*="x.com/intent"]')).toHaveCount(0);
+    await page.getByRole('button', { name: 'İlan bağlantısını kopyala' }).first().click();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('/ilan/');
   });
 
@@ -155,7 +152,7 @@ test.describe('Ziyaretçi', () => {
     await page.goto('/');
     const notice = page.getByRole('region', { name: 'Çerez bildirimi' });
     await expect(notice).toBeVisible();
-    await notice.getByRole('button', { name: 'Yalnızca zorunlu' }).click();
+    await notice.getByRole('button', { name: 'Reddet' }).click();
     await expect(notice).toBeHidden();
     await page.reload();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
