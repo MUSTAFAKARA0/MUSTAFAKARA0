@@ -1,4 +1,4 @@
-# Sahibin yapacakları · pilot ofise kadar (22.11.2026)
+# Sahibin yapacakları · pilot ofise kadar (23.11.2026)
 
 > Değerleri (anahtar, şifre, bağlantı adresi) **kimseye yazmayın**, Claude'a da göndermeyin; "tamam", koşu numarası ya da değer
 > görünmeyen ekran görüntüsü yeter. Ayrıntı: [PILOT_YAYIN_GO_NOGO.md](PILOT_YAYIN_GO_NOGO.md). Önceki sürümler git geçmişinde.
@@ -8,14 +8,16 @@
 
 | İş | Kanıt |
 | --- | --- |
+| Veritabanı güncellemeleri F ve E | 23.11: SQL Editor, son kontroller TAMAM, kabul testleri geçti (ekip daveti; büyük/küçük fotoğraf) |
+| Mission Control panosu güncel dalı okuyor | 23.11: PR #6 birleştirildi, eşitleme #86 yeşil |
 | Pilot kodu ve hukuk düzeltmeleri canlıda | PR #8 birleştirildi (22.11), production `567a0dd` READY; sağlık 200, ilan sayfası ve KARAYS sayfası açılıyor, çalışma zamanı hatası 0 |
 | KI-41 Aşama 2: production'a PR zorunluluğu | `uretim-pr` kural seti etkin (14.11); `koruma` geliştirme dalını da kapsıyor |
 | KI-41 Adım 0 envanteri | 11 hassas sır depo düzeyinde, ortamlar boş (14.11) |
 | Hukuk araştırması ve metin düzeltmeleri | `docs/legal/HUKUK_UYUM_2026-11-22.md`; pilot sözleşmesi taslağı `docs/legal/PILOT_SOZLESMESI_TASLAK.md` |
-| Gece yedekleri | her gün yeşil (#54–#73) |
+| Gece yedekleri | her gün yeşil (#54–#74) |
 | KARAYS alan adı, e-posta (Resend), Sentry bağlantısı | 02.11 |
 
-### 1. Veritabanı güncellemeleri F → E → G → H → I (Supabase SQL Editor)
+### 1. Veritabanı güncellemeleri G → H → I (Supabase SQL Editor; F ve E 23.11'de tamam)
 Adım adım: [operations/pilot-migrations-sql-editor.md](operations/pilot-migrations-sql-editor.md). Önce taze yedek, her dosyadan sonra
 ekran görüntüsünü Claude'a gönderin; Claude her adımda GO/NO-GO der. Bitmeden pilot ofis açılmaz (kurulum ekranı ve tasarım kilidi I ile gelir).
 

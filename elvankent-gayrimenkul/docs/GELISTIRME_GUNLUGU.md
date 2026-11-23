@@ -4,19 +4,19 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 > Depo herkese açıktır. Buraya proje veya dağıtım kimliği, ortam değişkeni değeri ya da varlığı, alan adı ayarı, kayıt sayısı veya sır yazılmaz.
 
-## Güncel durum (22.11.2026)
+## Güncel durum (23.11.2026)
 
 | Konu | Durum |
 | --- | --- |
 | Production dalı | `567a0dd` (22.11, PR #8: pilot ofis akışı, ilk kurulum ve tasarım kilidi, KI-45/46 uygulama tarafı, yetki belgesi no, hukuk uyum düzeltmeleri, A7 izleme). Vercel production READY; sağlık 200; çalışma zamanı hatası 0. Geri dönüş adayı `d6113e6` (PR #6) |
 | Son kod commit'i | `32bde53` (CI #239 üç iş yeşil; PR #8 ile production'da) |
 | Çalışma dalı | `claude/karays-refocus-t84k81` (production + belgeler) |
-| Canlı veritabanı | 39 migration. Bekleyen 5 migration E, F, G, H, I kodda hazır; sahip SQL Editor ile uygular ([operations/pilot-migrations-sql-editor.md](operations/pilot-migrations-sql-editor.md)) |
+| Canlı veritabanı | 41 migration: F ve E 23.11'de canlıda (04 TAMAM, kabul testleri geçti). Bekleyen G, H, I; sahip SQL Editor ile uygular ([operations/pilot-migrations-sql-editor.md](operations/pilot-migrations-sql-editor.md)) |
 | Alan adı ve e-posta | karays.com siteye bağlı; e-posta Resend ile. Elvankent kendi alan adına henüz bağlı değil |
 | CI | Son yeşil: #239 (`32bde53`), #237 (`8fc507a`) |
-| Yedek | Gece yedeği her gün yeşil (#54–#73, 22.11) |
+| Yedek | Gece yedeği her gün yeşil (#54–#74, 23.11) |
 | Güvenlik | KI-41 Aşama 0–2 ✓ (`uretim-pr` 14.11); Aşama 3–4 planı hazır, Adım 0b sahipte |
-| Açık kapılar | migration'lar E–I · avukat (EİDS, yurt dışı aktarım, sözleşme) · satıcı kimliği bilgileri · Vercel ücretsiz plan kararı · KI-41 Aşama 3–4 |
+| Açık kapılar | migration'lar G, H, I · avukat (EİDS, yurt dışı aktarım, sözleşme) · satıcı kimliği bilgileri · Vercel ücretsiz plan kararı · KI-41 Aşama 3–4 |
 | Bekleyen kararlar | [PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md); pilot için gereken: D-10, D-11, D-18, D-19, D-20 |
 
 **Kalan işler:** [KALAN_ISLER.md](KALAN_ISLER.md) · **Sahibin adımları:** [SAHIP_ADIMLARI.md](SAHIP_ADIMLARI.md).
@@ -24,6 +24,14 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 **Sıradaki adım:** sahip migration'ları F → E → G → H → I uygular (Claude her adımda GO/NO-GO); paralelde avukat görüşmesi.
 
 ## Girişler
+
+### 23.11.2026 (44) · Migration F ve E canlıda (sahip, SQL Editor)
+
+- Sahip `canli_sema_tespiti.sql` çalıştırdı: 1–39 VAR, 40–44 YOK, TUTARLILIK TAMAM. Bugünün gece yedeği (#74) yeşil.
+- **F (`tenant_member_guard`, KI-46):** 01 DUR yok (çoklu üyelik yok, yabancı paylaşım görseli yok); 02 kaydı alındı; 03 iki tetikleyici; 04 yedi satır TAMAM, şema sürümü değişmedi. Kabul: ekibe ekleme daveti geldi, çıkarma çalıştı.
+- **E (`media_size_guard`, KI-42):** 01 DUR yok (C kurulu, geri alınabilir, Storage gerçek boyutu yazıyor); 02 kaydı alındı; 03 tetikleyici 1; 04 yedi satır TAMAM. Kabul: telefondan büyük ve küçük fotoğraf hazır, döndür/sil çalıştı.
+- Mission Control: `ecc-mission-control` PR #6 sahip tarafından birleştirildi; elle tetiklenen eşitleme (#86) yeşil, pano bu dalı okuyor.
+- Sıradaki: G, H, I (2. gün; sabah yedeği yeşilse yeni yedek gerekmez).
 
 ### 22.11.2026 (43) · PR #8 production'da: pilot hazırlığı ve hukuk uyum düzeltmeleri
 
