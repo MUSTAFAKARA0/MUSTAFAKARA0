@@ -11,12 +11,12 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 | Production dalı | `567a0dd` (22.11, PR #8: pilot ofis akışı, ilk kurulum ve tasarım kilidi, KI-45/46 uygulama tarafı, yetki belgesi no, hukuk uyum düzeltmeleri, A7 izleme). Vercel production READY; sağlık 200; çalışma zamanı hatası 0. Geri dönüş adayı `d6113e6` (PR #6) |
 | Son kod commit'i | `32bde53` (CI #239 üç iş yeşil; PR #8 ile production'da) |
 | Çalışma dalı | `claude/karays-refocus-t84k81` (production + belgeler) |
-| Canlı veritabanı | 41 migration: F ve E 23.11'de canlıda (04 TAMAM, kabul testleri geçti). Bekleyen G, H, I; sahip SQL Editor ile uygular ([operations/pilot-migrations-sql-editor.md](operations/pilot-migrations-sql-editor.md)) |
+| Canlı veritabanı | 44 migration: E, F, G, H, I 23.11'de canlıda (sahip, SQL Editor; `canli_sema_tespiti` 1–44 VAR, TUTARLILIK TAMAM; kabul testleri geçti). Rehber: [operations/pilot-migrations-sql-editor.md](operations/pilot-migrations-sql-editor.md) |
 | Alan adı ve e-posta | karays.com siteye bağlı; e-posta Resend ile. Elvankent kendi alan adına henüz bağlı değil |
 | CI | Son yeşil: #239 (`32bde53`), #237 (`8fc507a`) |
 | Yedek | Gece yedeği her gün yeşil (#54–#74, 23.11) |
 | Güvenlik | KI-41 Aşama 0–2 ✓ (`uretim-pr` 14.11); Aşama 3–4 planı hazır, Adım 0b sahipte |
-| Açık kapılar | migration'lar G, H, I · avukat (EİDS, yurt dışı aktarım, sözleşme) · satıcı kimliği bilgileri · Vercel ücretsiz plan kararı · KI-41 Aşama 3–4 |
+| Açık kapılar | avukat (EİDS, yurt dışı aktarım, sözleşme) · satıcı kimliği bilgileri · Vercel ücretsiz plan kararı · KI-41 Aşama 3–4 |
 | Bekleyen kararlar | [PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md); pilot için gereken: D-10, D-11, D-18, D-19, D-20 |
 
 **Kalan işler:** [KALAN_ISLER.md](KALAN_ISLER.md) · **Sahibin adımları:** [SAHIP_ADIMLARI.md](SAHIP_ADIMLARI.md).
@@ -25,13 +25,16 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
-### 23.11.2026 (44) · Migration F ve E canlıda (sahip, SQL Editor)
+### 23.11.2026 (44) · Beş pilot migration'ı (F, E, G, H, I) canlıda (sahip, SQL Editor)
 
 - Sahip `canli_sema_tespiti.sql` çalıştırdı: 1–39 VAR, 40–44 YOK, TUTARLILIK TAMAM. Bugünün gece yedeği (#74) yeşil.
 - **F (`tenant_member_guard`, KI-46):** 01 DUR yok (çoklu üyelik yok, yabancı paylaşım görseli yok); 02 kaydı alındı; 03 iki tetikleyici; 04 yedi satır TAMAM, şema sürümü değişmedi. Kabul: ekibe ekleme daveti geldi, çıkarma çalıştı.
 - **E (`media_size_guard`, KI-42):** 01 DUR yok (C kurulu, geri alınabilir, Storage gerçek boyutu yazıyor); 02 kaydı alındı; 03 tetikleyici 1; 04 yedi satır TAMAM. Kabul: telefondan büyük ve küçük fotoğraf hazır, döndür/sil çalıştı.
 - Mission Control: `ecc-mission-control` PR #6 sahip tarafından birleştirildi; elle tetiklenen eşitleme (#86) yeşil, pano bu dalı okuyor.
-- Sıradaki: G, H, I (2. gün; sabah yedeği yeşilse yeni yedek gerekmez).
+- **G (`license_no`, KI-47):** 01/02 temiz; 03 sütun var; 04 dört satır TAMAM. Kabul: numara panelde girildi, sitenin alt bilgisinde görünüyor (Elvankent'in kendi alan adı henüz bağlı değil; geçici adresten bakıldı).
+- **H (`pilot_trial_end`, KI-48):** 01/02 temiz (deneme durumunda ofis yok); 03 fonksiyon var; 04 TAMAM. Konsol alanı yalnız deneme durumundaki ofiste görünür; pilot ofiste kullanılacak.
+- **I (`org_setup`, KI-49):** 01/02 temiz (tek ofis); 03 kurulum satırı 1; 04 13 satır TAMAM/BİLGİ, HATA yok. Kabul: konsolda Elvankent "Kurulum tamamlandı (mevcut ofis — tasarım kilitli değil)"; ofis paneli kurulum ekranına yönlenmeden açılıyor.
+- Son tespit: `canli_sema_tespiti` 1–44 VAR, TUTARLILIK TAMAM. Pilot ofis açılışının veritabanı engeli kalktı; kalanlar avukat, satıcı kimliği bilgileri, Vercel kararı.
 
 ### 22.11.2026 (43) · PR #8 production'da: pilot hazırlığı ve hukuk uyum düzeltmeleri
 
