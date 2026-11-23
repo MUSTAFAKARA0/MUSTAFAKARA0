@@ -1,4 +1,4 @@
-# Sahibin yapacakları · pilot ofise kadar (23.11.2026)
+# Sahibin yapacakları · pilot ofise kadar (24.11.2026)
 
 > Değerleri (anahtar, şifre, bağlantı adresi) **kimseye yazmayın**, Claude'a da göndermeyin; "tamam", koşu numarası ya da değer
 > görünmeyen ekran görüntüsü yeter. Ayrıntı: [PILOT_YAYIN_GO_NOGO.md](PILOT_YAYIN_GO_NOGO.md). Önceki sürümler git geçmişinde.
@@ -17,27 +17,32 @@
 | Gece yedekleri | her gün yeşil (#54–#74) |
 | KARAYS alan adı, e-posta (Resend), Sentry bağlantısı | 02.11 |
 
-### 1. Avukat görüşmesi
-Pilot sözleşmesi taslağı ve 10 soru: [legal/PILOT_SOZLESMESI_TASLAK.md](legal/PILOT_SOZLESMESI_TASLAK.md). En kritik üç soru: EİDS'nin
-ofisin kendi sitesine uygulanıp uygulanmadığı; sağlayıcılarla KVKK standart sözleşmesi yokken gerçek müşteri verisi girilip
-girilemeyeceği; şahıs olarak imzalamanın vergi ve sorumluluk sonucu (mali müşavirle).
+> **23.11 kararı:** avukat yok; şirket, mali müşavir, ücretli plan ve gerçek ofisle sözleşme **terhise kadar bekler**. Terhise kadar
+> yalnız 0–3 numaralı adımlar; 4–6 terhis sonrası ([legal/TERHIS_SONRASI_EVRAK_PAKETI.md](legal/TERHIS_SONRASI_EVRAK_PAKETI.md)).
 
-### 2. Sizden istenen bilgiler (yasal metinlere işlenecek)
-Ad soyad veya şirket unvanı, vergi dairesi ve numarası, adres, (varsa) KEP, telefon; pilot ofisin unvanı, yetki belgesi no, alan adı.
-Tam liste: pilot sözleşmesi taslağının Ek A bölümü. Claude bunları tek dosyaya (`legal.ts`) işler.
+### 0. Bekleyen PR'ı birleştirmek ve veritabanı güncellemesi J (terhise kadar, ~20 dk)
+24.11 işleri (fotoğraf döndürme kilidi, kiracı izolasyonu kalanları, evrak paketi, karar sayfası) tek PR'da. CI yeşil olunca PR'ı
+birleştirin; sonra J'yi SQL Editor'de aynı 01→04 düzeniyle uygularız ([operations/pilot-migrations-sql-editor.md](operations/pilot-migrations-sql-editor.md) 6. satır).
 
-### 3. Barındırma kararı (Vercel ücretsiz plan)
-Vercel'in ücretsiz planı ticari kullanıma kapalı; ücretsiz pilot da ticari sayılır ve hesap askıya alınabilir. Seçenekler: riski
-yazılı kabul etmek (ücretsiz kalır) ya da ileride Pro'ya geçmek (ücretli). Claude ücretli bir şey başlatmaz.
+### 1. Karar sayfası (terhise kadar, ~15 dk)
+[KARAR_SAYFASI.md](KARAR_SAYFASI.md) — A1…A10 için "evet/hayır" yazmanız yeterli. Ücret ya da ticari işlem içeren kararlar B bölümünde, terhis sonrasına.
 
-### 4. KI-41 Aşama 3–4: sırların ortamlara taşınması (ayrı bir gün)
+### 2. KI-41 Aşama 3–4: sırların ortamlara taşınması (terhise kadar, ayrı bir gün)
 Plan: [KI41_ASAMA_3_4_UYGULAMA.md](KI41_ASAMA_3_4_UYGULAMA.md). Önce Adım 0b (yönetici bypass'ını kapatma, iki ortamı production dalıyla
-sınırlama; 10 dk, risksiz), sonra anahtar yenileme. 
+sınırlama; 10 dk, risksiz), sonra anahtar yenileme.
 
-### 5. Sentry deneme olayı (isteğe bağlı, 1 dk)
+### 3. Sentry deneme olayı (isteğe bağlı, 1 dk)
 Claude'un oturumu karays.com'a istek gönderemiyor. Bilgisayarda karays.com açıkken tarayıcı konsolundan tek bir deneme hatası
 gönderilir; Sentry'de görünür ve e-posta gelir. Komutu Claude verir.
 
-### 6. Pilot günü
-Sözleşme imzalı ve 1–2 tamamsa (veritabanı güncellemeleri 23.11'de bitti): [operations/customer-onboarding.md](operations/customer-onboarding.md) §0 (konsoldan ofis aç → davet →
-kurulum → ilan → alan adı → yayın → telefon kontrolü).
+### 4. Terhis sonrası: mali müşavir, şirket ve resmî evrak
+Sıra ve hazır metinler: [legal/TERHIS_SONRASI_EVRAK_PAKETI.md](legal/TERHIS_SONRASI_EVRAK_PAKETI.md) (müşavir soruları, sağlayıcılara KVKK
+standart sözleşme yazısı, Kurul bildirimi, VUK 595 özelgesi, 5651). Görev süresince ücret alınmaz, fatura kesilmez, ticari sözleşme imzalanmaz.
+
+### 5. Terhis sonrası: bilgiler ve barındırma
+Şirket/şahıs bilgileri (unvan, vergi dairesi ve no, adres, KEP, telefon) → Claude `legal.ts`'e işler. Vercel Pro (~20 $/ay, harcama sınırı
+20 $): ücretsiz plan ticari kullanıma kapalı. Claude ücretli bir şey başlatmaz.
+
+### 6. Terhis sonrası: pilot günü
+Pilot sözleşmesi ([legal/PILOT_SOZLESMESI_TASLAK.md](legal/PILOT_SOZLESMESI_TASLAK.md)) imzalı ve 4–5 tamamsa:
+[operations/customer-onboarding.md](operations/customer-onboarding.md) §0 (konsoldan ofis aç → davet → kurulum → ilan → alan adı → yayın → telefon kontrolü).

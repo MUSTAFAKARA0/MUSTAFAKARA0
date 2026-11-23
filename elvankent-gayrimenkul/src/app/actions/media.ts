@@ -7,6 +7,7 @@ import { cacheTags } from '@/lib/cache-tags';
 import { classifyFinalizeError, decideAfterFinalizeError, finalizeMedia, isMissingRpc, markMediaFailed } from '@/modules/media/finalize';
 import { countOtherReadyPhotos, isValidReplaceTarget, photoLimitReached } from '@/modules/media/photo-limit';
 import { MediaValidationError, processImage, type ProcessedImage } from '@/modules/media/processing';
+import { pruneStaleBasesIn, type PrunableBucket } from '@/modules/media/stray-bases';
 import {
   ADMIN_MEDIA_FIELDS,
   contentOriginalPath,
@@ -296,6 +297,27 @@ async function readRow(ctx: OrgContext, id: string) {
 }
 
 /**
+ * KI-45: klasörde kalmış eski varyant tabanlarını işlemeden önce temizler (en iyi çaba). Depolama koruması satır başına
+ * güncel taban dışında en çok bir eski taban kabul eder; önceki temizlikler kaçarsa fotoğraf günlük süpürmeye kadar
+ * döndürülemezdi. Yalnız 15 dakikadan eski tabanlar silinir (eşzamanlı işlemenin yeni tabanına dokunulmaz).
+ */
+async function pruneStaleBases(ctx: OrgContext, media: ProcessInput) {
+  if (!media.original_path) return;
+  const folder = media.original_path.replace(/\/original$/, '');
+  if (folder === media.original_path) return;
+  try {
+    await pruneStaleBasesIn(ctx.supabase.storage.from(MEDIA_BUCKETS.public) as unknown as PrunableBucket, folder, media.public_base, {
+      ready: media.status === 'ready',
+      now: Date.now(),
+      onError: (base) => console.error('[media] stale base cleanup failed', { base }),
+    });
+  } catch {
+    // En iyi çaba: temizlik işlemeyi asla durdurmaz (günlük süpürme yedektir)
+    console.error('[media] stale base cleanup threw', { mediaId: media.id });
+  }
+}
+
+/**
  * 2. adım: yükleme tamamlanınca orijinal dosya indirilir, GERÇEK türü doğrulanır
  * ve WebP varyantları üretilip herkese açık kovaya yazılır; satır `media_finalize` RPC'siyle
  * tek işlemde sonlandırılır. Hazır (`ready`) bir satır (döndürme) hiçbir hatada düşürülmez ve
@@ -341,6 +363,7 @@ async function processMedia(ctx: OrgContext, media: ProcessInput, rotate: Rotati
     throw new ActionError('Görsel işlenirken bir sorun oluştu. Lütfen tekrar deneyin.', 'processing');
   }
 
+  await pruneStaleBases(ctx, media);
   const publicBase = newPublicBase(media.original_path, rotate);
   const uploads = await Promise.all(
     processed.variants.map(({ width, buffer }) =>

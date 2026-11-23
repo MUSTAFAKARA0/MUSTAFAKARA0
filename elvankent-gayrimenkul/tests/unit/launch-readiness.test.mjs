@@ -569,7 +569,7 @@ describe('LR-13 bekleyen migration\'lar (K-19)', () => {
   });
 });
 
-describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, company_name, media_finalize_rpc, media_privileges, media_storage_slots, media_stray_sweep, media_size_guard, tenant_member_guard, license_no, pilot_trial_end ve org_setup (supabase/ops)', () => {
+describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, company_name, media_finalize_rpc, media_privileges, media_storage_slots, media_stray_sweep, media_size_guard, tenant_member_guard, license_no, pilot_trial_end, org_setup ve tenant_hardening (supabase/ops)', () => {
   // Bekleyen migration'ları canlıda tek başına uygulayan betikler (karays_brand ile aynı düzen, LR-10).
   // Pending dosya değişip 03/04/05 değişmezse canlıya provası yapılmamış bir gövde gider.
   const runbooks = [
@@ -592,6 +592,8 @@ describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, compan
     // PILOT: I (ilk kurulum + tasarım kilidi) bağımsız
     { dir: 'supabase/ops/org_setup/', pending: '20261108000005_org_setup.sql', first: 'create table if not exists public.organization_setup (', fn: 'public.org_setup_complete', hashFrom: 'create or replace function public.org_setup_complete' },
     { dir: 'supabase/ops/license_no/', pending: '20261108000003_license_no.sql', first: 'alter table public.organization_settings', fn: null, hashFrom: null },
+    // KI-46: J (kiracı izolasyonu kalanları) bağımsız
+    { dir: 'supabase/ops/tenant_hardening/', pending: '20261124000001_tenant_hardening.sql', first: 'create or replace function public.get_public_collection(p_token text)', fn: 'public.crm_assignee_guard', hashFrom: 'create or replace function public.crm_assignee_guard' },
     { dir: 'supabase/ops/tenant_member_guard/', pending: '20261108000002_tenant_member_guard.sql', first: 'create or replace function public.organization_members_target_guard', fn: 'public.organization_members_target_guard', hashFrom: 'create or replace function public.organization_members_target_guard' },
     // 03b_validate.sql isteğe bağlı ayrı adım (VALIDATE tabloyu tarar); varsa aşağıda ayrıca denetlenir
     { dir: 'supabase/ops/company_name/', pending: '20261026000002_company_name_check.sql', first: 'alter table public.platform_settings drop constraint', fn: null, hashFrom: null, optional: ['03b_validate.sql'] },
@@ -725,7 +727,7 @@ describe('LR-14 O-5 runbook\'ları: quota_lock, OPS-02, media_quota_lock, compan
       const def = v2.slice(v2.indexOf(`create policy "${name}"`)).match(/^[\s\S]*?\);/)[0];
       assert.ok(rollback.includes(norm(def)), `05: ${name} birebir`);
     }
-    assert.match(read('scripts/rehearse-runbooks.sh'), /RUNBOOKS=\([^)]*media_privileges media_storage_slots media_stray_sweep media_size_guard tenant_member_guard license_no pilot_trial_end org_setup\)/);
+    assert.match(read('scripts/rehearse-runbooks.sh'), /RUNBOOKS=\([^)]*media_privileges media_storage_slots media_stray_sweep media_size_guard tenant_member_guard license_no pilot_trial_end org_setup tenant_hardening\)/);
     // KI-42: E varken C'nin 05'i durur (E, C'nin bakım penceresi tablosunu okur)
     assert.match(read('supabase/ops/media_storage_slots/05_rollback.sql'), /media_storage_size_guard[\s\S]*DUR: önce E geri alınır[\s\S]*drop trigger if exists media_storage_slot_guard/);
     assert.match(read('supabase/ops/media_size_guard/01_preflight.sql'), /DUR: apply C first/);
