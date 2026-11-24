@@ -4,9 +4,8 @@
  * sınırlıdır. Harita döşemeleri /api/tiles üzerinden aynı kaynaktan (self) sunulur.
  *
  * `supabaseOrigins` uygulamanın kendi adresleridir (ana adres + türetilmiş ya da açık depolama adresi).
- * `supabaseWildcard` (https://*.supabase.co) bu adresleri zaten kapsar; kaldırılması D-15 kararına ve
- * gerçek Supabase'e bağlı bir önizlemede Auth, yükleme ve görsel doğrulamasına bağlıdır
- * (docs/GELISTIRME_GUNLUGU.md, K-19). Bu modül başka modül içe aktarmaz (next.config da yükler).
+ * `supabaseWildcard` (https://*.supabase.co) başka Supabase projelerine de bağlantıya izin verir; D-15 (1) kararıyla
+ * (24.11.2026) production'da kapalıdır (next.config.ts). Seçenek geri dönüş için tutulur. Bu modül başka modül içe aktarmaz (next.config da yükler).
  */
 export interface CspOptions {
   supabaseOrigins: ReadonlyArray<string>;

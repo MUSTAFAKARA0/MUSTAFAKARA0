@@ -1,5 +1,8 @@
 # KARAYS · Karar sayfası (evet / hayır)
 
+> **24.11.2026 sonucu:** sahip A1–A10 için önerilerle devam edilmesini onayladı. A3 kodu PR ile yayına girer (canlı duman testi
+> sahipte); A4 zaten yapılmıştı; A5 ve A9 "şimdilik hayır" önerisi uygulandı. Kayıt: [PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md).
+
 > 24.11.2026 · Her satırda önerim var; **"evet"** demeniz önerinin kabulü demek. Ayrıntı ve kaynaklar:
 > [KARAR_ARASTIRMA_PAKETI.md](KARAR_ARASTIRMA_PAKETI.md) · kayıt: [PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md).
 > 23.11 kararı gereği ücret, fatura, şirket ve ticari sözleşme içeren kararlar **terhis sonrasına** ayrıldı (B bölümü).

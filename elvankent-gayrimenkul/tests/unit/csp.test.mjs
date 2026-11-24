@@ -43,7 +43,7 @@ describe('contentSecurityPolicy', () => {
     assert.ok(!directive(csp, 'connect-src').includes('https://baskaproje.supabase.co'));
   });
 
-  test('joker açıkken (bugünkü yayın) önceki politikayla aynı kaynaklar', () => {
+  test('joker açıkken (geri dönüş seçeneği) önceki politikayla aynı kaynaklar', () => {
     const csp = contentSecurityPolicy({ supabaseOrigins: origins, supabaseWildcard: true, development: false });
     assert.deepEqual(directive(csp, 'connect-src'), ["'self'", 'https://*.supabase.co', ...origins]);
     assert.deepEqual(directive(csp, 'img-src'), ["'self'", 'data:', 'blob:', 'https://*.supabase.co', ...origins]);
@@ -59,7 +59,8 @@ describe('contentSecurityPolicy', () => {
 
   test('next.config CSP\'yi bu modülden kurar; joker kararı (D-15) tek yerde', () => {
     const config = readFileSync(new URL('../../next.config.ts', import.meta.url), 'utf8');
-    assert.match(config, /contentSecurityPolicy\(\{ supabaseOrigins, supabaseWildcard: (true|false), development:/);
+    // D-15 (1) kararı (24.11.2026): production'da joker kapalı
+    assert.match(config, /contentSecurityPolicy\(\{ supabaseOrigins, supabaseWildcard: false, development:/);
     assert.match(config, /storageUrlFor\(supabaseUrl\.origin\)/);
     assert.doesNotMatch(config, /img-src|connect-src/, 'direktifler next.config içinde yeniden yazılmaz');
   });
