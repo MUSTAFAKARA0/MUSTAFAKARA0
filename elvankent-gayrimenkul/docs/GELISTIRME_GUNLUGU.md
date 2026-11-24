@@ -8,8 +8,8 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 | Konu | Durum |
 | --- | --- |
-| Production dalı | `1513500` (24.11, PR #9: Next 16.4.6 güvenlik yaması, fotoğraf döndürme kilidi, J kodu, erişilebilirlik, belgeler). Vercel production READY; sağlık 200; çalışma zamanı hatası 0. Geri dönüş adayı `567a0dd` (PR #8) |
-| Son kod commit'i | `a90ab9a` (CI #244/#245 üç iş yeşil; PR #9 ile production'da) |
+| Production dalı | `6d84bae` (24.11, PR #10: CSP'den *.supabase.co jokeri kaldırıldı, karar kaydı). Önceki: `1513500` (PR #9). Vercel production READY; sağlık 200; çalışma zamanı hatası 0; canlı CSP yalnız kendi Supabase adresleri |
+| Son kod commit'i | `6637c3e` (CI #248/#249 üç iş yeşil; PR #10 ile production'da) |
 | Çalışma dalı | `claude/karays-refocus-t84k81` (production + belgeler) |
 | Canlı veritabanı | 45 migration, bekleyen yok (J 24.11'de canlıda, 04 TAMAM): E, F, G, H, I 23.11'de canlıda (sahip, SQL Editor; `canli_sema_tespiti` 1–44 VAR, TUTARLILIK TAMAM; kabul testleri geçti). Rehber: [operations/pilot-migrations-sql-editor.md](operations/pilot-migrations-sql-editor.md) |
 | Alan adı ve e-posta | karays.com siteye bağlı; e-posta Resend ile. Elvankent kendi alan adına henüz bağlı değil |
@@ -24,6 +24,12 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 **Sıradaki adım:** sahip migration'ları F → E → G → H → I uygular (Claude her adımda GO/NO-GO); paralelde avukat görüşmesi.
 
 ## Girişler
+
+### 24.11.2026 (47) · PR #10 canlıda: CSP jokeri kaldırıldı; kararlar kayıtta
+
+- Sahip KARAR_SAYFASI A1–A10 önerileriyle devam edilmesini onayladı; karar kaydı D-01, D-02, D-03, D-12, D-14…D-18.
+- PR #10 (`6d84bae`): CSP `img-src`/`connect-src` yalnız kendi Supabase ana ve depolama adresleri. Vercel READY, `/api/health` 200, canlı başlık doğrulandı, çalışma zamanı hatası 0. Sahip duman testi: görseller ve fotoğraf yükleme çalışıyor (KI-32 kapandı).
+- Sentry deneme olayı (A7) isteğe bağlı, bilgisayardan yapılacak (telefonda konsol yok).
 
 ### 24.11.2026 (46) · PR #9 canlıda; migration J canlıda — bekleyen migration kalmadı
 
