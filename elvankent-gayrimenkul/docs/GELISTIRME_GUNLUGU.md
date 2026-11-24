@@ -25,6 +25,18 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 25.11.2026 (48) · Tema imzaları: her tasarım ailesine özgü doku, ışık ve hareket; KARAYS tasarım şeridi
+
+Sahip isteği (24.11 gece): temalarda yalnız renk ve yazı değişiyor; emlakçının dikkatini çekecek özgün tasarımlar, hareketler; KARAYS sayfası da gelişsin; ücretli hiçbir şey yok.
+
+- **Tema imzaları** (`src/theme-engine/signature-css.ts`, `design-css.ts`'e bağlı): her temaya kalıcı (doku, çerçeve, desen, üzerine gelme) ve hareket (açılış, kaydırma zaman çizelgesi, okuma çizgisi) parçası. Örnekler: Sinematik Vitrin film greni + vinyet + Ken Burns; Lüks/Editoryal altın çerçeve ve süs çizgileri; Architectural plan ızgarası, "01 /" bölüm numaraları, köşe işaretleri; Map First harita zemini ve rota çizgisi; Doğal Yaşam yaprak köşeler.
+- Kurallar: yalnız seçili temanın CSS'i yazılır; her kural `[data-site-theme]` ile başlar; hareket yalnız `[data-site-motion]` ve "hareketi azalt" kapalıyken; kareler yalnız transform/opacity/filter/clip-path/background-position; sonsuz döngü yok (WCAG 2.2.2); dış kaynak yok (gren satır içi data: SVG, CSP uyumlu); varsayılan Klasik sitenin tema CSS'i boş kalır.
+- Hareket dili açılan aileler: Klasik Güven, Yalın Galeri, Architectural, Map First (`subtle`). Yalın Galeri tanımı güncellendi.
+- **KARAYS sayfası**: "Tasarım aileleri" bölümü (9 ailenin gerçek önizleme görüntüsü, ~115 KB webp, tembel yükleme; fareli cihazda akan şerit, üzerine gelince/odakta durur; dokunmatik ve hareketi-azalt tercihinde elle kaydırılır; kopya sıra `aria-hidden`), hero ışık küreleri, başlık girişi, kart üzerine gelme efektleri (`src/app/karay/karay.css`, `components/karay/design-gallery.tsx`). Katman kuralı gereği şerit kataloğu içe aktarmaz; eşleşme testle korunur.
+- Bağımsız inceleme (code-reviewer): 4 orta + 4 düşük bulgu, hepsi düzeltildi (okuma çizgisinin tanımsız karesi ve önizlemeden taşması, Yalın bağlantı kuralının arka planı silmesi, şerit döngü sıçraması, sonsuz animasyonlar, Kent hero gecikmesi, gren/vinyetin yalnız yalıtılmış hero'da çalışması, forced-colors yedeği).
+- Testler: `theme-signatures.test.mjs` (SI-01…09), `karay-design-gallery.test.mjs` (KG-01…03); birim 1051/1051. Ekran taraması: 9 aile × masaüstü/telefon taşma 0; KARAYS masaüstü/telefon/hareketi-azalt taşma 0, hata 0.
+- Sahip için katalog PDF: "KARAYS · Temalar ve görsel dil kataloğu" (önce/sonra görüntüleri, imza listeleri).
+
 ### 24.11.2026 (47) · PR #10 canlıda: CSP jokeri kaldırıldı; kararlar kayıtta
 
 - Sahip KARAR_SAYFASI A1–A10 önerileriyle devam edilmesini onayladı; karar kaydı D-01, D-02, D-03, D-12, D-14…D-18.

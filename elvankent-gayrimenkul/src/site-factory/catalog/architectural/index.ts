@@ -16,7 +16,7 @@ export default defineFamily({
     card: 'outline',
     cardLayout: 'standard',
     footerLayout: 'structured',
-    motion: 'none',
+    motion: 'subtle',
     slots: { grid: 'ruled-index', listingDetail: 'information-first', gallery: 'grid' },
   },
   home: ['hero', 'stats', 'latest', 'categories', 'process', 'contact'],

@@ -8,6 +8,6 @@ export default defineFamily({
   audience: 'Yerel ve köklü emlak ofisleri',
   theme: 'klasik',
   palette: 'modern-green',
-  style: {},
+  style: { motion: 'subtle' },
   home: ['hero', 'showcase', 'categories', 'latest', 'regions', 'process', 'owner_cta', 'blog', 'contact'],
 });

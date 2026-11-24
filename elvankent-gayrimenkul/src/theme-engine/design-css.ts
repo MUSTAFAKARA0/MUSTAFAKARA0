@@ -1,4 +1,5 @@
 import type { ThemeId } from '@/theme-engine/ids';
+import { SIGNATURE } from '@/theme-engine/signature-css';
 import type { ResolvedStyle } from '@/theme-engine/themes';
 
 /**
@@ -156,6 +157,9 @@ export function designCss(themeId: ThemeId, style: ResolvedStyle): string {
     CARD_LAYOUT[style.cardLayout],
     HEADER_LAYOUT[style.headerLayout],
     MOTION[style.motion],
+    // Tema imzası (signature-css.ts): kalıcı kısım her zaman, hareket kısmı yalnızca hareket dili açıkken
+    { plain: SIGNATURE[themeId]?.static ?? '' },
+    { plain: style.motion !== 'none' ? (SIGNATURE[themeId]?.motion ?? '') : '' },
   ].filter(Boolean);
   const layered = parts.map((p) => p.layered ?? '').join('');
   const plain = parts.map((p) => p.plain ?? '').join('');
