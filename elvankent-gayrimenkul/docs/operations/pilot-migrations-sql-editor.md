@@ -40,7 +40,7 @@ Sağ üstte doğru projenin seçili olduğunu her seferinde kontrol edin.
 Aynı gün en fazla iki migration önerilir (F + E bir gün, G + H + I başka gün; G ve H çok küçük olduğu için I ile aynı gün olabilir).
 Her gün başında 0.2'deki taze yedek yinelenir. Bitince `canli_sema_tespiti.sql` yeniden: satır 1–44 **VAR** (J sonrası 1–45).
 
-> 23.11.2026: F, E, G, H, I canlıda (sahip, son kontroller TAMAM, kabul testleri geçti). Kalan: J (KI-56).
+> 23.11.2026: F, E, G, H, I canlıda; 24.11.2026: J canlıda (son kontroller TAMAM). Bekleyen migration yok.
 
 ## Ne zaman durulur
 `01`'de **DUR** · `04`'te **HATA** · kabul testinde beklenmeyen hata · son 24 saatte panelden şikâyet. Durunca o migration'ın `05`'i

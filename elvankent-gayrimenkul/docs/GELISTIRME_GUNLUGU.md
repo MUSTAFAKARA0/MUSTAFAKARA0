@@ -8,15 +8,15 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 | Konu | Durum |
 | --- | --- |
-| Production dalı | `567a0dd` (22.11, PR #8: pilot ofis akışı, ilk kurulum ve tasarım kilidi, KI-45/46 uygulama tarafı, yetki belgesi no, hukuk uyum düzeltmeleri, A7 izleme). Vercel production READY; sağlık 200; çalışma zamanı hatası 0. Geri dönüş adayı `d6113e6` (PR #6) |
-| Son kod commit'i | `32bde53` (CI #239 üç iş yeşil; PR #8 ile production'da) |
+| Production dalı | `1513500` (24.11, PR #9: Next 16.4.6 güvenlik yaması, fotoğraf döndürme kilidi, J kodu, erişilebilirlik, belgeler). Vercel production READY; sağlık 200; çalışma zamanı hatası 0. Geri dönüş adayı `567a0dd` (PR #8) |
+| Son kod commit'i | `a90ab9a` (CI #244/#245 üç iş yeşil; PR #9 ile production'da) |
 | Çalışma dalı | `claude/karays-refocus-t84k81` (production + belgeler) |
-| Canlı veritabanı | 44 migration (J bekliyor, KI-56): E, F, G, H, I 23.11'de canlıda (sahip, SQL Editor; `canli_sema_tespiti` 1–44 VAR, TUTARLILIK TAMAM; kabul testleri geçti). Rehber: [operations/pilot-migrations-sql-editor.md](operations/pilot-migrations-sql-editor.md) |
+| Canlı veritabanı | 45 migration, bekleyen yok (J 24.11'de canlıda, 04 TAMAM): E, F, G, H, I 23.11'de canlıda (sahip, SQL Editor; `canli_sema_tespiti` 1–44 VAR, TUTARLILIK TAMAM; kabul testleri geçti). Rehber: [operations/pilot-migrations-sql-editor.md](operations/pilot-migrations-sql-editor.md) |
 | Alan adı ve e-posta | karays.com siteye bağlı; e-posta Resend ile. Elvankent kendi alan adına henüz bağlı değil |
-| CI | Son yeşil: #239 (`32bde53`), #237 (`8fc507a`) |
-| Yedek | Gece yedeği her gün yeşil (#54–#74, 23.11) |
+| CI | Son yeşil: #244/#245 (`a90ab9a`), #243 (`99fe540`) |
+| Yedek | Gece yedeği her gün yeşil (#54–#75, 24.11) |
 | Güvenlik | KI-41 Aşama 0–2 ✓ (`uretim-pr` 14.11); Aşama 3–4 planı hazır, Adım 0b sahipte |
-| Açık kapılar | Terhise kadar: 24.11 PR'ının birleştirilmesi + J · karar sayfası (A1…A10) · KI-41 Aşama 3–4. Terhis sonrası (23.11 kararı, avukat yok): mali müşavir/şirket, KVKK standart sözleşmeleri, VUK 595, 5651, Vercel Pro, satıcı bilgileri ([legal/TERHIS_SONRASI_EVRAK_PAKETI.md](legal/TERHIS_SONRASI_EVRAK_PAKETI.md)) |
+| Açık kapılar | Terhise kadar: karar sayfası (A1…A10) · KI-41 Aşama 3–4. Terhis sonrası (23.11 kararı, avukat yok): mali müşavir/şirket, KVKK standart sözleşmeleri, VUK 595, 5651, Vercel Pro, satıcı bilgileri ([legal/TERHIS_SONRASI_EVRAK_PAKETI.md](legal/TERHIS_SONRASI_EVRAK_PAKETI.md)) |
 | Bekleyen kararlar | [PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md); pilot için gereken: D-10, D-11, D-18, D-19, D-20 |
 
 **Kalan işler:** [KALAN_ISLER.md](KALAN_ISLER.md) · **Sahibin adımları:** [SAHIP_ADIMLARI.md](SAHIP_ADIMLARI.md).
@@ -24,6 +24,12 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 **Sıradaki adım:** sahip migration'ları F → E → G → H → I uygular (Claude her adımda GO/NO-GO); paralelde avukat görüşmesi.
 
 ## Girişler
+
+### 24.11.2026 (46) · PR #9 canlıda; migration J canlıda — bekleyen migration kalmadı
+
+- Sahip PR #9'u birleştirdi (`1513500`); Vercel production READY, `/api/health` 200 db ok, çalışma zamanı hatası 0 (1 saat).
+- J (`tenant_hardening`, KI-56) SQL Editor ile: 01 DUR yok (eski atama 0/0, yabancı seçki öğesi 0; canlı `get_public_collection` gövdesi geri dönüş dosyasıyla aynı), 02 kayıt, 03 tetikleyici 2, 04 satır 1–8 TAMAM, şema sürümü değişmedi. Sonrası: sağlık 200, `/ilanlar` açılıyor (yeni başlık canlıda).
+- Canlı veritabanı: 45 migration, bekleyen yok.
 
 ### 24.11.2026 (45) · Terhise kadar "kusursuz ürün": fotoğraf döndürme kilidi, kiracı izolasyonu kalanları (J), Next.js güvenlik yaması, hız ölçümü, evrak paketi
 

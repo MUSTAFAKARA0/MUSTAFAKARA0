@@ -66,8 +66,8 @@ const remotePatterns = storageImagePatterns([supabaseUrl, storageUrl]);
 const storageOrigin = storageUrl?.origin ?? (supabaseUrl ? new URL(storageUrlFor(supabaseUrl.origin)).origin : undefined);
 const supabaseOrigins = [supabaseUrl?.origin, storageOrigin].filter((o): o is string => Boolean(o));
 
-// src/lib/csp.ts. Joker (*.supabase.co) D-15 kararı ve gerçek ortam doğrulamasına kadar kalır.
-const csp = contentSecurityPolicy({ supabaseOrigins, supabaseWildcard: true, development: process.env.NODE_ENV === 'development' });
+// src/lib/csp.ts. D-15 (1) kararı (24.11.2026): joker (*.supabase.co) kapalı; yalnız kendi ana ve depolama adreslerimiz.
+const csp = contentSecurityPolicy({ supabaseOrigins, supabaseWildcard: false, development: process.env.NODE_ENV === 'development' });
 
 const securityHeaders = [
   { key: 'Content-Security-Policy', value: csp },

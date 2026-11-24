@@ -36,11 +36,14 @@
 
 ## 1. Özet tablo
 
+> **24.11.2026:** sahip, [KARAR_SAYFASI.md](KARAR_SAYFASI.md) A bölümündeki önerilerle devam edilmesini onayladı ("sana okeyse devam et"). B bölümü (ücret, şirket, sözleşme) terhis sonrasına.
+
+
 | ID | Karar | Öncelik | Ne zaman gerekli | Bağlı bulgular | Durum |
 | --- | --- | --- | --- | --- | --- |
-| D-01 | Plan yapısı ve kapsamı | P0 | İlk teklif | — | Bekliyor |
-| D-02 | Fiyatlandırma modeli | P0 | İlk teklif | D-01 | Bekliyor |
-| D-03 | Deneme süresi | P0 | İlk müşteri kaydı | D-01 | Bekliyor |
+| D-01 | Plan yapısı ve kapsamı | P0 | İlk teklif | — | **Karar verildi (24.11.2026)** — 3 plan kalır; özel alan adı ofis bazlı bayrakla; rakamlar terhis sonrası (KARAR_SAYFASI A10) |
+| D-02 | Fiyatlandırma modeli | P0 | İlk teklif | D-01 | **Karar verildi (24.11.2026)** — teklif usulü, KDV hariç, yıllık peşin seçeneği; rakam terhis sonrası (A10) |
+| D-03 | Deneme süresi | P0 | İlk müşteri kaydı | D-01 | **Karar verildi (24.11.2026)** — pilot ofise 60 gün (konsoldan, H); kart/ödeme yok; otomatik kısıtlama yok (A6) |
 | D-04 | Başarısız ödeme, ek süre, askı | P1 | İlk geciken ödeme | D-08 | **Karar verildi (01.11.2026)** — 7 gün ek süre; alt kararlar açık |
 | D-05 | İptal ve süre bitimi (veri saklama dahil) | P1 | İlk iptal (geçici kural hemen) | OPS-02 | **Karar verildi (01.11.2026)** — dönem sonu + 14 gün salt okunur + askı; saklama süresi hukuki görüşe bağlı |
 | D-06 | Yükseltme / düşürme | P1 | İlk plan değişikliği | D-01 | Bekliyor |
@@ -49,13 +52,13 @@
 | D-09 | Webhook güvenliği ilkeleri | P2 | Ödeme entegrasyonundan önce | D-08 | Bekliyor |
 | D-10 | KVKK rolleri, sözleşmeler, yurt dışı aktarım | P0 | İlk müşteri sözleşmesi | PF-09 | Bekliyor |
 | D-11 | Altyapı planları ve bütçe | P0 | Production açılışı | PF-02, PF-03, PF-06 | Bekliyor |
-| D-12 | Depo görünürlüğü | P1 | İlk ücretli müşteri | SEC-01, SEC-03 | Bekliyor |
+| D-12 | Depo görünürlüğü | P1 | İlk ücretli müşteri | SEC-01, SEC-03 | **Karar verildi (24.11.2026)** — terhise kadar açık kalır (özel depoda CI dakikası ücrete döner); şirketle özel depoya (A9) |
 | D-13 | Alan adı stratejisi | P0 | Production açılışı | PF-05, PF-06 | **Karar verildi (02.11.2026)** — müşteri siteleri kendi alan adlarıyla açılır; alt kararlar açık |
-| D-14 | Dal ve yayın stratejisi | P0 | Production açılışı | PF-04, PF-11 | Bekliyor |
-| D-15 | Güvenlik başlıkları ve görüntü yüzeyi (CSP, HSTS, SVG) | P1 | Sonraki faz | SEC-02, PF-10, SEC-06 | Bekliyor |
-| D-16 | Güvenlik güncellemesine onay | P0 | Hemen | PF-01 | Karar verildi (O-4 yaması 01.11'de yayında) |
-| D-17 | İlk müşterilerde elle işletim ve otomasyon eşiği | P1 | İlk müşteri | OPS-03 | Bekliyor |
-| D-18 | Olay/destek sorumlusu ve hizmet taahhüdü | P1 | İlk müşteri | PF-07, PF-12, OPS-04, SEC-04 | Bekliyor |
+| D-14 | Dal ve yayın stratejisi | P0 | Production açılışı | PF-04, PF-11 | **Karar verildi (24.11.2026)** — canlıya yalnız PR, CI yeşil, sahibin birleştirmesi (`uretim-pr`) (A1) |
+| D-15 | Güvenlik başlıkları ve görüntü yüzeyi (CSP, HSTS, SVG) | P1 | Sonraki faz | SEC-02, PF-10, SEC-06 | **Karar verildi (24.11.2026)** — (1) CSP jokeri kaldırıldı; (2) ofis alan adlarında HSTS `includeSubDomains; preload` yok (zaten); (3) nonce CSP ilk ücretli müşterilerden sonra (A3–A5) |
+| D-16 | Güvenlik güncellemesine onay | P0 | Hemen | PF-01 | **Karar verildi** — O-4 yaması 01.11; kalıcı kural (24.11): yalnız güvenlik yaması, CI yeşil, sahip birleştirmesi (A2); Next 16.4.6 bu kuralla (PR #9) |
+| D-17 | İlk müşterilerde elle işletim ve otomasyon eşiği | P1 | İlk müşteri | OPS-03 | **Karar verildi (24.11.2026)** — 5 ücretli müşteriye kadar elle işletim (A8) |
+| D-18 | Olay/destek sorumlusu ve hizmet taahhüdü | P1 | İlk müşteri | PF-07, PF-12, OPS-04, SEC-04 | **Karar verildi (24.11.2026)** — en iyi çaba; hafta içi 09–18; site kapalıysa 4 iş saati içinde ilk yanıt; ihlalde ofise ≤ 24 saat (A7) |
 | D-19 | KARAYS'i hukuken kim satıyor (şirket türü, unvan, kod ve marka sahipliği) | P0 | İlk sözleşme/fatura öncesi | 07.11 PDF analizi | Bekliyor |
 | D-20 | EİDS (Elektronik İlan Doğrulama Sistemi) ve yetki belgesi alanları | P1 | İlk ofis müşterisi | 07.11 PDF analizi | Bekliyor |
 

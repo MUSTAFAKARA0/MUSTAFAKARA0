@@ -8,21 +8,18 @@
 
 | İş | Kanıt |
 | --- | --- |
+| PR #9 ve veritabanı güncellemesi J | 24.11: canlıda; J son kontrol TAMAM, site ve sağlık kontrolü sorunsuz; bekleyen migration yok |
 | Veritabanı güncellemeleri F, E, G, H, I | 23.11: SQL Editor, son kontroller TAMAM, `canli_sema_tespiti` 1–44 VAR; kabul testleri geçti (ekip daveti, büyük/küçük fotoğraf, yetki no alt bilgide, kurulum kartı, panel açılıyor) |
 | Mission Control panosu güncel dalı okuyor | 23.11: PR #6 birleştirildi, eşitleme #86 yeşil |
 | Pilot kodu ve hukuk düzeltmeleri canlıda | PR #8 birleştirildi (22.11), production `567a0dd` READY; sağlık 200, ilan sayfası ve KARAYS sayfası açılıyor, çalışma zamanı hatası 0 |
 | KI-41 Aşama 2: production'a PR zorunluluğu | `uretim-pr` kural seti etkin (14.11); `koruma` geliştirme dalını da kapsıyor |
 | KI-41 Adım 0 envanteri | 11 hassas sır depo düzeyinde, ortamlar boş (14.11) |
 | Hukuk araştırması ve metin düzeltmeleri | `docs/legal/HUKUK_UYUM_2026-11-22.md`; pilot sözleşmesi taslağı `docs/legal/PILOT_SOZLESMESI_TASLAK.md` |
-| Gece yedekleri | her gün yeşil (#54–#74) |
+| Gece yedekleri | her gün yeşil (#54–#75) |
 | KARAYS alan adı, e-posta (Resend), Sentry bağlantısı | 02.11 |
 
 > **23.11 kararı:** avukat yok; şirket, mali müşavir, ücretli plan ve gerçek ofisle sözleşme **terhise kadar bekler**. Terhise kadar
-> yalnız 0–3 numaralı adımlar; 4–6 terhis sonrası ([legal/TERHIS_SONRASI_EVRAK_PAKETI.md](legal/TERHIS_SONRASI_EVRAK_PAKETI.md)).
-
-### 0. Bekleyen PR'ı birleştirmek ve veritabanı güncellemesi J (terhise kadar, ~20 dk)
-24.11 işleri (fotoğraf döndürme kilidi, kiracı izolasyonu kalanları, evrak paketi, karar sayfası) tek PR'da. CI yeşil olunca PR'ı
-birleştirin; sonra J'yi SQL Editor'de aynı 01→04 düzeniyle uygularız ([operations/pilot-migrations-sql-editor.md](operations/pilot-migrations-sql-editor.md) 6. satır).
+> yalnız 1–3 numaralı adımlar; 4–6 terhis sonrası ([legal/TERHIS_SONRASI_EVRAK_PAKETI.md](legal/TERHIS_SONRASI_EVRAK_PAKETI.md)).
 
 ### 1. Karar sayfası (terhise kadar, ~15 dk)
 [KARAR_SAYFASI.md](KARAR_SAYFASI.md) — A1…A10 için "evet/hayır" yazmanız yeterli. Ücret ya da ticari işlem içeren kararlar B bölümünde, terhis sonrasına.
