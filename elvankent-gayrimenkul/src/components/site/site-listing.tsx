@@ -66,7 +66,11 @@ export function SiteListing({ tenant, view, data }: { tenant: Tenant; view: Patt
         </div>
       </div>
 
-      <section id="sonuclar" aria-label="Arama sonuçları" className="container-page scroll-mt-24 py-10 sm:py-14">
+      <section id="sonuclar" aria-labelledby="sonuclar-baslik" className="container-page scroll-mt-24 py-10 sm:py-14">
+        {/* Başlık sırası h1 → h2 → (ilan kartı) h3: ekran okuyucu gezintisi için görünmez bölüm başlığı */}
+        <h2 id="sonuclar-baslik" className="sr-only">
+          Arama sonuçları
+        </h2>
         <ListingResults>
           {result.items.length > 0 ? (
             <ListingResultsSurface view={view} items={result.items} mapPoints={mapPoints} page={result.page} pageCount={result.pageCount} hrefFor={hrefFor} priorityCount={2} />

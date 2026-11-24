@@ -157,11 +157,16 @@ test('TEST-OWNER-02: Elvankent kullanıcısı başka kiracıyı (ve kiracı list
   expect((await e.from('subscriptions').select('id').eq('organization_id', S.bId!)).data ?? []).toEqual([]);
   expect((await e.from('organization_members').select('user_id').eq('organization_id', S.bId!)).data ?? []).toEqual([]);
   expect((await e.rpc('platform_organizations')).error).not.toBeNull();
-  // Herkese açık anahtarla da kiracı listesi çekilemez
-  for (const table of ['organizations', 'organization_settings', 'organization_domains']) {
-    const res = await request.get(`${url}/rest/v1/${table}?select=*`, { headers: { apikey: anonKey!, Authorization: `Bearer ${anonKey}` } });
-    expect(res.status(), table).toBe(200);
-    expect(await res.json(), table).toEqual([]);
+  // Herkese açık anahtarla da kiracı listesi çekilemez. organizations: tablo yetkisi /api/health için kalır, politika yok → boş.
+  // organization_settings / organization_domains: J (KI-56) sonrası anon tablo yetkisi de yok → doğrudan reddedilir (42501).
+  const anonGet = (table: string) => request.get(`${url}/rest/v1/${table}?select=*`, { headers: { apikey: anonKey!, Authorization: `Bearer ${anonKey}` } });
+  const orgsRes = await anonGet('organizations');
+  expect(orgsRes.status()).toBe(200);
+  expect(await orgsRes.json()).toEqual([]);
+  for (const table of ['organization_settings', 'organization_domains']) {
+    const res = await anonGet(table);
+    expect(res.status(), table).toBe(401);
+    expect((await res.json()).code, table).toBe('42501');
   }
 });
 

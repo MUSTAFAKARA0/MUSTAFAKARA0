@@ -4,25 +4,59 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 > Depo herkese açıktır. Buraya proje veya dağıtım kimliği, ortam değişkeni değeri ya da varlığı, alan adı ayarı, kayıt sayısı veya sır yazılmaz.
 
-## Güncel durum (07.11.2026, K-67)
+## Güncel durum (24.11.2026)
 
 | Konu | Durum |
 | --- | --- |
-| Production dalı | `d6113e6` (03.11, PR #6: medya düzeltmeleri, video sesi, KI-40, KI-41 Aşama 1). Vercel production READY; geri dönüş adayı `2eeb5e1` (PR #5). Önceki: `6b698e9` (PR #4), `a0f0a67` (PR #3), `74013a5`, `650fd4e` |
-| Çalışma dalı | `claude/karays-mission-control-vn8g65` (production'ın önünde: yedek izleme iş akışı ve belgeler) |
-| Canlı veritabanı | 39 migration (hepsi 02.11). `enforce_subscription_limits` = false. Bekleyen migration yok (KI-42 için hazırlanacak) |
-| Alan adı ve e-posta | karays.com siteye bağlı (K-61); e-posta Resend ile `bildirim@karays.com` (K-60) |
-| CI | Son yeşil: #203 (`e50bdab`), #198 (`f67815a`, PR #6'nın içeriği). Her push sonrası koşu bu günlüğe yazılır |
-| Yedek | Gece yedeği `uretim-yedek` ortamıyla (yalnız production dalı): #54–#58 (03–07.11) yeşil. Gerçek geri yükleme provası KI-24 #2 (O-5 öncesi yedekle) başarılı; güncel şemayla tekrar önerilir |
-| Güvenlik | Kural seti (silme/zorla gönderim kapalı), `o5a-uygula` dal sınırı ve onay, KI-40 kapandı. KI-41 Aşama 3–6 sahipte ([KI41_GUVENLIK_PLANI.md](KI41_GUVENLIK_PLANI.md)) |
-| Açık kapılar | D-11 ücretli planlar · KI-41 Aşama 3–4 · hukuk/KVKK (D-10) · müşteri alan adı (HSTS düzeltmesiyle) · OPS-02 (D-04/D-05 alt kararları) |
-| Bekleyen kararlar | [PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md): D-01…D-03, D-06…D-12, D-14, D-16…D-18; D-04/D-05 alt kararları |
+| Production dalı | `567a0dd` (22.11, PR #8: pilot ofis akışı, ilk kurulum ve tasarım kilidi, KI-45/46 uygulama tarafı, yetki belgesi no, hukuk uyum düzeltmeleri, A7 izleme). Vercel production READY; sağlık 200; çalışma zamanı hatası 0. Geri dönüş adayı `d6113e6` (PR #6) |
+| Son kod commit'i | `32bde53` (CI #239 üç iş yeşil; PR #8 ile production'da) |
+| Çalışma dalı | `claude/karays-refocus-t84k81` (production + belgeler) |
+| Canlı veritabanı | 44 migration (J bekliyor, KI-56): E, F, G, H, I 23.11'de canlıda (sahip, SQL Editor; `canli_sema_tespiti` 1–44 VAR, TUTARLILIK TAMAM; kabul testleri geçti). Rehber: [operations/pilot-migrations-sql-editor.md](operations/pilot-migrations-sql-editor.md) |
+| Alan adı ve e-posta | karays.com siteye bağlı; e-posta Resend ile. Elvankent kendi alan adına henüz bağlı değil |
+| CI | Son yeşil: #239 (`32bde53`), #237 (`8fc507a`) |
+| Yedek | Gece yedeği her gün yeşil (#54–#74, 23.11) |
+| Güvenlik | KI-41 Aşama 0–2 ✓ (`uretim-pr` 14.11); Aşama 3–4 planı hazır, Adım 0b sahipte |
+| Açık kapılar | Terhise kadar: 24.11 PR'ının birleştirilmesi + J · karar sayfası (A1…A10) · KI-41 Aşama 3–4. Terhis sonrası (23.11 kararı, avukat yok): mali müşavir/şirket, KVKK standart sözleşmeleri, VUK 595, 5651, Vercel Pro, satıcı bilgileri ([legal/TERHIS_SONRASI_EVRAK_PAKETI.md](legal/TERHIS_SONRASI_EVRAK_PAKETI.md)) |
+| Bekleyen kararlar | [PHASE2_DECISION_REGISTER.md](PHASE2_DECISION_REGISTER.md); pilot için gereken: D-10, D-11, D-18, D-19, D-20 |
 
 **Kalan işler:** [KALAN_ISLER.md](KALAN_ISLER.md) · **Sahibin adımları:** [SAHIP_ADIMLARI.md](SAHIP_ADIMLARI.md).
 
-**Sıradaki adım:** müşteri (Elvankent) alan adı — müşteri onayı ve DNS erişimi; D-11 planları.
+**Sıradaki adım:** sahip migration'ları F → E → G → H → I uygular (Claude her adımda GO/NO-GO); paralelde avukat görüşmesi.
 
 ## Girişler
+
+### 24.11.2026 (45) · Terhise kadar "kusursuz ürün": fotoğraf döndürme kilidi, kiracı izolasyonu kalanları (J), Next.js güvenlik yaması, hız ölçümü, evrak paketi
+
+- **Sahip kararı (23.11):** asteğmenlik süresince şirket, mali müşavir, ücretli plan ve gerçek ofisle sözleşme yok; avukat yok. Ürün terhise kadar kusursuzlaştırılır, resmî evrak kâğıt üstünde hazırlanır.
+- **KI-45 kapandı (kod):** döndürme/yeniden işlemede klasörde biriken eski varyant tabanları işlemeden önce silinir (yalnız 15 dk'dan eski, güncel taban dışında; güncel taban beklenmeyen biçimdeyse ya da hazır satırın tabanı yoksa hiçbir şey silinmez). Fotoğraf artık günlük süpürmeye kadar döndürülemez kalmaz. KI-38 iddiası düzeltildi (garanti C'nin tek-yazım kuralı ve FOR SHARE kilidi). Atomik 50 fotoğraf sayımı gerekçeli kabul (bayt kotası atomik). Testler: birim SB-01…04, güvenlik SL-11c (uygulamanın fonksiyonuyla; başka ofis silemez).
+- **KI-56 (J) hazır:** `20261124000001_tenant_hardening.sql` + runbook: seçki okumasında kurum koşulu, talep/randevu atamasında aktif üye zorunluluğu, anon'un ofis ayarları/alan adı tablo yetkisi kaldırıldı, mahalle ekleme politikası kaldırıldı. Güvenlik TH-01…06, runbook provası 14/14, E2E TEST-OWNER-02 yeni (daha sıkı) davranışa göre: iki tablo anon'a 401/42501.
+- **Next.js 16.4.3 → 16.4.6:** üç orta düzey duyuru (GHSA-mfr8-8qww-v76h, GHSA-vc7v-qv4w-wrv8, GHSA-7qx7-33qx-rqx2); Next derlemesi bu sürümle güvenlik uyarısı verip duruyordu. Kodumuz `use cache`/`unstable_cache` kullanmıyor; yükseltme yine de yayın için şart. `npm audit` 0.
+- **Hız ölçümü (KI-35):** yerel production derlemesinde Lighthouse (telefon, 3 ölçüm): hız 85–93, erişilebilirlik 100 (ilanlar sayfası başlık sırası düzeltildi), iyi uygulamalar 100, konsol hatası 0, CLS 0. LCP yerelde 3,5–4,1 sn (CDN yok); canlı değer PageSpeed ile.
+- **Belgeler:** [legal/TERHIS_SONRASI_EVRAK_PAKETI.md](legal/TERHIS_SONRASI_EVRAK_PAKETI.md) (müşavir soruları, sağlayıcılara İngilizce KVKK standart sözleşme talebi, Kurul bildirimi, VUK 595 özelge metni, 5651), [KARAR_SAYFASI.md](KARAR_SAYFASI.md) (A1…A10 evet/hayır), SAHIP_ADIMLARI terhis kararına göre.
+- **Bağımsız inceleme (ECC security-reviewer):** engelleyici bulgu yok; orta bulgu (güncel taban biçimi koruması) ve düşük bulgu (temizliğin işlemeyi durdurmaması) uygulandı.
+- **Yerel doğrulama:** typecheck, ESLint, birim 989+, güvenlik 248/248, runbook provası 14/14; E2E tam koşu 222 geçti / 1 (TEST-OWNER-02, beklenen J davranışı → test güncellendi).
+
+### 23.11.2026 (44) · Beş pilot migration'ı (F, E, G, H, I) canlıda (sahip, SQL Editor)
+
+- Sahip `canli_sema_tespiti.sql` çalıştırdı: 1–39 VAR, 40–44 YOK, TUTARLILIK TAMAM. Bugünün gece yedeği (#74) yeşil.
+- **F (`tenant_member_guard`, KI-46):** 01 DUR yok (çoklu üyelik yok, yabancı paylaşım görseli yok); 02 kaydı alındı; 03 iki tetikleyici; 04 yedi satır TAMAM, şema sürümü değişmedi. Kabul: ekibe ekleme daveti geldi, çıkarma çalıştı.
+- **E (`media_size_guard`, KI-42):** 01 DUR yok (C kurulu, geri alınabilir, Storage gerçek boyutu yazıyor); 02 kaydı alındı; 03 tetikleyici 1; 04 yedi satır TAMAM. Kabul: telefondan büyük ve küçük fotoğraf hazır, döndür/sil çalıştı.
+- Mission Control: `ecc-mission-control` PR #6 sahip tarafından birleştirildi; elle tetiklenen eşitleme (#86) yeşil, pano bu dalı okuyor.
+- **G (`license_no`, KI-47):** 01/02 temiz; 03 sütun var; 04 dört satır TAMAM. Kabul: numara panelde girildi, sitenin alt bilgisinde görünüyor (Elvankent'in kendi alan adı henüz bağlı değil; geçici adresten bakıldı).
+- **H (`pilot_trial_end`, KI-48):** 01/02 temiz (deneme durumunda ofis yok); 03 fonksiyon var; 04 TAMAM. Konsol alanı yalnız deneme durumundaki ofiste görünür; pilot ofiste kullanılacak.
+- **I (`org_setup`, KI-49):** 01/02 temiz (tek ofis); 03 kurulum satırı 1; 04 13 satır TAMAM/BİLGİ, HATA yok. Kabul: konsolda Elvankent "Kurulum tamamlandı (mevcut ofis — tasarım kilitli değil)"; ofis paneli kurulum ekranına yönlenmeden açılıyor.
+- Son tespit: `canli_sema_tespiti` 1–44 VAR, TUTARLILIK TAMAM. Pilot ofis açılışının veritabanı engeli kalktı; kalanlar avukat, satıcı kimliği bilgileri, Vercel kararı.
+
+### 22.11.2026 (43) · PR #8 production'da: pilot hazırlığı ve hukuk uyum düzeltmeleri
+
+- Hukuk doğrulaması: [legal/HUKUK_UYUM_2026-11-22.md](legal/HUKUK_UYUM_2026-11-22.md); EİDS bulgusu Ticaret Bakanlığı duyurusuyla teyit
+  edildi. Koda işlendi: metinler yurt dışı aktarımı doğru anlatır, sosyal ağ paylaşım düğmeleri kaldırıldı, çerez bandı eşit,
+  ilanda yetki belgesi no, özel nitelikli veri uyarısı. Pilot sözleşmesi taslağı: [legal/PILOT_SOZLESMESI_TASLAK.md](legal/PILOT_SOZLESMESI_TASLAK.md).
+- Sahip PR #8'i birleştirdi: production `567a0dd`, Vercel READY; sağlık 200, ilan sayfası ve KARAYS sayfası açılıyor, hata 0.
+
+**CI:** #239 (`32bde53`) üç iş yeşil; #237 (`8fc507a`) üç iş yeşil.
+
+**Açık (sahip):** migration'lar E–I · avukat görüşmesi · satıcı kimliği bilgileri · Vercel ücretsiz plan kararı · KI-41 Aşama 3–4.
 
 ### 07.11.2026 (42) · K-66: KI-41 Aşama 1 sonrası gece yedekleri yeşil
 

@@ -65,6 +65,7 @@ const DB_MESSAGES: Record<string, string> = {
   last_owner: 'Organizasyonun en az bir aktif sahibi olmalıdır.',
   cannot_modify_self: 'Kendi rolünüzü veya üyeliğinizi değiştiremezsiniz.',
   cross_tenant_reference: 'Seçilen kayıt bu organizasyona ait değil.',
+  assignee_not_member: 'Seçilen kişi bu ofisin aktif bir üyesi değil.',
   organization_immutable: 'Kaydın organizasyonu değiştirilemez.',
   rate_limited: 'Kısa sürede çok fazla deneme yapıldı. Lütfen birkaç dakika sonra tekrar deneyin.',
   property_deleted: 'Bu ilan çöp kutusunda. Düzenlemek için önce geri yükleyin.',

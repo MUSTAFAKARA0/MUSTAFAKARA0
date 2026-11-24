@@ -35,9 +35,12 @@ Sağ üstte doğru projenin seçili olduğunu her seferinde kontrol edin.
 | 3 | `license_no` (G) | Marka ve görünüm › Yasal bilgiler › yetki belgesi no girin → sitenin alt bilgisinde görünür | `05` girilmiş numaraları siler |
 | 4 | `pilot_trial_end` (H) | Konsol › organizasyon › Deneme / pilot bitişi alanı görünür (gerçek ofiste denemek gerekmez) | — |
 | 5 | `org_setup` (I) | Konsol › Elvankent organizasyonu › "İlk kurulum" kartında "(mevcut ofis — tasarım kilitli değil …)" yazar (I öncesi kart "henüz etkin değil" der); Elvankent paneli normal açılır, kurulum ekranına yönlenmez | Pilot ofis bundan **sonra** açılır |
+| 6 | `tenant_hardening` (J, 24.11) | Panel › Talepler › bir talebi açın › "Atanan" alanında bir ekip üyesi seçip kaydedin → kaydedilir; sitenin ana sayfası ve bir ilan sayfası açılır | Kodu içeren PR birleştirildikten **sonra**; tek başına, ayrı bir gün olabilir |
 
 Aynı gün en fazla iki migration önerilir (F + E bir gün, G + H + I başka gün; G ve H çok küçük olduğu için I ile aynı gün olabilir).
-Her gün başında 0.2'deki taze yedek yinelenir. Bitince `canli_sema_tespiti.sql` yeniden: satır 1–44 **VAR**.
+Her gün başında 0.2'deki taze yedek yinelenir. Bitince `canli_sema_tespiti.sql` yeniden: satır 1–44 **VAR** (J sonrası 1–45).
+
+> 23.11.2026: F, E, G, H, I canlıda (sahip, son kontroller TAMAM, kabul testleri geçti). Kalan: J (KI-56).
 
 ## Ne zaman durulur
 `01`'de **DUR** · `04`'te **HATA** · kabul testinde beklenmeyen hata · son 24 saatte panelden şikâyet. Durunca o migration'ın `05`'i

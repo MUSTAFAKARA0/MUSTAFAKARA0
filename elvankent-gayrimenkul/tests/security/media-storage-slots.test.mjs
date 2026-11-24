@@ -12,6 +12,7 @@
  *   SL-10  bekleme anında alınmış imzalı adres: sonlandırmadan sonra üzerine yazamaz; satır silinince yükleyemez
  *   SL-11  media (varyant): satırsız, başka kurum ve güncel (sonlanmış) tabana yazma reddedilir; yeni tabana yazılır
  *   SL-11b varyant yuvası sınırları: taban başına 6 dosya, güncel dışı en çok 2 taban, media kovasında üzerine yazma yok
+ *   SL-11c KI-45: eski tabanlar birikince ofis oturumu klasörü listeleyip 15 dk'dan eski tabanları siler; yeni taban yeniden yazılır
  *   SL-12  service_role: yeni nesne yükler (geri yükleme --apply); sonlanmış nesnenin üzerine yalnız bakım penceresinde
  *   SL-13  yardımcı fonksiyonlar anon'a kapalı; C kendini korur (B yoksa 'apply B first'); dosya sırası
  *
@@ -24,6 +25,7 @@ import { execFile } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { promisify } from 'node:util';
 import { createClient } from '@supabase/supabase-js';
+import { pruneStaleBasesIn, STRAY_BASE_MIN_AGE_MS } from '../../src/modules/media/stray-bases.ts';
 
 const execFileP = promisify(execFile);
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -361,6 +363,37 @@ describe('SL-11b varyant yuvası sınırları (K-23 güvenlik MEDIUM, DB #4)', {
     assert.ok((await uput(O.a.owner.client, 'media', `${base}/w320.webp`, 99, WEBP, true)).error, 'oturumla üzerine yazma reddedilmeli');
     assert.ok((await sput('media', `${base}/w320.webp`, 99, WEBP, true)).error, 'service_role üzerine yazma reddedilmeli');
     assert.equal(await objectSize('media', `${base}/w320.webp`), 10);
+  });
+});
+
+describe('SL-11c KI-45 eski taban temizliği (döndürme 1 gün kilitlenmez)', { skip }, () => {
+  test('iki eski taban yuvayı kapatır; ofis oturumu listeleyip eski tabanları siler; yeni taban yeniden yazılır, güncel taban korunur', async () => {
+    const row = await readyRow(O.a);
+    const b1 = rev();
+    const b2 = rev();
+    assert.ifError((await uput(O.a.owner.client, 'media', `${row.folder}/${b1}/w320.webp`, 10, WEBP)).error);
+    assert.ifError((await uput(O.a.owner.client, 'media', `${row.folder}/${b2}/w320.webp`, 10, WEBP)).error);
+    assert.ok((await uput(O.a.owner.client, 'media', `${row.folder}/${rev()}/w320.webp`, 10, WEBP)).error, 'yuva kapalı olmalı');
+
+    // Uygulamanın kullandığı fonksiyonun aynısı (src/app/actions/media.ts → pruneStaleBasesIn), ofis oturumuyla
+    const bucket = O.a.owner.client.storage.from('media');
+    assert.deepEqual(await pruneStaleBasesIn(bucket, row.folder, row.base, { ready: true, now: Date.now() }), [], 'yeni tabanlar hemen silinmemeli');
+    const later = Date.now() + STRAY_BASE_MIN_AGE_MS + 60_000;
+    const removed = await pruneStaleBasesIn(bucket, row.folder, row.base, { ready: true, now: later });
+    assert.deepEqual([...removed].sort(), [b1, b2].sort(), 'iki eski taban silinmeli, güncel taban değil');
+    assert.ifError((await uput(O.a.owner.client, 'media', `${row.folder}/${rev()}/w320.webp`, 10, WEBP)).error, 'temizlikten sonra yeni taban yazılmalı');
+    const current = await bucket.list(`${row.folder}/${row.base.slice(row.base.lastIndexOf('/') + 1)}`);
+    assert.equal(current.data?.length, 1, 'güncel taban dosyası duruyor');
+  });
+
+  test("başka ofis A'nın klasörünü listeleyemez ve silemez", async () => {
+    const row = await readyRow(O.a);
+    const other = O.b.owner.client.storage.from('media');
+    const files = `${row.base}/w320.webp`;
+    const removed = await other.remove([files]);
+    assert.equal(removed.data?.length ?? 0, 0, 'B silememeli');
+    const still = await O.a.owner.client.storage.from('media').list(row.base);
+    assert.equal(still.data?.length, 1);
   });
 });
 
