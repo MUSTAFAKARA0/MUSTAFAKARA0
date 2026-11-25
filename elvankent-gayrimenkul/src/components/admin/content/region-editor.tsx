@@ -3,7 +3,7 @@
 import { useDistrictNeighborhoods } from '@/components/admin/use-neighborhoods';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { ArrowDown, ArrowUp, ExternalLink, Plus, Save, Trash2 } from 'lucide-react';
 import { StepSection, TextAreaField, TextField } from '@/components/admin/editor/fields';
 import { MarkdownEditor } from '@/components/admin/content/markdown-editor';

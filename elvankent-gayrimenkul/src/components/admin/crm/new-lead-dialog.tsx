@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { STAFF_SENSITIVE_HINT } from '@/lib/sensitive-data-hint';
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { Plus } from 'lucide-react';
 import { NumberInput } from '@/components/ui/number-input';
 import { Button } from '@/components/ui/button';

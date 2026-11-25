@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { ImagePlus, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -106,7 +106,7 @@ export function BrandingImageField({
         }}
       />
       <div className={cn('flex flex-col gap-3', !stacked && 'sm:flex-row sm:items-start')}>
-        <div className={cn('relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-[repeating-conic-gradient(#f1efe9_0%_25%,#fff_0%_50%)] bg-[length:16px_16px]', previewClassName ?? 'h-24 w-48')}>
+        <div className={cn('relative flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-[repeating-conic-gradient(var(--surface-muted)_0%_25%,var(--surface)_0%_50%)] bg-[length:16px_16px]', previewClassName ?? 'h-24 w-48')}>
           {url ? (
             // eslint-disable-next-line @next/next/no-img-element -- depolamadaki marka görseli (boyutu değişken)
             <img src={url} alt={`${label} önizlemesi`} className="max-h-full max-w-full object-contain" />

@@ -3,7 +3,7 @@ import { ShieldCheck, Users } from 'lucide-react';
 import { AutoSaveSelect } from '@/components/panel/action-controls';
 import { MemberMenu, NewMemberDialog } from '@/components/admin/users/member-controls';
 import { MfaPolicyToggle } from '@/components/admin/mfa/mfa-policy';
-import { AdminPageHeader, EmptyPanel, Panel, TableWrap, td, th } from '@/components/panel/ui';
+import { AdminPageHeader, EmptyPanel, Panel, TableWrap, td, Th } from '@/components/panel/ui';
 import { Badge } from '@/components/ui/badge';
 import { updateMemberRole } from '@/app/actions/admin-users';
 import { formatDate, formatRelativeDate } from '@/lib/format';
@@ -37,6 +37,7 @@ export default async function UsersPage() {
     <>
       <AdminPageHeader
         title="Kullanıcılar"
+        breadcrumbs={[{ label: 'Ayarlar', href: '/admin/ayarlar' }, { label: 'Kullanıcılar' }]}
         description={`Ekibinizdeki kişiler ve rolleri · ${active} aktif kullanıcı${limit ? ` / plan sınırı ${limit}` : ''}`}
         actions={<NewMemberDialog roles={roles} disabledReason={full ? 'Planınızın kullanıcı limitine ulaşıldı.' : undefined} />}
       />
@@ -44,17 +45,17 @@ export default async function UsersPage() {
         {error ? (
           <EmptyPanel icon={Users} title="Kullanıcılar yüklenemedi" description="Sayfayı yenileyerek tekrar deneyin." />
         ) : (
-          <TableWrap className="[&_table]:min-w-[820px]">
+          <TableWrap caption="Ekip üyeleri" zebra className="[&_table]:min-w-[820px]">
             <thead className="border-b border-border bg-surface-muted/50">
               <tr>
-                <th className={th}>Kullanıcı</th>
-                <th className={th}>Rol</th>
-                <th className={th}>Durum</th>
-                <th className={th}>Son giriş</th>
-                <th className={th}>Eklenme</th>
-                <th className={th}>
+                <Th>Kullanıcı</Th>
+                <Th>Rol</Th>
+                <Th>Durum</Th>
+                <Th>Son giriş</Th>
+                <Th>Eklenme</Th>
+                <Th>
                   <span className="sr-only">İşlemler</span>
-                </th>
+                </Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

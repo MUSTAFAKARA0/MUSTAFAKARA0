@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox, Field, Input } from '@/components/ui/form-controls';

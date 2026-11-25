@@ -33,7 +33,7 @@ export const viewport: Viewport = rootViewport(PLATFORM_BRAND.headerBackground);
  */
 export default function PlatformRootLayout({ children }: LayoutProps<'/platform'>) {
   return (
-    <RootDocument>
+    <RootDocument appToaster>
       <div className={`${PLATFORM_SCOPE} ${platformFont.className} min-h-dvh bg-background text-foreground`}>
         <style href="platform-theme" precedence="high">
           {platformThemeCss(platformFont.style.fontFamily)}

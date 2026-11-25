@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from '@/components/common/intent-link';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { ArrowLeft, ArrowRight, Check, ExternalLink, ImagePlus, Laptop, LayoutTemplate, Loader2, Monitor, Smartphone, Sparkles, Tablet, X } from 'lucide-react';
 import { createSite, publishNewSite } from '@/app/actions/site-create';
 import { InitialInvitationResult } from '@/components/platform/owner-invitation';

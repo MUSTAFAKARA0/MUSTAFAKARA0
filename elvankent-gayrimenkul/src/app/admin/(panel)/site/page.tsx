@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { removeBrandingImage } from '@/app/actions/admin-settings';
 import { BrandingImageField } from '@/components/panel/branding-image-field';
 import { Panel } from '@/components/panel/ui';
+import { SectionNav } from '@/components/panel/section-nav';
 import { BrandForm } from '@/components/site-editor/brand-form';
 import { brandingUrl } from '@/modules/media/variants';
 import { brandValues } from '@/site-editor/brand-values';
@@ -22,8 +23,15 @@ export default async function Page() {
   const hint = (col: string) => (pending.includes(col) ? ' · Taslakta: yayınlanınca sitede görünür.' : '');
   return (
     <div className="space-y-6">
+      <SectionNav
+        items={[
+          { id: 'marka-identity', label: 'Firma kimliği' },
+          { id: 'marka-renkleri', label: 'Marka renkleri' },
+          { id: 'logo-ve-gorseller', label: 'Logo ve görseller' },
+        ]}
+      />
       <BrandForm groups={['identity', 'colors']} initial={brandValues(site.brand)} pendingFields={pending} />
-      <Panel title="Logo ve görseller" description="Görseller taslağa yüklenir; önizlemede hemen, sitede yayınladığınızda görünür. Eski görseller silinmez (geri alma için saklanır).">
+      <Panel id="logo-ve-gorseller" variant="form-section" title="Logo ve görseller" description="Görseller taslağa yüklenir; önizlemede hemen, sitede yayınladığınızda görünür. Eski görseller silinmez (geri alma için saklanır).">
         <div className="grid gap-6 lg:grid-cols-2">
           <BrandingImageField removeAction={removeBrandingImage} kind="logo" label="Logo" url={brandingUrl(s.logo_url)} hint={`Yatay logo önerilir. ${FORMATS}${hint('logo_url')}`} />
           <BrandingImageField

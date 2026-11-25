@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { STAFF_SENSITIVE_HINT } from '@/lib/sensitive-data-hint';
 import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { CalendarPlus, MessageSquarePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';

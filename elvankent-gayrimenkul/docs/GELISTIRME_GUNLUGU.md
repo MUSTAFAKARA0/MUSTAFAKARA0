@@ -25,12 +25,24 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 25.11.2026 (52) · Ofis paneli ve KARAY konsolu arayüz kalitesi (Aşama 3/3)
+
+- Tasarım belirteçleri (renk, gölge, durum) `globals.css`'te; panelde ham renk kodu yok (AT-01), 18 metin/zemin çifti ≥ 4,5:1 (AT-13).
+- Ortak bileşenler: sayfa başlığı + içerik yolu (breadcrumb) + durum rozeti, form bölümü, bölüm menüsü, boş süzgeç sonucu, mini grafik (sparkline), yapışkan işlem çubuğu, tablo (yapışkan başlık, yoğunluk, mobilde kart görünümü; tablo anlamı role ile korunur).
+- Pano: 4 ana gösterge kartı (son 14 gün / önceki 14 gün farkı, yeterli veri yoksa gösterilmez), Portföy ve Etkileşim şeritleri, "Henüz yeterli veri yok" durumu, sade kurulum kartı.
+- Talepler tablo hâlinde (Ad/telefon, İlan, Kaynak, Durum, Tarih) + Ara/WhatsApp hızlı işlemleri; Ayarlar ve Site yönetiminde bölüm menüsü; düzenleyicide adım ilerleme çubuğu ve yapışkan Önceki/Sonraki; kenar menüde İlanlar alt menüsü katlanır; mobilde 44 px hedefler, kaydırmalı sekme şeritleri.
+- Bildirimler (toast) yalnız panel ve konsolda yeni görünümde; hata bildirimi 8 sn. Ofis siteleri ve karays.com etkilenmez.
+- Panel/konsol sayfalarında `loading.tsx` yok: yetki yönlendirmesi ve 404 durum kodları korunur (AT-08, AV-1/AV-2).
+- İş mantığı, sunucu eylemleri, yetki ve veritabanına dokunulmadı; dışa aktarım yüzeyi testle korunur (AT-10a).
+- Bağımsız denetim: gan-evaluator (1. tur 6,0/10) + code-reviewer (1. tur 2 yüksek, 6 orta; 2. turda hepsi kapandı, onay). Dosya özeti karşılaştıran koruma testi, iş mantığı dizinlerini kalıcı dondurduğu için eklenmedi.
+- Testler: birim 1260/1260; E2E 258 geçti, 4 koşullu atlandı, 0 hata (yeni admin-visual AV-1…4 dahil).
+
 ### 25.11.2026 (51) · Ofis siteleri sayfa kalitesi (Aşama 2/3)
 
 - İlan detayı: tüm detay düzenlerinde yapışkan bölüm menüsü (Özet, Açıklama, Özellikler, Olanaklar, Konum, Benzer); temel bilgiler kutucuk; ilan no "Kopyala"; tek satırlık mobil iletişim çubuğu (form görünürken gizlenir, odaklanan alanı örtmez: scroll-padding) ve masaüstü yapışkan çubuk (satılmış/kiralanmış ilanda yok).
 - Galeri: kaydırma rAF ile, boş kare yok; nokta ve önceki/sonraki düğmeleri; tam ekranda aşağı kaydırıp kapatma, odak geri dönüşü, sakin duyurulan sayaç; yalnız görünen ve sıradaki fotoğraf yüklenir (detay LCP 3,9 → 3,2 sn).
 - Listeleme: bağlama göre boş durum ve öneriler; hazır rotalar da etkin süzgeç sayılır; "En az / En çok X ₺" etiketleri; mobil süzgeç sayfasında 44 px dokunma hedefleri.
-- Yükleme iskeletleri (kart düzenine uygun), Favoriler'de kayma yok (CLS 0); 404 davranışı korunur (Suspense sayfa içinde).
+- Yükleme iskeletleri (kart düzenine uygun), Favoriler'de kayma yok (CLS 0); 404 davranışı korunur; ilan listesi bilinçli olarak akışsız (CI zamanlaması).
 - Tutarlılık: Gece Premium rozet/kalp kontrastı, Kiralık Merkezi/Plaza Ofis kompakt satırlar ve alt bilgi kontrastı, Plaza Ofis okuma sırası.
 - Bağımsız denetim: code-reviewer (1 yüksek bulgu doğrulamada yeniden üretilmedi, test eklendi) + gan-evaluator (6,6/10) bulgularının hepsi düzeltildi.
 - Testler: birim 1245/1245; tenant-quality TQ-01…08; tasarım altın parmak izleri değişmedi.

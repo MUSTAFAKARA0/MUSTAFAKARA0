@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { setDesignFamilyEnabled } from '@/app/actions/site-builder';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/form-controls';

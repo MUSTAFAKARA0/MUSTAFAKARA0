@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
+import { Panel } from "@/components/panel/ui";
 import { Field, Input, Textarea } from "@/components/ui/form-controls";
 import { ColorInput } from "@/components/site-editor/appearance-forms";
 import { SaveBar, useSiteEditor } from "@/components/site-editor/site-actions";
@@ -127,14 +128,13 @@ export function BrandForm({
   return (
     <div className="max-w-4xl space-y-6">
       {groups.includes("colors") && (
-        <section className="rounded-2xl border border-border bg-surface p-5">
-          <h2 className="text-[15px] font-bold">Marka renkleri</h2>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Renkler sekmesinde kaynak &quot;Ofisin marka renkleri&quot;
-            seçiliyse site bu iki renkten türetilir (düğmeler, bağlantılar,
-            vurgular). Okunabilirlik için kontrast otomatik düzeltilir.
-          </p>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <Panel
+          id="marka-renkleri"
+          variant="form-section"
+          title="Marka renkleri"
+          description={'Renkler sekmesinde kaynak "Ofisin marka renkleri" seçiliyse site bu iki renkten türetilir (düğmeler, bağlantılar, vurgular). Okunabilirlik için kontrast otomatik düzeltilir.'}
+        >
+          <div className="grid gap-4 sm:grid-cols-2">
             {(
               [
                 ["primary_color", "Ana renk"],
@@ -151,20 +151,11 @@ export function BrandForm({
               </div>
             ))}
           </div>
-        </section>
+        </Panel>
       )}
       {GROUPS.filter((g) => groups.includes(g.id)).map((g) => (
-        <section
-          key={g.title}
-          className="rounded-2xl border border-border bg-surface p-5"
-        >
-          <h2 className="text-[15px] font-bold">{g.title}</h2>
-          {g.description && (
-            <p className="mt-1 text-[13px] text-muted-foreground">
-              {g.description}
-            </p>
-          )}
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <Panel key={g.title} id={`marka-${g.id}`} variant="form-section" title={g.title} description={g.description}>
+          <div className="grid gap-4 sm:grid-cols-2">
             {g.fields.map((f) => (
               <Field
                 key={f.key}
@@ -207,7 +198,7 @@ export function BrandForm({
               </Field>
             ))}
           </div>
-        </section>
+        </Panel>
       ))}
       <SaveBar
         pending={pending}

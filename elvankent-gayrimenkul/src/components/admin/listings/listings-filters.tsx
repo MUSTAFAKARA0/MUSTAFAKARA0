@@ -70,17 +70,9 @@ export function ListingsFilters() {
         {pending && <Loader2 className="absolute top-1/2 right-3.5 size-4 -translate-y-1/2 animate-spin text-muted-foreground" aria-label="Yükleniyor" />}
       </div>
       <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-        <Select aria-label="İlan türü" value={params.get('tip') ?? ''} onChange={(e) => update({ tip: e.target.value || null })} className="h-11 sm:w-36">
+        <Select aria-label="İlan türü" value={params.get('tip') ?? ''} onChange={(e) => update({ tip: e.target.value || null })} className="h-11 sm:w-40">
           <option value="">Tüm türler</option>
           {Object.entries(LISTING_TYPE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </Select>
-        <Select aria-label="Kategori" value={params.get('kategori') ?? ''} onChange={(e) => update({ kategori: e.target.value || null })} className="h-11 sm:w-40">
-          <option value="">Tüm kategoriler</option>
-          {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
             <option key={value} value={value}>
               {label}
             </option>
@@ -93,7 +85,15 @@ export function ListingsFilters() {
           <option value="90">Son 90 gün</option>
           <option value="365">Son 1 yıl</option>
         </Select>
-        <Select aria-label="Sıralama" value={params.get('sirala') ?? 'guncel'} onChange={(e) => update({ sirala: e.target.value === 'guncel' ? null : e.target.value })} className="h-11 sm:w-44">
+        <Select aria-label="Kategori" wrapperClassName="col-span-2 sm:col-span-1" value={params.get('kategori') ?? ''} onChange={(e) => update({ kategori: e.target.value || null })} className="h-11 sm:w-52">
+          <option value="">Tüm kategoriler</option>
+          {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </Select>
+        <Select aria-label="Sıralama" wrapperClassName="col-span-2 sm:col-span-1" value={params.get('sirala') ?? 'guncel'} onChange={(e) => update({ sirala: e.target.value === 'guncel' ? null : e.target.value })} className="h-11 sm:w-52">
           {SORTS.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}

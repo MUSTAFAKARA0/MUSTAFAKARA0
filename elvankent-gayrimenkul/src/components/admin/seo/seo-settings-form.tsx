@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { Save } from 'lucide-react';
 import { TextAreaField, TextField } from '@/components/admin/editor/fields';
 import { SerpPreview } from '@/components/admin/content/serp-preview';

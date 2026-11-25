@@ -10,6 +10,7 @@ import {
   Palette,
   CalendarDays,
   Check,
+  ChevronDown,
   ChevronsUpDown,
   ExternalLink,
   FolderHeart,
@@ -91,7 +92,7 @@ function SubLinks({ item, onNavigate }: { item: AdminNavItem; onNavigate?: () =>
               onClick={onNavigate}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'block rounded-lg px-2.5 py-1.5 text-[13px] transition',
+                'block rounded-lg px-2.5 py-2.5 text-[13px] transition lg:py-1.5',
                 active ? 'bg-primary-soft font-semibold text-primary-ink' : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
               )}
             >
@@ -106,6 +107,8 @@ function SubLinks({ item, onNavigate }: { item: AdminNavItem; onNavigate?: () =>
 
 function NavList({ nav, badges, onNavigate }: { nav: AdminNavSection[]; badges?: Record<string, number>; onNavigate?: () => void }) {
   const pathname = usePathname();
+  // Alt öğeler (durum süzgeçleri, ilan sekmeleriyle aynı) varsayılan kapalı; açma düğmesi ile gösterilir
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   return (
     <nav aria-label="Yönetim menüsü" className="space-y-6">
       {nav.map((section, i) => (
@@ -116,14 +119,16 @@ function NavList({ nav, badges, onNavigate }: { nav: AdminNavSection[]; badges?:
               const Icon = ICONS[item.icon];
               const active = isActive(item, pathname);
               return (
-                <li key={item.href}>
+                <li key={item.href} className="relative">
                   <Link
                     href={item.href}
                     onClick={onNavigate}
                     aria-current={active && !item.children ? 'page' : undefined}
                     className={cn(
-                      'flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] font-medium transition',
-                      active ? 'bg-surface text-foreground shadow-xs ring-1 ring-border' : 'text-foreground/75 hover:bg-surface/70 hover:text-foreground',
+                      'relative flex min-h-11 items-center gap-3 rounded-xl px-3 py-2 text-[14px] font-medium transition lg:min-h-10',
+                      active
+                        ? 'bg-surface text-foreground shadow-[var(--shadow-1)] ring-1 ring-border before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-primary'
+                        : 'text-foreground/75 hover:bg-surface/70 hover:text-foreground',
                     )}
                   >
                     <Icon className={cn('size-[18px] shrink-0', active ? 'text-primary' : 'text-muted-foreground')} aria-hidden />
@@ -134,8 +139,20 @@ function NavList({ nav, badges, onNavigate }: { nav: AdminNavSection[]; badges?:
                         <span className="sr-only"> yeni</span>
                       </span>
                     )}
+                    {item.children && item.children.length > 0 && <span className="ml-auto w-9 shrink-0" aria-hidden />}
                   </Link>
-                  {active && item.children && item.children.length > 0 && (
+                  {item.children && item.children.length > 0 && (
+                    <button
+                      type="button"
+                      aria-expanded={Boolean(expanded[item.href])}
+                      aria-label={`${item.label} alt menüsü`}
+                      onClick={() => setExpanded((e) => ({ ...e, [item.href]: !e[item.href] }))}
+                      className="absolute top-1/2 right-1 flex size-9 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-surface-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary max-lg:size-11"
+                    >
+                      <ChevronDown className={cn('size-4 transition-transform', expanded[item.href] && 'rotate-180')} aria-hidden />
+                    </button>
+                  )}
+                  {expanded[item.href] && item.children && item.children.length > 0 && (
                     <Suspense fallback={null}>
                       <SubLinks item={item} onNavigate={onNavigate} />
                     </Suspense>
@@ -274,10 +291,10 @@ export function AdminShell({ nav, org, orgs, user, siteUrl, canCreateListing, pa
       <div className="px-3 pt-4 pb-3">
         <OrgSwitcher org={org} orgs={orgs} />
       </div>
-      <div className="flex-1 overflow-y-auto px-3 pb-6">
+      <div className="scroll-fade flex-1 overflow-y-auto px-3 pb-6">
         <NavList nav={nav} badges={badges} onNavigate={onNavigate} />
       </div>
-      <div className="border-t border-border px-3 py-3">
+      <div className="border-t border-border px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <UserMenu user={user} siteUrl={siteUrl} />
         {/* Hiyerarşi: ofis, KARAY altyapısının müşterisidir (platform yönetimine erişim yoktur) */}
         <p className="mt-2 px-2 text-[11px] text-muted-foreground/80">KARAYS altyapısıyla çalışır</p>
@@ -293,21 +310,21 @@ export function AdminShell({ nav, org, orgs, user, siteUrl, canCreateListing, pa
       >
         İçeriğe geç
       </a>
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[17rem] border-r border-border bg-[#efeee9] lg:block">{sidebar()}</aside>
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[17rem] border-r border-border bg-sidebar lg:block">{sidebar()}</aside>
 
-      <header className="sticky top-0 z-20 border-b border-border bg-[#f5f4f1]/90 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-border bg-topbar/90 backdrop-blur">
         <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <button
                 type="button"
-                className="inline-flex size-10 items-center justify-center rounded-xl text-foreground transition hover:bg-surface lg:hidden"
+                className="inline-flex size-11 items-center justify-center rounded-xl text-foreground transition hover:bg-surface lg:hidden"
                 aria-label="Menüyü aç"
               >
                 <Menu className="size-6" />
               </button>
             </DialogTrigger>
-            <SheetContent side="left" title={org.name} description="Yönetim menüsü" hideHeader className="bg-[#efeee9] p-0 [&>div:nth-child(2)]:p-0">
+            <SheetContent side="left" title={org.name} description="Yönetim menüsü" hideHeader className="bg-sidebar p-0 [&>div:nth-child(2)]:p-0">
               {sidebar(() => setOpen(false))}
             </SheetContent>
           </Dialog>
@@ -333,7 +350,7 @@ export function AdminShell({ nav, org, orgs, user, siteUrl, canCreateListing, pa
             )}
             {canCreateListing && (
               <Button asChild size="sm">
-                <Link href="/admin/ilanlar/yeni">
+                <Link href="/admin/ilanlar/yeni" aria-label="Yeni ilan">
                   <Plus /> <span className="hidden sm:inline">Yeni ilan</span>
                 </Link>
               </Button>

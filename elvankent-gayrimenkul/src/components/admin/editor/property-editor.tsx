@@ -2,9 +2,11 @@
 
 import Link from '@/components/common/intent-link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, CheckCircle2, CloudOff, ExternalLink, Eye, Loader2, RefreshCw } from 'lucide-react';
+import { Breadcrumbs } from '@/components/panel/breadcrumbs';
 import { ListingStatusBadge } from '@/components/panel/ui';
+import { StickyActionBar } from '@/components/ui/form-section';
 import { MediaManager } from '@/components/admin/media/media-manager';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -241,6 +243,7 @@ export function PropertyEditor({ data, taxonomy, perms, map, initialStep, siteHo
     seo: Boolean(values.seo_description || (values.description ?? '').length >= 110),
     yayin: values.status === 'published',
   };
+  const doneCount = EDITOR_STEPS.filter((s) => complete[s.id]).length;
   const stepIndex = EDITOR_STEPS.findIndex((s) => s.id === step);
   const isPublic = ['published', 'sold', 'rented'].includes(values.status);
 
@@ -253,10 +256,8 @@ export function PropertyEditor({ data, taxonomy, perms, map, initialStep, siteHo
     <EditorContext.Provider value={ctx}>
       <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <Link href="/admin/ilanlar" className="mb-2 inline-flex text-[13px] font-medium text-muted-foreground hover:text-foreground">
-            ← İlanlar
-          </Link>
-          <h1 className="line-clamp-2 font-display text-[1.7rem] leading-tight sm:text-[2rem]">{values.title || 'Yeni ilan'}</h1>
+          <Breadcrumbs items={[{ label: 'İlanlar', href: '/admin/ilanlar' }, { label: values.reference_no || 'İlan düzenle' }]} />
+          <h1 className="line-clamp-2 font-display text-[1.7rem] leading-tight tracking-tight sm:text-[2rem]">{values.title || 'Yeni ilan'}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
             <span className="numeric font-semibold text-foreground">{values.reference_no}</span>
             <span>
@@ -287,7 +288,18 @@ export function PropertyEditor({ data, taxonomy, perms, map, initialStep, siteHo
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[14rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)]">
         <nav aria-label="İlan adımları" className="min-w-0 lg:sticky lg:top-24 lg:self-start">
-          <ol className="scrollbar-none relative -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
+          <div className="mb-3 hidden lg:block" aria-hidden>
+            <div className="flex items-baseline justify-between text-[12.5px] font-semibold text-muted-foreground">
+              <span>İlerleme</span>
+              <span className="numeric">
+                {doneCount}/{EDITOR_STEPS.length}
+              </span>
+            </div>
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-sunken">
+              <div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${(doneCount / EDITOR_STEPS.length) * 100}%` }} />
+            </div>
+          </div>
+          <ol className="tab-strip scrollbar-none relative -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
             {EDITOR_STEPS.map((s, i) => {
               const active = s.id === step;
               return (
@@ -297,8 +309,8 @@ export function PropertyEditor({ data, taxonomy, perms, map, initialStep, siteHo
                     onClick={() => goTo(s.id)}
                     aria-current={active ? 'step' : undefined}
                     className={cn(
-                      'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] font-medium transition',
-                      active ? 'bg-surface text-foreground shadow-xs ring-1 ring-border' : 'text-foreground/70 hover:bg-surface/70',
+                      'flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] font-medium transition',
+                      active ? 'bg-surface text-foreground shadow-[var(--shadow-1)] ring-1 ring-border' : 'text-foreground/70 hover:bg-surface/70',
                     )}
                   >
                     <span
@@ -319,7 +331,7 @@ export function PropertyEditor({ data, taxonomy, perms, map, initialStep, siteHo
         </nav>
 
         <div className="min-w-0">
-          <div className="rounded-2xl border border-border bg-surface p-5 shadow-xs sm:p-7">
+          <div className="rounded-2xl border border-border bg-surface p-5 shadow-[var(--shadow-1)] sm:p-7">
             <h2 className="mb-6 text-[1.15rem] font-bold">
               <span className="text-muted-foreground">{stepIndex + 1}/7 · </span>
               {EDITOR_STEPS[stepIndex].label}
@@ -337,7 +349,7 @@ export function PropertyEditor({ data, taxonomy, perms, map, initialStep, siteHo
             )}
           </div>
 
-          <div className="mt-5 flex items-center justify-between gap-3">
+          <StickyActionBar className="mt-5 justify-between">
             <Button variant="outline" disabled={stepIndex === 0} onClick={() => goTo(EDITOR_STEPS[stepIndex - 1].id)}>
               <ArrowLeft /> Önceki
             </Button>
@@ -350,7 +362,7 @@ export function PropertyEditor({ data, taxonomy, perms, map, initialStep, siteHo
                 <Link href="/admin/ilanlar">İlanlara dön</Link>
               </Button>
             )}
-          </div>
+          </StickyActionBar>
         </div>
       </div>
 

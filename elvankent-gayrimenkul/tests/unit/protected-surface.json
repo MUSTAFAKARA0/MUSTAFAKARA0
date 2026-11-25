@@ -1,0 +1,877 @@
+{
+ "src/app/actions/admin-content.ts": [
+  "PageInput",
+  "PostInput",
+  "RedirectInput",
+  "RegionInput",
+  "SeoSettingsInput",
+  "deleteRedirect",
+  "deleteRegionPage",
+  "purgePost",
+  "resetPage",
+  "savePage",
+  "savePost",
+  "saveRedirect",
+  "saveRegionPage",
+  "saveSeoSettings",
+  "setPostDeleted"
+ ],
+ "src/app/actions/admin-crm.ts": [
+  "CollectionInput",
+  "CustomerInput",
+  "ManualLeadInput",
+  "addLeadActivity",
+  "createAppointment",
+  "createManualLead",
+  "deleteCollection",
+  "saveCollection",
+  "saveCustomer",
+  "setCollectionRevoked",
+  "setCustomerDeleted",
+  "setLeadDeleted",
+  "updateAppointment",
+  "updateLead"
+ ],
+ "src/app/actions/admin-domains.ts": [
+  "addOfficeDomain",
+  "connectOfficeDomain",
+  "removeOfficeDomain",
+  "rotateOfficeDomainVerification",
+  "setPrimaryOfficeDomain",
+  "verifyOfficeDomain"
+ ],
+ "src/app/actions/admin-properties.ts": [
+  "BulkAction",
+  "BulkResult",
+  "CreatePropertyState",
+  "SaveInput",
+  "SaveResult",
+  "bulkPropertyAction",
+  "createProperty",
+  "duplicateProperty",
+  "saveProperty",
+  "setPropertyStatus"
+ ],
+ "src/app/actions/admin-settings.ts": [
+  "NotificationSettingsInput",
+  "removeBrandingImage",
+  "saveCompanySettings",
+  "saveLicenseNumber",
+  "saveNotificationSettings",
+  "saveSiteSettings",
+  "sendTestNotification",
+  "trashDemoListings"
+ ],
+ "src/app/actions/admin-site.ts": [
+  "applyOfficeDesignFamily",
+  "createOfficeSitePreviewLink",
+  "discardOfficeSiteDraft",
+  "publishOfficeSite",
+  "rollbackOfficeSite",
+  "saveOfficeSiteSection",
+  "updateOfficeSiteBrand"
+ ],
+ "src/app/actions/admin-users.ts": [
+  "CreateMemberResult",
+  "MemberInput",
+  "createMember",
+  "removeMember",
+  "resendMemberInvitation",
+  "resetMemberMfa",
+  "resetMemberPassword",
+  "setMemberStatus",
+  "updateMemberRole"
+ ],
+ "src/app/actions/auth.ts": [
+  "AuthFormState",
+  "requestPasswordReset",
+  "signIn",
+  "signOut",
+  "signOutPlatform",
+  "switchOrganization",
+  "updatePassword",
+  "updateProfileName"
+ ],
+ "src/app/actions/invitation.ts": [
+  "ActivationState",
+  "InvitationPreview",
+  "activateInvitation",
+  "inspectInvitation"
+ ],
+ "src/app/actions/karay-admin.ts": [
+  "addOrgNote",
+  "updateKarayLead",
+  "updateKarayProfile"
+ ],
+ "src/app/actions/karay.ts": [
+  "KarayLeadState",
+  "submitKarayLead"
+ ],
+ "src/app/actions/locations.ts": [
+  "getDistrictNeighborhoods"
+ ],
+ "src/app/actions/media.ts": [
+  "UploadTicket",
+  "cancelMediaUpload",
+  "createContentMediaUpload",
+  "createMediaUpload",
+  "deleteMedia",
+  "finalizeMediaUpload",
+  "listPropertyMedia",
+  "renewMediaUpload",
+  "reorderMedia",
+  "retryMediaProcessing",
+  "rotateMedia",
+  "setMediaCover",
+  "updateMediaAlt"
+ ],
+ "src/app/actions/mfa.ts": [
+  "MfaEnrollment",
+  "confirmMfaEnrollment",
+  "removeMyMfa",
+  "setRequireAdminMfa",
+  "startMfaEnrollment",
+  "verifyMfaCode"
+ ],
+ "src/app/actions/platform.ts": [
+  "PlanInput",
+  "addDomain",
+  "connectDomainAction",
+  "connectDomainManualAction",
+  "createOrganization",
+  "removeDomainAction",
+  "reopenOrgSetupAction",
+  "revokeOwnerInvitationAction",
+  "rotateDomainVerificationAction",
+  "sendOwnerInvitationAction",
+  "setOrganizationPlan",
+  "setOrganizationStatus",
+  "setOrganizationTrialEnd",
+  "setPrimaryDomainAction",
+  "updatePlan",
+  "verifyDomainAction"
+ ],
+ "src/app/actions/public.ts": [
+  "LeadFormState",
+  "getCompareDetails",
+  "getPublicCards",
+  "submitLead"
+ ],
+ "src/app/actions/setup.ts": [
+  "finishSetup",
+  "saveSetupStep"
+ ],
+ "src/app/actions/site-builder.ts": [
+  "BrandInput",
+  "applyDesignFamily",
+  "createSitePreviewLink",
+  "discardSiteDraft",
+  "publishSite",
+  "rollbackSite",
+  "saveSiteSection",
+  "setDesignFamilyEnabled",
+  "setOrgDesignFamilies",
+  "setSiteFeatures",
+  "setSiteStatus",
+  "updateSiteBrand"
+ ],
+ "src/app/actions/site-create.ts": [
+  "CreateSiteInput",
+  "createSite",
+  "publishNewSite"
+ ],
+ "src/modules/analytics/track.ts": [
+  "TrackedEvent",
+  "trackEvent"
+ ],
+ "src/modules/audit/labels.ts": [
+  "AUDIT_CATEGORIES",
+  "AuditCategory",
+  "AuditRow",
+  "auditTargetHref",
+  "describeAudit"
+ ],
+ "src/modules/audit/queries.ts": [
+  "AUDIT_PAGE_SIZE",
+  "AuditEntry",
+  "AuditFilters",
+  "listAuditLogs"
+ ],
+ "src/modules/billing/subscription-strip.ts": [
+  "EXPORT_ANCHOR",
+  "EXPORT_HREF",
+  "PAST_DUE_GRACE_DAYS",
+  "READ_ONLY_DAYS",
+  "StripState",
+  "SubscriptionRow",
+  "SubscriptionStatus",
+  "SubscriptionStrip",
+  "calendarDay",
+  "subscriptionStrip",
+  "trialDaysLeft",
+  "trialEnded"
+ ],
+ "src/modules/content/admin-queries.ts": [
+  "AdminPage",
+  "AdminPageRow",
+  "AdminPost",
+  "AdminPostRow",
+  "AdminRegion",
+  "AdminRegionRow",
+  "CONTENT_PAGE_SIZE",
+  "PostFilter",
+  "REDIRECTS_PAGE_SIZE",
+  "RedirectRow",
+  "getAdminPage",
+  "getAdminPost",
+  "getAdminRegion",
+  "listAdminPages",
+  "listAdminPosts",
+  "listAdminRegions",
+  "listRedirects",
+  "postCounts"
+ ],
+ "src/modules/content/default-pages.ts": [
+  "PAGE_DEFINITIONS",
+  "PAGE_KEYS",
+  "PageDefinition",
+  "PageKey"
+ ],
+ "src/modules/content/hours-schema.ts": [
+  "openingHoursSchema"
+ ],
+ "src/modules/content/hours.ts": [
+  "OpeningHours",
+  "WEEKDAYS",
+  "WEEKDAY_LABELS",
+  "Weekday",
+  "formatOpeningHours",
+  "openingHoursSchema",
+  "parseOpeningHours"
+ ],
+ "src/modules/content/markdown.tsx": [
+  "Markdown",
+  "MarkdownFragment",
+  "fillPlaceholders",
+  "markdownToPlainText"
+ ],
+ "src/modules/content/queries.ts": [
+  "ContentPage",
+  "POSTS_PAGE_SIZE",
+  "Post",
+  "PostSummary",
+  "RegionFaq",
+  "RegionPage",
+  "getContentPage",
+  "getPostBySlug",
+  "getPostsPage",
+  "getPublishedPosts",
+  "getRegionPageBySlug",
+  "getRegionPages",
+  "placeholderValues",
+  "readingMinutes"
+ ],
+ "src/modules/content/settings-schema.ts": [
+  "CompanySettingsInput",
+  "LicenseInput",
+  "SiteSettingsInput",
+  "companySchema",
+  "licenseSchema",
+  "siteSchema"
+ ],
+ "src/modules/crm/admin-queries.ts": [
+  "AppointmentRow",
+  "CRM_PAGE_SIZE",
+  "CollectionRow",
+  "CustomerRow",
+  "LeadActivity",
+  "LeadDetail",
+  "LeadListFilters",
+  "LeadRow",
+  "LeadSource",
+  "LeadStatus",
+  "Member",
+  "getCollection",
+  "getCustomerDetail",
+  "getLeadDetail",
+  "getMembers",
+  "getPickerOptions",
+  "leadStatusCounts",
+  "listAppointments",
+  "listCollections",
+  "listCustomers",
+  "listLeads"
+ ],
+ "src/modules/crm/constants.ts": [
+  "ACTIVITY_KIND_LABELS",
+  "APPOINTMENT_STATUS_LABELS",
+  "APPOINTMENT_STATUS_TONES",
+  "APPOINTMENT_TRANSITIONS",
+  "ActivityKind",
+  "AppointmentStatus",
+  "LEAD_INTENT_LABELS",
+  "LEAD_SOURCES",
+  "LEAD_SOURCE_LABELS",
+  "LEAD_STATUSES",
+  "LEAD_STATUS_LABELS",
+  "LEAD_STATUS_TONES",
+  "LeadIntent",
+  "LeadSource",
+  "LeadStatus",
+  "VALUATION_CONDITIONS"
+ ],
+ "src/modules/crm/validation.ts": [
+  "PublicLeadInput",
+  "appointmentTimestamp",
+  "emailField",
+  "phoneField",
+  "publicLeadSchema"
+ ],
+ "src/modules/domains/config.ts": [
+  "DomainConfig",
+  "domainConfig",
+  "domainConfigFromEnv"
+ ],
+ "src/modules/domains/dns.ts": [
+  "DnsResolver",
+  "dohResolver",
+  "getDnsResolver"
+ ],
+ "src/modules/domains/hostname.ts": [
+  "DOMAIN_INPUT_MESSAGES",
+  "DomainInputError",
+  "DomainPolicy",
+  "canonicalHostname",
+  "isUnderSuffix",
+  "parseDomainInput"
+ ],
+ "src/modules/domains/index.ts": [
+  "getDomainProvider",
+  "type DnsRecord",
+  "type DomainStatus",
+  "vercelDnsRecords"
+ ],
+ "src/modules/domains/provider.ts": [
+  "DnsRecord",
+  "DomainProvider",
+  "DomainResult",
+  "DomainStatus",
+  "createManualProvider",
+  "createVercelProvider",
+  "isApexDomain",
+  "vercelDnsRecords"
+ ],
+ "src/modules/domains/service.ts": [
+  "DnsInstruction",
+  "DomainActor",
+  "DomainStatus",
+  "DomainView",
+  "addDomain",
+  "connectDomain",
+  "listDomains",
+  "removeDomain",
+  "rotateVerification",
+  "setPrimaryDomain",
+  "verifyDomain"
+ ],
+ "src/modules/domains/verification.ts": [
+  "hashVerificationValue",
+  "newVerification",
+  "verificationValue"
+ ],
+ "src/modules/export/csv.ts": [
+  "csvCell",
+  "toCsv"
+ ],
+ "src/modules/karay/lead-status.ts": [
+  "LEAD_STATUS"
+ ],
+ "src/modules/karay/legal.ts": [
+  "KARAYS_COMPANY",
+  "KARAY_LEGAL",
+  "KarayLegalDoc",
+  "findKarayLegal"
+ ],
+ "src/modules/karay/nav.ts": [
+  "KARAY_NAV"
+ ],
+ "src/modules/karay/notify.ts": [
+  "notifyPlatformLead"
+ ],
+ "src/modules/karay/profile-schema.ts": [
+  "KarayProfileInput",
+  "companyNameSchema",
+  "profileSchema"
+ ],
+ "src/modules/karay/profile.ts": [
+  "KarayProfile",
+  "getKarayProfile"
+ ],
+ "src/modules/karay/site.ts": [
+  "karaySiteUrl"
+ ],
+ "src/modules/maps/providers.ts": [
+  "MapProvider",
+  "MapProviderId",
+  "getMapProvider",
+  "publicMapConfig"
+ ],
+ "src/modules/media/branding.ts": [
+  "BRANDING_COLUMN",
+  "BRANDING_KINDS",
+  "BRANDING_LABEL",
+  "BRANDING_MAX_INPUT_BYTES",
+  "BRANDING_PERMISSION",
+  "BrandingError",
+  "BrandingKind",
+  "BrandingOutput",
+  "isOwnBrandingPath",
+  "processBranding"
+ ],
+ "src/modules/media/finalize.ts": [
+  "FinalizeArgs",
+  "FinalizeDecision",
+  "FinalizeDecisionInput",
+  "FinalizeErrorKind",
+  "FinalizeResult",
+  "RpcErrorLike",
+  "classifyFinalizeError",
+  "decideAfterFinalizeError",
+  "finalizeMedia",
+  "isMissingRpc",
+  "markMediaFailed",
+  "parseFinalizeResult"
+ ],
+ "src/modules/media/library.ts": [
+  "LIBRARY_PAGE_SIZE",
+  "LIBRARY_SIZES",
+  "LIBRARY_TYPES",
+  "LibraryFilters",
+  "LibraryItem",
+  "LibrarySize",
+  "LibraryType",
+  "StorageUsage",
+  "libraryPropertyOptions",
+  "libraryUsage",
+  "listLibrary"
+ ],
+ "src/modules/media/photo-limit.ts": [
+  "LimitMediaRef",
+  "countOtherReadyPhotos",
+  "isValidReplaceTarget",
+  "photoLimitReached"
+ ],
+ "src/modules/media/processing.ts": [
+  "ImageContainer",
+  "InspectedImage",
+  "MediaValidationError",
+  "ProcessedImage",
+  "inspectImage",
+  "processImage",
+  "sniffImageContainer"
+ ],
+ "src/modules/media/server.ts": [
+  "ADMIN_MEDIA_FIELDS",
+  "AdminMedia",
+  "Rotation",
+  "contentOriginalPath",
+  "mediaFolder",
+  "mediaFolderOf",
+  "newPublicBase",
+  "normalizeFileName",
+  "originalPath",
+  "pathsOwnedByOrg",
+  "queueItemIsSafe",
+  "removeMediaFiles",
+  "removeMediaFolder",
+  "rotationOf",
+  "variantPaths"
+ ],
+ "src/modules/media/stray-bases.ts": [
+  "PrunableBucket",
+  "STRAY_BASE_MIN_AGE_MS",
+  "StorageEntry",
+  "candidateBases",
+  "isStaleBase",
+  "pruneStaleBasesIn"
+ ],
+ "src/modules/media/stray-sweep.ts": [
+  "STRAY_BATCH",
+  "STRAY_MAX_CALLS",
+  "STRAY_SCAN",
+  "STRAY_STALL_DAYS",
+  "STRAY_TIME_BUDGET_MS",
+  "StrayCursorRow",
+  "StrayItem",
+  "StrayRpcError",
+  "StraySweepDeps",
+  "StraySweepReport",
+  "StraySweepResult",
+  "isTimeoutError",
+  "sweepStray"
+ ],
+ "src/modules/media/variants.ts": [
+  "MEDIA_BUCKETS",
+  "MEDIA_LIMITS",
+  "MediaSource",
+  "VARIANT_NAMES",
+  "VARIANT_WIDTHS",
+  "brandingUrl",
+  "mediaSrcSet",
+  "mediaUrl",
+  "pickVariantWidth",
+  "planVariantWidths"
+ ],
+ "src/modules/monitoring/client.ts": [
+  "reportClientError"
+ ],
+ "src/modules/monitoring/report.ts": [
+  "ErrorReport",
+  "cleanPath",
+  "reportError",
+  "scrub"
+ ],
+ "src/modules/notifications/auth-emails.ts": [
+  "buildPasswordResetEmail",
+  "sendPasswordResetEmail"
+ ],
+ "src/modules/notifications/email.ts": [
+  "EmailMessage",
+  "EmailProvider",
+  "EmailResult",
+  "RETRY_DELAYS_MS",
+  "SendOptions",
+  "emailProviderName",
+  "isEmailConfigured",
+  "sendEmail",
+  "sendTransactional"
+ ],
+ "src/modules/notifications/lead.ts": [
+  "buildLeadEmail",
+  "leadNotificationRecipients",
+  "notifyNewLead"
+ ],
+ "src/modules/onboarding/setup-state.ts": [
+  "DESIGN_STEP",
+  "LAST_SETUP_STEP",
+  "LOCKED_DESIGN_KEYS",
+  "LockedDesignValues",
+  "OrgSetup",
+  "SETUP_STATES",
+  "SETUP_STATE_LABELS",
+  "SETUP_STEPS",
+  "SetupOrigin",
+  "SetupState",
+  "designLocked",
+  "familyToRecord",
+  "initialFamily",
+  "isLockedDesignChange",
+  "parseOrgSetup",
+  "resumeStep",
+  "sectionTouchesLockedKeys",
+  "setupRequired",
+  "shouldRedirectToSetup"
+ ],
+ "src/modules/platform/customer-status.ts": [
+  "CUSTOMER_STATUS_META",
+  "CustomerStatus",
+  "CustomerStatusInput",
+  "CustomerStatusKey",
+  "DOMAIN_WAIT_DAYS",
+  "OnboardingFlags",
+  "OnboardingStep",
+  "OnboardingStepKey",
+  "customerIssues",
+  "customerStatus",
+  "onboardingProgress",
+  "onboardingSteps",
+  "parseOnboardingFlags"
+ ],
+ "src/modules/platform/customers.ts": [
+  "CUSTOMER_FILTERS",
+  "CustomerRow",
+  "customerMetrics",
+  "filterCustomers",
+  "isCustomerFilter",
+  "listCustomers"
+ ],
+ "src/modules/platform/design-access.ts": [
+  "disabledFamilies",
+  "grantedFamilies",
+  "isMissingDesignAccessSchema",
+  "selectableFamilies"
+ ],
+ "src/modules/platform/invitations/email.ts": [
+  "buildInvitationEmail"
+ ],
+ "src/modules/platform/invitations/member.ts": [
+  "MemberInvitationResult",
+  "memberInvitationsAvailable",
+  "sendMemberInvitation"
+ ],
+ "src/modules/platform/invitations/service.ts": [
+  "InitialInvitation",
+  "InvitationStatus",
+  "OwnerInvitation",
+  "getOwnerInvitation",
+  "revokeOwnerInvitation",
+  "sendInitialOwnerInvitation",
+  "sendOwnerInvitation"
+ ],
+ "src/modules/platform/invitations/token.ts": [
+  "ACTIVATION_PATH",
+  "INVITATION_TOKEN_BYTES",
+  "createInvitationToken",
+  "hashInvitationToken",
+  "invitationLink",
+  "isInvitationTokenFormat"
+ ],
+ "src/modules/platform/org-schema.ts": [
+  "CreateOrgInput",
+  "RESERVED_SLUGS",
+  "hostnameSchema",
+  "orgSchema"
+ ],
+ "src/modules/platform/provisioning.ts": [
+  "OwnerAccountState",
+  "provisionOrganization"
+ ],
+ "src/modules/platform/queries.ts": [
+  "ORG_STATUS_LABELS",
+  "PlatformOrg",
+  "SUBSCRIPTION_LABELS",
+  "listPlans",
+  "listPlatformOrgs"
+ ],
+ "src/modules/platform/sites.ts": [
+  "SITE_STATUS_META",
+  "SiteAdmin",
+  "getSiteAdmin",
+  "getSiteOr404"
+ ],
+ "src/modules/properties/admin-queries.ts": [
+  "ADMIN_PAGE_SIZE",
+  "AdminListFilters",
+  "AdminListRow",
+  "AdminStatusFilter",
+  "EditorData",
+  "EditorProperty",
+  "adminStatusCounts",
+  "getEditorData",
+  "listAdminProperties"
+ ],
+ "src/modules/properties/admin.ts": [
+  "DEED_CODES",
+  "FACADE_CODES",
+  "HEATING_CODES",
+  "PARKING_CODES",
+  "PUBLISH_CHECKS",
+  "PrivateLocation",
+  "PropertyPatch",
+  "PublishCheckKey",
+  "SeoCheck",
+  "USAGE_CODES",
+  "VIEW_CODES",
+  "ZONING_CODES",
+  "featureIdsSchema",
+  "locationSchema",
+  "propertyPatchSchema",
+  "publishChecklist",
+  "seoChecklist"
+ ],
+ "src/modules/properties/constants.ts": [
+  "CATEGORY_LABELS",
+  "CATEGORY_SLUGS",
+  "CURRENCY_LABELS",
+  "CurrencyCode",
+  "DEED_STATUS_LABELS",
+  "DEED_STATUS_OPTIONS",
+  "FACADE_LABELS",
+  "FACADE_OPTIONS",
+  "FEATURE_GROUP_LABELS",
+  "FLOOR_FILTER_OPTIONS",
+  "FLOOR_LABELS",
+  "FLOOR_OPTIONS",
+  "HEATING_LABELS",
+  "HEATING_OPTIONS",
+  "LISTING_TYPE_LABELS",
+  "LISTING_TYPE_SLUGS",
+  "LISTING_TYPE_TO_SLUG",
+  "ListingStatus",
+  "ListingType",
+  "LocationPrecision",
+  "NEW_LISTING_DAYS",
+  "PAGE_SIZE",
+  "PARKING_LABELS",
+  "PARKING_OPTIONS",
+  "PRECISION_LABELS",
+  "PRICE_DROP_DAYS",
+  "PUBLIC_STATUSES",
+  "PropertyCategory",
+  "ROOM_FILTER_OPTIONS",
+  "RoomFilter",
+  "SORT_OPTIONS",
+  "STATUS_LABELS",
+  "STATUS_TRANSITIONS",
+  "SortValue",
+  "USAGE_STATUS_LABELS",
+  "USAGE_STATUS_OPTIONS",
+  "VIEW_LABELS",
+  "VIEW_OPTIONS",
+  "ZONING_LABELS",
+  "ZONING_OPTIONS",
+  "allowedTransitions",
+  "floorLabel",
+  "roomsLabel"
+ ],
+ "src/modules/properties/filters.ts": [
+  "ListingPreset",
+  "ListingQuery",
+  "asReferenceNo",
+  "canonicalListingPath",
+  "countActiveFilters",
+  "listingHref",
+  "listingQueryToParams",
+  "parseListingQuery",
+  "sanitizeSearchText"
+ ],
+ "src/modules/properties/queries.ts": [
+  "RegionCount",
+  "RegionPriceStat",
+  "SearchResult",
+  "findRedirect",
+  "getInventoryCounts",
+  "getLatestProperties",
+  "getMapPoints",
+  "getPropertiesByIds",
+  "getPropertyDetailsByIds",
+  "getPropertyForPreview",
+  "getPublicPropertyBySlug",
+  "getRegionCounts",
+  "getRegionPriceStats",
+  "getShowcaseProperties",
+  "getSimilarProperties",
+  "getSitemapProperties",
+  "searchProperties",
+  "sortImages",
+  "toCard",
+  "toDetail"
+ ],
+ "src/modules/properties/routes.ts": [
+  "ListingRoute",
+  "ResolvedRegion",
+  "regionListingPath",
+  "resolveListingRoute",
+  "resolveRegionSlug"
+ ],
+ "src/modules/properties/search-options.ts": [
+  "getSearchOptions"
+ ],
+ "src/modules/properties/search-types.ts": [
+  "SearchOptions"
+ ],
+ "src/modules/properties/taxonomy.ts": [
+  "City",
+  "District",
+  "Feature",
+  "LocationLookup",
+  "Neighborhood",
+  "PropertyType",
+  "Taxonomy",
+  "getTaxonomy",
+  "neighborhoodsOfDistrict",
+  "resolveLocation"
+ ],
+ "src/modules/properties/types.ts": [
+  "PropertyCard",
+  "PropertyDetail",
+  "PropertyImage"
+ ],
+ "src/modules/seo/jsonld.ts": [
+  "Crumb",
+  "articleJsonLd",
+  "breadcrumbJsonLd",
+  "listingJsonLd",
+  "organizationId",
+  "organizationJsonLd",
+  "websiteJsonLd"
+ ],
+ "src/modules/seo/og-image.tsx": [
+  "OG_CACHE_PUBLIC",
+  "OG_SIZE",
+  "OgBrand",
+  "imageAsJpegDataUrl",
+  "ogFonts",
+  "renderListingOgImage",
+  "renderSiteOgImage",
+  "truncate"
+ ],
+ "src/modules/seo/og.ts": [
+  "OgImageRef",
+  "baseOpenGraph",
+  "listingOgImage",
+  "siteOgImage"
+ ],
+ "src/modules/seo/redirects.ts": [
+  "followRedirect"
+ ],
+ "src/modules/seo/site-icon.ts": [
+  "siteIconParts",
+  "siteIconSvg"
+ ],
+ "src/modules/seo/site-metadata.ts": [
+  "SiteMetadataInput",
+  "buildSiteMetadata",
+  "siteDescription",
+  "siteNoindex",
+  "siteTitle"
+ ],
+ "src/platform/auth/password-policy.ts": [
+  "authPasswordErrorMessage",
+  "passwordSchema"
+ ],
+ "src/platform/auth/permissions.ts": [
+  "OrgRole",
+  "PERMISSIONS",
+  "PERMISSION_LABELS",
+  "Permission",
+  "ROLES",
+  "ROLE_DESCRIPTIONS",
+  "ROLE_LABELS",
+  "ROLE_PERMISSIONS",
+  "assignableRoles",
+  "roleHasPermission"
+ ],
+ "src/platform/auth/scope-cookie.ts": [
+  "writeSessionScopeCookie"
+ ],
+ "src/platform/auth/session.ts": [
+  "ACTIVE_ORG_COOKIE",
+  "Membership",
+  "MfaRequirement",
+  "MfaState",
+  "OrgBrand",
+  "OrgContext",
+  "PlanFeature",
+  "PlanInfo",
+  "SESSION_SCOPE_COOKIE",
+  "SessionScope",
+  "SessionUser",
+  "getMemberships",
+  "getMfaRequirement",
+  "getOrgBrand",
+  "getOrgContext",
+  "getSessionScope",
+  "getSessionUser",
+  "mfaUrl",
+  "requireFeature",
+  "requireOrgContext",
+  "requirePageContext",
+  "requirePagePermission",
+  "requirePermission",
+  "requireSuperAdmin",
+  "requireSuperAdminPage",
+  "sessionIdFromAccessToken",
+  "sessionScopeValue"
+ ]
+}
