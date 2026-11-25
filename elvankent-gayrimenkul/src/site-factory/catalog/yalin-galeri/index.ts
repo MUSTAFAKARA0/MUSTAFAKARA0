@@ -4,10 +4,10 @@ import { defineFamily } from '@/site-factory/types';
 export default defineFamily({
   id: 'yalin-galeri',
   name: 'Yalın Galeri',
-  description: 'Bol boşluk, tek yazı ailesi, editoryal kartlar ve köşesiz görseller. Hareket yok; içerik ve fotoğraf öne çıkar.',
+  description: 'Bol boşluk, tek yazı ailesi, editoryal kartlar ve köşesiz görseller. Sakin, ölçülü hareket; içerik ve fotoğraf öne çıkar.',
   audience: 'Sade ve güçlü marka görünümü isteyen ofisler',
   theme: 'yalin',
   palette: 'minimal-black',
-  style: { hero: 'editorial', cardLayout: 'editorial', footerLayout: 'minimal', motion: 'none' },
+  style: { hero: 'editorial', cardLayout: 'editorial', footerLayout: 'minimal', motion: 'subtle' },
   home: ['hero', 'latest', 'spotlight', 'regions', 'contact'],
 });

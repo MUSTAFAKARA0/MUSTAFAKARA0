@@ -23,6 +23,7 @@ import { KarayTourVideo } from '@/components/karay/karay-tour-video';
 import { HelperMascot } from '@/components/brand/helper-mascot';
 import { KaroMascot } from '@/components/brand/karo-mascot';
 import { ThemeShowcase } from '@/components/karay/theme-showcase';
+import { DesignGallery } from '@/components/karay/design-gallery';
 import { Button } from '@/components/ui/button';
 import { karaySiteUrl } from '@/modules/karay/site';
 import { getKarayProfile } from '@/modules/karay/profile';
@@ -34,6 +35,7 @@ import { THEME_LIST } from '@/theme-engine/themes';
 // /_next/static/media altından okunur (proxy'den geçmez).
 import ekranKontrolMerkezi from './_images/ekran-kontrol-merkezi.png';
 import ekranRenkler from './_images/ekran-renkler.png';
+import './karay.css';
 
 /*
  * KARAY şirket/ürün sayfası. İçerik yalnızca platformda GERÇEKTEN var olan özellikleri
@@ -109,15 +111,18 @@ export default async function KarayPage() {
       {/* 1. Hero */}
       <section aria-labelledby="karay-hero" className="relative overflow-hidden bg-[#0b1b3a] text-white">
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgb(255_255_255/0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgb(255_255_255/0.05)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_at_top,black_40%,transparent_75%)]" />
+        {/* Marka renklerinde yavaş süzülen ışık küreleri (dekoratif; hareketi azalt tercihinde durağan) */}
+        <div aria-hidden className="ky-orb ky-orb-a" />
+        <div aria-hidden className="ky-orb ky-orb-b" />
         <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pt-16 pb-20 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:pt-24 lg:pb-28">
           <div>
             <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[12.5px] font-medium text-white/80">
               <span className="size-1.5 rounded-full bg-[#1cc8b6]" aria-hidden /> Gayrimenkul Teknolojileri ve SaaS Platformu
             </p>
-            <h1 id="karay-hero" className="mt-6 text-[2.35rem] leading-[1.08] font-semibold tracking-tight text-balance sm:text-[3.1rem] lg:text-[3.5rem]">
+            <h1 id="karay-hero" className="ky-rise mt-6 text-[2.35rem] leading-[1.08] font-semibold tracking-tight text-balance sm:text-[3.1rem] lg:text-[3.5rem]">
               Emlak ofisinizin dijital altyapısı, tek platformda.
             </h1>
-            <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-white/75 sm:text-[18px]">
+            <p className="ky-rise-2 mt-6 max-w-xl text-[17px] leading-relaxed text-white/75 sm:text-[18px]">
               Web siteniz, ilanlarınız, müşteri talepleriniz ve markanız aynı panelde. Kendi alan adınızda, kendi markanızla; kod yazmadan yönetin, önce önizleyin, sonra yayınlayın.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
@@ -137,7 +142,7 @@ export default async function KarayPage() {
             </ul>
           </div>
           <figure className="relative min-w-0">
-            <div className="relative">
+            <div className="ky-float relative">
               <div className="overflow-hidden rounded-2xl border border-white/10 bg-white shadow-[0_30px_80px_-30px_rgb(0_0_0/0.6)]">
                 <div className="flex items-center gap-1.5 border-b border-[#e3e8f0] bg-[#f4f7fb] px-4 py-2.5" aria-hidden>
                   <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
@@ -186,6 +191,25 @@ export default async function KarayPage() {
         </div>
       </section>
 
+      {/* Tasarım aileleri: her ailenin gerçek önizlemesinden ana sayfa görüntüsü */}
+      <section id="tasarimlar" aria-labelledby="karay-tasarimlar" className="scroll-mt-20 overflow-hidden bg-white">
+        <div className="mx-auto max-w-7xl px-4 pt-20 sm:px-6 lg:pt-24">
+          <div className="ky-enter max-w-2xl">
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Tasarım aileleri</p>
+            <h2 id="karay-tasarimlar" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
+              Her ofise kendine özgü bir site
+            </h2>
+            <p className="mt-5 text-[16.5px] leading-relaxed text-[#33415c]">
+              Aileler yalnızca renk ve yazı değiştirmez: hero düzeni, header, kart yapısı, footer, doku ve hareket dili baştan farklıdır. Sinematik bir vitrin, dergi düzeni, harita öncelikli ya da sade bir galeri; hepsi kendi ilanlarınız ve markanızla.
+            </p>
+          </div>
+        </div>
+        <div className="mt-12 pb-20 lg:pb-24">
+          <DesignGallery />
+          <p className="mx-auto mt-2 max-w-7xl px-4 text-[12.5px] text-[#5b6b85] sm:px-6">Gerçek önizleme ekranları · örnek içerikle</p>
+        </div>
+      </section>
+
       {/* 2–4. KARAY nedir? · Problemler · Çözüm */}
       <section id="hakkimizda" aria-labelledby="karay-nedir" className="scroll-mt-20 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
@@ -228,7 +252,7 @@ export default async function KarayPage() {
       {/* 5. Özellikler */}
       <section id="ozellikler" aria-labelledby="karay-ozellikler" className="scroll-mt-20 bg-[#f4f7fb]">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
-          <div className="max-w-2xl">
+          <div className="ky-enter max-w-2xl">
             <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Platform özellikleri</p>
             <h2 id="karay-ozellikler" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
               Bir emlak ofisinin dijitalde ihtiyaç duyduğu her şey
@@ -236,8 +260,8 @@ export default async function KarayPage() {
           </div>
           <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-[#e3e8f0] bg-[#e3e8f0] sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, title, text }) => (
-              <li key={title} className="bg-white p-6 sm:p-7">
-                <span className="inline-flex size-10 items-center justify-center rounded-xl bg-[#eef3ff] text-[#2f6bff]">
+              <li key={title} className="group bg-white p-6 transition-colors hover:bg-[#fbfcff] sm:p-7">
+                <span className="inline-flex size-10 items-center justify-center rounded-xl bg-[#eef3ff] text-[#2f6bff] transition-colors duration-300 group-hover:bg-[#2f6bff] group-hover:text-white">
                   <Icon className="size-5" aria-hidden />
                 </span>
                 <h3 className="mt-4 text-[16.5px] font-semibold text-[#0b1b3a]">{title}</h3>
@@ -293,7 +317,7 @@ export default async function KarayPage() {
       {/* 17. Temalar */}
       <section id="temalar" aria-labelledby="karay-temalar" className="scroll-mt-20 border-y border-[#e3e8f0] bg-[#f4f7fb]">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
-          <div className="max-w-2xl">
+          <div className="ky-enter max-w-2xl">
             <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Temalar</p>
             <h2 id="karay-temalar" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
               {THEME_LIST.length} tema, her biri farklı bir karakter
@@ -327,7 +351,7 @@ export default async function KarayPage() {
               ['İki adımlı doğrulama', 'Yöneticiler için doğrulama uygulamasıyla (TOTP) ikinci adım; ofis bunu zorunlu kılabilir.'],
               ['İşlem kayıtları', 'Önemli işlemler (yayın, marka, kullanıcı, ayar değişikliği) kim ve ne zaman bilgisiyle kaydedilir.'],
             ].map(([t, d]) => (
-              <li key={t} className="rounded-2xl border border-[#e3e8f0] p-6">
+              <li key={t} className="ky-card rounded-2xl border border-[#e3e8f0] bg-white p-6">
                 <h3 className="text-[15.5px] font-semibold text-[#0b1b3a]">{t}</h3>
                 <p className="mt-2 text-[14.5px] leading-relaxed text-[#4a5871]">{d}</p>
               </li>
@@ -345,7 +369,7 @@ export default async function KarayPage() {
           </h2>
           <ol className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((s, i) => (
-              <li key={s.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+              <li key={s.title} className="ky-enter rounded-2xl border border-white/10 bg-white/[0.04] p-6">
                 <span className="text-[13px] font-semibold text-[#1cc8b6]">Adım {i + 1}</span>
                 <h3 className="mt-2 text-[17px] font-semibold">{s.title}</h3>
                 <p className="mt-2 text-[14.5px] leading-relaxed text-white/70">{s.text}</p>

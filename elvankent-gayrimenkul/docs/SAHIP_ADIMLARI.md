@@ -8,6 +8,7 @@
 
 | İş | Kanıt |
 | --- | --- |
+| Karar sayfası A1–A10 ve PR #10 (CSP) | 24.11: önerilerle devam; PR #10 canlıda, duman testi geçti |
 | PR #9 ve veritabanı güncellemesi J | 24.11: canlıda; J son kontrol TAMAM, site ve sağlık kontrolü sorunsuz; bekleyen migration yok |
 | Veritabanı güncellemeleri F, E, G, H, I | 23.11: SQL Editor, son kontroller TAMAM, `canli_sema_tespiti` 1–44 VAR; kabul testleri geçti (ekip daveti, büyük/küçük fotoğraf, yetki no alt bilgide, kurulum kartı, panel açılıyor) |
 | Mission Control panosu güncel dalı okuyor | 23.11: PR #6 birleştirildi, eşitleme #86 yeşil |
@@ -19,16 +20,13 @@
 | KARAYS alan adı, e-posta (Resend), Sentry bağlantısı | 02.11 |
 
 > **23.11 kararı:** avukat yok; şirket, mali müşavir, ücretli plan ve gerçek ofisle sözleşme **terhise kadar bekler**. Terhise kadar
-> yalnız 1–3 numaralı adımlar; 4–6 terhis sonrası ([legal/TERHIS_SONRASI_EVRAK_PAKETI.md](legal/TERHIS_SONRASI_EVRAK_PAKETI.md)).
-
-### 1. Karar sayfası (terhise kadar, ~15 dk)
-[KARAR_SAYFASI.md](KARAR_SAYFASI.md) — A1…A10 için "evet/hayır" yazmanız yeterli. Ücret ya da ticari işlem içeren kararlar B bölümünde, terhis sonrasına.
+> yalnız 2–3 numaralı adımlar (ikisi de isteğe bağlı); 4–6 terhis sonrası ([legal/TERHIS_SONRASI_EVRAK_PAKETI.md](legal/TERHIS_SONRASI_EVRAK_PAKETI.md)).
 
 ### 2. KI-41 Aşama 3–4: sırların ortamlara taşınması (terhise kadar, ayrı bir gün)
 Plan: [KI41_ASAMA_3_4_UYGULAMA.md](KI41_ASAMA_3_4_UYGULAMA.md). Önce Adım 0b (yönetici bypass'ını kapatma, iki ortamı production dalıyla
 sınırlama; 10 dk, risksiz), sonra anahtar yenileme.
 
-### 3. Sentry deneme olayı (isteğe bağlı, 1 dk)
+### 3. Sentry deneme olayı (isteğe bağlı, 1 dk, bilgisayardan)
 Claude'un oturumu karays.com'a istek gönderemiyor. Bilgisayarda karays.com açıkken tarayıcı konsolundan tek bir deneme hatası
 gönderilir; Sentry'de görünür ve e-posta gelir. Komutu Claude verir.
 
