@@ -10,7 +10,7 @@ import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 export function KarayTourVideo() {
   const v = PLATFORM_BRAND.video;
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#e3e8f0] bg-[#0b1b3a] shadow-[0_24px_60px_-30px_rgb(11_27_58/0.45)]">
+    <div className="ky-cinema">
       <video
         controls
         playsInline

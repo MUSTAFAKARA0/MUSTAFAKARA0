@@ -1,4 +1,5 @@
 import Image, { type StaticImageData } from 'next/image';
+import { MarqueePause } from '@/components/karay/marquee-pause';
 // Ekran görüntüleri statik import edilir (bkz. app/karay/page.tsx: /karay/ yolu proxy'de korunur, görsel
 // iyileştiricinin iç isteği orada 404 alır). Görüntüler tasarım ailelerinin GERÇEK önizlemesinden
 // (örnek içerikle, "Önizleme · örnek içerik" rozetiyle) alınmıştır; müşteri sitesi değildir.
@@ -36,8 +37,8 @@ export const GALLERY_FAMILIES: readonly { id: string; name: string; text: string
  */
 export function DesignGallery() {
   const items = GALLERY_FAMILIES;
-  const card = (f: (typeof items)[number], copy: boolean) => (
-    <li key={`${copy ? 'k-' : ''}${f.id}`} className={copy ? 'ky-copy' : undefined} aria-hidden={copy || undefined}>
+  const card = (f: (typeof items)[number], copy: boolean, index: number) => (
+    <li key={`${copy ? 'k-' : ''}${f.id}`} className={[copy ? 'ky-copy' : '', index % 2 ? 'ky-low' : ''].filter(Boolean).join(' ') || undefined} aria-hidden={copy || undefined}>
       <figure>
         <div className="ky-shot">
           <Image src={f.shot} alt={copy ? '' : `${f.name} tasarım ailesiyle örnek emlak ofisi ana sayfası`} sizes="(min-width: 640px) 352px, 78vw" loading="lazy" />
@@ -50,11 +51,14 @@ export function DesignGallery() {
     </li>
   );
   return (
-    <div className="ky-marquee" role="region" aria-label="Tasarım aileleri örnek ana sayfalar" tabIndex={0}>
-      <ul className="ky-track">
-        {items.map((f) => card(f, false))}
-        {items.map((f) => card(f, true))}
-      </ul>
+    <div className="ky-marquee-wrap">
+      <MarqueePause />
+      <div className="ky-marquee" role="region" aria-label="Tasarım aileleri örnek ana sayfalar" tabIndex={0}>
+        <ul className="ky-track">
+          {items.map((f, i) => card(f, false, i))}
+          {items.map((f, i) => card(f, true, i))}
+        </ul>
+      </div>
     </div>
   );
 }

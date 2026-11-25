@@ -1,95 +1,41 @@
-import Image from 'next/image';
+import type { CSSProperties } from 'react';
 import Link from 'next/link';
-import {
-  BarChart3,
-  Building2,
-  CheckCircle2,
-  Eye,
-  FileClock,
-  Globe,
-  Inbox,
-  LayoutTemplate,
-  Lock,
-  Palette,
-  Rocket,
-  Search,
-  ShieldCheck,
-  Smartphone,
-  Users,
-} from 'lucide-react';
+import { ArrowRight, Play, Rocket } from 'lucide-react';
 import { JsonLd } from '@/components/common/json-ld';
 import { KarayLeadForm } from '@/components/karay/karay-lead-form';
 import { KarayTourVideo } from '@/components/karay/karay-tour-video';
 import { HelperMascot } from '@/components/brand/helper-mascot';
-import { KaroMascot } from '@/components/brand/karo-mascot';
-import { ThemeShowcase } from '@/components/karay/theme-showcase';
-import { DesignGallery } from '@/components/karay/design-gallery';
+import { Bento } from '@/components/karay/bento';
+import { Compare } from '@/components/karay/compare';
+import { FAQ, PANEL_WORDS, ROLES, STEPS, FEATURES } from '@/components/karay/content';
+import { FactsBand } from '@/components/karay/facts-band';
+import { HeroStack } from '@/components/karay/hero-stack';
+import { Reveal } from '@/components/karay/reveal';
+import { RotatingWord } from '@/components/karay/rotating-word';
+import { Security } from '@/components/karay/security';
+import { ThemeStage } from '@/components/karay/theme-stage';
+import { MotionToggle } from '@/components/karay/motion-toggle';
+import { DesignGallery, GALLERY_FAMILIES } from '@/components/karay/design-gallery';
+import { Timeline } from '@/components/karay/timeline';
+import { Walkthrough } from '@/components/karay/walkthrough';
+import { Wave } from '@/components/karay/wave';
 import { Button } from '@/components/ui/button';
 import { karaySiteUrl } from '@/modules/karay/site';
 import { getKarayProfile } from '@/modules/karay/profile';
 import { PLATFORM_BRAND } from '@/platform/branding/platform-brand';
 import { parseSiteConfig } from '@/site-config/schema';
 import { THEME_LIST } from '@/theme-engine/themes';
-// Ekran görüntüleri statik import edilir: /karay/ yolu proxy'de alan adına göre korunur ve görsel
-// iyileştiricinin Host başlığı taşımayan iç isteği orada 404 alır (P3-F1). Statik görsel
-// /_next/static/media altından okunur (proxy'den geçmez).
-import ekranKontrolMerkezi from './_images/ekran-kontrol-merkezi.png';
-import ekranRenkler from './_images/ekran-renkler.png';
 import './karay.css';
 
 /*
- * KARAY şirket/ürün sayfası. İçerik yalnızca platformda GERÇEKTEN var olan özellikleri
- * anlatır; müşteri sayısı, istatistik, referans veya yorum gibi doğrulanmamış hiçbir bilgi
- * yoktur. Ekran görüntüleri platformun kendisinden (örnek bir ofisle) alınmıştır; tema
- * önizlemeleri gerçek tema motoruyla çizilir.
+ * KARAY şirket/ürün sayfası: "Canlı Vitrin" (taslaktan yayına). İçerik yalnızca platformda GERÇEKTEN var olan
+ * özellikleri anlatır (components/karay/content.ts); müşteri sayısı, istatistik, referans veya yorum gibi
+ * doğrulanmamış hiçbir bilgi yoktur. Ekran görüntüleri platformun kendisinden (örnek bir ofisle) alınmıştır; tema
+ * önizlemeleri gerçek tema motoruyla çizilir. Ekran görüntüleri statik import edilir (bkz. hero-stack.tsx):
+ * /karay/ yolu proxy'de alan adına göre korunur, görsel iyileştiricinin Host başlığı taşımayan iç isteği orada 404
+ * alır (P3-F1); statik görsel /_next/static/media altından okunur (proxy'den geçmez).
+ * Hareketler yalnızca "hareketi azalt" tercihi yokken çalışır; tercih varsa ya da JavaScript yoksa sayfa durağan ve eksiksizdir.
  */
-
-const FEATURES = [
-  { icon: LayoutTemplate, title: 'Profesyonel emlak web sitesi', text: 'Hazır sayfalar: ilanlar, bölgeler, hizmetler, değerleme talebi, blog, iletişim. Kod yazmadan yayına alınır.' },
-  { icon: Building2, title: 'İlan yönetimi', text: 'Adım adım ilan girişi, çoklu fotoğraf, taslak ve onay akışı, satıldı/kiralandı durumu, PDF broşür ve QR kod.' },
-  { icon: Users, title: 'CRM ve müşteri yönetimi', text: 'Müşteri kartları, randevular, ilan koleksiyonları ve müşteriye özel paylaşım bağlantıları.' },
-  { icon: Inbox, title: 'Talep yönetimi', text: 'Web sitesinden gelen iletişim, ilan ve değerleme talepleri tek listede; e-posta bildirimi ve durum takibi.' },
-  { icon: Palette, title: 'Marka ve tema', text: `${THEME_LIST.length} farklı tema, hazır renk paletleri, yazı tipi, logo ve header/footer ayarları. Her ofis kendi markasıyla.` },
-  { icon: Eye, title: 'Taslak → önizleme → yayın', text: 'Değişiklikler önce taslağa kaydedilir, canlı siteyi bozmadan önizlenir, tek tıkla yayınlanır; eski sürüme dönülebilir.' },
-  { icon: Search, title: 'SEO', text: 'Sayfa başlıkları, açıklamalar, paylaşım görselleri, site haritası, kanonik adresler ve yapılandırılmış veri (RealEstateAgent).' },
-  { icon: Globe, title: 'Kendi alan adınız', text: 'Site kendi alan adınızda yayınlanır; DNS adımları panelde gösterilir.' },
-  { icon: Smartphone, title: 'Mobil uyumlu', text: 'Site ve yönetim paneli telefonda uygulama gibi çalışır: menü, filtreler, formlar ve fotoğraflar mobile göre tasarlandı.' },
-  { icon: BarChart3, title: 'Ölçüm', text: 'İlan görüntülenme, favori, WhatsApp ve telefon tıklamaları ile talep kaynakları panelde; yalnızca gerçek veriler.' },
-  { icon: ShieldCheck, title: 'Güvenlik ve yalıtım', text: 'Her ofisin verisi veritabanı düzeyinde (RLS) ayrıdır; rol bazlı yetki, iki adımlı doğrulama ve işlem kayıtları.' },
-  { icon: FileClock, title: 'Sürüm geçmişi', text: 'Her yayın bir sürümdür; kim, ne zaman, hangi notla yayınladı görülür ve önceki sürüme dönülür.' },
-];
-
-const PROBLEMS = [
-  'Web sitesi bir ajansa bağlı; küçük bir değişiklik için bile beklemek gerekiyor.',
-  'İlanlar, müşteriler ve gelen talepler farklı yerlerde dağınık duruyor.',
-  'Site hazır bir şablona benziyor; ofisin kendi markasını yansıtmıyor.',
-  'Telefonda yavaş ya da kullanışsız bir site ziyaretçiyi kaybettiriyor.',
-  'Arama motorlarında görünürlük için teknik ayarlar yapılmamış.',
-];
-
-const SOLUTIONS = [
-  'Web siteniz, ilanlarınız ve müşterileriniz tek panelde.',
-  'Markanızı, temanızı ve menünüzü kendiniz yönetin; önce önizleyin, sonra yayınlayın.',
-  'Siteden gelen her talep otomatik olarak panelinize düşer.',
-  'Mobil öncelikli, hızlı ve SEO uyumlu altyapı hazır gelir.',
-  'Kendi alan adınız, kendi logonuz: sitede platformun değil, sizin markanız görünür.',
-];
-
-const STEPS = [
-  { title: 'Tanışma', text: 'Formu doldurun; ofisinizi, ilan sayınızı ve ihtiyaçlarınızı konuşalım.' },
-  { title: 'Kurulum', text: 'Ofisiniz platformda açılır; logo, renkler, tema ve iletişim bilgileriniz taslak olarak hazırlanır.' },
-  { title: 'Önizleme ve alan adı', text: 'Sitenizi yayından önce önizlersiniz; alan adınız bağlanır.' },
-  { title: 'Yayın ve yönetim', text: 'Site yayına alınır; ilanlarınızı, taleplerinizi ve müşterilerinizi kendi panelinizden yönetirsiniz.' },
-];
-
-const FAQ = [
-  { q: 'KARAYS bir emlak ofisi mi?', a: 'Hayır. KARAYS, emlak ofislerine yazılım altyapısı sağlayan bir gayrimenkul teknolojileri şirketidir. İlan sahibi değildir, emlak hizmeti vermez.' },
-  { q: 'Sitemde KARAYS adı görünür mü?', a: 'Hayır. Siteniz kendi logonuz, adınız, renkleriniz ve alan adınızla yayınlanır (beyaz etiket).' },
-  { q: 'Mevcut alan adımı kullanabilir miyim?', a: 'Evet. Alan adınız platforma bağlanır; gerekli DNS kayıtları panelde adım adım gösterilir.' },
-  { q: 'Verilerim diğer ofislerle karışır mı?', a: 'Hayır. Her ofisin ilanları, müşterileri ve talepleri veritabanı düzeyinde ayrıdır; bir ofis başka bir ofisin verisini göremez.' },
-  { q: 'Sitenin görünümünü kendim değiştirebilir miyim?', a: `Evet. ${THEME_LIST.length} tema, renk paletleri, yazı tipleri, menü, ana sayfa bölümleri ve footer ayarlanabilir. Değişiklikler önce taslakta önizlenir, sonra yayınlanır.` },
-  { q: 'Fiyatlandırma nasıl?', a: 'Ofisinizin ihtiyaçlarına göre bilgi veriyoruz. "Bilgi al" formunu doldurmanız yeterli.' },
-];
 
 export default async function KarayPage() {
   const profile = await getKarayProfile();
@@ -108,291 +54,197 @@ export default async function KarayPage() {
   return (
     <>
       <JsonLd data={jsonLd} />
-      {/* 1. Hero */}
-      <section aria-labelledby="karay-hero" className="relative overflow-hidden bg-[#0b1b3a] text-white">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgb(255_255_255/0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgb(255_255_255/0.05)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_at_top,black_40%,transparent_75%)]" />
-        {/* Marka renklerinde yavaş süzülen ışık küreleri (dekoratif; hareketi azalt tercihinde durağan) */}
-        <div aria-hidden className="ky-orb ky-orb-a" />
-        <div aria-hidden className="ky-orb ky-orb-b" />
-        <div className="relative mx-auto grid max-w-7xl gap-12 px-4 pt-16 pb-20 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:pt-24 lg:pb-28">
-          <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[12.5px] font-medium text-white/80">
-              <span className="size-1.5 rounded-full bg-[#1cc8b6]" aria-hidden /> Gayrimenkul Teknolojileri ve SaaS Platformu
+      {/* Saklanan "animasyonları durdur" tercihi hidratasyondan ÖNCE uygulanır (CSP script-src 'unsafe-inline' izin verir): hareket bir an bile oynamaz */}
+      <script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('ky:motion')==='off'){document.documentElement.setAttribute('data-motion','off');var s=document.querySelector('.karay-site');if(s)s.setAttribute('data-motion','off')}}catch(e){}" }} />
+      {/* 1. Hero: koyu sahne, katmanlı cihaz yığını */}
+      <section aria-labelledby="karay-hero" className="ky-hero ky-dark relative bg-[#0b1b3a] text-white [overflow:clip]">
+        <div aria-hidden className="ky-mesh" />
+        <div aria-hidden className="ky-grid ky-grid-fade" />
+        <div aria-hidden className="ky-noise" />
+        <div className="relative mx-auto grid max-w-7xl gap-16 px-4 pt-14 pb-36 sm:px-6 lg:grid-cols-[1.02fr_1fr] lg:items-center lg:gap-10 lg:pt-24 lg:pb-48">
+          <div className="min-w-0">
+            <p className="ky-rise inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/[0.06] px-3.5 py-1.5 text-[12.5px] font-medium text-white/85">
+              <span className="ky-pulse-dot" aria-hidden /> Gayrimenkul Teknolojileri ve SaaS Platformu
             </p>
-            <h1 id="karay-hero" className="ky-rise mt-6 text-[2.35rem] leading-[1.08] font-semibold tracking-tight text-balance sm:text-[3.1rem] lg:text-[3.5rem]">
+            <h1 id="karay-hero" className="mt-6 text-[2.5rem] leading-[1.05] font-[650] tracking-[-0.025em] text-balance sm:text-[3.4rem] md:text-[clamp(2.5rem,5.2vw,4.5rem)] lg:text-[clamp(2.75rem,4.6vw,4.1rem)]">
               Emlak ofisinizin dijital altyapısı, tek platformda.
             </h1>
-            <p className="ky-rise-2 mt-6 max-w-xl text-[17px] leading-relaxed text-white/75 sm:text-[18px]">
+            <p className="ky-rise mt-6 max-w-xl text-[17px] leading-relaxed text-white/80 sm:text-[18px]" style={{ '--ky-d': '180ms' } as CSSProperties}>
               Web siteniz, ilanlarınız, müşteri talepleriniz ve markanız aynı panelde. Kendi alan adınızda, kendi markanızla; kod yazmadan yönetin, önce önizleyin, sonra yayınlayın.
             </p>
-            <div className="mt-9 flex flex-wrap gap-3">
-              <Button asChild size="lg" className="bg-white text-[#0b1b3a] hover:bg-white/90">
-                <a href="#demo">Demo talep et</a>
+            <div className="ky-rise mt-9 flex flex-wrap items-center gap-x-6 gap-y-4" style={{ '--ky-d': '300ms' } as CSSProperties}>
+              <Button asChild size="lg" className="ky-cta bg-white text-[#0b1b3a] hover:bg-white">
+                <a href="#demo">
+                  Demo talep et <ArrowRight className="ky-arrow" aria-hidden />
+                </a>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-white/30 bg-transparent text-white hover:border-white/60 hover:bg-white/10">
+              <Button asChild size="lg" variant="outline" className="border-white/35 bg-transparent text-white hover:border-white/70 hover:bg-white/10">
                 <a href="#platform">Platformu keşfet</a>
               </Button>
+              <a href="#tanitim" className="ky-textlink">
+                <span className="ky-play" aria-hidden>
+                  <Play className="size-3.5 fill-current" />
+                </span>
+                Tanıtım videosunu izle
+              </a>
             </div>
-            <ul className="mt-10 grid gap-2 text-[14.5px] text-white/75 sm:grid-cols-2">
+            <RotatingWord lead="Hepsi tek panelde:" words={PANEL_WORDS} className="mt-9" />
+            <ul className="mt-8 grid gap-2.5 text-[14.5px] text-white/80 sm:grid-cols-2">
               {['Kendi alan adınız ve markanız', `${THEME_LIST.length} profesyonel tema`, 'İlan, CRM ve talep yönetimi', 'Taslak → önizleme → yayın'].map((t) => (
-                <li key={t} className="flex items-center gap-2">
-                  <CheckCircle2 className="size-4 shrink-0 text-[#1cc8b6]" aria-hidden /> {t}
+                <li key={t} className="flex items-center gap-2.5">
+                  <svg aria-hidden focusable="false" viewBox="0 0 24 24" className="ky-checksvg ky-checksvg-sm">
+                    <circle cx="12" cy="12" r="10.5" />
+                    <path className="ky-check" pathLength={1} d="M7 12.5l3.4 3.4L17 9" />
+                  </svg>
+                  {t}
                 </li>
               ))}
             </ul>
+            <MotionToggle label="Hareketi durdur" className="mt-3 -ml-1" />
           </div>
-          <figure className="relative min-w-0">
-            <div className="ky-float relative">
-              <div className="overflow-hidden rounded-2xl border border-white/10 bg-white shadow-[0_30px_80px_-30px_rgb(0_0_0/0.6)]">
-                <div className="flex items-center gap-1.5 border-b border-[#e3e8f0] bg-[#f4f7fb] px-4 py-2.5" aria-hidden>
-                  <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
-                  <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
-                  <span className="size-2.5 rounded-full bg-[#dfe5ee]" />
-                  <span className="ml-3 truncate text-[11.5px] text-[#5b6b85]">{PLATFORM_BRAND.name} · Site Kontrol Merkezi</span>
-                </div>
-                <Image
-                  src={ekranKontrolMerkezi}
-                  alt={`${PLATFORM_BRAND.name} Site Kontrol Merkezi: bir emlak ofisi sitesinin tasarım aileleri, canlı ve taslak durumu`}
-                  sizes="(min-width: 1024px) 600px, 100vw"
-                  priority
-                  className="h-auto w-full"
-                />
-              </div>
-              {/* KARO ziyaretçiyi karşılar: ekran görüntüsünün sol alt köşesinde (dekoratif). Sola taşması sayfa kenar boşluğunu
-                  (16 / 24 px) ve geniş ekranda sütun aralığını (48 px) aşmaz: hero overflow-hidden, KARO kırpılmamalı (KARAY-21) */}
-              <KaroMascot
-                width={168}
-                sizes="(min-width: 1024px) 168px, (min-width: 640px) 128px, 92px"
-                loading="eager"
-                className="absolute -bottom-5 -left-3 h-auto w-[92px] sm:-left-5 sm:w-[128px] lg:-bottom-8 lg:-left-12 lg:w-[168px]"
-              />
-            </div>
-            <figcaption className="mt-3 text-right text-[12.5px] text-white/55 lg:text-center">Gerçek ekran görüntüsü · örnek ofis verisiyle</figcaption>
-          </figure>
+          <HeroStack />
         </div>
+        <Wave fill="#f4f7fb" />
       </section>
 
+      {/* 2. Dürüst rakamlar: yalnızca içerik dizilerinin uzunlukları */}
+      <div className="relative z-10 flow-root bg-[#f4f7fb] pb-4">
+        <FactsBand
+          items={[
+            { value: THEME_LIST.length, label: 'tema', note: 'Gerçek tema motoruyla çizilen önizleme' },
+            { value: GALLERY_FAMILIES.length, label: 'tasarım ailesi', note: 'Düzen, header ve kart yapısı baştan farklı' },
+            { value: STEPS.length, label: 'adımda yayın', note: 'Tanışmadan canlı siteye' },
+            { value: ROLES.length, label: 'yetki rolü', note: ROLES.join(', ') },
+          ]}
+        />
+      </div>
+
       {/* Tanıtım videosu: gerçek ürün, örnek verilerle (~1 dk) */}
-      <section id="tanitim" aria-labelledby="karay-tanitim" className="scroll-mt-20 border-b border-[#e3e8f0] bg-[#f4f7fb]">
-        <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:py-20">
-          <div className="max-w-2xl">
+      <section id="tanitim" aria-labelledby="karay-tanitim" className="ky-dots relative scroll-mt-20 bg-[#f4f7fb]">
+        <div className="relative mx-auto max-w-5xl px-4 py-16 sm:px-6 lg:py-24">
+          <Reveal className="max-w-2xl">
             <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Tanıtım videosu</p>
-            <h2 id="karay-tanitim" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
+            <h2 id="karay-tanitim" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem] lg:text-[3rem] lg:leading-[1.08]">
               Platformu 1 dakikada görün
             </h2>
             <p className="mt-4 text-[16.5px] leading-relaxed text-[#33415c]">
               Platform konsolu, ofis paneli, ilan ekleme, telefonda ofis sitesi ve temalar. Sessiz izlenebilir: ekran yazıları ve Türkçe altyazı var.
             </p>
-          </div>
-          <figure className="mt-10 min-w-0">
+          </Reveal>
+          <figure className="ky-cinema-wrap mt-10 min-w-0">
             <KarayTourVideo />
-            <figcaption className="mt-3 text-center text-[12.5px] text-[#5b6b85]">Gerçek ürün ekranları · örnek (demo) ofis verisiyle</figcaption>
+            <figcaption className="mt-4 text-center text-[12.5px] text-[#4a5871]">Gerçek ürün ekranları · örnek (demo) ofis verisiyle</figcaption>
           </figure>
-        </div>
-      </section>
-
-      {/* Tasarım aileleri: her ailenin gerçek önizlemesinden ana sayfa görüntüsü */}
-      <section id="tasarimlar" aria-labelledby="karay-tasarimlar" className="scroll-mt-20 overflow-hidden bg-white">
-        <div className="mx-auto max-w-7xl px-4 pt-20 sm:px-6 lg:pt-24">
-          <div className="ky-enter max-w-2xl">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Tasarım aileleri</p>
-            <h2 id="karay-tasarimlar" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
-              Her ofise kendine özgü bir site
-            </h2>
-            <p className="mt-5 text-[16.5px] leading-relaxed text-[#33415c]">
-              Aileler yalnızca renk ve yazı değiştirmez: hero düzeni, header, kart yapısı, footer, doku ve hareket dili baştan farklıdır. Sinematik bir vitrin, dergi düzeni, harita öncelikli ya da sade bir galeri; hepsi kendi ilanlarınız ve markanızla.
-            </p>
-          </div>
-        </div>
-        <div className="mt-12 pb-20 lg:pb-24">
-          <DesignGallery />
-          <p className="mx-auto mt-2 max-w-7xl px-4 text-[12.5px] text-[#5b6b85] sm:px-6">Gerçek önizleme ekranları · örnek içerikle</p>
         </div>
       </section>
 
       {/* 2–4. KARAY nedir? · Problemler · Çözüm */}
       <section id="hakkimizda" aria-labelledby="karay-nedir" className="scroll-mt-20 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
-          <div className="max-w-3xl">
+          <Reveal className="max-w-3xl">
             <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">{PLATFORM_BRAND.name} nedir?</p>
-            <h2 id="karay-nedir" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
+            <h2 id="karay-nedir" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem] lg:text-[3rem] lg:leading-[1.08]">
               Emlak ofisleri için geliştirilen bir gayrimenkul teknolojileri platformu
             </h2>
             <p className="mt-5 text-[17px] leading-relaxed text-[#33415c]">
               {PLATFORM_BRAND.name} bir emlak ofisi değildir; emlak ofislerine yazılım altyapısı sağlar. Her ofis platformda kendi markasıyla, kendi alan adında, kendi web sitesini ve iş süreçlerini yönetir. Ofislerin verileri birbirinden tamamen ayrıdır.
             </p>
-          </div>
-          <div className="mt-14 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-[#e3e8f0] bg-[#f8fafc] p-7 sm:p-9">
-              <h3 className="text-[18px] font-semibold text-[#0b1b3a]">Emlak ofislerinin sık karşılaştığı sorunlar</h3>
-              <ul className="mt-5 space-y-3.5">
-                {PROBLEMS.map((p) => (
-                  <li key={p} className="flex gap-3 text-[15px] leading-relaxed text-[#33415c]">
-                    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-[#9aa8c0]" aria-hidden />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="rounded-2xl bg-[#0b1b3a] p-7 text-white sm:p-9">
-              <h3 className="text-[18px] font-semibold">{PLATFORM_BRAND.name} ile</h3>
-              <ul className="mt-5 space-y-3.5">
-                {SOLUTIONS.map((s) => (
-                  <li key={s} className="flex gap-3 text-[15px] leading-relaxed text-white/85">
-                    <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-[#1cc8b6]" aria-hidden />
-                    {s}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          </Reveal>
+          <Compare />
         </div>
       </section>
 
       {/* 5. Özellikler */}
-      <section id="ozellikler" aria-labelledby="karay-ozellikler" className="scroll-mt-20 bg-[#f4f7fb]">
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
-          <div className="ky-enter max-w-2xl">
+      <section id="ozellikler" aria-labelledby="karay-ozellikler" className="ky-dots relative scroll-mt-20 bg-[#f4f7fb]">
+        <div className="relative mx-auto max-w-7xl px-4 pt-20 pb-28 sm:px-6 lg:pt-28 lg:pb-36">
+          <Reveal className="max-w-2xl">
             <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Platform özellikleri</p>
-            <h2 id="karay-ozellikler" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
+            <h2 id="karay-ozellikler" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem] lg:text-[3rem] lg:leading-[1.08]">
               Bir emlak ofisinin dijitalde ihtiyaç duyduğu her şey
             </h2>
-          </div>
-          <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-[#e3e8f0] bg-[#e3e8f0] sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map(({ icon: Icon, title, text }) => (
-              <li key={title} className="group bg-white p-6 transition-colors hover:bg-[#fbfcff] sm:p-7">
-                <span className="inline-flex size-10 items-center justify-center rounded-xl bg-[#eef3ff] text-[#2f6bff] transition-colors duration-300 group-hover:bg-[#2f6bff] group-hover:text-white">
-                  <Icon className="size-5" aria-hidden />
-                </span>
-                <h3 className="mt-4 text-[16.5px] font-semibold text-[#0b1b3a]">{title}</h3>
-                <p className="mt-2 text-[14.5px] leading-relaxed text-[#4a5871]">{text}</p>
-              </li>
-            ))}
-          </ul>
+            <p className="mt-4 text-[16.5px] leading-relaxed text-[#33415c]">{FEATURES.length} özellik, tek panelde.</p>
+          </Reveal>
+          <Bento />
         </div>
       </section>
 
-      {/* 6–11, 16. Platform: Site Kontrol Merkezi ve yayın akışı */}
-      <section id="platform" aria-labelledby="karay-platform" className="scroll-mt-20 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-14 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:py-28">
-          <div>
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Site Kontrol Merkezi</p>
-            <h2 id="karay-platform" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
-              Web sitenizi tek panelden yönetin
+      {/* 6–11, 16. Platform: Site Kontrol Merkezi ve yayın akışı (sticky anlatım) */}
+      <Walkthrough />
+
+      {/* Tasarım aileleri: her ailenin gerçek önizlemesinden ana sayfa görüntüsü */}
+      <section id="tasarimlar" aria-labelledby="karay-tasarimlar" className="relative scroll-mt-20 overflow-hidden bg-white">
+        <div className="mx-auto max-w-7xl px-4 pt-16 sm:px-6 lg:pt-20">
+          <Reveal className="max-w-2xl">
+            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Tasarım aileleri</p>
+            <h2 id="karay-tasarimlar" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem] lg:text-[3rem] lg:leading-[1.08]">
+              Her ofise kendine özgü bir site
             </h2>
             <p className="mt-5 text-[16.5px] leading-relaxed text-[#33415c]">
-              Marka, tema, renkler, yazı tipi, header, ana sayfa bölümleri, sayfalar, menü, footer, SEO, alan adı ve özellikler aynı ekranda. Canlı siteyi ve taslağı her an ayrı ayrı görürsünüz.
+              Aileler yalnızca renk ve yazı değiştirmez: hero düzeni, header, kart yapısı, footer, doku ve hareket dili baştan farklıdır. Sinematik bir vitrin, dergi düzeni, harita öncelikli ya da sade bir galeri; hepsi kendi ilanlarınız ve markanızla.
             </p>
-            <ol className="mt-8 space-y-4">
-              {[
-                ['Taslağa kaydedin', 'Değişiklikler önce taslağa yazılır; ziyaretçileriniz hiçbir şey görmez.'],
-                ['Önizleyin', 'Taslağı kendi alan adınızda, yalnızca sizin tarayıcınızda görün.'],
-                ['Yayınlayın', 'Tek tıkla canlıya alın; her yayın yeni bir sürümdür.'],
-                ['Gerekirse geri alın', 'Geçmiş sekmesinden önceki sürüme dönün.'],
-              ].map(([t, d], i) => (
-                <li key={t} className="flex gap-4">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#0b1b3a] text-[13px] font-semibold text-white">{i + 1}</span>
-                  <span>
-                    <span className="block text-[15.5px] font-semibold text-[#0b1b3a]">{t}</span>
-                    <span className="block text-[14.5px] text-[#4a5871]">{d}</span>
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </div>
-          <figure className="min-w-0">
-            <div className="overflow-hidden rounded-2xl border border-[#e3e8f0] shadow-[0_24px_60px_-30px_rgb(11_27_58/0.35)]">
-              <Image
-                src={ekranRenkler}
-                alt="Site Kontrol Merkezi Renkler sekmesi: hazır paletler ve gerçek tema motoruyla canlı önizleme"
-                sizes="(min-width: 1024px) 640px, 100vw"
-                className="h-auto w-full"
-              />
-            </div>
-            <figcaption className="mt-3 text-center text-[12.5px] text-[#5b6b85]">Renkler sekmesi ve canlı önizleme · gerçek ekran görüntüsü</figcaption>
-          </figure>
+          </Reveal>
+        </div>
+        <div className="mt-12 pb-24 lg:pb-32">
+          <DesignGallery />
+          <p className="mx-auto mt-2 max-w-7xl px-4 text-[12.5px] text-[#4a5871] sm:px-6">Gerçek önizleme ekranları · örnek içerikle</p>
         </div>
       </section>
 
-      {/* 17. Temalar */}
-      <section id="temalar" aria-labelledby="karay-temalar" className="scroll-mt-20 border-y border-[#e3e8f0] bg-[#f4f7fb]">
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
-          <div className="ky-enter max-w-2xl">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">Temalar</p>
-            <h2 id="karay-temalar" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
+      {/* 17. Temalar: koyu sahne */}
+      <section id="temalar" aria-labelledby="karay-temalar" className="ky-dark relative scroll-mt-20 bg-[#0b1b3a] text-white [overflow-x:clip]">
+        <Wave fill="#ffffff" position="top" />
+        <div aria-hidden className="ky-mesh ky-mesh-soft" />
+        <div aria-hidden className="ky-noise" />
+        <div className="relative mx-auto max-w-7xl px-4 pt-28 pb-28 sm:px-6 lg:pt-36 lg:pb-36">
+          <Reveal className="max-w-2xl">
+            <p className="ky-eyebrow-dark">Temalar</p>
+            <h2 id="karay-temalar" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight sm:text-[2.4rem] lg:text-[3rem] lg:leading-[1.08]">
               {THEME_LIST.length} tema, her biri farklı bir karakter
             </h2>
-            <p className="mt-5 text-[16.5px] leading-relaxed text-[#33415c]">
+            <p className="mt-5 text-[16.5px] leading-relaxed text-white/80">
               Temalar yalnızca renk değildir: yazı tipi, köşeler, kartlar, header, ana sayfa düzeni, düğmeler ve görsel işleme değişir. Önizleme, emlak sitelerinin kullandığı gerçek tema motoruyla çizilir.
             </p>
-          </div>
+          </Reveal>
           <div className="mt-12">
-            <ThemeShowcase baseConfig={parseSiteConfig({})} />
+            <ThemeStage baseConfig={parseSiteConfig({})} />
           </div>
         </div>
+        <Wave fill="#f4f7fb" />
       </section>
 
       {/* 15. Güvenlik */}
-      <section aria-labelledby="karay-guvenlik" className="bg-white">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.2fr] lg:py-24">
-          <div>
-            <span className="inline-flex size-12 items-center justify-center rounded-2xl bg-[#0b1b3a] text-white">
-              <Lock className="size-6" aria-hidden />
-            </span>
-            <h2 id="karay-guvenlik" className="mt-5 text-[1.75rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.1rem]">
-              Her ofisin verisi kendine ait
-            </h2>
-            <p className="mt-4 text-[16px] leading-relaxed text-[#33415c]">Çok kiracılı (multi-tenant) mimaride yalıtım yalnızca ekranda değil, veritabanı düzeyinde uygulanır.</p>
-          </div>
-          <ul className="grid gap-4 sm:grid-cols-2">
-            {[
-              ['Veritabanı düzeyinde yalıtım', 'Satır düzeyi güvenlik (RLS): bir ofis başka bir ofisin ilanını, müşterisini veya talebini okuyamaz.'],
-              ['Rol bazlı yetki', 'Sahip, yönetici, danışman, editör ve izleyici rolleri; her işlem sunucuda yetkiyle kontrol edilir.'],
-              ['İki adımlı doğrulama', 'Yöneticiler için doğrulama uygulamasıyla (TOTP) ikinci adım; ofis bunu zorunlu kılabilir.'],
-              ['İşlem kayıtları', 'Önemli işlemler (yayın, marka, kullanıcı, ayar değişikliği) kim ve ne zaman bilgisiyle kaydedilir.'],
-            ].map(([t, d]) => (
-              <li key={t} className="ky-card rounded-2xl border border-[#e3e8f0] bg-white p-6">
-                <h3 className="text-[15.5px] font-semibold text-[#0b1b3a]">{t}</h3>
-                <p className="mt-2 text-[14.5px] leading-relaxed text-[#4a5871]">{d}</p>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+      <Security />
 
       {/* 18. Nasıl çalışır? */}
-      <section id="nasil-calisir" aria-labelledby="karay-nasil" className="scroll-mt-20 bg-[#0b1b3a] text-white">
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-24">
+      <section id="nasil-calisir" aria-labelledby="karay-nasil" className="ky-dark relative scroll-mt-20 bg-[#0b1b3a] text-white [overflow-x:clip]">
+        <Wave fill="#f4f7fb" position="top" />
+        <div aria-hidden className="ky-grid ky-grid-fade" />
+        <div aria-hidden className="ky-noise" />
+        <div className="relative mx-auto max-w-7xl px-4 pt-28 pb-28 sm:px-6 lg:pt-36 lg:pb-36">
           <p className="text-[13px] font-semibold tracking-[0.14em] text-[#1cc8b6] uppercase">Nasıl çalışır?</p>
-          <h2 id="karay-nasil" className="mt-3 max-w-2xl text-[1.9rem] leading-tight font-semibold tracking-tight sm:text-[2.4rem]">
+          <h2 id="karay-nasil" className="mt-3 max-w-2xl text-[1.9rem] leading-tight font-semibold tracking-tight sm:text-[2.4rem] lg:text-[3rem] lg:leading-[1.08]">
             Tanışmadan yayına dört adım
           </h2>
-          <ol className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((s, i) => (
-              <li key={s.title} className="ky-enter rounded-2xl border border-white/10 bg-white/[0.04] p-6">
-                <span className="text-[13px] font-semibold text-[#1cc8b6]">Adım {i + 1}</span>
-                <h3 className="mt-2 text-[17px] font-semibold">{s.title}</h3>
-                <p className="mt-2 text-[14.5px] leading-relaxed text-white/70">{s.text}</p>
-              </li>
-            ))}
-          </ol>
-          <div className="mt-12 flex flex-wrap gap-3">
-            <Button asChild size="lg" className="bg-white text-[#0b1b3a] hover:bg-white/90">
+          <Timeline />
+          <div className="mt-14 flex flex-wrap gap-3">
+            <Button asChild size="lg" className="ky-cta bg-white text-[#0b1b3a] hover:bg-white">
               <a href="#demo">
                 <Rocket /> Demo talep et
               </a>
             </Button>
           </div>
         </div>
+        <Wave fill="#ffffff" />
       </section>
 
       {/* 20. İletişim */}
-      <section id="iletisim" aria-labelledby="karay-iletisim" className="scroll-mt-20 bg-white">
+      <section id="iletisim" aria-labelledby="karay-iletisim" className="ky-contact relative scroll-mt-20 bg-white">
         <span id="demo" className="block scroll-mt-20" aria-hidden />
-        <div className="mx-auto grid max-w-7xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:py-28">
-          <div>
+        <div aria-hidden className="ky-contact-mesh" />
+        <div className="relative mx-auto grid max-w-7xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:py-28">
+          <Reveal className="min-w-0">
             <p className="text-[13px] font-semibold tracking-[0.14em] text-[#265fe8] uppercase">İletişim</p>
-            <h2 id="karay-iletisim" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem]">
+            <h2 id="karay-iletisim" className="mt-3 text-[1.9rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.4rem] lg:text-[3rem] lg:leading-[1.08]">
               Ofisiniz için konuşalım
             </h2>
             <p className="mt-5 text-[16.5px] leading-relaxed text-[#33415c]">
@@ -430,25 +282,25 @@ export default async function KarayPage() {
             )}
             {/* Yardımcı maskot: bu bölümün gerçek destek kanalının (iletişim formu) görsel yüzü; dekoratif */}
             <HelperMascot width={144} sizes="(min-width: 1024px) 144px, (min-width: 640px) 112px, 96px" className="mt-10 h-auto w-24 sm:w-28 lg:w-36" />
-          </div>
-          <div className="rounded-2xl border border-[#e3e8f0] bg-[#f8fafc] p-6 sm:p-8">
+          </Reveal>
+          <div className="ky-form-card min-w-0 p-6 sm:p-8">
             <KarayLeadForm />
           </div>
         </div>
       </section>
 
       {/* 21. SSS */}
-      <section aria-labelledby="karay-sss" className="border-t border-[#e3e8f0] bg-[#f4f7fb]">
-        <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6 lg:py-24">
+      <section aria-labelledby="karay-sss" className="relative bg-[#f4f7fb]">
+        <div className="mx-auto max-w-3xl px-4 pt-20 pb-32 sm:px-6 lg:pt-24 lg:pb-40">
           <h2 id="karay-sss" className="text-[1.75rem] leading-tight font-semibold tracking-tight text-[#0b1b3a] sm:text-[2.1rem]">
             Sık sorulan sorular
           </h2>
-          <div className="mt-8 divide-y divide-[#e3e8f0] rounded-2xl border border-[#e3e8f0] bg-white">
+          <div className="ky-faq mt-8 divide-y divide-[#e3e8f0] rounded-2xl border border-[#e3e8f0] bg-white shadow-[var(--ky-shadow-1)]">
             {FAQ.map((f) => (
               <details key={f.q} className="group px-5 py-4 sm:px-6">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[15.5px] font-semibold text-[#0b1b3a] marker:hidden">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-[15.5px] font-semibold text-[#0b1b3a] marker:hidden">
                   {f.q}
-                  <span aria-hidden className="text-[#5b6b85] transition group-open:rotate-45">
+                  <span aria-hidden className="ky-plus">
                     +
                   </span>
                 </summary>
@@ -463,6 +315,7 @@ export default async function KarayPage() {
             </Link>
           </p>
         </div>
+        <Wave fill="#0b1b3a" />
       </section>
     </>
   );
