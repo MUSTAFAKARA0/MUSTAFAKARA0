@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { CheckCircle2, Circle, Copy, ExternalLink, Eye, FileText, Heart, Phone, QrCode, Star, TrendingDown } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { WhatsAppIcon } from '@/components/common/brand-icons';
 import { MediaImage } from '@/components/common/media-image';
 import { Badge } from '@/components/ui/badge';
@@ -37,11 +37,11 @@ export function StepSeo({ siteHost }: { siteHost: string }) {
     <div className="space-y-8">
       <StepSection title="Arama sonucu önizlemesi" description="Google gibi arama motorlarında yaklaşık bu şekilde görünür (kesin görünümü arama motoru belirler).">
         <div className="rounded-2xl border border-border bg-surface p-5">
-          <p className="truncate text-[13px] text-[#4d5156]">
+          <p className="truncate text-[13px] text-serp-muted">
             {siteHost} › ilan › {values.slug}
           </p>
-          <p className="mt-1 line-clamp-1 text-[19px] leading-snug text-[#1a0dab]">{shownTitle}</p>
-          <p className="mt-1 line-clamp-2 text-[13.5px] leading-relaxed text-[#4d5156]">{shownDescription || 'Açıklama eklendiğinde burada görünür.'}</p>
+          <p className="mt-1 line-clamp-1 text-[19px] leading-snug text-serp-title">{shownTitle}</p>
+          <p className="mt-1 line-clamp-2 text-[13.5px] leading-relaxed text-serp-muted">{shownDescription || 'Açıklama eklendiğinde burada görünür.'}</p>
         </div>
       </StepSection>
 

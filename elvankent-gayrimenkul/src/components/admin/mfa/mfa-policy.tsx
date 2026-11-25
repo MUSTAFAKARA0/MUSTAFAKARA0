@@ -3,7 +3,7 @@
 import Link from '@/components/common/intent-link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { Switch } from '@/components/ui/form-controls';
 import { setRequireAdminMfa } from '@/app/actions/mfa';
 

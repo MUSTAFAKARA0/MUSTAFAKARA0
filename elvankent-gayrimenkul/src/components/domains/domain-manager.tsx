@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { CheckCircle2, Copy, ExternalLink, Eye, EyeOff, Globe, Link2, Plus, RefreshCw, ShieldCheck, Star, Trash2 } from 'lucide-react';
 import { ActionButton } from '@/components/panel/action-controls';
 import { Badge } from '@/components/ui/badge';

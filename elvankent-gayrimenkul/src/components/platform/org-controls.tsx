@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import { Field, Input, Select } from '@/components/ui/form-controls';
 import { createOrganization, setOrganizationPlan, setOrganizationTrialEnd } from '@/app/actions/platform';

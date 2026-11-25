@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Search, Users } from 'lucide-react';
-import { AdminPageHeader, EmptyPanel, Panel, TableWrap, td, th } from '@/components/panel/ui';
+import { AdminPageHeader, EmptyPanel, Panel, TableWrap, td, Th } from '@/components/panel/ui';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/form-controls';
 import { formatDate, formatRelativeDate } from '@/lib/format';
@@ -35,13 +35,13 @@ export default async function PlatformUsersPage({ searchParams }: PageProps<'/pl
         ) : users.length === 0 ? (
           <EmptyPanel icon={Users} title="Kullanıcı bulunamadı" />
         ) : (
-          <TableWrap className="[&_table]:min-w-[860px]">
+          <TableWrap caption="Tüm kullanıcılar" zebra className="[&_table]:min-w-[860px]">
             <thead className="border-b border-border bg-surface-muted/50">
               <tr>
-                <th className={th}>Kullanıcı</th>
-                <th className={th}>Üyelikler</th>
-                <th className={th}>Son giriş</th>
-                <th className={th}>Kayıt</th>
+                <Th>Kullanıcı</Th>
+                <Th>Üyelikler</Th>
+                <Th>Son giriş</Th>
+                <Th>Kayıt</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

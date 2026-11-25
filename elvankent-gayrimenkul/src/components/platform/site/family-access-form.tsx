@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { KeyRound } from 'lucide-react';
 import { setOrgDesignFamilies } from '@/app/actions/site-builder';
 import { Badge } from '@/components/ui/badge';

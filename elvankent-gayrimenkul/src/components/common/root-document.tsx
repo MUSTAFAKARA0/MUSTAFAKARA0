@@ -1,4 +1,5 @@
 import { Toaster } from 'sonner';
+import { AppToaster } from '@/components/ui/toaster';
 import { DemoNotice } from '@/components/common/demo-notice';
 import { VercelInsights } from '@/components/common/vercel-insights';
 
@@ -9,8 +10,9 @@ import { VercelInsights } from '@/components/common/vercel-insights';
  *
  *   fontClassName  <html> üzerindeki yazı tipi değişken sınıfları (tokenlar :root'ta çözülür)
  *   demoNotice     demo ortamı şeridi (KARAY sayfasında yok: örnek veri içermez)
+ *   appToaster     yalnızca panel (admin/platform) yüzeylerinde AppToaster; diğer yüzeyler önceki Toaster'ı korur
  */
-export function RootDocument({ children, fontClassName, demoNotice = true }: { children: React.ReactNode; fontClassName?: string; demoNotice?: boolean }) {
+export function RootDocument({ children, fontClassName, demoNotice = true, appToaster = false }: { children: React.ReactNode; fontClassName?: string; demoNotice?: boolean; appToaster?: boolean }) {
   return (
     <html lang="tr" data-scroll-behavior="smooth" className={fontClassName}>
       <body className="min-h-dvh">
@@ -18,7 +20,7 @@ export function RootDocument({ children, fontClassName, demoNotice = true }: { c
         {children}
         {/* Vercel Speed Insights / Analytics yalnızca Vercel ortamında (VERCEL=1) */}
         {process.env.VERCEL === '1' && <VercelInsights />}
-        <Toaster position="top-center" richColors closeButton toastOptions={{ classNames: { toast: 'font-sans rounded-xl' } }} />
+        {appToaster ? <AppToaster /> : <Toaster position="top-center" richColors closeButton toastOptions={{ classNames: { toast: 'font-sans rounded-xl' } }} />}
       </body>
     </html>
   );

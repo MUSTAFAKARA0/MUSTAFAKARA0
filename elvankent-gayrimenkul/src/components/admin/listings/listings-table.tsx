@@ -3,7 +3,7 @@
 import Link from '@/components/common/intent-link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import {
   Archive,
   ArchiveRestore,
@@ -21,7 +21,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { ListingStatusBadge } from '@/components/panel/ui';
+import { ListingStatusBadge, Th } from '@/components/panel/ui';
 import { MediaImage } from '@/components/common/media-image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -84,7 +84,7 @@ function RowMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={`${row.title} için işlemler`}>
+        <Button variant="ghost" size="icon-sm" className="max-md:size-11" aria-label={`${row.title} için işlemler`}>
           <MoreHorizontal />
         </Button>
       </DropdownMenuTrigger>
@@ -205,34 +205,35 @@ export function ListingsTable({ rows, trash, perms }: { rows: AdminListRow[]; tr
     <>
       {/* Masaüstü tablo */}
       <div className={cn('hidden md:block', pending && 'opacity-60 transition-opacity')}>
-        <table className="w-full border-collapse text-left text-[14px]">
+        <table className="data-table w-full border-collapse text-left text-[14px]">
+          <caption className="sr-only">İlan listesi</caption>
           <thead>
-            <tr className="border-b border-border">
-              <th className="w-10 px-4 py-3">
+            <tr className="border-b border-border bg-surface-muted/50">
+              <th scope="col" className="w-12 px-4 py-3">
                 {bulkActions.length > 0 && (
                   <input
                     type="checkbox"
                     aria-label="Sayfadaki tüm ilanları seç"
                     checked={allSelected}
                     onChange={() => setSelected(allSelected ? new Set() : new Set(rows.map((r) => r.id)))}
-                    className="size-[18px] cursor-pointer rounded-[5px] accent-[var(--primary)]"
+                    className="size-6 cursor-pointer rounded-[6px] accent-[var(--primary)]"
                   />
                 )}
               </th>
-              <th className="px-2 py-3 text-[12px] font-bold tracking-wide text-muted-foreground uppercase">İlan</th>
-              <th className="px-3 py-3 text-[12px] font-bold tracking-wide text-muted-foreground uppercase">Durum</th>
-              <th className="px-3 py-3 text-right text-[12px] font-bold tracking-wide text-muted-foreground uppercase">Fiyat</th>
-              <th className="hidden px-3 py-3 text-[12px] font-bold tracking-wide text-muted-foreground uppercase xl:table-cell">Konum</th>
-              <th className="hidden px-3 py-3 text-[12px] font-bold tracking-wide text-muted-foreground uppercase lg:table-cell">Etkileşim</th>
-              <th className="px-3 py-3 text-[12px] font-bold tracking-wide text-muted-foreground uppercase">{trash ? 'Silinme' : 'Güncelleme'}</th>
-              <th className="w-12 px-3 py-3">
+              <Th className="px-2">İlan</Th>
+              <Th className="px-3">Durum</Th>
+              <Th className="px-3 text-right">Fiyat</Th>
+              <Th className="hidden px-3 xl:table-cell">Konum</Th>
+              <Th className="hidden px-3 lg:table-cell">Etkileşim</Th>
+              <Th className="px-3">{trash ? 'Silinme' : 'Güncelleme'}</Th>
+              <th scope="col" className="w-12 px-3 py-3">
                 <span className="sr-only">İşlemler</span>
               </th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.id} className={cn('border-b border-border last:border-0 hover:bg-surface-muted/50', selected.has(row.id) && 'bg-primary-soft/40')}>
+              <tr key={row.id} className={cn('border-b border-border last:border-0 hover:bg-surface-muted/60', selected.has(row.id) && 'bg-primary-soft/50 shadow-[inset_3px_0_0_var(--primary)]')}>
                 <td className="px-4 py-3">
                   {bulkActions.length > 0 && (
                     <input
@@ -240,7 +241,7 @@ export function ListingsTable({ rows, trash, perms }: { rows: AdminListRow[]; tr
                       aria-label={`${row.title} seç`}
                       checked={selected.has(row.id)}
                       onChange={() => toggle(row.id)}
-                      className="size-[18px] cursor-pointer rounded-[5px] accent-[var(--primary)]"
+                      className="size-6 cursor-pointer rounded-[6px] accent-[var(--primary)]"
                     />
                   )}
                 </td>
@@ -306,7 +307,7 @@ export function ListingsTable({ rows, trash, perms }: { rows: AdminListRow[]; tr
                 aria-label={`${row.title} seç`}
                 checked={selected.has(row.id)}
                 onChange={() => toggle(row.id)}
-                className="mt-1 size-5 shrink-0 cursor-pointer accent-[var(--primary)]"
+                className="mt-1 size-6 shrink-0 cursor-pointer accent-[var(--primary)]"
               />
             )}
             <Thumb row={row} />
@@ -334,7 +335,7 @@ export function ListingsTable({ rows, trash, perms }: { rows: AdminListRow[]; tr
 
       {/* Toplu işlem çubuğu */}
       {selected.size > 0 && (
-        <div className="fixed inset-x-3 bottom-3 z-30 mx-auto flex max-w-3xl flex-wrap items-center gap-2 rounded-2xl bg-surface-inverse p-2.5 pl-4 text-white shadow-lg sm:inset-x-6 lg:left-[calc(17rem+1.5rem)]">
+        <div role="region" aria-label="Toplu işlemler" className="bulk-bar fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-3xl flex-wrap items-center gap-2 rounded-2xl bg-surface-inverse p-2.5 pl-4 text-white shadow-[var(--shadow-3)] sm:inset-x-6 lg:left-[calc(17rem+1.5rem)]">
           <span className="mr-auto text-sm font-semibold">{selected.size} ilan seçildi</span>
           {bulkActions.map((action) => {
             const Icon = { publish: Rocket, archive: Archive, feature: Star, unfeature: StarOff, delete: Trash2, restore: ArchiveRestore, purge: Trash2 }[action];

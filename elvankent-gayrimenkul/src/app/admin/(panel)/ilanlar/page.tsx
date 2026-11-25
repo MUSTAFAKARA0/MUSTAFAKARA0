@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { Building2, Plus, Trash2 } from 'lucide-react';
 import { ListingsFilters } from '@/components/admin/listings/listings-filters';
 import { ListingsTable } from '@/components/admin/listings/listings-table';
+import { EmptyFiltered } from '@/components/panel/empty-filtered';
 import { AdminPageHeader, EmptyPanel } from '@/components/panel/ui';
 import { Pagination } from '@/components/common/pagination';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,7 @@ export default async function ListingsPage({ searchParams }: PageProps<'/admin/i
 
   const [{ rows, total, pageCount }, counts] = await Promise.all([listAdminProperties(ctx, filters), adminStatusCounts(ctx)]);
   const trash = status === 'cop';
+  const filtersActive = Boolean(filters.q || listingType || category || days || filters.minPrice || filters.maxPrice);
   const visibleTabs = TABS.filter((t) => t.value !== 'cop' || ctx.can('properties.delete') || counts.cop > 0);
 
   const hrefFor = (page: number) => {
@@ -67,19 +69,11 @@ export default async function ListingsPage({ searchParams }: PageProps<'/admin/i
     <>
       <AdminPageHeader
         title="İlanlar"
-        description={`${formatNumber(counts.all)} ilan · ${formatNumber(counts.published)} yayında`}
-        actions={
-          ctx.can('properties.create') && (
-            <Button asChild>
-              <Link href="/admin/ilanlar/yeni">
-                <Plus /> Yeni ilan
-              </Link>
-            </Button>
-          )
-        }
+        breadcrumbs={[{ label: 'Ofis paneli', href: '/admin' }, { label: 'İlanlar' }]}
+        description={`${formatNumber(counts.all)} ilan · ${formatNumber(counts.published)} yayında${filtersActive ? ` · ${formatNumber(total)} sonuç` : ''}`}
       />
 
-      <nav aria-label="İlan durumu" className="scrollbar-none relative -mx-4 mb-5 flex gap-1 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+      <nav aria-label="İlan durumu" className="tab-strip scrollbar-none relative -mx-4 mb-5 flex gap-1 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         {visibleTabs.map((tab) => {
           const active = tab.value === status;
           return (
@@ -88,7 +82,7 @@ export default async function ListingsPage({ searchParams }: PageProps<'/admin/i
               href={tab.value === 'all' ? '/admin/ilanlar' : `/admin/ilanlar?durum=${tab.value}`}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'inline-flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-[13.5px] font-semibold transition',
+                'inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-3.5 py-2 text-[13.5px] font-semibold transition sm:min-h-10',
                 active ? 'bg-surface-inverse text-white' : 'text-muted-foreground hover:bg-surface hover:text-foreground',
               )}
             >
@@ -100,7 +94,7 @@ export default async function ListingsPage({ searchParams }: PageProps<'/admin/i
         })}
       </nav>
 
-      <div className="rounded-2xl border border-border bg-surface shadow-xs">
+      <div className="rounded-2xl border border-border bg-surface shadow-[var(--shadow-1)]">
         <div className="border-b border-border p-4 sm:p-5">
           <Suspense fallback={<div className="h-11" />}>
             <ListingsFilters />
@@ -111,7 +105,9 @@ export default async function ListingsPage({ searchParams }: PageProps<'/admin/i
             Çöp kutusundaki ilanlar sitede görünmez. Geri yükleyebilir veya kalıcı olarak silebilirsiniz.
           </p>
         )}
-        {rows.length === 0 ? (
+        {rows.length === 0 && filtersActive && !trash ? (
+          <EmptyFiltered clearHref={status === 'all' ? '/admin/ilanlar' : `/admin/ilanlar?durum=${status}`} title="Bu filtrelere uygun ilan yok" />
+        ) : rows.length === 0 ? (
           <EmptyPanel
             icon={trash ? Trash2 : Building2}
             title={trash ? 'Çöp kutusu boş' : total === 0 && status === 'all' && !filters.q ? 'Henüz ilan eklenmemiş' : 'Bu filtrelere uygun ilan yok'}

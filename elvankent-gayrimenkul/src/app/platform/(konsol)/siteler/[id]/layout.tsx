@@ -1,6 +1,6 @@
+import { AdminPageHeader } from '@/components/panel/ui';
 import { notFound } from 'next/navigation';
 import { ExternalLink, Globe } from 'lucide-react';
-import Link from '@/components/common/intent-link';
 import { DiscardDraftButton, PreviewButton, PublishButton, SiteEditorProvider } from '@/components/site-editor/site-actions';
 import { SiteStatusCards } from '@/components/site-editor/site-status';
 import { SiteTabs } from '@/components/site-editor/site-tabs';
@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import { publicEnv } from '@/lib/env';
 import { formatRelativeDate } from '@/lib/format';
 import { isUuid } from '@/lib/utils';
-import { brandingUrl } from '@/modules/media/variants';
 import { ORG_STATUS_LABELS } from '@/modules/platform/queries';
 import { getSiteAdmin, SITE_STATUS_META } from '@/modules/platform/sites';
 import { requireSuperAdminPage } from '@/platform/auth/session';
@@ -64,55 +63,44 @@ export default async function SiteControlLayout({ children, params }: LayoutProp
   const orgStatus = ORG_STATUS_LABELS[site.org.status];
   const domain = site.primaryDomain ?? (site.org.isDefault ? new URL(publicEnv.siteUrl).host : null);
   const siteUrl = domain ? (site.primaryDomain ? `https://${domain}` : publicEnv.siteUrl) : null;
-  const logo = brandingUrl(site.brand.logo_url);
   const pending = [...new Set(site.pendingSections.map((k) => SECTION_TAB[k]).filter(Boolean))];
   const pendingLabels = pending.map((t) => TAB_LABEL[t]).filter(Boolean);
   return (
     <>
-      <nav aria-label="Konum" className="mb-3 text-[13px] text-muted-foreground">
-        <Link href="/platform/siteler" className="hover:text-foreground">
-          Web Siteleri
-        </Link>
-        <span aria-hidden> › </span>
-        <span className="text-foreground">{site.org.name}</span>
-      </nav>
-      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="flex min-w-0 items-center gap-4">
-          <div className="hidden size-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-border bg-surface sm:flex">
-            {logo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logo} alt="" className="max-h-10 max-w-12 object-contain" />
-            ) : (
-              <span className="text-lg font-semibold text-muted-foreground">{site.org.name.slice(0, 1)}</span>
+      <AdminPageHeader
+        title={site.org.name}
+        breadcrumbs={[{ label: 'Web Siteleri', href: '/platform/siteler' }, { label: site.org.name }]}
+        status={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            {site.org.status !== 'active' && orgStatus ? <Badge variant={orgStatus.tone} size="lg">{orgStatus.label}</Badge> : <Badge variant={status.tone} size="lg">● {status.label}</Badge>}
+            {site.hasUnpublishedChanges && <Badge variant="info" size="lg">Yayınlanmamış değişiklik</Badge>}
+          </span>
+        }
+        description={
+          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+            {domain && (
+              <span className="inline-flex items-center gap-1">
+                <Globe className="size-3.5" aria-hidden /> {domain}
+              </span>
             )}
+            <span>{site.version > 0 ? `Sürüm ${site.version}${site.publishedAt ? ` · ${formatRelativeDate(site.publishedAt)}` : ''}` : 'Varsayılan görünüm'}</span>
+          </span>
+        }
+        actions={
+          <div className="flex flex-wrap gap-2">
+            {siteUrl && site.org.status === 'active' && (
+              <Button asChild variant="outline" size="sm">
+                <a href={siteUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink /> Siteyi gör
+                </a>
+              </Button>
+            )}
+            {site.org.status === 'active' && <PreviewButton action={createSitePreviewLink.bind(null, site.org.id)} />}
+            {site.hasUnpublishedChanges && <DiscardDraftButton action={discardSiteDraft.bind(null, site.org.id)} />}
+            <PublishButton action={publishSite.bind(null, site.org.id)} disabled={!site.hasUnpublishedChanges} />
           </div>
-          <div className="min-w-0">
-            <h1 className="truncate text-[1.6rem] leading-tight font-semibold text-foreground sm:text-[1.9rem]">{site.org.name}</h1>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
-              {site.org.status !== 'active' && orgStatus ? <Badge variant={orgStatus.tone}>{orgStatus.label}</Badge> : <Badge variant={status.tone}>● {status.label}</Badge>}
-              {site.hasUnpublishedChanges && <Badge variant="info">Yayınlanmamış değişiklik</Badge>}
-              {domain && (
-                <span className="inline-flex items-center gap-1">
-                  <Globe className="size-3.5" aria-hidden /> {domain}
-                </span>
-              )}
-              <span>{site.version > 0 ? `Sürüm ${site.version}${site.publishedAt ? ` · ${formatRelativeDate(site.publishedAt)}` : ''}` : 'Varsayılan görünüm'}</span>
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {siteUrl && site.org.status === 'active' && (
-            <Button asChild variant="outline" size="sm">
-              <a href={siteUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink /> Siteyi gör
-              </a>
-            </Button>
-          )}
-          {site.org.status === 'active' && <PreviewButton action={createSitePreviewLink.bind(null, site.org.id)} />}
-          {site.hasUnpublishedChanges && <DiscardDraftButton action={discardSiteDraft.bind(null, site.org.id)} />}
-          <PublishButton action={publishSite.bind(null, site.org.id)} disabled={!site.hasUnpublishedChanges} />
-        </div>
-      </div>
+        }
+      />
       <SiteStatusCards
         live={site.status === 'active' && site.org.status === 'active'}
         version={site.version}

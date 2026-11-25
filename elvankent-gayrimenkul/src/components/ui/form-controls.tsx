@@ -13,9 +13,9 @@ export function Textarea({ className, ...props }: React.TextareaHTMLAttributes<H
   return <textarea className={cn(fieldBase, 'min-h-28 py-3 leading-relaxed', className)} {...props} />;
 }
 
-export function Select({ className, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select({ className, wrapperClassName, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { wrapperClassName?: string }) {
   return (
-    <div className="relative">
+    <div className={cn('relative', wrapperClassName)}>
       <select className={cn(fieldBase, 'h-11 appearance-none pr-10', className)} {...props}>
         {children}
       </select>

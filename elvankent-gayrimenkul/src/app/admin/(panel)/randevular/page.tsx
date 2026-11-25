@@ -51,17 +51,18 @@ export default async function AppointmentsPage({ searchParams }: PageProps<'/adm
     <>
       <AdminPageHeader
         title="Randevular"
+        breadcrumbs={[{ label: 'Ofis paneli', href: '/admin' }, { label: 'Randevular' }]}
         description="Web sitesinden gelen gösterim talepleri ve ekibinizin oluşturduğu randevular."
         actions={canManage && <NewAppointmentDialog customers={picker.customers} properties={picker.properties} members={members} triggerLabel="Yeni randevu" triggerVariant="primary" />}
       />
-      <nav aria-label="Randevu görünümü" className="mb-5 flex gap-1">
+      <nav aria-label="Randevu görünümü" className="tab-strip scrollbar-none mb-5 flex gap-1 overflow-x-auto">
         {VIEWS.map((v) => (
           <Link
             key={v.value}
             href={v.value === 'upcoming' ? '/admin/randevular' : `/admin/randevular?gorunum=${v.value}`}
             aria-current={v.value === view ? 'page' : undefined}
             className={cn(
-              'rounded-xl px-3.5 py-2 text-[13.5px] font-semibold transition',
+              'inline-flex min-h-11 shrink-0 items-center rounded-xl px-3.5 py-2 text-[13.5px] font-semibold transition sm:min-h-10',
               v.value === view ? 'bg-surface-inverse text-white' : 'text-muted-foreground hover:bg-surface hover:text-foreground',
             )}
           >
@@ -77,7 +78,7 @@ export default async function AppointmentsPage({ searchParams }: PageProps<'/adm
       ) : (
         <div className="space-y-6">
           {[...groups.entries()].map(([key, items]) => (
-            <section key={key} aria-label={dayLabel.format(new Date(items[0].scheduledAt))} className="rounded-2xl border border-border bg-surface shadow-xs">
+            <section key={key} aria-label={dayLabel.format(new Date(items[0].scheduledAt))} className="rounded-2xl border border-border bg-surface shadow-[var(--shadow-1)]">
               <h2 className="border-b border-border px-5 py-3 text-[14px] font-bold sm:px-6">
                 {dayLabel.format(new Date(items[0].scheduledAt))} <span className="font-medium text-muted-foreground">· {formatWeekday(items[0].scheduledAt)}</span>
               </h2>

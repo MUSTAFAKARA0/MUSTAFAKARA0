@@ -38,6 +38,17 @@
   --muted-foreground: #5a605d;
   --inverse-foreground: #f4f2ee;
   --border: #e6e2da;
+  /* Panel (admin/platform) yüzey tokenları: karanlık tema için hazır, yalnızca açık tema yayında */
+  --sidebar-bg: #efeee9;
+  --topbar-bg: #f5f4f1;
+  --admin-canvas: #f5f4f1;
+  --serp-title: #1a0dab;
+  --serp-muted: #4d5156;
+  --row-h-compact: 2.5rem;
+  --row-h-comfortable: 3.5rem;
+  --shadow-1: 0 1px 2px rgb(20 26 24 / 0.05);
+  --shadow-2: 0 1px 2px rgb(20 26 24 / 0.04), 0 4px 12px -4px rgb(20 26 24 / 0.1);
+  --shadow-3: 0 2px 4px rgb(20 26 24 / 0.05), 0 16px 32px -12px rgb(20 26 24 / 0.2);
   --border-strong: #d3cec3;
   --ring: var(--primary);
   --overlay: rgb(12 16 15 / 0.62);
@@ -75,6 +86,11 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-inverse-foreground: var(--inverse-foreground);
   --color-border: var(--border);
+  --color-sidebar: var(--sidebar-bg);
+  --color-topbar: var(--topbar-bg);
+  --color-admin-canvas: var(--admin-canvas);
+  --color-serp-title: var(--serp-title);
+  --color-serp-muted: var(--serp-muted);
   --color-border-strong: var(--border-strong);
   --color-ring: var(--ring);
   --color-overlay: var(--overlay);
@@ -310,8 +326,86 @@
   .skeleton {
     background: linear-gradient(90deg, var(--surface-muted) 0%, var(--surface-sunken) 50%, var(--surface-muted) 100%);
     background-size: 1200px 100%;
-    animation: var(--animate-shimmer);
     border-radius: 0.5rem;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .skeleton {
+      animation: var(--animate-shimmer);
+    }
+  }
+
+  /* Tablo: yapışkan başlık, yoğunluk ve mobilde kart satırlar (tek DOM, CSS ile geçiş) */
+  .data-table[data-sticky='true'] thead th {
+    position: sticky;
+    top: var(--table-sticky-top, 4rem);
+    z-index: 5;
+    background: var(--surface-muted);
+  }
+  .data-table[data-density='compact'] tbody td {
+    padding-block: 0.4rem;
+    height: var(--row-h-compact);
+  }
+  .data-table[data-density='comfortable'] tbody td {
+    height: var(--row-h-comfortable);
+  }
+  .data-table tbody tr {
+    transition: background-color 0.12s;
+  }
+  .data-table[data-zebra='true'] tbody tr:nth-child(even) {
+    background: color-mix(in oklab, var(--surface-muted) 55%, transparent);
+  }
+  .data-table tbody tr:focus-within {
+    background: color-mix(in oklab, var(--primary) 6%, var(--surface));
+  }
+  @media (max-width: 639px) {
+    .data-table[data-cards='true'] {
+      min-width: 0 !important;
+    }
+    .data-table[data-cards='true'] thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+    .data-table[data-cards='true'],
+    .data-table[data-cards='true'] tbody,
+    .data-table[data-cards='true'] tr,
+    .data-table[data-cards='true'] td {
+      display: block;
+      width: 100%;
+    }
+    .data-table[data-cards='true'] tr {
+      padding: 0.5rem 0;
+    }
+    .data-table[data-cards='true'] td {
+      max-width: none !important;
+      text-align: left !important;
+      padding-block: 0.4rem;
+    }
+    .data-table[data-inline-labels='true'] td[data-label]:not(:first-child) {
+      display: flex;
+      gap: 0.75rem;
+      align-items: baseline;
+    }
+    .data-table[data-inline-labels='true'] td[data-label]:not(:first-child)::before {
+      flex: 0 0 4.5rem;
+    }
+    .data-table[data-inline-labels='true'] td[data-label]:not(:first-child) > * {
+      min-width: 0;
+    }
+    .data-table[data-cards='true'] tbody tr + tr {
+      border-top: 1px solid var(--border);
+    }
+    .data-table[data-cards='true'] td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+    }
   }
 
   /* Uzun metin içerik (sayfalar, blog, ilan açıklaması) */
@@ -436,4 +530,65 @@
   body {
     background: #fff;
   }
+}
+
+/* AppToaster (yalnızca panel): bildirim renkleri panel tokenlarından; hareket yalnızca no-preference içinde */
+[data-sonner-toast].app-toast[data-rich-colors='true'][data-type='success'] {
+  --success-bg: var(--success-soft);
+  --success-border: color-mix(in oklab, var(--success) 30%, transparent);
+  --success-text: var(--success);
+}
+[data-sonner-toast].app-toast[data-rich-colors='true'][data-type='error'] {
+  --error-bg: var(--danger-soft);
+  --error-border: color-mix(in oklab, var(--danger) 30%, transparent);
+  --error-text: var(--danger);
+}
+[data-sonner-toast].app-toast[data-rich-colors='true'][data-type='warning'] {
+  --warning-bg: var(--warning-soft);
+  --warning-border: color-mix(in oklab, var(--warning) 30%, transparent);
+  --warning-text: var(--warning);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toast].app-toast {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Toplu işlem çubuğu: seçimde alttan kayarak gelir (yalnızca no-preference) */
+@keyframes bulk-bar-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bulk-bar {
+    animation: bulk-bar-in 0.22s var(--ease-premium) both;
+  }
+}
+
+/* Yatay sekme şeridi: mobilde kenar solması + yakalama (snap) */
+.tab-strip {
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 1rem;
+}
+.tab-strip > * {
+  scroll-snap-align: start;
+}
+@media (max-width: 639px) {
+  .tab-strip {
+    -webkit-mask-image: linear-gradient(to right, transparent 0, black 1rem, black calc(100% - 1.75rem), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, black 1rem, black calc(100% - 1.75rem), transparent 100%);
+  }
+}
+
+/* Kaydırılabilir yan menü: kaydırılacak içerik varsa üst/alt kenarda gölge (CSS-only scroll shadow) */
+.scroll-fade {
+  background:
+    linear-gradient(var(--sidebar-bg) 30%, transparent) center top,
+    linear-gradient(transparent, var(--sidebar-bg) 70%) center bottom,
+    radial-gradient(farthest-side at 50% 0, rgb(20 26 24 / 0.18), transparent) center top,
+    radial-gradient(farthest-side at 50% 100%, rgb(20 26 24 / 0.18), transparent) center bottom;
+  background-repeat: no-repeat;
+  background-size: 100% 28px, 100% 28px, 100% 10px, 100% 10px;
+  background-attachment: local, local, scroll, scroll;
 }

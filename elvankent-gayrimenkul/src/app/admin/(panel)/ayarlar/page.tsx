@@ -6,6 +6,7 @@ import { BrandingImageField } from '@/components/panel/branding-image-field';
 import { NotificationSettingsForm } from '@/components/admin/settings/notification-settings-form';
 import { SiteSettingsForm } from '@/components/admin/settings/site-settings-form';
 import { AdminPageHeader, Panel } from '@/components/panel/ui';
+import { SectionNav } from '@/components/panel/section-nav';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -92,10 +93,19 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <AdminPageHeader title="Ayarlar" description="Ana sayfa, ilan varsayılanları, plan kullanımı ve veri dışa aktarma. Marka ve iletişim bilgileri Şirket Ayarları'ndadır." />
+      <AdminPageHeader title="Ayarlar" breadcrumbs={[{ label: 'Ofis paneli', href: '/admin' }, { label: 'Ayarlar' }]} description="Ana sayfa, ilan varsayılanları, plan kullanımı ve veri dışa aktarma. Marka ve iletişim bilgileri Şirket Ayarları'ndadır." />
+      <SectionNav
+        items={[
+          { id: 'ana-sayfa', label: 'Ana sayfa' },
+          { id: 'bildirimler', label: 'Bildirimler' },
+          ...(canExport ? [{ id: EXPORT_ANCHOR, label: 'Veri dışa aktarma' }] : []),
+          ...((demoCount ?? 0) > 0 && ctx.can('properties.delete') ? [{ id: 'demo', label: 'Demo ilanlar' }] : []),
+          { id: 'plan-ve-kullanim', label: 'Plan ve kullanım' },
+        ]}
+      />
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="min-w-0 space-y-6">
-          <Panel title="Ana sayfa" description="Ziyaretçinin ilk gördüğü bölüm. Metinler ve görsel taslağa kaydedilir; yayınladığınızda sitede görünür.">
+          <Panel id="ana-sayfa" variant="form-section" title="Ana sayfa" description="Ziyaretçinin ilk gördüğü bölüm. Metinler ve görsel taslağa kaydedilir; yayınladığınızda sitede görünür.">
             <div className="space-y-6">
               {site && <SiteDraftStatus site={site} labels={pendingSectionLabels(site)} />}
               {pendingHero && <p className="text-[13px] font-semibold text-amber-900">Ana sayfa metni veya görseli taslakta: yayınlanınca sitede görünür.</p>}
@@ -117,14 +127,14 @@ export default async function SettingsPage() {
                   label="Ana sayfa görseli"
                   url={brandingUrl(s?.hero_image_url)}
                   stacked
-                  previewClassName="aspect-[16/7] w-full"
+                  previewClassName="aspect-[16/7] w-full max-w-sm"
                   hint="En az 1280×600 px yatay fotoğraf önerilir; en fazla 2400 px genişliğe küçültülür. Yüklenmezse marka renginde sade bir zemin kullanılır. Yalnızca kullanım hakkına sahip olduğunuz görselleri yükleyin."
                 />
               </div>
             </div>
           </Panel>
 
-          <Panel title="Bildirimler" description="Yeni müşteri talebi geldiğinde ofisin haberdar olması için e-posta bildirimi.">
+          <Panel id="bildirimler" variant="form-section" title="Bildirimler" description="Yeni müşteri talebi geldiğinde ofisin haberdar olması için e-posta bildirimi.">
             <NotificationSettingsForm
               initial={{ notify_new_lead: notify?.notify_new_lead ?? true, emails: notify?.emails ?? [] }}
               fallbackEmail={company?.email ?? null}
@@ -177,7 +187,7 @@ export default async function SettingsPage() {
           )}
 
           {(demoCount ?? 0) > 0 && ctx.can('properties.delete') && (
-            <Panel title="Demo ilanlar" description="Kurulumla gelen, sitede “DEMO” olarak işaretli örnek ilanlar.">
+            <Panel id="demo" title="Demo ilanlar" description="Kurulumla gelen, sitede “DEMO” olarak işaretli örnek ilanlar.">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="flex items-center gap-2.5 text-[14px]">
                   <FlaskConical className="size-5 text-accent-ink" aria-hidden />
@@ -205,7 +215,7 @@ export default async function SettingsPage() {
         </div>
 
         <aside className="space-y-6">
-          <Panel title="Plan ve kullanım">
+          <Panel id="plan-ve-kullanim" title="Plan ve kullanım">
             {usage ? (
               <div className="space-y-5">
                 <div className="flex flex-wrap items-center gap-2">

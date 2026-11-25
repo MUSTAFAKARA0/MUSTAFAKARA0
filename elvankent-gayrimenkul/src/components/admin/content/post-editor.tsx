@@ -3,7 +3,7 @@
 import Link from '@/components/common/intent-link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { CalendarClock, ExternalLink, EyeOff, Save, Send, Trash2 } from 'lucide-react';
 import { StepSection, TextAreaField, TextField } from '@/components/admin/editor/fields';
 import { CoverUpload, type CoverMedia } from '@/components/admin/content/cover-upload';

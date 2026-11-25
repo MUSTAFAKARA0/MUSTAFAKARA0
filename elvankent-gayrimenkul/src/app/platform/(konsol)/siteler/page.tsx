@@ -12,7 +12,7 @@ import {
   EmptyPanel,
   TableWrap,
   td,
-  th,
+  Th,
 } from "@/components/panel/ui";
 import { PreviewButton } from "@/components/site-editor/site-actions";
 import { createSitePreviewLink } from "@/app/actions/site-builder";
@@ -77,15 +77,15 @@ export default async function SitesPage() {
       ) : (
         <>
           {/* Masaüstü: tablo */}
-          <TableWrap className="hidden rounded-2xl border border-border bg-surface shadow-xs md:block">
+          <TableWrap caption="Web siteleri" zebra className="hidden rounded-2xl border border-border bg-surface shadow-xs md:block">
             <thead className="border-b border-border bg-surface-muted/50">
               <tr>
-                <th className={th}>Site</th>
-                <th className={th}>Durum</th>
-                <th className={th}>Alan adı</th>
-                <th className={th}>Tema</th>
-                <th className={th}>Yayın</th>
-                <th className={`${th} text-right`}>İşlemler</th>
+                <Th>Site</Th>
+                <Th>Durum</Th>
+                <Th>Alan adı</Th>
+                <Th>Tema</Th>
+                <Th>Yayın</Th>
+                <Th className="text-right">İşlemler</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

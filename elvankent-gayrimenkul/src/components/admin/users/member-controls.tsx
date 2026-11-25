@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { Copy, KeyRound, Mail, MoreHorizontal, Power, ShieldOff, UserMinus, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';

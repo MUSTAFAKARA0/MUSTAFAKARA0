@@ -15,7 +15,7 @@ export default async function NewListingPage() {
       <AdminPageHeader
         title="Yeni ilan"
         description="Önce temel bilgileri girin; taslak oluşturulur ve sihirbaz sizi konum, özellikler, fotoğraflar ve yayın adımlarından geçirir. Tüm değişiklikler otomatik kaydedilir."
-        back={{ href: '/admin/ilanlar', label: 'İlanlar' }}
+        breadcrumbs={[{ label: 'İlanlar', href: '/admin/ilanlar' }, { label: 'Yeni ilan' }]}
       />
       <Panel className="max-w-2xl">
         <NewListingForm types={taxonomy.propertyTypes.map((t) => ({ id: t.id, name: t.name, category: t.category as PropertyCategory }))} />

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Copy, KeyRound, ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import { Field, Input } from '@/components/ui/form-controls';
 import { confirmMfaEnrollment, startMfaEnrollment, verifyMfaCode, type MfaEnrollment } from '@/app/actions/mfa';

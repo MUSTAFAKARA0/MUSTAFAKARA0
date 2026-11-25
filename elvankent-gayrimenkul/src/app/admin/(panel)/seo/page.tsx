@@ -5,7 +5,7 @@ import { removeBrandingImage } from '@/app/actions/admin-settings';
 import { BrandingImageField } from '@/components/panel/branding-image-field';
 import { RedirectDialog } from '@/components/admin/seo/redirect-dialog';
 import { SeoSettingsForm } from '@/components/admin/seo/seo-settings-form';
-import { AdminPageHeader, EmptyPanel, Panel, TableWrap, td, th } from '@/components/panel/ui';
+import { AdminPageHeader, EmptyPanel, Panel, TableWrap, td, Th } from '@/components/panel/ui';
 import { Pagination } from '@/components/common/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -105,16 +105,16 @@ export default async function SeoPage({ searchParams }: PageProps<'/admin/seo'>)
             {redirects.rows.length === 0 ? (
               <EmptyPanel icon={Waypoints} title={q ? 'Eşleşen yönlendirme yok' : 'Henüz yönlendirme yok'} description="Bir ilanın adresi değiştiğinde veya kalıcı silindiğinde yönlendirme burada görünür." />
             ) : (
-              <TableWrap>
+              <TableWrap caption="SEO denetimi" zebra>
                 <thead className="border-b border-border bg-surface-muted/50">
                   <tr>
-                    <th className={th}>Eski adres</th>
-                    <th className={th}>Yeni adres</th>
-                    <th className={th}>Tür</th>
-                    <th className={th}>Tarih</th>
-                    <th className={th}>
+                    <Th>Eski adres</Th>
+                    <Th>Yeni adres</Th>
+                    <Th>Tür</Th>
+                    <Th>Tarih</Th>
+                    <Th>
                       <span className="sr-only">İşlemler</span>
-                    </th>
+                    </Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">

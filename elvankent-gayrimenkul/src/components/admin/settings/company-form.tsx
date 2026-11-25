@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { Check, Plus, Save, Trash2, X } from 'lucide-react';
 import { TextAreaField, TextField } from '@/components/admin/editor/fields';
 import { Panel } from '@/components/panel/ui';
@@ -294,7 +294,7 @@ export function CompanyForm({
         </div>
       </Panel>
 
-      <div className="sticky bottom-0 z-10 -mx-4 flex items-center justify-end gap-3 border-t border-border bg-[#f5f4f1]/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:px-5">
+      <div className="sticky bottom-0 z-10 -mx-4 flex items-center justify-end gap-3 border-t border-border bg-topbar/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:px-5">
         {dirty ? (
           <p className="mr-auto text-[13px] font-medium text-warning" role="status">
             Kaydedilmemiş değişiklikler var — taslağa kaydedin.

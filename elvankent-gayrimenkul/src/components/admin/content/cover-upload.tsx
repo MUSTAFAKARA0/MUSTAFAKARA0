@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/toast';
 import { ImagePlus, RefreshCw, Trash2, X } from 'lucide-react';
 import { MediaImage } from '@/components/common/media-image';
 import { prepareFile, startUpload, UploadError } from '@/components/admin/media/upload-engine';

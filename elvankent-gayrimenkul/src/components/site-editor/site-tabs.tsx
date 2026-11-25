@@ -23,8 +23,8 @@ export function SiteTabs({ base, tabs, pending }: { base: string; tabs: readonly
     activeRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [pathname]);
   return (
-    <nav aria-label="Site ayarları" className="scrollbar-none -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-      <ul className="flex min-w-max gap-1 rounded-2xl border border-border bg-surface p-1 shadow-xs">
+    <nav aria-label="Site ayarları" className="tab-strip scrollbar-none -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+      <ul className="flex min-w-max gap-1 rounded-2xl border border-border bg-surface p-1 shadow-[var(--shadow-1)]">
         {tabs.map((t) => {
           const href = t.slug ? `${base}/${t.slug}` : base;
           const active = t.slug ? pathname.startsWith(href) : pathname === base;
@@ -38,7 +38,7 @@ export function SiteTabs({ base, tabs, pending }: { base: string; tabs: readonly
                 aria-current={active ? 'page' : undefined}
                 title={isPending ? 'Bu bölümde yayınlanmamış değişiklik var' : undefined}
                 className={cn(
-                  'relative inline-flex min-h-10 items-center gap-1.5 rounded-xl px-3.5 text-[13.5px] font-semibold whitespace-nowrap transition-colors',
+                  'relative inline-flex min-h-11 items-center gap-1.5 sm:min-h-10 rounded-xl px-3.5 text-[13.5px] font-semibold whitespace-nowrap transition-colors',
                   active ? 'bg-primary text-primary-fg shadow-sm' : 'text-muted-foreground hover:bg-surface-muted hover:text-foreground',
                 )}
               >

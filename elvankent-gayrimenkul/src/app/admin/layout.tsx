@@ -25,8 +25,8 @@ export default async function AdminRootLayout({ children }: { children: React.Re
   const tenant = await getTenantFromRequest().catch(() => null);
   const css = tenant ? themeCss(buildTheme(tenant.settings.primary_color, tenant.settings.accent_color)) : null;
   return (
-    <RootDocument fontClassName={baseFontVariables}>
-      <div className="min-h-dvh bg-[#f5f4f1] text-foreground">
+    <RootDocument fontClassName={baseFontVariables} appToaster>
+      <div className="min-h-dvh bg-admin-canvas text-foreground">
         {css && tenant && (
           <style href={`theme-${tenant.id}`} precedence="high">
             {css}

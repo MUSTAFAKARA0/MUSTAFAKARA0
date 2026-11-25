@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from '@/components/common/intent-link';
 import { BarChart3, Eye, Heart, Inbox, MessageCircle, Phone, QrCode, Share2, Users } from 'lucide-react';
 import { AreaChart, BarList } from '@/components/admin/charts';
-import { AdminPageHeader, EmptyPanel, ListingStatusBadge, Panel, StatCard, TableWrap, td, th } from '@/components/panel/ui';
+import { AdminPageHeader, EmptyPanel, ListingStatusBadge, Panel, StatCard, TableWrap, td, Th } from '@/components/panel/ui';
 import { formatNumber } from '@/lib/format';
 import { cn, firstParam, one } from '@/lib/utils';
 import { LEAD_SOURCE_LABELS } from '@/modules/crm/constants';
@@ -164,20 +164,20 @@ export default async function AnalyticsPage({ searchParams }: PageProps<'/admin/
         {rows.length === 0 ? (
           <EmptyPanel icon={Users} title="Henüz etkileşim verisi yok" description="İlanlarınız görüntülendikçe burada ilan bazında sayılar görünür." />
         ) : (
-          <TableWrap className="[&_table]:min-w-[860px]">
+          <TableWrap caption="İlan bazında etkileşim" zebra className="[&_table]:min-w-[860px]">
             <thead className="border-b border-border bg-surface-muted/50">
               <tr>
-                <th className={th}>İlan</th>
+                <Th>İlan</Th>
                 {(Object.keys(SORTS) as SortKey[]).map((key) => (
-                  <th key={key} className={cn(th, 'text-right')} aria-sort={key === sort ? 'descending' : undefined}>
+                  <Th key={key} className="text-right" sort={key === sort ? 'descending' : undefined}>
                     <Link href={hrefFor({ sirala: key })} className={cn('hover:text-foreground', key === sort && 'text-foreground underline underline-offset-4')}>
                       {SORTS[key].label}
                     </Link>
-                  </th>
+                  </Th>
                 ))}
-                <th className={cn(th, 'text-right')} title="(WhatsApp + telefon + form) / görüntülenme">
+                <Th className="text-right" title="(WhatsApp + telefon + form) / görüntülenme">
                   İletişim oranı
-                </th>
+                </Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

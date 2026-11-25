@@ -20,15 +20,20 @@ const badgeVariants = cva(
         inverse: 'bg-surface-inverse/85 text-white backdrop-blur-sm',
         glass: 'bg-surface/92 text-foreground shadow-xs backdrop-blur-sm',
       },
+      size: {
+        md: '',
+        lg: 'px-3 py-1 text-[12.5px] leading-5',
+      },
     },
-    defaultVariants: { variant: 'neutral' },
+    defaultVariants: { variant: 'neutral', size: 'md' },
   },
 );
 
 export function Badge({
   className,
   variant,
+  size,
   ...props
 }: React.HTMLAttributes<HTMLSpanElement> & VariantProps<typeof badgeVariants>) {
-  return <span className={cn(badgeVariants({ variant }), className)} {...props} />;
+  return <span className={cn(badgeVariants({ variant, size }), className)} {...props} />;
 }

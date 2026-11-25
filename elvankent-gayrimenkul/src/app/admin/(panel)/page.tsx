@@ -6,18 +6,15 @@ import {
   CheckCircle2,
   Eye,
   FilePen,
-  Heart,
   Inbox,
-  KeyRound,
-  Phone,
   Plus,
   Sparkles,
 } from 'lucide-react';
-import { WhatsAppIcon } from '@/components/common/brand-icons';
 import { OnboardingChecklist } from '@/components/admin/onboarding-checklist';
 import { parseOnboardingFlags } from '@/modules/platform/customer-status';
 import { AreaChart, BarList } from '@/components/admin/charts';
-import { AdminPageHeader, EmptyPanel, ListingStatusBadge, Panel, StatCard } from '@/components/panel/ui';
+import { Sparkline } from '@/components/panel/sparkline';
+import { AdminPageHeader, EmptyPanel, ListingStatusBadge, MetricStrip, Panel, StatCard } from '@/components/panel/ui';
 import { MediaImage } from '@/components/common/media-image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,6 +29,15 @@ import type { Enums } from '@/types/supabase';
 export const metadata: Metadata = { title: 'Dashboard' };
 
 const PERIODS = [7, 30, 90] as const;
+
+/** Son 14 gün toplamı / önceki 14 gün toplamı - 1 (yüzde). Yetersiz veri (< 28 gün) veya önceki dönem 0 ise null: uydurma yok. */
+function deltaPercent(series: number[]): number | null {
+  if (series.length < 28) return null;
+  const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+  const last = sum(series.slice(-14));
+  const prev = sum(series.slice(-28, -14));
+  return prev > 0 ? ((last - prev) / prev) * 100 : null;
+}
 
 interface DashboardData {
   properties: Record<'total' | 'draft' | 'pending' | 'published' | 'sold' | 'rented' | 'archived' | 'trash' | 'featured' | 'demo' | 'new_in_period', number>;
@@ -99,7 +105,8 @@ export default async function DashboardPage({ searchParams }: PageProps<'/admin'
   const header = (
     <AdminPageHeader
       title={firstName ? `Merhaba, ${firstName}` : 'Dashboard'}
-      description={`${ctx.org.name} · son ${days} günün özeti`}
+      breadcrumbs={[{ label: ctx.org.name }, { label: 'Dashboard' }]}
+      description={`Son ${days} günün özeti`}
       actions={
         <div className="inline-flex rounded-xl border border-border bg-surface p-1" role="group" aria-label="Dönem">
           {PERIODS.map((n) => (
@@ -108,7 +115,7 @@ export default async function DashboardPage({ searchParams }: PageProps<'/admin'
               href={n === 30 ? '/admin' : `/admin?gun=${n}`}
               aria-current={n === days ? 'true' : undefined}
               className={cn(
-                'rounded-lg px-3 py-1.5 text-[13px] font-semibold transition',
+                'inline-flex min-h-9 items-center rounded-lg px-3 py-1.5 text-[13px] font-semibold transition max-sm:min-h-11',
                 n === days ? 'bg-surface-inverse text-white' : 'text-muted-foreground hover:text-foreground',
               )}
             >
@@ -160,6 +167,52 @@ export default async function DashboardPage({ searchParams }: PageProps<'/admin'
     property: { title: string; reference_no: string } | { title: string; reference_no: string }[] | null;
   }[];
 
+  // Gerçek günlük seriden son 14 gün / önceki 14 gün değişimi (en az 28 günlük veri yoksa gösterilmez)
+  const viewsSeries = d.daily.map((x) => Number(x.views) || 0);
+  const leadsSeries = d.daily.map((x) => Number(x.leads) || 0);
+  const heroCards = [
+    <StatCard key="aktif" label="Aktif ilan" value={p.published} icon={CheckCircle2} tone="success" href="/admin/ilanlar?durum=published" hint={`${formatNumber(p.total)} ilan içinde`} />,
+    canAnalytics ? (
+      <StatCard
+        key="views"
+        label={`Görüntülenme (${days} gün)`}
+        value={d.period.views}
+        icon={Eye}
+        tone="primary"
+        trend={deltaPercent(viewsSeries)}
+        trendLabel="son 14 gün"
+        sparkline={<Sparkline values={viewsSeries} label="Günlük görüntülenme" className="w-full" width={160} height={34} />}
+      />
+    ) : null,
+    canLeads ? (
+      <StatCard
+        key="leads"
+        label={`İletişim talepleri (${days} gün)`}
+        value={d.leads.in_period}
+        icon={Inbox}
+        tone="primary"
+        href="/admin/talepler"
+        hint={`${formatNumber(d.leads.new)} yeni · ${formatNumber(d.leads.open)} açık`}
+        trend={deltaPercent(leadsSeries)}
+        trendLabel="son 14 gün"
+        sparkline={<Sparkline values={leadsSeries} label="Günlük talep" className="w-full" width={160} height={34} />}
+      />
+    ) : null,
+    canAppointments ? (
+      <StatCard
+        key="randevu"
+        label="Yaklaşan randevular"
+        value={d.appointments.upcoming}
+        icon={CalendarClock}
+        href="/admin/randevular"
+        hint={d.appointments.requested ? `${d.appointments.requested} onay bekliyor` : 'Onay bekleyen yok'}
+      />
+    ) : null,
+    <StatCard key="taslak" label="Taslak / onay bekleyen" value={`${formatNumber(p.draft)} / ${formatNumber(p.pending)}`} icon={FilePen} tone="warning" href={p.pending > 0 ? '/admin/ilanlar?durum=pending' : '/admin/ilanlar?durum=draft'} />,
+  ]
+    .filter(Boolean)
+    .slice(0, 4);
+
   return (
     <>
       {header}
@@ -195,65 +248,29 @@ export default async function DashboardPage({ searchParams }: PageProps<'/admin'
         </Panel>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatCard
-          label="Toplam ilan"
-          value={formatNumber(p.total)}
-          icon={Building2}
-          href="/admin/ilanlar"
-          hint={`${p.new_in_period} yeni · ${p.featured} öne çıkan`}
-        />
-        <StatCard label="Aktif ilan" value={formatNumber(p.published)} icon={CheckCircle2} tone="success" href="/admin/ilanlar?durum=published" />
-        <StatCard
-          label="Satılan / kiralanan"
-          value={`${formatNumber(p.sold)} / ${formatNumber(p.rented)}`}
-          icon={KeyRound}
-          tone="accent"
-          href="/admin/ilanlar?durum=sold"
-        />
-        <StatCard
-          label="Taslak / onay bekleyen"
-          value={`${formatNumber(p.draft)} / ${formatNumber(p.pending)}`}
-          icon={FilePen}
-          tone="warning"
-          href={p.pending > 0 ? '/admin/ilanlar?durum=pending' : '/admin/ilanlar?durum=draft'}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4" data-hero-kpis>
+        {heroCards}
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:gap-4 lg:grid-cols-2">
+        <MetricStrip
+          title="Portföy"
+          items={[
+            { label: 'Toplam ilan', value: p.total, href: '/admin/ilanlar', hint: `${p.new_in_period} yeni` },
+            { label: 'Satılan / kiralanan', value: `${formatNumber(p.sold)} / ${formatNumber(p.rented)}`, href: '/admin/ilanlar?durum=sold' },
+            { label: 'Taslak / onay bekleyen', value: `${formatNumber(p.draft)} / ${formatNumber(p.pending)}`, href: p.pending > 0 ? '/admin/ilanlar?durum=pending' : '/admin/ilanlar?durum=draft' },
+            { label: 'Öne çıkan', value: p.featured, href: '/admin/ilanlar?durum=published' },
+          ]}
         />
         {canAnalytics && (
-          <>
-            <StatCard
-              label={`Görüntülenme (${days} gün)`}
-              value={formatNumber(d.period.views)}
-              icon={Eye}
-              tone="primary"
-              hint={`${formatNumber(d.period.unique_visitors)} tekil ziyaretçi · toplam ${formatNumber(Number(d.totals.views) || 0)}`}
-            />
-            <StatCard label={`Favoriler (${days} gün)`} value={formatNumber(d.period.favorites)} icon={Heart} hint={`Toplam ${formatNumber(d.totals.favorites)}`} />
-            <StatCard
-              label={`WhatsApp tıklaması (${days} gün)`}
-              value={formatNumber(d.period.whatsapp_clicks)}
-              icon={WhatsAppIcon}
-              hint={`Toplam ${formatNumber(d.totals.whatsapp_clicks)}`}
-            />
-            <StatCard label={`Telefon tıklaması (${days} gün)`} value={formatNumber(d.period.phone_clicks)} icon={Phone} hint={`Toplam ${formatNumber(d.totals.phone_clicks)}`} />
-          </>
-        )}
-        {canLeads && (
-          <StatCard
-            label={`İletişim talepleri (${days} gün)`}
-            value={formatNumber(d.leads.in_period)}
-            icon={Inbox}
-            tone="primary"
-            href="/admin/talepler"
-            hint={`${formatNumber(d.leads.new)} yeni · ${formatNumber(d.leads.open)} açık`}
-          />
-        )}
-        {canAppointments && (
-          <StatCard
-            label="Yaklaşan randevular"
-            value={formatNumber(d.appointments.upcoming)}
-            icon={CalendarClock}
-            href="/admin/randevular"
-            hint={d.appointments.requested ? `${d.appointments.requested} onay bekliyor` : 'Onay bekleyen yok'}
+          <MetricStrip
+            title={`Etkileşim · son ${days} gün`}
+            items={[
+              { label: 'Favoriler', value: d.period.favorites, hint: `Toplam ${formatNumber(d.totals.favorites)}` },
+              { label: 'WhatsApp tıklaması', value: d.period.whatsapp_clicks, hint: `Toplam ${formatNumber(d.totals.whatsapp_clicks)}` },
+              { label: 'Telefon tıklaması', value: d.period.phone_clicks, hint: `Toplam ${formatNumber(d.totals.phone_clicks)}` },
+              { label: 'Tekil ziyaretçi', value: d.period.unique_visitors },
+            ]}
           />
         )}
       </div>

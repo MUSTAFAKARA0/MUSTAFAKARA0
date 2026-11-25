@@ -28,6 +28,16 @@ export function AreaChart({
 }) {
   const W = 640;
   const H = height;
+  // Dürüstlük: en az 2 gün gerçek (sıfırdan büyük) veri yoksa çizgi çizilmez
+  const activeDays = primary.filter((p, i) => p.value > 0 || (secondary?.[i]?.value ?? 0) > 0).length;
+  if (primary.length < 2 || activeDays < 2) {
+    return (
+      <div role="status" className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface-muted/40 px-4 text-center" style={{ minHeight: height }}>
+        <p className="text-[14.5px] font-semibold text-foreground">Henüz yeterli veri yok</p>
+        <p className="mt-1 max-w-xs text-[13px] text-muted-foreground">Sitenizde ziyaret ve talep oluştukça grafik burada görünür.</p>
+      </div>
+    );
+  }
   const pad = { top: 12, right: 8, bottom: 26, left: 36 };
   const max = Math.max(1, ...primary.map((p) => p.value), ...(secondary ?? []).map((p) => p.value));
   const niceMax = max <= 5 ? 5 : Math.ceil(max / 5) * 5;
@@ -52,6 +62,8 @@ export function AreaChart({
         )}
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={caption}>
+        <title>{caption}</title>
+        <desc>{`${primaryLabel}${secondaryLabel ? ` ve ${secondaryLabel}` : ''}: ${primary.length} günlük veri`}</desc>
         <defs>
           <linearGradient id="chartPrimary" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="var(--primary)" stopOpacity="0.22" />
@@ -89,7 +101,8 @@ export function AreaChart({
         ))}
       </svg>
       <figcaption className="sr-only">{caption}</figcaption>
-      <table className="sr-only">
+      <div className="sr-only">
+      <table>
         <thead>
           <tr>
             <th>Gün</th>
@@ -107,6 +120,7 @@ export function AreaChart({
           ))}
         </tbody>
       </table>
+      </div>
     </figure>
   );
 }
