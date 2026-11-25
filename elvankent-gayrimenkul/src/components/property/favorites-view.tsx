@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { AlertCircle, HeartOff } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { EmptyState } from '@/components/common/empty-state';
+import { ContextEmptyState } from '@/components/common/empty-state-variants';
 import { PropertyCard } from '@/components/property/property-card';
 import { PropertyGridSkeleton } from '@/components/property/property-skeletons';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,8 @@ export function FavoritesView() {
   }, [key, covered]);
 
   const state: LoadState | null = !hydrated ? null : !key ? { key, status: 'ready', items: [] } : covered ? loaded : null;
+  // Sunucu çıktısı ve yüklenme anı, boş durumla AYNI yüksekliği ayırır (CLS yok); kayıtlı favori varsa kart iskeleti
+  if (!hydrated || (!state && !key)) return <div role="status" aria-label="Favoriler yükleniyor" className="su-skel min-h-[26rem] rounded-2xl" />;
   if (!state) return <PropertyGridSkeleton count={3} />;
 
   if (state.status === 'error') {
@@ -52,16 +54,7 @@ export function FavoritesView() {
 
   if (!items.length) {
     return (
-      <EmptyState
-        icon={HeartOff}
-        title="Henüz favori ilanınız yok"
-        description="Beğendiğiniz ilanlardaki kalp simgesine dokunarak favorilerinize ekleyebilir, daha sonra buradan kolayca ulaşabilirsiniz."
-        action={
-          <Button asChild>
-            <Link href="/ilanlar">İlanları keşfedin</Link>
-          </Button>
-        }
-      />
+      <ContextEmptyState variant="favorites" className="min-h-[26rem] justify-center" />
     );
   }
 

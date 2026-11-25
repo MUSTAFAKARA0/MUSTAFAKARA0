@@ -25,7 +25,7 @@ export function ChoiceChip({
       onClick={() => onPressedChange(!pressed)}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border font-medium transition-colors select-none',
-        size === 'md' ? 'h-10 px-4 text-sm' : 'h-8 px-3 text-[13px]',
+        size === 'md' ? 'h-11 px-4 text-sm lg:h-10' : 'h-8 px-3 text-[13px] max-lg:h-11',
         pressed
           ? 'border-foreground bg-foreground text-background'
           : 'border-border-strong bg-surface text-foreground/85 hover:border-foreground/50',
@@ -90,7 +90,7 @@ export function SegmentedControl<T extends string>({
             onClick={() => onValueChange(o.value)}
             className={cn(
               'flex-1 rounded-lg font-semibold whitespace-nowrap transition-colors',
-              size === 'md' ? 'h-9 px-4 text-sm' : 'h-8 px-3 text-[13px]',
+              size === 'md' ? 'h-11 px-4 text-sm lg:h-9' : 'h-8 px-3 text-[13px] max-lg:h-11',
               checked
                 ? tone === 'default'
                   ? 'bg-surface text-foreground shadow-xs'

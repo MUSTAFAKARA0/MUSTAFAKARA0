@@ -66,9 +66,9 @@ export function PropertyCard({
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Fotoğraf yok</div>
         )}
         <div className="pc-scrim pointer-events-none absolute inset-x-0 bottom-0 h-20 scrim-bottom opacity-80" aria-hidden />
-        <PropertyBadges property={p} className="absolute top-3 left-3 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-1.5" />
-        <FavoriteButton propertyId={p.id} title={p.title} className="absolute top-3 right-3" />
-        <span className="pc-type absolute bottom-3 left-3 rounded-full bg-white/92 px-2.5 py-1 text-[11.5px] font-bold text-foreground backdrop-blur">
+        <PropertyBadges property={p} className="pc-badges absolute top-3 left-3 flex max-w-[calc(100%-4.5rem)] flex-wrap gap-1.5" />
+        <FavoriteButton propertyId={p.id} title={p.title} className="pc-fav absolute top-3 right-3" />
+        <span className="pc-type absolute bottom-3 left-3 rounded-full bg-surface/92 px-2.5 py-1 text-[11.5px] font-bold text-foreground backdrop-blur">
           {LISTING_TYPE_LABELS[p.listingType]} · {p.typeName}
         </span>
         {p.imageCount > 1 && (

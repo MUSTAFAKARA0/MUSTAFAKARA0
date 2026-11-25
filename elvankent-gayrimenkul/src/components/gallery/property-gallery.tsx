@@ -1,9 +1,11 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useCallback, useRef, useState } from 'react';
-import { Expand, ImageOff, Images } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Expand, ImageOff, Images } from 'lucide-react';
 import { MediaImage } from '@/components/common/media-image';
+import { EMPTY_COPY } from '@/components/common/empty-state-copy';
+import { scrollBehavior } from '@/lib/scroll-behavior';
 import { cn } from '@/lib/utils';
 import type { PropertyImage } from '@/modules/properties/types';
 
@@ -26,9 +28,43 @@ export function PropertyGallery({ images, title, overlay }: { images: PropertyIm
   const [opened, setOpened] = useState(false);
   const [startIndex, setStartIndex] = useState(0);
   const [mobileIndex, setMobileIndex] = useState(0);
+  // Görseli yüklenmiş en uzak slayt (ratchet): yalnızca gezilen slaytlar ve bir sonraki indirilir (LCP)
+  const [reach, setReach] = useState(0);
   const mobileRef = useRef<HTMLDivElement>(null);
+  const frame = useRef(0);
+  const triggerRef = useRef<HTMLElement | null>(null);
 
-  const openAt = useCallback((i: number) => {
+  // Kaydırma olayı kare başına en fazla bir kez işlenir; durum yalnızca slayt değişince güncellenir
+  const onMobileScroll = useCallback(() => {
+    if (frame.current) return;
+    frame.current = requestAnimationFrame(() => {
+      frame.current = 0;
+      const el = mobileRef.current;
+      if (el?.clientWidth) {
+        const i = Math.round(el.scrollLeft / el.clientWidth);
+        setMobileIndex(i);
+        setReach((r) => Math.max(r, i));
+      }
+    });
+  }, []);
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(frame.current);
+      frame.current = 0;
+    },
+    [],
+  );
+
+  // Hedef, tıklama anındaki gerçek konumdan hesaplanır (hızlı ardışık tıklamada sapma olmaz)
+  const slideBy = (delta: number, count: number) => {
+    const el = mobileRef.current;
+    if (!el?.clientWidth) return;
+    const target = Math.min(count - 1, Math.max(0, Math.round(el.scrollLeft / el.clientWidth) + delta));
+    el.scrollTo({ left: target * el.clientWidth, behavior: scrollBehavior() });
+  };
+
+  const openAt = useCallback((i: number, trigger: HTMLElement) => {
+    triggerRef.current = trigger;
     setStartIndex(i);
     setOpened(true);
     setOpen(true);
@@ -39,7 +75,11 @@ export function PropertyGallery({ images, title, overlay }: { images: PropertyIm
       <div className="relative flex aspect-[16/9] items-center justify-center rounded-[1.5rem] bg-surface-muted text-muted-foreground sm:aspect-[21/9]">
         <div className="text-center">
           <ImageOff className="mx-auto size-10" aria-hidden />
-          <p className="mt-2 text-sm">Bu ilan için henüz fotoğraf eklenmemiş.</p>
+          <p className="mt-2 text-sm font-semibold">{EMPTY_COPY['no-photos'].title}</p>
+          <p className="mt-1 text-sm">{EMPTY_COPY['no-photos'].description}</p>
+          <a href="#bilgi-talep" className="mt-3 inline-flex min-h-11 items-center text-sm font-semibold text-primary-ink underline underline-offset-4">
+            Fotoğraf için bize yazın
+          </a>
         </div>
         {overlay}
       </div>
@@ -55,10 +95,7 @@ export function PropertyGallery({ images, title, overlay }: { images: PropertyIm
       <div className="relative -mx-4 sm:mx-0 md:hidden">
         <div
           ref={mobileRef}
-          onScroll={() => {
-            const el = mobileRef.current;
-            if (el?.clientWidth) setMobileIndex(Math.round(el.scrollLeft / el.clientWidth));
-          }}
+          onScroll={onMobileScroll}
           className="scrollbar-none flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain sm:rounded-2xl"
           aria-label={`${title} fotoğrafları`}
           role="region"
@@ -67,11 +104,12 @@ export function PropertyGallery({ images, title, overlay }: { images: PropertyIm
             <button
               key={img.id}
               type="button"
-              onClick={() => openAt(i)}
-              className="relative aspect-[4/3] w-full shrink-0 snap-center bg-surface-muted"
+              onClick={(e) => openAt(i, e.currentTarget)}
+              className="su-gal-slide relative aspect-[4/3] w-full shrink-0 snap-center bg-surface-muted"
               aria-label={`Fotoğraf ${i + 1} / ${images.length} – tam ekran aç`}
             >
-              {Math.abs(i - mobileIndex) <= 2 && (
+              {/* Slayt kabukları hep bağlıdır (kaydırma konumu sabit); görsel yalnızca gezilen slayt + bir sonrakinde çizilir */}
+              {i <= reach + 1 && (
                 <MediaImage
                   media={img}
                   alt={altFor(img, title, i)}
@@ -79,7 +117,8 @@ export function PropertyGallery({ images, title, overlay }: { images: PropertyIm
                   // Masaüstünde gizli: orada en küçük varyant seçilir
                   sizes="(min-width: 768px) 1px, 100vw"
                   loading={i === 0 ? 'eager' : 'lazy'}
-                  fetchPriority={i === 0 ? 'high' : undefined}
+                  fetchPriority={i === 0 ? 'high' : 'low'}
+                  decoding="async"
                   className="object-cover"
                 />
               )}
@@ -89,6 +128,35 @@ export function PropertyGallery({ images, title, overlay }: { images: PropertyIm
         <span className="numeric pointer-events-none absolute right-3 bottom-3 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white">
           {mobileIndex + 1} / {images.length}
         </span>
+        {images.length > 1 && (
+          <>
+            <div className="su-dots" aria-hidden>
+              {images.slice(0, 12).map((img, i) => (
+                <i key={img.id} data-on={i === Math.min(mobileIndex, 11) ? '' : undefined} />
+              ))}
+            </div>
+            {mobileIndex > 0 && (
+              <button
+                type="button"
+                onClick={() => slideBy(-1, images.length)}
+                aria-label="Önceki slayt"
+                className="absolute top-1/2 left-2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur active:scale-95"
+              >
+                <ChevronLeft className="size-5" aria-hidden />
+              </button>
+            )}
+            {mobileIndex < images.length - 1 && (
+              <button
+                type="button"
+                onClick={() => slideBy(1, images.length)}
+                aria-label="Sonraki slayt"
+                className="absolute top-1/2 right-2 flex size-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur active:scale-95"
+              >
+                <ChevronRight className="size-5" aria-hidden />
+              </button>
+            )}
+          </>
+        )}
         {overlay}
       </div>
 
@@ -109,8 +177,8 @@ export function PropertyGallery({ images, title, overlay }: { images: PropertyIm
             <button
               key={img.id}
               type="button"
-              onClick={() => openAt(i)}
-              className={cn('group relative overflow-hidden bg-surface-muted focus-visible:outline-offset-[-3px]', hero && 'col-span-2 row-span-2')}
+              onClick={(e) => openAt(i, e.currentTarget)}
+              className={cn('group su-tile-zoom relative overflow-hidden bg-surface-muted focus-visible:outline-3 focus-visible:outline-offset-[-4px]', hero && 'col-span-2 row-span-2')}
               aria-label={last ? `Tüm fotoğrafları gör (+${hidden})` : `Fotoğraf ${i + 1} – tam ekran aç`}
             >
               <MediaImage
@@ -123,7 +191,7 @@ export function PropertyGallery({ images, title, overlay }: { images: PropertyIm
                 className="object-cover transition duration-700 ease-premium group-hover:scale-[1.03]"
               />
               {last && (
-                <span className="absolute inset-0 flex items-center justify-center bg-black/45 text-white transition group-hover:bg-black/55">
+                <span className="absolute inset-0 flex items-center justify-center bg-black/65 text-white transition group-hover:bg-black/75">
                   <span className="text-center">
                     <span className="numeric block font-display text-[2rem] leading-none">+{hidden}</span>
                     <span className="mt-1 block text-sm font-semibold">fotoğraf</span>
@@ -135,8 +203,8 @@ export function PropertyGallery({ images, title, overlay }: { images: PropertyIm
         })}
         <button
           type="button"
-          onClick={() => openAt(0)}
-          className="absolute right-4 bottom-4 inline-flex items-center gap-2 rounded-xl bg-white/95 px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm backdrop-blur transition hover:bg-white"
+          onClick={(e) => openAt(0, e.currentTarget)}
+          className="absolute right-4 bottom-4 inline-flex items-center gap-2 rounded-xl bg-surface/95 px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm backdrop-blur transition hover:bg-surface"
         >
           {images.length > 1 ? <Images className="size-4" aria-hidden /> : <Expand className="size-4" aria-hidden />}
           {images.length > 1 ? `Tüm fotoğraflar (${images.length})` : 'Büyüt'}
@@ -144,7 +212,7 @@ export function PropertyGallery({ images, title, overlay }: { images: PropertyIm
         {overlay}
       </div>
 
-      {(open || opened) && <Lightbox images={images} title={title} open={open} onOpenChange={setOpen} startIndex={startIndex} />}
+      {(open || opened) && <Lightbox images={images} title={title} open={open} onOpenChange={setOpen} startIndex={startIndex} returnFocusTo={triggerRef} />}
     </>
   );
 }

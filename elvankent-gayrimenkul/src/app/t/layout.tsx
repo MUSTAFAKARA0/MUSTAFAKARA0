@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { RootDocument, rootMetadata, rootViewport } from '@/components/common/root-document';
 import '@/app/globals.css';
+import '@/styles/site-ui.css';
 
 /*
  * Kiracı (emlak ofisi) sitelerinin kökü — Site Engine. Burada yazı tipi veya tema CSS'i

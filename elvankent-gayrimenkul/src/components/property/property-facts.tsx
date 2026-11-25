@@ -29,13 +29,16 @@ export function KeyFacts({ p }: { p: PropertyDetail }) {
   ].filter((f): f is { icon: typeof Maximize; label: string; value: string } => Boolean(f?.value));
   if (!facts.length) return null;
   return (
-    <dl className="flex flex-wrap gap-px overflow-hidden rounded-2xl border border-border bg-border">
+    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {facts.slice(0, 6).map(({ icon: Icon, label, value }) => (
-        <div key={label} className="min-w-0 flex-[1_1_9.5rem] bg-surface px-4 py-4">
-          <dt className="flex items-center gap-1.5 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-            <Icon className="size-3.5" aria-hidden /> {label}
+        <div key={label} className="su-tile min-w-0 px-3.5 py-3.5">
+          <dt className="flex items-center gap-2 text-[11.5px] font-semibold tracking-wide text-muted-foreground uppercase">
+            <span className="su-tile-icon shrink-0" aria-hidden>
+              <Icon className="size-4" />
+            </span>
+            {label}
           </dt>
-          <dd className="numeric mt-1.5 text-[16px] font-bold text-foreground">{value}</dd>
+          <dd className="numeric mt-2 truncate text-[16px] font-bold text-foreground">{value}</dd>
         </div>
       ))}
     </dl>
@@ -50,7 +53,7 @@ function Group({ title, rows }: { title: string; rows: Row[] }) {
   return (
     <div>
       <h3 className="text-[13px] font-bold tracking-wide text-muted-foreground uppercase">{title}</h3>
-      <dl className="mt-3 divide-y divide-border border-y border-border">
+      <dl className="su-zebra mt-3 divide-y divide-border border-y border-border">
         {visible.map(([label, value]) => (
           <div key={label} className="flex items-baseline justify-between gap-4 py-3 text-[15px]">
             <dt className="text-muted-foreground">{label}</dt>

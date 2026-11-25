@@ -1,7 +1,9 @@
 import { Breadcrumbs } from '@/components/common/breadcrumbs';
 import { GallerySurface } from '@/components/patterns/gallery/surface';
 import { Actions, ContactBlock, DemoNote, DetailSection, detailModel, LocationLine, LocationMap, MetaLine, PreviewStrip, PriceFacts, SimilarSection, StatusNotice, type DetailLayoutProps } from '@/components/patterns/property-detail/parts';
-import { MobileContactBar } from '@/components/property/contact-panel';
+import { DetailContactBars } from '@/components/property/detail-contact-bars';
+import { buildDetailSections, MIN_NAV_ITEMS } from '@/components/property/detail-nav-logic';
+import { DetailSectionNav } from '@/components/property/detail-section-nav';
 import { DetailsTable, FeatureList, KeyFacts } from '@/components/property/property-facts';
 import { LISTING_TYPE_LABELS } from '@/modules/properties/constants';
 
@@ -14,6 +16,8 @@ import { LISTING_TYPE_LABELS } from '@/modules/properties/constants';
 export function ImmersiveDetail({ tenant, p, similar, mode = 'public', deletedAt, view }: DetailLayoutProps) {
   const m = detailModel(tenant, p, mode);
   const hasMap = p.latitude !== null && p.longitude !== null;
+  const navItems = buildDetailSections({ description: Boolean(p.description), features: p.features.length > 0, map: hasMap, similar: similar.length > 0 });
+  const nav = navItems.length >= MIN_NAV_ITEMS ? <DetailSectionNav items={navItems} /> : null;
   return (
     <div data-pattern="karay-pattern:property-detail/immersive" className="kp-detail-immersive">
       {m.preview && <PreviewStrip p={p} deletedAt={deletedAt} />}
@@ -38,11 +42,14 @@ export function ImmersiveDetail({ tenant, p, similar, mode = 'public', deletedAt
         </div>
 
         <div className="mx-auto mt-12 max-w-3xl space-y-10">
+          {nav}
           <StatusNotice p={p} />
-          <KeyFacts p={p} />
+          <div id="ozet" className="su-sec">
+            <KeyFacts p={p} />
+          </div>
           <DemoNote p={p} />
           {p.description && (
-            <section aria-label="Açıklama" className="kp-prose">
+            <section id="aciklama" aria-label="Açıklama" className="kp-prose su-sec">
               <div className="prose-content whitespace-pre-line">{p.description}</div>
             </section>
           )}
@@ -80,7 +87,7 @@ export function ImmersiveDetail({ tenant, p, similar, mode = 'public', deletedAt
         <SimilarSection p={p} m={m} similar={similar} title="Portföyden seçtiklerimiz" columns={2} />
       </article>
 
-      {m.available && !m.preview && <MobileContactBar propertyId={p.id} tel={m.tel} whatsapp={m.whatsapp} priceLabel={m.priceLabel} />}
+      {m.available && !m.preview && <DetailContactBars propertyId={p.id} tel={m.tel} whatsapp={m.whatsapp} priceLabel={m.priceLabel} referenceNo={p.referenceNo} />}
     </div>
   );
 }

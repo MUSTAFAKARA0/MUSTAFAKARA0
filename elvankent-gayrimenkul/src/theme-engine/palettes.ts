@@ -109,7 +109,7 @@ export const PALETTES: PalettePreset[] = [
     id: 'rental-coral',
     name: 'Kiralık (mercan · yeşil)',
     scheme: 'light',
-    tokens: { primary: '#b8402c', secondary: '#1d1412', accent: '#1f7a6d', background: '#fbf8f6', surface: '#ffffff', text: '#1d1412', muted: '#6a5a55', border: '#ecdfd9', ...status },
+    tokens: { primary: '#a33523', secondary: '#1d1412', accent: '#1f7a6d', background: '#fbf8f6', surface: '#ffffff', text: '#1d1412', muted: '#6a5a55', border: '#ecdfd9', ...status },
   },
   {
     id: 'midnight-brass',

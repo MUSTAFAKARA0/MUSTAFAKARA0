@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from '
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2, X, ZoomIn, ZoomOut } from 'lucide-react';
 import { mediaSrcSet, mediaUrl } from '@/modules/media/variants';
+import { scrollBehavior } from '@/lib/scroll-behavior';
 import { cn } from '@/lib/utils';
 import type { PropertyImage } from '@/modules/properties/types';
 
@@ -160,12 +161,15 @@ export function Lightbox({
   open,
   onOpenChange,
   startIndex,
+  returnFocusTo,
 }: {
   images: PropertyImage[];
   title: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   startIndex: number;
+  /** Kapanınca odağın döneceği öğe (açan düğme) */
+  returnFocusTo?: React.RefObject<HTMLElement | null>;
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -173,12 +177,18 @@ export function Lightbox({
   const [index, setIndex] = useState(startIndex);
   const [zoomed, setZoomed] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  // Ekran okuyucu duyurusu: kaydırma her karede değil, slayt yerleşince (350 ms sonra) bir kez
+  const [announced, setAnnounced] = useState(startIndex);
+  useEffect(() => {
+    const t = window.setTimeout(() => setAnnounced(index), 350);
+    return () => window.clearTimeout(t);
+  }, [index]);
   const fullscreenSupported = useSyncExternalStore(noop, () => Boolean(document.fullscreenEnabled), () => false);
 
   const scrollTo = useCallback((i: number, smooth = true) => {
     const el = trackRef.current;
     if (!el) return;
-    el.scrollTo({ left: i * el.clientWidth, behavior: smooth ? 'smooth' : 'instant' });
+    el.scrollTo({ left: i * el.clientWidth, behavior: smooth ? scrollBehavior() : 'instant' });
   }, []);
 
   // Açılışta seçilen fotoğrafa atla
@@ -194,7 +204,7 @@ export function Lightbox({
   // Aktif küçük resmi görünür tut
   useEffect(() => {
     const thumb = thumbsRef.current?.children[index] as HTMLElement | undefined;
-    thumb?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    thumb?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: scrollBehavior() });
   }, [index]);
 
   useEffect(() => {
@@ -202,6 +212,20 @@ export function Lightbox({
     document.addEventListener('fullscreenchange', onChange);
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
+
+  // Aşağı kaydırarak kapatma (dokunmatik): yakınlaştırılmamışken, belirgin dikey hareket
+  const swipe = useRef<{ x: number; y: number } | null>(null);
+  const onTouchStart = (e: React.TouchEvent) => {
+    swipe.current = e.touches.length === 1 && !zoomed ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = swipe.current;
+    swipe.current = null;
+    const end = e.changedTouches[0];
+    if (!start || !end) return;
+    const dy = end.clientY - start.y;
+    if (dy > 110 && Math.abs(end.clientX - start.x) < dy / 2) onOpenChange(false);
+  };
 
   const onScroll = () => {
     const el = trackRef.current;
@@ -272,14 +296,23 @@ export function Lightbox({
         <DialogPrimitive.Content
           ref={contentRef}
           onKeyDown={onKeyDown}
+          onCloseAutoFocus={(e) => {
+            if (returnFocusTo?.current) {
+              e.preventDefault();
+              returnFocusTo.current.focus();
+            }
+          }}
           className="fixed inset-0 z-50 flex flex-col bg-[#0a0d0c] text-white outline-none data-[state=open]:animate-fade-in"
           aria-describedby="lightbox-help"
         >
           <div className="flex items-center justify-between gap-3 px-3 py-3 sm:px-5">
             <DialogPrimitive.Title className="line-clamp-1 text-sm font-semibold text-white/85">{title}</DialogPrimitive.Title>
             <div className="flex shrink-0 items-center gap-2">
-              <span className="numeric mr-1 text-sm text-white/70" aria-live="polite">
+              <span className="numeric mr-1 text-sm text-white/70">
                 {index + 1} / {images.length}
+              </span>
+              <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+                Fotoğraf {announced + 1} / {images.length}
               </span>
               <button type="button" className={cn(iconButton, 'hidden sm:inline-flex')} onClick={() => zoomActive(1.4)} aria-label="Yakınlaştır">
                 <ZoomIn className="size-5" />
@@ -302,6 +335,8 @@ export function Lightbox({
             <div
               ref={trackRef}
               onScroll={onScroll}
+              onTouchStart={onTouchStart}
+              onTouchEnd={onTouchEnd}
               className={cn(
                 'scrollbar-none flex h-full snap-x snap-mandatory overscroll-contain',
                 zoomed ? 'overflow-x-hidden' : 'overflow-x-auto',

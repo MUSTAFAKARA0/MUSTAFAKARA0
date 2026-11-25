@@ -7,6 +7,7 @@ import { LeadForm, markQrSource } from '@/components/forms/lead-form';
 import { Button } from '@/components/ui/button';
 import { SegmentedControl } from '@/components/ui/choice';
 import { cn } from '@/lib/utils';
+import { useBarScrollPadding, useContactBar } from '@/components/property/use-contact-bar';
 import { trackEvent } from '@/modules/analytics/track';
 
 interface ContactProps {
@@ -77,32 +78,34 @@ export function ContactPanel(props: ContactProps) {
   );
 }
 
-/** Mobilde ekranın altında sabit iletişim çubuğu */
+/**
+ * Mobilde ekranın altında tek satırlık iletişim çubuğu (fiyat + ara / WhatsApp + birincil eylem).
+ * İletişim kutusu görünümdeyken gizlenir; görünürken sayfa kaydırma payı çubuk kadar artar
+ * (odaklanan alan çubuğun altında kalmaz).
+ */
 export function MobileContactBar({ propertyId, tel, whatsapp, priceLabel }: Pick<ContactProps, 'propertyId' | 'tel' | 'whatsapp'> & { priceLabel: string }) {
+  const show = useContactBar('iletisim-kutusu', false);
+  useBarScrollPadding(show, 'calc(4.5rem + env(safe-area-inset-bottom))');
+  if (!show) return null;
+  const iconBtn = 'flex size-11 shrink-0 items-center justify-center rounded-xl border border-border-strong bg-surface text-foreground';
   return (
-    <div className="safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/96 px-3 pt-2.5 shadow-[0_-8px_24px_-12px_rgb(20_26_24/0.25)] backdrop-blur lg:hidden">
-      <p className="numeric mb-2 line-clamp-1 px-1 text-[13.5px] font-bold text-foreground">{priceLabel}</p>
-      <div className={cn('grid gap-2', tel && whatsapp ? 'grid-cols-[1fr_1fr_1.5fr]' : tel || whatsapp ? 'grid-cols-[1fr_1.5fr]' : 'grid-cols-1')}>
-        {tel && (
-          <Button asChild variant="outline" size="lg" className="px-2">
-            <a href={tel} onClick={() => trackEvent(propertyId, 'phone_click')}>
-              <Phone /> Ara
-            </a>
-          </Button>
-        )}
-        <Button asChild variant="outline" size="lg" className="px-2">
-          <a href="#bilgi-talep">
-            <MessageSquareText /> Bilgi al
-          </a>
-        </Button>
-        {whatsapp && (
-          <Button asChild variant="whatsapp" size="lg" className="px-2">
-            <a href={whatsapp} target="_blank" rel="noopener noreferrer" onClick={() => trackEvent(propertyId, 'whatsapp_click')}>
-              <WhatsAppIcon className="size-5" /> WhatsApp
-            </a>
-          </Button>
-        )}
-      </div>
+    <div className="safe-bottom su-mbar fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-border bg-surface/96 px-3 pt-2 shadow-[0_-8px_24px_-12px_rgb(20_26_24/0.25)] backdrop-blur lg:hidden">
+      <p className="numeric min-w-0 flex-1 truncate text-[15px] leading-tight font-bold text-foreground">{priceLabel}</p>
+      {tel && (
+        <a href={tel} aria-label="Ara" className={iconBtn} onClick={() => trackEvent(propertyId, 'phone_click')}>
+          <Phone className="size-5" aria-hidden />
+        </a>
+      )}
+      {whatsapp && (
+        <a href={whatsapp} aria-label="WhatsApp" target="_blank" rel="noopener noreferrer" className={cn(iconBtn, 'border-transparent bg-whatsapp text-white')} onClick={() => trackEvent(propertyId, 'whatsapp_click')}>
+          <WhatsAppIcon className="size-5" />
+        </a>
+      )}
+      <Button asChild variant="primary" size="lg" className="shrink-0 px-4">
+        <a href="#bilgi-talep">
+          <MessageSquareText /> Bilgi al
+        </a>
+      </Button>
     </div>
   );
 }

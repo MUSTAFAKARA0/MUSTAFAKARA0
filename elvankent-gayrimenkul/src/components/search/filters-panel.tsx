@@ -28,11 +28,15 @@ const FEATURE_FLAGS: FlagKey[] = ['credit', 'furnished', 'complex', 'elevator', 
 const LISTING_FLAGS: FlagKey[] = ['isNew', 'priceDrop', 'featured'];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const labelId = useId();
+  // fieldset/legend yerine group + başlık: legend'in tarayıcıya özgü yerleşimi başlık altında büyük boşluk bırakıyordu
   return (
-    <fieldset className="border-b border-border py-6 first:pt-0 last:border-b-0 last:pb-0">
-      <legend className="mb-3 text-[13px] font-bold tracking-wide text-foreground uppercase">{title}</legend>
+    <div role="group" aria-labelledby={labelId} className="border-b border-border py-6 first:pt-0 last:border-b-0 last:pb-0">
+      <p id={labelId} className="mb-3 text-[13px] font-bold tracking-wide text-foreground uppercase">
+        {title}
+      </p>
       {children}
-    </fieldset>
+    </div>
   );
 }
 

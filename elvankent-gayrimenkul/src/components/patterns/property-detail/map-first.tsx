@@ -3,7 +3,9 @@ import { ArrowRight, MapPin } from 'lucide-react';
 import { Breadcrumbs } from '@/components/common/breadcrumbs';
 import { GallerySurface } from '@/components/patterns/gallery/surface';
 import { Actions, ContactBlock, DemoNote, DetailSection, detailModel, LocationLine, LocationMap, MetaLine, PreviewStrip, PriceFacts, SimilarSection, StatusNotice, TypeLine, type DetailLayoutProps } from '@/components/patterns/property-detail/parts';
-import { MobileContactBar } from '@/components/property/contact-panel';
+import { DetailContactBars } from '@/components/property/detail-contact-bars';
+import { buildDetailSections, MIN_NAV_ITEMS } from '@/components/property/detail-nav-logic';
+import { DetailSectionNav } from '@/components/property/detail-section-nav';
 import { DetailsTable, FeatureList, KeyFacts } from '@/components/property/property-facts';
 
 /**
@@ -14,6 +16,8 @@ import { DetailsTable, FeatureList, KeyFacts } from '@/components/property/prope
 export function MapFirstDetail({ tenant, p, similar, mode = 'public', deletedAt, view }: DetailLayoutProps) {
   const m = detailModel(tenant, p, mode);
   const hasMap = p.latitude !== null && p.longitude !== null;
+  const navItems = buildDetailSections({ description: Boolean(p.description), features: p.features.length > 0, map: hasMap, similar: similar.length > 0 });
+  const nav = navItems.length >= MIN_NAV_ITEMS ? <DetailSectionNav items={navItems} /> : null;
   return (
     <div data-pattern="karay-pattern:property-detail/map-first" className="kp-detail-mapfirst">
       {m.preview && <PreviewStrip p={p} deletedAt={deletedAt} />}
@@ -36,7 +40,7 @@ export function MapFirstDetail({ tenant, p, similar, mode = 'public', deletedAt,
             <GallerySurface view={view} images={p.images} title={p.title} />
           </div>
           {hasMap && (
-            <div className="kp-detail-map min-w-0">
+            <div id="konum" className="kp-detail-map su-sec min-w-0">
               <LocationMap p={p} m={m} view={view} area className="kp-detail-mapbox overflow-hidden rounded-2xl border border-border" />
             </div>
           )}
@@ -53,9 +57,12 @@ export function MapFirstDetail({ tenant, p, similar, mode = 'public', deletedAt,
 
         <div className="mt-10 grid gap-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-14">
           <div className="min-w-0 space-y-10">
+            {nav}
             <PriceFacts p={p} />
             <StatusNotice p={p} />
-            <KeyFacts p={p} />
+            <div id="ozet" className="su-sec">
+              <KeyFacts p={p} />
+            </div>
             <DemoNote p={p} />
             {p.description && (
               <DetailSection id="aciklama" title="Açıklama">
@@ -78,7 +85,7 @@ export function MapFirstDetail({ tenant, p, similar, mode = 'public', deletedAt,
         </div>
         <SimilarSection p={p} m={m} similar={similar} />
       </div>
-      {m.available && !m.preview && <MobileContactBar propertyId={p.id} tel={m.tel} whatsapp={m.whatsapp} priceLabel={m.priceLabel} />}
+      {m.available && !m.preview && <DetailContactBars propertyId={p.id} tel={m.tel} whatsapp={m.whatsapp} priceLabel={m.priceLabel} referenceNo={p.referenceNo} />}
     </div>
   );
 }
