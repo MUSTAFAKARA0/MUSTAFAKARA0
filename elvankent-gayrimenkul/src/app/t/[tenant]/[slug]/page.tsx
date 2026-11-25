@@ -32,26 +32,15 @@ export async function generateMetadata({ params, searchParams }: PageProps<'/t/[
   };
 }
 
-export default async function ListingPage({ params, searchParams }: PageProps<'/t/[tenant]/[slug]'>) {
-  const { tenant: key, slug } = await params;
-  const tenant = await requireSiteTenant(key);
-  const route = await resolveListingRoute(slug, tenant.settings.service_area);
+type Tenant = Awaited<ReturnType<typeof requireSiteTenant>>;
+type Route = NonNullable<Awaited<ReturnType<typeof resolveListingRoute>>>;
 
-  if (!route) {
-    const target = await findRedirect(tenant.id, `/${slug}`);
-    if (target) followRedirect(target);
-    notFound();
-  }
-
-  const sp = await searchParams;
-  const query = parseListingQuery(sp, route.preset);
-
-  // Filtreler bir SEO yoluna karşılık geliyorsa oraya yönlendir (ör. /ilanlar?tip=satilik → /satilik)
-  if (route.kind === 'listing') {
-    const target = listingHref(query);
-    if (target.split('?')[0] !== route.path) redirect(target);
-  }
-
+/**
+ * Sonuç gövdesi. Bilerek AKIŞSIZ (Suspense yok): ilan listesi arama motorları ve ziyaretçi için tek parça
+ * tam HTML olarak gelir. 25.11.2026: Suspense ile akıtılan sonuçlar eski şemalı (bekleyen dosyasız) CI
+ * ayağında boş geldi (acceptance 7–9); rota-düzeyi loading.tsx ise 404'ü yumuşak 404'e çevirir.
+ */
+async function ListingBody({ tenant, route, query }: { tenant: Tenant; route: Route; query: ReturnType<typeof parseListingQuery> }) {
   const [result, options, regionPages] = await Promise.all([
     searchProperties(tenant.id, query),
     getSearchOptions(tenant.id),
@@ -89,4 +78,27 @@ export default async function ListingPage({ params, searchParams }: PageProps<'/
       data={{ route, query, options, result, regionPage: regionPage ? { slug: regionPage.slug, name: regionPage.name } : null, hrefFor, mapPoints }}
     />
   );
+}
+
+export default async function ListingPage({ params, searchParams }: PageProps<'/t/[tenant]/[slug]'>) {
+  const { tenant: key, slug } = await params;
+  const tenant = await requireSiteTenant(key);
+  const route = await resolveListingRoute(slug, tenant.settings.service_area);
+
+  if (!route) {
+    const target = await findRedirect(tenant.id, `/${slug}`);
+    if (target) followRedirect(target);
+    notFound();
+  }
+
+  const sp = await searchParams;
+  const query = parseListingQuery(sp, route.preset);
+
+  // Filtreler bir SEO yoluna karşılık geliyorsa oraya yönlendir (ör. /ilanlar?tip=satilik → /satilik)
+  if (route.kind === 'listing') {
+    const target = listingHref(query);
+    if (target.split('?')[0] !== route.path) redirect(target);
+  }
+
+  return <ListingBody tenant={tenant} route={route} query={query} />;
 }

@@ -1,15 +1,15 @@
 import Link from 'next/link';
-import { SearchX } from 'lucide-react';
 import { Breadcrumbs } from '@/components/common/breadcrumbs';
-import { EmptyState } from '@/components/common/empty-state';
+import { emptySuggestions } from '@/components/common/empty-state-copy';
+import { ContextEmptyState } from '@/components/common/empty-state-variants';
 import { ListingResultsSurface } from '@/components/patterns/listing/surface';
 import type { MapPoint } from '@/components/patterns/contracts';
 import type { PatternView } from '@/components/patterns/resolver';
 import { ListingSearchSurface } from '@/components/patterns/search/surface';
 import { ListingResults, ListingSearchProvider } from '@/components/search/search-context';
-import { Button } from '@/components/ui/button';
+import { FLAG_KEYS } from '@/components/search/filter-state';
 import { formatNumber } from '@/lib/format';
-import type { ListingQuery } from '@/modules/properties/filters';
+import { countActiveFilters, type ListingQuery } from '@/modules/properties/filters';
 import type { SearchResult } from '@/modules/properties/queries';
 import type { ListingRoute } from '@/modules/properties/routes';
 import type { SearchOptions } from '@/modules/properties/search-types';
@@ -34,6 +34,10 @@ export interface ListingPageData {
 
 export function SiteListing({ tenant, view, data }: { tenant: Tenant; view: PatternView | null; data: ListingPageData }) {
   const { route, query, options, result, regionPage, hrefFor, mapPoints } = data;
+  // Rota ön ayarı (/kiralik-arsa vb.) etkin filtredir; temizleme ön ayarı da kaldırır (yoksa aynı boş sayfaya döner)
+  const extras = countActiveFilters(query, route.preset) > 0 || Boolean(query.q);
+  const presetOnly = !extras && Boolean(route.preset.listingType || route.preset.category || route.preset.types?.length);
+  const filtered = extras || presetOnly;
   return (
     <ListingSearchProvider>
       <div className="border-b border-border bg-surface">
@@ -75,20 +79,10 @@ export function SiteListing({ tenant, view, data }: { tenant: Tenant; view: Patt
           {result.items.length > 0 ? (
             <ListingResultsSurface view={view} items={result.items} mapPoints={mapPoints} page={result.page} pageCount={result.pageCount} hrefFor={hrefFor} priorityCount={2} />
           ) : (
-            <EmptyState
-              icon={SearchX}
-              title="Hiç ilan bulunamadı"
-              description="Seçtiğiniz kriterlere uygun yayında ilan yok. Filtreleri genişletebilir veya aradığınız gayrimenkulü bize iletebilirsiniz; uygun bir seçenek olduğunda size haber verelim."
-              action={
-                <>
-                  <Button asChild>
-                    <Link href={route.path}>Filtreleri temizle</Link>
-                  </Button>
-                  <Button asChild variant="outline">
-                    <Link href="/iletisim">Aradığımı bildir</Link>
-                  </Button>
-                </>
-              }
+            <ContextEmptyState
+              variant={filtered ? 'filtered' : 'no-listings'}
+              suggestions={filtered ? emptySuggestions({ ...query, flagCount: FLAG_KEYS.filter((k) => query[k]).length }) : []}
+              clearHref={extras ? route.path : presetOnly ? '/ilanlar' : undefined}
             />
           )}
         </ListingResults>

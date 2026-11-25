@@ -80,8 +80,8 @@ export function SiteFooter({ tenant, regions, hasBlog, view }: { tenant: Tenant;
       ];
   const about = f.about ?? s.tagline ?? s.description;
 
-  const heading = 'mb-4 text-[12px] font-bold tracking-[0.14em] text-inverse-foreground/55 uppercase';
-  const linkClass = 'text-[14.5px] text-inverse-foreground/80 transition-colors hover:text-inverse-foreground';
+  const heading = 'mb-4 text-[12px] font-bold tracking-[0.14em] text-inverse-foreground/80 uppercase';
+  const linkClass = 'text-[14.5px] text-inverse-foreground/90 transition-colors hover:text-inverse-foreground';
 
   const layout = view.style.footerLayout;
   // İletişim öncelikli düzende iletişim bilgileri üstteki bantta; marka sütununda tekrarlanmaz
@@ -94,7 +94,7 @@ export function SiteFooter({ tenant, regions, hasBlog, view }: { tenant: Tenant;
       <div className={cn('inline-flex max-w-full min-w-0', logo && footerStyle !== 'light' && 'rounded-2xl bg-white px-3.5 py-2.5 shadow-sm')}>
         <Logo name={s.display_name} logoUrl={logo} tone={logo && footerStyle !== 'light' ? 'dark' : 'light'} size="footer" display={view.config.header.brand} className="max-w-full" />
       </div>
-      {about && <p className="mt-5 text-[14.5px] leading-relaxed text-inverse-foreground/70">{about}</p>}
+      {about && <p className="mt-5 text-[14.5px] leading-relaxed text-inverse-foreground/85">{about}</p>}
       <ul className={cn('mt-6 space-y-2.5 text-[14.5px] text-inverse-foreground/80', !showContactList && !f.showHours && 'hidden')}>
         {showContactList && phone && s.phone && (
           <li>
@@ -131,7 +131,7 @@ export function SiteFooter({ tenant, regions, hasBlog, view }: { tenant: Tenant;
                   {h}
                 </span>
               ))}
-              {s.working_hours_note && <span className="block text-inverse-foreground/60">{s.working_hours_note}</span>}
+              {s.working_hours_note && <span className="block text-inverse-foreground/80">{s.working_hours_note}</span>}
             </span>
           </li>
         )}
@@ -181,7 +181,7 @@ export function SiteFooter({ tenant, regions, hasBlog, view }: { tenant: Tenant;
   );
   const bottom = (
     <div className="border-t border-inverse-foreground/10">
-      <div className="container-page flex flex-col gap-4 py-6 text-[13px] text-inverse-foreground/60 md:flex-row md:items-center md:justify-between">
+      <div className="container-page flex flex-col gap-4 py-6 text-[13px] text-inverse-foreground/80 md:flex-row md:items-center md:justify-between">
         <p>
           © {new Date().getFullYear()} {f.copyright ?? `${s.legal_name ?? s.display_name}. Tüm hakları saklıdır.`}
           {s.license_no ? <span data-testid="license-no">{` · Yetki belgesi no: ${s.license_no}`}</span> : null}
@@ -242,7 +242,7 @@ export function SiteFooter({ tenant, regions, hasBlog, view }: { tenant: Tenant;
         </div>
         {((f.showContact && (s.phone || s.email || address)) || (f.showHours && hours.length > 0)) && (
           <div className="container-page pb-10">
-            <ul className="flex flex-wrap gap-x-6 gap-y-2 text-[14px] text-inverse-foreground/75">
+            <ul className="flex flex-wrap gap-x-6 gap-y-2 text-[14px] text-inverse-foreground/85">
               {f.showContact && phone && s.phone && (
                 <li>
                   <a href={phone} className="numeric inline-flex items-center gap-2 hover:text-inverse-foreground">

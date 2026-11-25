@@ -12,7 +12,7 @@ import { FiltersPanel } from '@/components/search/filters-panel';
 import { FLAG_KEYS, FLAG_LABELS, fromDraft, toDraft, type FilterDraft } from '@/components/search/filter-state';
 import { useListingSearch } from '@/components/search/search-context';
 import type { SearchOptions } from '@/modules/properties/search-types';
-import { formatNumber } from '@/lib/format';
+import { priceRangeLabel } from '@/components/search/filter-labels';
 import { cn } from '@/lib/utils';
 import {
   CATEGORY_LABELS,
@@ -66,6 +66,11 @@ function PopoverFooter({ onClear, onApply }: { onClear: () => void; onApply: () 
  * fiyat, oda) + "Tüm filtreler"; mobilde "Filtreler" paneli. Tüm değişiklikler
  * URL'ye yazılır.
  */
+/** Ön ayarın yalnızca konum parçası (bölge sayfalarında sabit kalır) */
+function locationPreset(preset: ListingPreset): ListingPreset {
+  return { city: preset.city, district: preset.district, neighborhood: preset.neighborhood };
+}
+
 export function ListingToolbar({
   query,
   preset,
@@ -79,7 +84,8 @@ export function ListingToolbar({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [draft, setDraft] = useState<FilterDraft>(() => toDraft(query));
   const [quick, setQuick] = useState<FilterDraft>(() => toDraft(query));
-  const activeCount = countActiveFilters(query, preset);
+  // Rota ön ayarı (ör. /kiralik-arsa) da etkin filtredir: rozet ve çipler onu da sayar; yalnız konum ön ayarı (bölge sayfası) sayılmaz
+  const activeCount = countActiveFilters(query, locationPreset(preset));
 
   const go = (next: ListingQuery) => navigate(listingHref(next));
   const openSheet = (open: boolean) => {
@@ -95,10 +101,7 @@ export function ListingToolbar({
     : query.district
       ? options.districts.find((d) => d.slug === query.district)?.name
       : undefined;
-  const priceLabel =
-    query.minPrice || query.maxPrice
-      ? `${query.minPrice ? formatNumber(query.minPrice) : '0'} – ${query.maxPrice ? formatNumber(query.maxPrice) : '∞'} ₺`
-      : undefined;
+  const priceLabel = priceRangeLabel(query.minPrice, query.maxPrice);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -287,9 +290,9 @@ interface Chip {
 export function ActiveFilterChips({ query, preset, options }: { query: ListingQuery; preset: ListingPreset; options: SearchOptions }) {
   const { navigate } = useListingSearch();
   const chips: Chip[] = [];
-  if (query.listingType && !preset.listingType) chips.push({ key: 'lt', label: LISTING_TYPE_LABELS[query.listingType], remove: { listingType: undefined } });
-  if (query.category && !preset.category) chips.push({ key: 'cat', label: CATEGORY_LABELS[query.category], remove: { category: undefined } });
-  if (query.types?.length && !preset.types)
+  if (query.listingType) chips.push({ key: 'lt', label: LISTING_TYPE_LABELS[query.listingType], remove: { listingType: undefined } });
+  if (query.category) chips.push({ key: 'cat', label: CATEGORY_LABELS[query.category], remove: { category: undefined } });
+  if (query.types?.length)
     for (const t of query.types)
       chips.push({ key: `t-${t}`, label: options.types.find((x) => x.slug === t)?.name ?? t, remove: { types: query.types.filter((x) => x !== t) } });
   if (query.neighborhood && !preset.neighborhood)
@@ -297,11 +300,7 @@ export function ActiveFilterChips({ query, preset, options }: { query: ListingQu
   else if (query.district && !preset.district)
     chips.push({ key: 'd', label: options.districts.find((x) => x.slug === query.district)?.name ?? query.district, remove: { district: undefined, neighborhood: undefined } });
   if (query.minPrice || query.maxPrice)
-    chips.push({
-      key: 'price',
-      label: `${query.minPrice ? formatNumber(query.minPrice) : '0'} – ${query.maxPrice ? formatNumber(query.maxPrice) : '∞'} ₺`,
-      remove: { minPrice: undefined, maxPrice: undefined },
-    });
+    chips.push({ key: 'price', label: priceRangeLabel(query.minPrice, query.maxPrice) ?? '', remove: { minPrice: undefined, maxPrice: undefined } });
   if (query.minM2 || query.maxM2)
     chips.push({ key: 'm2', label: `${query.minM2 ?? 0} – ${query.maxM2 ?? '∞'} m²`, remove: { minM2: undefined, maxM2: undefined } });
   for (const r of query.rooms ?? []) chips.push({ key: `r-${r}`, label: r, remove: { rooms: query.rooms?.filter((x) => x !== r) } });
@@ -330,7 +329,7 @@ export function ActiveFilterChips({ query, preset, options }: { query: ListingQu
       <li>
         <button
           type="button"
-          onClick={() => navigate(listingHref({ ...preset, sort: query.sort, page: 1 }))}
+          onClick={() => navigate(listingHref({ ...locationPreset(preset), sort: query.sort, page: 1 }))}
           className="h-8 px-2 text-[13px] font-semibold text-primary-ink hover:underline"
         >
           Tümünü temizle

@@ -6,7 +6,11 @@ import { MapSurface } from '@/components/patterns/map/surface';
 import type { PatternView } from '@/components/patterns/resolver';
 import { PropertyBadges } from '@/components/property/property-badges';
 import { CompareToggle, FavoriteButton, ShareButton } from '@/components/property/property-actions';
-import { ContactPanel, MobileContactBar } from '@/components/property/contact-panel';
+import { ContactPanel } from '@/components/property/contact-panel';
+import { DetailContactBars } from '@/components/property/detail-contact-bars';
+import { CopyReference } from '@/components/property/copy-reference';
+import { buildDetailSections, MIN_NAV_ITEMS } from '@/components/property/detail-nav-logic';
+import { DetailSectionNav } from '@/components/property/detail-section-nav';
 import { DetailsTable, FeatureList, KeyFacts } from '@/components/property/property-facts';
 import { PropertyGrid } from '@/components/property/property-grid';
 import { Button } from '@/components/ui/button';
@@ -20,8 +24,8 @@ import { tenantUrl, type Tenant } from '@/platform/tenant/tenant';
 
 function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
-    <section aria-labelledby={id} className="border-t border-border pt-10">
-      <h2 id={id} className="font-display text-[1.6rem] leading-tight text-foreground">
+    <section aria-labelledby={id} className="su-sec border-t border-border pt-10">
+      <h2 id={id} className="su-sec font-display text-[1.6rem] leading-tight text-foreground">
         {title}
       </h2>
       <div className="mt-6">{children}</div>
@@ -52,6 +56,8 @@ export function PropertyDetailView({ tenant, p, similar, mode = 'public', delete
   const available = p.status === 'published';
   const map = publicMapConfig();
   const typePath = `/${LISTING_TYPE_TO_SLUG[p.listingType]}-${p.typeSlug}`;
+  const hasMap = p.latitude !== null && p.longitude !== null;
+  const navItems = buildDetailSections({ description: Boolean(p.description), features: p.features.length > 0, map: hasMap, similar: similar.length > 0 });
   const areaPath = p.citySlug && p.districtSlug ? regionListingPath(p.citySlug, p.districtSlug, p.neighborhoodSlug) : null;
 
   return (
@@ -109,6 +115,7 @@ export function PropertyDetailView({ tenant, p, similar, mode = 'public', delete
             <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[13.5px] text-muted-foreground">
               <span>
                 İlan no: <strong className="numeric font-semibold text-foreground">{p.referenceNo}</strong>
+                {!preview && <CopyReference value={p.referenceNo} />}
               </span>
               {p.publishedAt && (
                 <span className="flex items-center gap-1">
@@ -147,7 +154,8 @@ export function PropertyDetailView({ tenant, p, similar, mode = 'public', delete
 
         <div className="mt-10 grid gap-12 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-14">
           <div className="min-w-0 space-y-10">
-            <div>
+            {navItems.length >= MIN_NAV_ITEMS && <DetailSectionNav items={navItems} />}
+            <div id="ozet" className="su-sec">
               <p className="numeric text-price font-bold tracking-tight text-foreground">{priceLabel}</p>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                 {p.hasPriceDrop && p.pricePrevious && (
@@ -188,7 +196,7 @@ export function PropertyDetailView({ tenant, p, similar, mode = 'public', delete
               </Section>
             )}
 
-            {p.latitude !== null && p.longitude !== null && (
+            {hasMap && (
               <Section id="konum" title="Konum">
                 <p className="-mt-2 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
                   <MapPin className="size-4" aria-hidden /> {location}
@@ -196,7 +204,7 @@ export function PropertyDetailView({ tenant, p, similar, mode = 'public', delete
                 </p>
                 <MapSurface
                   view={view}
-                  center={{ lat: p.latitude, lng: p.longitude }}
+                  center={{ lat: p.latitude as number, lng: p.longitude as number }}
                   mode={p.locationPrecision === 'exact' ? 'pin' : 'area'}
                   radiusMeters={p.locationPrecision === 'neighborhood' ? 700 : 300}
                   zoom={p.locationPrecision === 'neighborhood' ? 14 : 15}
@@ -209,7 +217,7 @@ export function PropertyDetailView({ tenant, p, similar, mode = 'public', delete
             )}
           </div>
 
-          <aside aria-label="İletişim" className="lg:sticky lg:top-24 lg:self-start">
+          <aside id="iletisim-kutusu" aria-label="İletişim" className="lg:sticky lg:top-24 lg:self-start">
             <div className="rounded-2xl bg-surface-muted p-5 sm:p-6">
               <p className="text-[13px] font-semibold text-muted-foreground">
                 {CATEGORY_LABELS[p.category]} · {p.referenceNo}
@@ -253,7 +261,7 @@ export function PropertyDetailView({ tenant, p, similar, mode = 'public', delete
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="eyebrow">Size uygun olabilir</p>
-                <h2 id="benzer" className="mt-2 font-display text-display-lg">
+                <h2 id="benzer" className="su-sec mt-2 font-display text-display-lg">
                   Bu ilana benzer gayrimenkuller
                 </h2>
               </div>
@@ -268,7 +276,7 @@ export function PropertyDetailView({ tenant, p, similar, mode = 'public', delete
         )}
       </div>
 
-      {available && !preview && <MobileContactBar propertyId={p.id} tel={tel} whatsapp={whatsapp} priceLabel={priceLabel} />}
+      {available && !preview && <DetailContactBars propertyId={p.id} tel={tel} whatsapp={whatsapp} priceLabel={priceLabel} referenceNo={p.referenceNo} />}
     </>
   );
 }

@@ -25,6 +25,16 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 25.11.2026 (51) · Ofis siteleri sayfa kalitesi (Aşama 2/3)
+
+- İlan detayı: tüm detay düzenlerinde yapışkan bölüm menüsü (Özet, Açıklama, Özellikler, Olanaklar, Konum, Benzer); temel bilgiler kutucuk; ilan no "Kopyala"; tek satırlık mobil iletişim çubuğu (form görünürken gizlenir, odaklanan alanı örtmez: scroll-padding) ve masaüstü yapışkan çubuk (satılmış/kiralanmış ilanda yok).
+- Galeri: kaydırma rAF ile, boş kare yok; nokta ve önceki/sonraki düğmeleri; tam ekranda aşağı kaydırıp kapatma, odak geri dönüşü, sakin duyurulan sayaç; yalnız görünen ve sıradaki fotoğraf yüklenir (detay LCP 3,9 → 3,2 sn).
+- Listeleme: bağlama göre boş durum ve öneriler; hazır rotalar da etkin süzgeç sayılır; "En az / En çok X ₺" etiketleri; mobil süzgeç sayfasında 44 px dokunma hedefleri.
+- Yükleme iskeletleri (kart düzenine uygun), Favoriler'de kayma yok (CLS 0); 404 davranışı korunur (Suspense sayfa içinde).
+- Tutarlılık: Gece Premium rozet/kalp kontrastı, Kiralık Merkezi/Plaza Ofis kompakt satırlar ve alt bilgi kontrastı, Plaza Ofis okuma sırası.
+- Bağımsız denetim: code-reviewer (1 yüksek bulgu doğrulamada yeniden üretilmedi, test eklendi) + gan-evaluator (6,6/10) bulgularının hepsi düzeltildi.
+- Testler: birim 1245/1245; tenant-quality TQ-01…08; tasarım altın parmak izleri değişmedi.
+
 ### 25.11.2026 (50) · Tasarım kataloğu 9 → 18 aile, 10 → 15 tema; yeni aile seçici (Aşama 1/3)
 
 Sahip isteği: temaları ayrıntılı, daha büyük bir katalog hâline getirmek; ECC ajanlarıyla profesyonel iş. Plan: [upgrade-2 şartnamesi, üç aşama: katalog → ofis siteleri → panel].

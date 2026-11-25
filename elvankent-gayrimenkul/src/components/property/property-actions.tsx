@@ -10,7 +10,7 @@ import { trackEvent } from '@/modules/analytics/track';
 type Variant = 'overlay' | 'outline' | 'ghost';
 
 const variantClass: Record<Variant, string> = {
-  overlay: 'size-10 rounded-full bg-white/92 text-foreground shadow-xs backdrop-blur hover:bg-white',
+  overlay: 'size-11 rounded-full bg-surface/92 text-foreground shadow-xs backdrop-blur hover:bg-surface',
   outline:
     'h-11 rounded-xl border border-border-strong bg-surface px-4 text-sm font-semibold text-foreground hover:bg-surface-muted',
   ghost: 'size-9 rounded-lg text-muted-foreground hover:bg-surface-muted hover:text-foreground',

@@ -172,7 +172,7 @@ export function DemoNote({ p }: { p: PropertyDetail }) {
 export function DetailSection({ id, title, children, className }: { id: string; title: string; children: React.ReactNode; className?: string }) {
   return (
     <section aria-labelledby={id} className={className ?? 'border-t border-border pt-10'}>
-      <h2 id={id} className="font-display text-[1.6rem] leading-tight text-foreground">
+      <h2 id={id} className="su-sec font-display text-[1.6rem] leading-tight text-foreground">
         {title}
       </h2>
       <div className="mt-6">{children}</div>
@@ -209,7 +209,7 @@ export function LocationMap({ p, m, view, className, area }: { p: PropertyDetail
 /** İletişim: özet + iletişim paneli (önizlemede devre dışı notu) + bilgilendirme */
 export function ContactBlock({ tenant, p, m, summary = true }: { tenant: Tenant; p: PropertyDetail; m: DetailModel; summary?: boolean }) {
   return (
-    <>
+    <div id="iletisim-kutusu">
       {summary && (
         <div className="rounded-2xl bg-surface-muted p-5 sm:p-6">
           <p className="text-[13px] font-semibold text-muted-foreground">
@@ -245,7 +245,7 @@ export function ContactBlock({ tenant, p, m, summary = true }: { tenant: Tenant;
       <p className="mt-2 px-1 text-[12.5px] leading-relaxed text-muted-foreground">
         {tenant.settings.display_name} · İlan bilgileri bilgilendirme amaçlıdır; işlem öncesinde tapu ve imar bilgileri resmi kurumlardan teyit edilmelidir.
       </p>
-    </>
+    </div>
   );
 }
 
@@ -256,7 +256,7 @@ export function SimilarSection({ p, m, similar, title = 'Bu ilana benzer gayrime
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">Size uygun olabilir</p>
-          <h2 id="benzer" className="mt-2 font-display text-display-lg">
+          <h2 id="benzer" className="su-sec mt-2 font-display text-display-lg">
             {title}
           </h2>
         </div>

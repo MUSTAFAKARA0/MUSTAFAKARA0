@@ -9,7 +9,7 @@ export function PropertyBadges({ property, className }: { property: PropertyCard
   if (property.status === 'rented') badges.push(<Badge key="rented" variant="inverse">Kiralandı</Badge>);
   if (property.hasPriceDrop)
     badges.push(
-      <Badge key="drop" variant="success" className="bg-white/95 shadow-xs">
+      <Badge key="drop" variant="success" className="bg-surface/95 shadow-xs">
         <ArrowDownRight aria-hidden /> Fiyat düştü
       </Badge>,
     );

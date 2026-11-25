@@ -4,8 +4,8 @@ import { notFound } from 'next/navigation';
 import { ChevronDown, Info } from 'lucide-react';
 import { PageHeader } from '@/components/common/page-header';
 import { LazyMap } from '@/components/common/maps/lazy-map';
+import { ContextEmptyState } from '@/components/common/empty-state-variants';
 import { PropertyGrid } from '@/components/property/property-grid';
-import { Button } from '@/components/ui/button';
 import { formatCompact, formatNumber } from '@/lib/format';
 import { getRegionPageBySlug } from '@/modules/content/queries';
 import { Markdown } from '@/modules/content/markdown';
@@ -126,12 +126,7 @@ export default async function RegionPage({ params }: PageProps<'/t/[tenant]/bolg
           {listings.items.length > 0 ? (
             <PropertyGrid items={listings.items} columns={4} className="mt-8" />
           ) : (
-            <div className="mt-6 rounded-2xl bg-surface-muted p-6">
-              <p className="text-[15px]">Bu bölgede şu anda yayında ilan bulunmuyor.</p>
-              <Button asChild className="mt-4" variant="outline">
-                <Link href="/iletisim">Aradığınızı bize iletin</Link>
-              </Button>
-            </div>
+            <ContextEmptyState variant="no-region-listings" className="mt-6" />
           )}
         </section>
 

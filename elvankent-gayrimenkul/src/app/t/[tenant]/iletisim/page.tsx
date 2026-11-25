@@ -106,7 +106,7 @@ export default async function ContactPage({ params }: PageProps<'/t/[tenant]/ile
         </div>
         <div className="rounded-[1.5rem] border border-border bg-surface p-6 shadow-sm sm:p-8">
           <h2 className="font-display text-2xl">Bize yazın</h2>
-          <p className="mt-2 text-[15px] text-muted-foreground">Mesajınızı bırakın; en kısa sürede size dönüş yapalım.</p>
+          <p className="mt-2 text-[15px] text-muted-foreground">Mesajınızı bırakın; ofisimiz talebinizi değerlendirip size ulaşsın.</p>
           <LeadForm kind="contact" className="mt-6" />
         </div>
       </div>

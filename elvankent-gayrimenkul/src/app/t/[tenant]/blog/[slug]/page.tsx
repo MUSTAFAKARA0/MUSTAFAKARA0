@@ -102,7 +102,7 @@ export default async function BlogPostPage({ params }: PageProps<'/t/[tenant]/bl
       )}
 
       <div className="container-narrow py-12 sm:py-16">
-        <Markdown source={post.body} className="prose-content" />
+        <Markdown source={post.body} className="prose-content su-prose" />
         {post.updatedAt && post.updatedAt.slice(0, 10) !== post.publishedAt.slice(0, 10) && (
           <p className="mt-10 text-sm text-muted-foreground">Son güncelleme: {formatDate(post.updatedAt)}</p>
         )}

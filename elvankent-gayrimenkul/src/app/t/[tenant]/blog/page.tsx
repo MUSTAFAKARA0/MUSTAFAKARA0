@@ -111,7 +111,7 @@ export default async function BlogIndexPage({ params, searchParams }: PageProps<
               </div>
             )}
             {grid.length > 0 && (
-              <ul className={`grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 ${featured ? 'mt-12 sm:mt-16' : ''}`}>
+              <ul className={`su-enter grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 ${featured ? 'mt-12 sm:mt-16' : ''}`}>
                 {grid.map((post) => (
                   <li key={post.id}>
                     <PostCard post={post} />

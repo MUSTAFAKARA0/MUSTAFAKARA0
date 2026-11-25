@@ -49,15 +49,15 @@ export default async function RegionsIndexPage({ params }: PageProps<'/t/[tenant
         {regions.length === 0 ? (
           <EmptyState icon={MapPinned} title="Henüz bölge sayfası yok" description="Bölge rehberleri yakında burada olacak." />
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="su-enter grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {regions.map((r) => (
               <li key={r.slug}>
-                <Link href={`/bolgeler/${r.slug}`} className="group flex h-full flex-col rounded-2xl border border-border bg-surface p-6 transition hover:border-border-strong hover:shadow-md">
+                <Link href={`/bolgeler/${r.slug}`} className="su-region group flex h-full flex-col border border-border bg-surface p-6 pt-7 transition hover:border-border-strong hover:shadow-md">
                   <span className="text-sm text-muted-foreground">{[r.districtName !== r.name ? r.districtName : null, r.cityName].filter(Boolean).join(', ')}</span>
                   <span className="mt-1 font-display text-[1.7rem] text-foreground">{r.name}</span>
                   {r.intro && <span className="mt-3 line-clamp-3 text-[14.5px] leading-relaxed text-muted-foreground">{r.intro}</span>}
                   <span className="mt-auto flex items-center justify-between pt-6 text-sm font-semibold">
-                    <span className="numeric text-muted-foreground">{countFor(r)} yayında ilan</span>
+                    <span className="numeric rounded-full bg-primary-soft px-3 py-1 text-[13px] text-primary-ink">{countFor(r)} yayında ilan</span>
                     <ArrowRight className="size-4 transition group-hover:translate-x-1" aria-hidden />
                   </span>
                 </Link>
@@ -73,7 +73,7 @@ export default async function RegionsIndexPage({ params }: PageProps<'/t/[tenant
             <ul className="mt-6 flex flex-wrap gap-2">
               {[...districtTotals.values()].map((d) => (
                 <li key={d.path}>
-                  <Link href={d.path} className="inline-flex h-10 items-center gap-2 rounded-full border border-border-strong bg-surface px-4 text-sm font-medium hover:border-foreground/50">
+                  <Link href={d.path} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-strong bg-surface px-4 text-sm font-medium hover:border-foreground/50">
                     {d.name} <span className="numeric text-muted-foreground">{d.count}</span>
                   </Link>
                 </li>

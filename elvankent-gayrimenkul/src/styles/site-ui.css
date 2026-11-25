@@ -1,0 +1,346 @@
+/*
+ * Kiracı sitesi arayüz katmanı (Aşama 2). Yalnızca app/t ve app/site-onizleme kökleri içe aktarır;
+ * panel, platform ve KARAY'a girmez. Tema CSS'i (Theme Engine) burada DEĞİŞMEZ: yalnızca tema
+ * değişkenleri (--surface-muted, --border, --primary...) ve data-site-* öznitelikleri okunur.
+ * Hareket yalnızca prefers-reduced-motion: no-preference içindedir; hiçbir süre 5 sn'yi aşmaz.
+ */
+
+/* ---------- İskelet (loading.tsx) ---------- */
+.su-skel {
+  background: var(--surface-muted);
+  border-radius: 0.5rem;
+}
+.pcs {
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem;
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  border-radius: 1.25rem;
+  background: var(--surface);
+}
+.pcs-media {
+  aspect-ratio: 4/3;
+  border-radius: 0.875rem;
+}
+.pcs-lines {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.9rem 0.5rem 0.5rem;
+}
+.pcs-lines > i {
+  display: block;
+  height: 0.9rem;
+}
+.pcs-lines > i:first-child {
+  height: 1.4rem;
+  width: 42%;
+}
+.pcs-lines > i:nth-child(2) {
+  width: 86%;
+}
+.pcs-lines > i:nth-child(3) {
+  width: 58%;
+}
+.pcs-grid {
+  display: grid;
+  gap: 2.5rem 1.5rem;
+}
+@media (min-width: 640px) {
+  .pcs-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1280px) {
+  .pcs-grid[data-cols='3'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .pcs-grid[data-cols='4'] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+[data-sk-image='square'] .pcs-media {
+  border-radius: 0;
+}
+[data-sk-image='organic'] .pcs-media {
+  border-radius: 2rem;
+}
+[data-sk-layout='overlay'] .pcs {
+  padding: 0;
+  overflow: hidden;
+}
+[data-sk-layout='overlay'] .pcs-media {
+  aspect-ratio: 4/5;
+  border-radius: 0;
+}
+[data-sk-layout='overlay'] .pcs-lines {
+  display: none;
+}
+[data-sk-layout='editorial'] .pcs {
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+[data-sk-layout='editorial'] .pcs-media {
+  aspect-ratio: 4/5;
+}
+[data-sk-layout='editorial'] .pcs-lines {
+  padding: 1rem 0 0;
+}
+@media (min-width: 640px) {
+  [data-sk-layout='horizontal'] .pcs {
+    display: grid;
+    grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+  }
+  [data-sk-layout='horizontal'] .pcs-media {
+    aspect-ratio: auto;
+    min-height: 13.5rem;
+  }
+  .pcs-grid[data-sk-layout='horizontal'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .pcs-grid[data-sk-layout='horizontal'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.pcs-grid[data-sk-layout='compact'] {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+[data-sk-layout='compact'] .pcs {
+  display: grid;
+  grid-template-columns: 6.75rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+[data-sk-layout='compact'] .pcs-media {
+  aspect-ratio: auto;
+  min-height: 6rem;
+}
+[data-sk-layout='compact'] .pcs-lines {
+  align-content: center;
+  padding: 0.15rem 0.25rem;
+}
+@media (min-width: 640px) {
+  [data-sk-layout='compact'] .pcs {
+    grid-template-columns: 9rem minmax(0, 1fr);
+  }
+  [data-sk-layout='compact'] .pcs-media {
+    min-height: 6rem;
+  }
+}
+
+/* ---------- İlan detayı ---------- */
+.su-sec {
+  scroll-margin-top: 0.5rem;
+}
+html[data-su-bar] {
+  scroll-padding-bottom: calc(var(--su-bar-h, 4.5rem) + 1rem);
+}
+.su-nav {
+  position: sticky;
+  top: var(--su-nav-top, 0px);
+  z-index: 30;
+  background: color-mix(in oklab, var(--background) 94%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+}
+.su-nav ul {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.su-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0 0.85rem;
+  border-bottom: 2px solid transparent;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+}
+.su-nav a:hover {
+  color: var(--foreground);
+}
+.su-nav a[aria-current='true'] {
+  color: var(--foreground);
+  border-bottom-color: var(--primary);
+}
+.su-tile {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl, 0.875rem);
+  background: var(--surface);
+}
+.su-tile-icon {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+}
+.su-zebra > div {
+  padding-inline: 0.75rem;
+}
+.su-zebra > div:nth-child(even) {
+  background: color-mix(in oklab, var(--surface-muted) 75%, transparent);
+}
+.su-stickybar {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  z-index: 30;
+  display: none;
+  width: min(44rem, calc(100vw - 8rem));
+  translate: -50% 0;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0.75rem 0.6rem 1.1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-xl, 1rem);
+  background: color-mix(in oklab, var(--surface) 96%, transparent);
+  box-shadow: 0 18px 44px -18px rgb(20 26 24 / 0.4);
+  backdrop-filter: blur(10px);
+}
+@media (min-width: 1024px) {
+  .su-stickybar {
+    display: flex;
+  }
+}
+
+/* ---------- Galeri ---------- */
+.su-gal-slide {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 75vw;
+}
+.su-dots {
+  position: absolute;
+  inset-inline: 0;
+  top: 0.8rem;
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+  pointer-events: none;
+}
+.su-dots i {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.55);
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.18);
+}
+.su-dots i[data-on] {
+  width: 1.1rem;
+  background: #fff;
+}
+.su-tile-zoom {
+  cursor: zoom-in;
+}
+
+/* ---------- Boş durum ---------- */
+.su-empty {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl, 1.25rem);
+  background: linear-gradient(180deg, var(--surface), color-mix(in oklab, var(--surface-muted) 55%, var(--surface)));
+}
+.su-empty-hint {
+  border-left: 2px solid var(--accent);
+}
+
+/* ---------- Bölge ve blog ---------- */
+.su-region {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xl, 1rem);
+}
+.su-region::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--accent);
+  transform-origin: left;
+}
+.su-prose > p:first-of-type {
+  font-size: 1.2rem;
+  line-height: 1.7;
+  color: var(--foreground);
+}
+.su-prose {
+  max-width: 68ch;
+  margin-inline: auto;
+}
+
+/* ---------- Form ---------- */
+:is(input, select, textarea)[aria-invalid='true'] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--danger) 16%, transparent);
+}
+
+/* ---------- Mikro etkileşimler (yalnızca hareket tercihi yokken) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes su-shimmer {
+    to {
+      background-position: -200% 0;
+    }
+  }
+  @keyframes su-up {
+    from {
+      transform: translateY(10px);
+    }
+  }
+  @keyframes su-pop {
+    40% {
+      transform: scale(1.28);
+    }
+  }
+  @keyframes su-grow {
+    from {
+      transform: scaleX(0);
+    }
+  }
+  .su-skel {
+    background: linear-gradient(90deg, var(--surface-muted) 0, var(--surface-sunken) 50%, var(--surface-muted) 100%) 0 0 / 200% 100%;
+    animation: su-shimmer 1.6s ease-in-out 3;
+  }
+  .su-enter {
+    animation: su-up 0.45s var(--ease-premium, ease-out) both;
+  }
+  .su-stickybar {
+    animation: su-up 0.35s var(--ease-premium, ease-out) both;
+  }
+  .btn:active {
+    transform: scale(0.98);
+  }
+  .su-region::before {
+    animation: su-grow 0.6s var(--ease-premium, ease-out) both;
+  }
+  .su-region:hover::before {
+    height: 5px;
+  }
+  button[aria-pressed='true'] > svg.fill-danger {
+    animation: su-pop 0.35s var(--ease-premium, ease-out);
+  }
+  .prose-content a {
+    text-decoration-thickness: 1px;
+    transition: text-decoration-thickness 0.2s;
+  }
+  .prose-content a:hover {
+    text-decoration-thickness: 2px;
+  }
+  .su-nav a {
+    transition:
+      color 0.15s,
+      border-color 0.2s;
+  }
+  .su-dots i {
+    transition:
+      width 0.25s var(--ease-premium, ease-out),
+      background-color 0.2s;
+  }
+}

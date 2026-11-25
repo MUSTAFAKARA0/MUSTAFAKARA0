@@ -18,7 +18,7 @@ const badgeVariants = cva(
         info: 'bg-info-soft text-info',
         outline: 'border border-border bg-surface text-foreground/80',
         inverse: 'bg-surface-inverse/85 text-white backdrop-blur-sm',
-        glass: 'bg-white/92 text-foreground shadow-xs backdrop-blur-sm',
+        glass: 'bg-surface/92 text-foreground shadow-xs backdrop-blur-sm',
       },
     },
     defaultVariants: { variant: 'neutral' },
