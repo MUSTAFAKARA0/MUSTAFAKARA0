@@ -25,7 +25,8 @@ describe('Faz 2 › iskelet', () => {
     const rules = css.replace(/\/\*[\s\S]*?\*\//g, '');
     assert.ok(!/\[data-site-[a-z-]+=/.test(rules), 'site-ui.css içinde data-site-* öznitelik seçicisi var');
     assert.match(read('src/components/property/skeletons/card-skeleton.tsx'), /data-sk-layout=\{layout\}/);
-    assert.match(read('src/app/t/[tenant]/[slug]/page.tsx'), /<ListingPageSkeleton layout=\{style\.cardLayout\} image=\{style\.image\} \/>/);
+    // İlan listesi akışsızdır: sonuçlar tek parça HTML (eski şemalı CI ayağında akış boş sonuç verdi)
+    assert.ok(!/<Suspense/.test(read('src/app/t/[tenant]/[slug]/page.tsx')), 'ilan listesi Suspense ile akıtılmamalı');
   });
 
   test('SK-02 iskelet işaretlemesi gerçek kart kancalarını kullanmaz', () => {

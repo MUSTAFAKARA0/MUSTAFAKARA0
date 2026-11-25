@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { patternNeeds } from '@/components/patterns/resolver';
-import { ListingPageSkeleton } from '@/components/property/skeletons/page-skeletons';
 import { SiteListing } from '@/components/site/site-listing';
 import { getRegionPages } from '@/modules/content/queries';
 import { countActiveFilters, listingHref, listingQueryToParams, parseListingQuery } from '@/modules/properties/filters';
@@ -37,7 +35,11 @@ export async function generateMetadata({ params, searchParams }: PageProps<'/t/[
 type Tenant = Awaited<ReturnType<typeof requireSiteTenant>>;
 type Route = NonNullable<Awaited<ReturnType<typeof resolveListingRoute>>>;
 
-/** Sonuç gövdesi: veri gelene kadar iskelet (rota-düzeyi loading.tsx 404'ü yumuşak 404'e çevirir, bu yüzden Suspense) */
+/**
+ * Sonuç gövdesi. Bilerek AKIŞSIZ (Suspense yok): ilan listesi arama motorları ve ziyaretçi için tek parça
+ * tam HTML olarak gelir. 25.11.2026: Suspense ile akıtılan sonuçlar eski şemalı (bekleyen dosyasız) CI
+ * ayağında boş geldi (acceptance 7–9); rota-düzeyi loading.tsx ise 404'ü yumuşak 404'e çevirir.
+ */
 async function ListingBody({ tenant, route, query }: { tenant: Tenant; route: Route; query: ReturnType<typeof parseListingQuery> }) {
   const [result, options, regionPages] = await Promise.all([
     searchProperties(tenant.id, query),
@@ -98,11 +100,5 @@ export default async function ListingPage({ params, searchParams }: PageProps<'/
     if (target.split('?')[0] !== route.path) redirect(target);
   }
 
-  // Notfound/yönlendirme yukarıda, akıştan ÖNCE çözülür (durum kodları korunur); veri beklerken iskelet
-  const { style } = await getSiteView(tenant);
-  return (
-    <Suspense fallback={<ListingPageSkeleton layout={style.cardLayout} image={style.image} />}>
-      <ListingBody tenant={tenant} route={route} query={query} />
-    </Suspense>
-  );
+  return <ListingBody tenant={tenant} route={route} query={query} />;
 }
