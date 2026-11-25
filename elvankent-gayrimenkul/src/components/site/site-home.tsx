@@ -73,12 +73,14 @@ export function SiteHome({ tenant, view, data }: { tenant: Tenant; view: SiteVie
   }
 
   const heroSpot = showcase[0] ?? latestPool[0] ?? null;
+  // Mozaik hero için gerçek ilanların kapakları (yinelenmeden, en çok 3)
+  const mosaic = [...new Map([...showcase, ...latestPool].filter((p) => p.cover).map((p) => [p.id, p])).values()].slice(0, 3);
   const sections = view.config.home?.sections ?? DEFAULT_HOME_SECTIONS;
   const render = (sec: HomeSectionConfig) => {
     const o: SectionOverride = { eyebrow: sec.eyebrow, title: sec.title, description: sec.description, ctaLabel: sec.ctaLabel, ctaHref: sec.ctaHref };
     switch (sec.type) {
       case 'hero':
-        return <HeroSurface view={view} tenant={tenant} options={options} spotlight={heroSpot} publishedCount={inventory.total} inventory={inventory} content={o} />;
+        return <HeroSurface view={view} tenant={tenant} options={options} spotlight={heroSpot} publishedCount={inventory.total} inventory={inventory} mosaic={mosaic} content={o} />;
       case 'showcase':
         return <ShowcaseSection items={showcase} o={o} />;
       case 'categories':

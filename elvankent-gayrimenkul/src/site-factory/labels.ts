@@ -6,11 +6,11 @@ import type { HomepageComposition } from '@/site-factory/types';
  * kullanır; kiracı sitesine girmez. Değer listeleri Theme Engine kimlikleridir (ids.ts).
  */
 export const VARIANT_LABELS = {
-  hero: { overlay: 'Fotoğraf üstü', centered: 'Ortalı', split: 'Bölünmüş', cinematic: 'Sinematik', editorial: 'Editoryal (çerçeveli)', showcase: 'İlan vitrini', immersive: 'Kenardan kenara (az metin)', blueprint: 'Izgaralı dizin', 'map-search': 'Arama + bölge dizini' } satisfies Record<HeroLayout, string>,
-  header: { classic: 'Klasik', centered: 'Ortalı logo, ayrı menü', floating: 'Yüzen (ayrık)', transparent: 'Saydam (hero üzerinde)', structured: 'Izgaralı, iletişim şeritli', 'search-bar': 'Arama çubuklu' } satisfies Record<HeaderLayout, string>,
+  hero: { overlay: 'Fotoğraf üstü', centered: 'Ortalı', split: 'Bölünmüş', cinematic: 'Sinematik', editorial: 'Editoryal (çerçeveli)', showcase: 'İlan vitrini', immersive: 'Kenardan kenara (az metin)', blueprint: 'Izgaralı dizin', 'map-search': 'Arama + bölge dizini', tabbed: 'Sekmeli arama + sayı şeridi', mosaic: 'Üçlü fotoğraf mozaiği', poster: 'Afiş (sayaçlı)' } satisfies Record<HeroLayout, string>,
+  header: { classic: 'Klasik', centered: 'Ortalı logo, ayrı menü', floating: 'Yüzen (ayrık)', transparent: 'Saydam (hero üzerinde)', structured: 'Izgaralı, iletişim şeritli', 'search-bar': 'Arama çubuklu', utility: 'Üst bilgi şeritli' } satisfies Record<HeaderLayout, string>,
   card: { elevated: 'Gölgeli', outline: 'Çizgili', flat: 'Düz zemin', bezel: 'Çift çerçeve' },
-  cardLayout: { standard: 'Standart', overlay: 'Görsel üstü', editorial: 'Editoryal (kutusuz)', horizontal: 'Yatay' },
-  footer: { classic: 'Sütunlu', contact: 'İletişim öncelikli', minimal: 'Minimal', editorial: 'Editoryal', structured: 'Izgaralı künye', discovery: 'Keşif (bölge kısayollu)' } satisfies Record<FooterLayout, string>,
+  cardLayout: { standard: 'Standart', overlay: 'Görsel üstü', editorial: 'Editoryal (kutusuz)', horizontal: 'Yatay', compact: 'Sıkı satır' },
+  footer: { classic: 'Sütunlu', contact: 'İletişim öncelikli', minimal: 'Minimal', editorial: 'Editoryal', structured: 'Izgaralı künye', discovery: 'Keşif (bölge kısayollu)', band: 'Çağrı bandı + dört sütun' } satisfies Record<FooterLayout, string>,
   motion: { none: 'Hareketsiz', subtle: 'Ölçülü', expressive: 'Belirgin' },
   homepage: { family: 'Ailenin düzeni', 'featured-first': 'Öne çıkan ilan önce', 'listings-first': 'İlanlar önce' } satisfies Record<HomepageComposition, string>,
 } as const;

@@ -10,6 +10,7 @@ import type { SiteView } from '@/site-config/load';
 import { parseSiteConfig } from '@/site-config/schema';
 import type { PreviewPayload } from '@/site-factory/site-info';
 import { initialSiteSections } from '@/site-factory/site-info';
+import { findPalette } from '@/theme-engine/palettes';
 import { resolveStyle } from '@/theme-engine/themes';
 
 /**
@@ -163,7 +164,9 @@ export function buildPreviewModel(payload: { manifest: PreviewPayload['manifest'
       whatsapp: f.whatsapp ?? true,
       favorites: f.favorites ?? true,
       advancedSeo: false,
-      darkMode: false,
+      // Koyu paletli aile (ör. Gece Premium) önizlemede tasarlandığı gibi koyu gösterilir; yayındaki sitede
+      // koyu görünüm özelliği (dark_mode) ayrıca açık olmalıdır (sihirbaz bunu aile kartında belirtir)
+      darkMode: f.dark_mode ?? findPalette(config.colors.preset)?.scheme === 'dark',
     },
     preview: true,
   };

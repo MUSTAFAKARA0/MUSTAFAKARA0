@@ -5,6 +5,7 @@ import { serverEnv } from '@/lib/server-env';
 import { disabledFamilies } from '@/modules/platform/design-access';
 import { listPlans } from '@/modules/platform/queries';
 import { requireSuperAdminPage } from '@/platform/auth/session';
+import { FAMILY_META } from '@/site-factory/catalog-meta';
 import { DESIGN_FAMILIES, familyParts, SURFACE_PART_LABELS } from '@/site-factory/families';
 import { FIXED_SLOT_LABELS, VARIANT_LABELS } from '@/site-factory/labels';
 import { SITE_TYPES } from '@/site-factory/site-types';
@@ -43,6 +44,8 @@ export default async function NewSitePage() {
         parts: familyParts(f, style),
         surfaces: Object.fromEntries(Object.entries(f.style.slots ?? {}).flatMap(([k, v]) => (typeof v === 'string' && SURFACE_PART_LABELS[k]?.[v] ? [[k, SURFACE_PART_LABELS[k][v]]] : []))),
         disabled: global.disabled.has(f.id),
+        meta: FAMILY_META[f.id],
+        dark: palette.scheme === 'dark',
       };
     }),
     palettes: PALETTES.filter((p) => p.scheme === 'light').map((p) => ({ id: p.id, name: p.name, swatch: [p.tokens.primary, p.tokens.accent, p.tokens.background] })),

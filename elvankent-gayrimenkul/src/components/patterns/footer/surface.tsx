@@ -1,4 +1,5 @@
 import { SiteFooter } from '@/components/layout/site-footer';
+import { BandFooter } from '@/components/patterns/footer/band';
 import { DiscoveryFooter } from '@/components/patterns/footer/discovery';
 import { EditorialFooter } from '@/components/patterns/footer/editorial';
 import type { FooterPatternInput } from '@/components/patterns/footer/parts';
@@ -17,6 +18,8 @@ export function FooterSurface(props: FooterPatternInput) {
       return <StructuredFooter {...props} />;
     case 'discovery':
       return <DiscoveryFooter {...props} />;
+    case 'band':
+      return <BandFooter {...props} />;
     default:
       return <SiteFooter tenant={props.tenant} regions={props.regions} hasBlog={props.hasBlog} view={props.view} />;
   }

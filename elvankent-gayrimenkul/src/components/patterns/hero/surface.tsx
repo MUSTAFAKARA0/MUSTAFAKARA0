@@ -3,6 +3,9 @@ import type { HeroPatternProps } from '@/components/patterns/contracts';
 import { BlueprintHero } from '@/components/patterns/hero/blueprint';
 import { ImmersiveHero } from '@/components/patterns/hero/immersive';
 import { MapSearchHero } from '@/components/patterns/hero/map-search';
+import { MosaicHero } from '@/components/patterns/hero/mosaic';
+import { PosterHero } from '@/components/patterns/hero/poster';
+import { TabbedHero } from '@/components/patterns/hero/tabbed';
 import { resolvePattern, type PatternView } from '@/components/patterns/resolver';
 
 /**
@@ -19,6 +22,12 @@ export function HeroSurface({ view, ...props }: HeroPatternProps & { view: Patte
       return <BlueprintHero {...props} />;
     case 'map-search':
       return <MapSearchHero {...props} />;
+    case 'tabbed':
+      return <TabbedHero {...props} />;
+    case 'mosaic':
+      return <MosaicHero {...props} />;
+    case 'poster':
+      return <PosterHero {...props} />;
     default:
       return (
         <Hero

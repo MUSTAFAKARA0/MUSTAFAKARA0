@@ -42,7 +42,7 @@ export default async function Page() {
     <div className="space-y-10">
       {families.length > 0 ? (
         <div className="space-y-3">
-          <DesignFamilyPicker families={families} brand={brand} darkAllowed={site.overrides.dark_mode === true} name={site.brand.display_name} />
+          <DesignFamilyPicker families={families} brand={brand} darkAllowed={site.overrides.dark_mode === true} name={site.brand.display_name} real={{ kind: 'office', base: '/site-onizleme/ofis' }} />
           <Button asChild variant="outline" size="sm">
             <Link href="/admin/tasarim/onizleme">
               <Eye /> Tasarımları sitenizin verisiyle önizle

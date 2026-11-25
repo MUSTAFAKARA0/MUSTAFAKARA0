@@ -4,18 +4,18 @@
  * Yeni tema: buraya kimlik + themes.ts'e tanım (+ gerekirse design-css.ts'te sunum parçası). Müşteri başına
  * tema dosyası/kodu oluşturulmaz.
  */
-export const THEME_IDS = ['klasik', 'marble', 'atlas', 'prestij', 'kent', 'yalin', 'rezidans', 'doga', 'dergi', 'grafit'] as const;
+export const THEME_IDS = ['klasik', 'marble', 'atlas', 'prestij', 'kent', 'yalin', 'rezidans', 'doga', 'dergi', 'grafit', 'deniz', 'plaza', 'tarla', 'miras', 'gece'] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 
 export const FONT_IDS = ['manrope', 'fraunces', 'inter', 'playfair', 'dm-sans', 'lora', 'cormorant', 'space-grotesk', 'outfit', 'newsreader'] as const;
 export type FontId = (typeof FONT_IDS)[number];
 
 /** Yapısal tasarım seçenekleri (kapalı listeler; bkz. settings.ts › styleSchema) */
-export const HERO_LAYOUTS = ['overlay', 'centered', 'split', 'cinematic', 'editorial', 'showcase', 'immersive', 'blueprint', 'map-search'] as const;
+export const HERO_LAYOUTS = ['overlay', 'centered', 'split', 'cinematic', 'editorial', 'showcase', 'immersive', 'blueprint', 'map-search', 'tabbed', 'mosaic', 'poster'] as const;
 export const CARD_SURFACES = ['elevated', 'outline', 'flat', 'bezel'] as const;
-export const CARD_LAYOUTS = ['standard', 'overlay', 'editorial', 'horizontal'] as const;
-export const HEADER_LAYOUTS = ['classic', 'centered', 'floating', 'transparent', 'structured', 'search-bar'] as const;
-export const FOOTER_LAYOUTS = ['classic', 'contact', 'minimal', 'editorial', 'structured', 'discovery'] as const;
+export const CARD_LAYOUTS = ['standard', 'overlay', 'editorial', 'horizontal', 'compact'] as const;
+export const HEADER_LAYOUTS = ['classic', 'centered', 'floating', 'transparent', 'structured', 'search-bar', 'utility'] as const;
+export const FOOTER_LAYOUTS = ['classic', 'contact', 'minimal', 'editorial', 'structured', 'discovery', 'band'] as const;
 export const MOTION_LEVELS = ['none', 'subtle', 'expressive'] as const;
 export type HeroLayout = (typeof HERO_LAYOUTS)[number];
 export type CardSurface = (typeof CARD_SURFACES)[number];
@@ -32,7 +32,7 @@ export type MotionLevel = (typeof MOTION_LEVELS)[number];
  * bileşen yok (ör. müşteri yorumları gerçek veri gerektirir; uydurma içerik gösterilmez).
  */
 export const NAVIGATION_STYLES = ['standard'] as const;
-export const GRID_LAYOUTS = ['standard', 'gallery-wide', 'ruled-index', 'map-results'] as const;
+export const GRID_LAYOUTS = ['standard', 'gallery-wide', 'ruled-index', 'map-results', 'feature-first'] as const;
 export const SEARCH_STYLES = ['standard', 'map-first'] as const;
 export const LISTING_DETAIL_LAYOUTS = ['standard', 'immersive', 'information-first', 'map-first'] as const;
 export const GALLERY_LAYOUTS = ['standard', 'grid', 'carousel', 'fullscreen'] as const;

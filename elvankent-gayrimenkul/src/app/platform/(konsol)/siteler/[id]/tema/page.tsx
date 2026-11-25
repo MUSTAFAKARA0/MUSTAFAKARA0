@@ -22,7 +22,14 @@ export default async function Page({ params }: PageProps<'/platform/siteler/[id]
   const formKey = JSON.stringify([d.theme, d.style, d.colors]);
   return (
     <div className="space-y-10">
-      <DesignFamilyPicker families={families} brand={brand} darkAllowed={site.overrides.dark_mode === true} name={site.brand.display_name} />
+      <DesignFamilyPicker
+        families={families}
+        brand={brand}
+        darkAllowed={site.overrides.dark_mode === true}
+        name={site.brand.display_name}
+        real={{ kind: 'platform', siteType: d.style.origin?.siteType ?? 'real-estate-office', city: site.brand.address_city ?? undefined }}
+        description="Bu sitenin taslağına uygulanacak tasarım: bir aile seçmek taslağın tema, renk, tipografi ve düzen bölümlerini değiştirir (metinler, menü ve marka korunur). Canlı site yayınlayana kadar değişmez."
+      />
       <FamilyAccessForm
         orgId={site.org.id}
         available={access.available}

@@ -66,6 +66,8 @@ export interface HeroPatternProps {
   content: SectionOverride;
   /** Kategori sayıları (gerçek envanter) */
   inventory: { total: number; byListingType: { sale: number; rent: number }; byCategory: Record<string, number> };
+  /** Gerçek vitrin/son ilanlar (kapağı olanlar; en çok 3): yalnızca mozaik hero kullanır, yoksa tek görsele düşer */
+  mosaic?: PropertyCard[];
 }
 export interface HeaderPatternProps extends PatternContext {
   hasBlog: boolean;

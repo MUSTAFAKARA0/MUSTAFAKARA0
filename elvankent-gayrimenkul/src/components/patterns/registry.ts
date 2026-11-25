@@ -47,9 +47,13 @@ export const PATTERN_REGISTRY: readonly PatternMeta[] = [
   pattern('hero', 'immersive', 'Kenardan kenara görsel, az metin, tek çağrı'),
   pattern('hero', 'blueprint', 'Izgaralı, numaralı kategori dizini + çerçeveli görsel'),
   pattern('hero', 'map-search', 'Arama öncelikli, bölge + ilan sayısı dizini'),
+  pattern('hero', 'tabbed', 'Satılık/Kiralık sekmeli arama kartı + gerçek sayı şeridi'),
+  pattern('hero', 'mosaic', 'Gerçek ilan kapaklarından üçlü fotoğraf mozaiği'),
+  pattern('hero', 'poster', 'Afiş düzeni: iri başlık, tek çağrı, gerçek envanter sayaçları'),
   pattern('search', 'map-first', 'Yapışkan filtre çubuğu + ilçe kısayolları'),
   pattern('listing', 'gallery-wide', 'İki sütunlu geniş görselli seçki'),
   pattern('listing', 'ruled-index', 'Çizgili, numaralı mimari dizin'),
+  pattern('listing', 'feature-first', 'İlk ilan büyük (2×2), diğerleri standart ızgarada'),
   pattern('listing', 'map-results', 'Liste ↔ harita (masaüstü yan yana, mobilde geçiş)', { interactive: true, needs: ['map-points'] }),
   pattern('property-detail', 'immersive', 'Tam genişlik galeri, editoryal tek sütun'),
   pattern('property-detail', 'information-first', 'Teknik künye öncelikli iki sütun'),
@@ -60,9 +64,11 @@ export const PATTERN_REGISTRY: readonly PatternMeta[] = [
   pattern('header', 'transparent', 'Hero üzerinde saydam, ortalı logo, düşük yoğunluk'),
   pattern('header', 'structured', 'Çizgili ızgara hücreleri, üstte iletişim şeridi'),
   pattern('header', 'search-bar', 'Header içinde ilan araması ve hızlı keşif bağlantıları'),
+  pattern('header', 'utility', 'Üstte telefon, WhatsApp ve çalışma saati şeridi + ana satır'),
   pattern('footer', 'editorial', 'Büyük marka cümlesi, tek çağrı, sade bağlantı satırı'),
   pattern('footer', 'structured', 'Numaralı, çizgili sütunlar ve künye tipi iletişim'),
   pattern('footer', 'discovery', 'Bölge ve ilan türü kısayollarıyla kompakt keşif'),
+  pattern('footer', 'band', 'Tam genişlik marka çağrı bandı + dört sütunlu footer'),
 ];
 
 /** Manifest kapalı listeleri (desen türü → izin verilen kimlikler) */

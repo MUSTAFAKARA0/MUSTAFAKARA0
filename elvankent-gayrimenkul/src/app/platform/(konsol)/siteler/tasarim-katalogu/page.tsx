@@ -3,6 +3,7 @@ import { AdminPageHeader } from '@/components/panel/ui';
 import { FamilyCatalogAdmin } from '@/components/platform/site/family-catalog-admin';
 import { disabledFamilies } from '@/modules/platform/design-access';
 import { requireSuperAdminPage } from '@/platform/auth/session';
+import { FAMILY_META } from '@/site-factory/catalog-meta';
 import { DESIGN_FAMILIES, familyParts } from '@/site-factory/families';
 import { PALETTES } from '@/theme-engine/palettes';
 import { resolveStyle, THEMES } from '@/theme-engine/themes';
@@ -36,6 +37,7 @@ export default async function DesignCatalogPage() {
       parts: familyParts(f, resolveStyle({ theme: f.theme, style: f.style })),
       enabled: !global.disabled.has(f.id),
       sites: usedBy.get(f.id) ?? 0,
+      meta: FAMILY_META[f.id],
     };
   });
   return (

@@ -95,7 +95,7 @@ export function ThemeShowcase({ baseConfig }: { baseConfig: SiteConfig }) {
           {/* key: tema değişince önizleme yeniden bağlanır ve CSS "swap" girişi oynar (yalnızca hareket serbestken) */}
           <div key={active} className="ky-swap">
             <DeviceFrame title={`${theme.name} teması · örnek site`}>
-              <LivePreview config={config} brand={{ primary_color: null, accent_color: null }} darkAllowed={false} name="Örnek Gayrimenkul" label={`${theme.name} teması örnek site önizlemesi`} />
+              <LivePreview config={config} brand={{ primary_color: null, accent_color: null }} darkAllowed name="Örnek Gayrimenkul" label={`${theme.name} teması örnek site önizlemesi`} />
             </DeviceFrame>
           </div>
         </div>

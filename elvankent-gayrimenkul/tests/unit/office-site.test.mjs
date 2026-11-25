@@ -117,6 +117,21 @@ describe('OS-03: tasarım ailesi doğrulaması', () => {
     assert.equal(db.calls.filter((c) => c.name === 'site_save_draft').length, 0);
   });
 
+  test('koyu paletli aile (gece-premium) koyu görünüm kapalıyken reddedilir; açıkken ve belirtilmediğinde uygulanır', async () => {
+    const off = fakeDb();
+    await assert.rejects(() => service.applyFamilyToDraft(off, ORG, 'gece-premium', ['gece-premium'], undefined, false), /koyu görünüm gerektirir/);
+    assert.equal(off.calls.filter((c) => c.name === 'site_save_draft').length, 0);
+    const on = fakeDb();
+    await service.applyFamilyToDraft(on, ORG, 'gece-premium', ['gece-premium'], undefined, true);
+    assert.equal(on.calls.filter((c) => c.name === 'site_save_draft').length, 5);
+    // açık paletli aile koyu kapalıyken de uygulanır
+    const light = fakeDb();
+    await service.applyFamilyToDraft(light, ORG, 'plaza-ofis', ['plaza-ofis'], undefined, false);
+    assert.equal(light.calls.filter((c) => c.name === 'site_save_draft').length, 5);
+    // eylemler org'un dark_mode değerini servise geçirir
+    for (const f of ['src/app/actions/admin-site.ts', 'src/app/actions/site-builder.ts']) assert.match(read(f), /readDarkAllowed\(/, f);
+  });
+
   test('izinli aile 5 tasarım bölümünü TASLAĞA yazar (yayın yok); kaynak ailesi kayda geçer', async () => {
     const db = fakeDb();
     await service.applyFamilyToDraft(db, ORG, 'sinematik-vitrin', ['sinematik-vitrin']);

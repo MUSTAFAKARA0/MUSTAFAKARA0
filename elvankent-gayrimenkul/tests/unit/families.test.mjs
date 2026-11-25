@@ -43,6 +43,8 @@ function walk(dir, out = []) {
 }
 
 const NEW = ['luxury', 'architectural', 'map-first'];
+/** Faz 1 katalog genişlemesi: 10–18. aileler (sona eklenir) */
+const NEW9 = ['deniz-kiyisi', 'proje-lansman', 'plaza-ofis', 'arsa-tarla', 'kurumsal-zincir', 'butik-ofis', 'kiralik-merkezi', 'miras-konak', 'gece-premium'];
 const base = () => parseSiteConfig({});
 const viewOf = (design) => {
   const config = parseSiteConfig(design);
@@ -97,7 +99,7 @@ describe('D7.3 aile × yüzey matrisi', () => {
   });
 
   test('her D7.3 deseni en az bir ailede kullanılır (kullanılmayan kod yok) ve kendi işaretini taşır', () => {
-    const used = new Set(NEW.flatMap((id) => Object.entries(manifestSurfaces(manifest(id))).map(([s, v]) => `${contract[s].kind}/${v}`)));
+    const used = new Set([...NEW, ...NEW9].flatMap((id) => Object.entries(manifestSurfaces(manifest(id))).map(([s, v]) => `${contract[s].kind}/${v}`)));
     for (const p of PATTERN_REGISTRY.filter((x) => !x.legacy && x.kind !== 'interaction')) {
       if (p.kind === 'gallery' && p.id === 'carousel') continue; // D7.2 deseni; Map First kullanır
       assert.ok(used.has(`${p.kind}/${p.id}`) || (p.kind === 'gallery' && p.id === 'grid'), `${p.kind}/${p.id} hiçbir ailede yok`);
@@ -294,5 +296,115 @@ describe('D7.4 Header ve Footer yüzeyleri', () => {
       assert.ok(!/elvankent/i.test(code), `${path.relative(SRC, f)}: kiracı adı`);
       assert.ok(!/tenant\.(slug|key|id)\s*===|settings\.display_name\s*===|organizationId\s*===/.test(code), `${path.relative(SRC, f)}: kiracıya özel dal`);
     }
+  });
+});
+
+// ------------------------------------------------------------------------------------------------
+// FAZ 1 · KATALOG GENİŞLEMESİ: 10–18. aileler (9 yeni aile, 5 yeni tema, 6 yeni desen)
+// ------------------------------------------------------------------------------------------------
+const EXPECTED9 = {
+  'deniz-kiyisi': { navigation: 'floating', footer: 'discovery', home: 'mosaic', search: 'standard', listing: 'standard', 'property-detail': 'standard', gallery: 'carousel', map: 'standard' },
+  'proje-lansman': { navigation: 'transparent', footer: 'editorial', home: 'poster', search: 'standard', listing: 'gallery-wide', 'property-detail': 'immersive', gallery: 'fullscreen', map: 'standard' },
+  'plaza-ofis': { navigation: 'structured', footer: 'structured', home: 'tabbed', search: 'standard', listing: 'standard', 'property-detail': 'information-first', gallery: 'grid', map: 'standard' },
+  'arsa-tarla': { navigation: 'classic', footer: 'structured', home: 'map-search', search: 'map-first', listing: 'ruled-index', 'property-detail': 'map-first', gallery: 'grid', map: 'standard' },
+  'kurumsal-zincir': { navigation: 'utility', footer: 'band', home: 'split', search: 'standard', listing: 'standard', 'property-detail': 'standard', gallery: 'grid', map: 'standard' },
+  'butik-ofis': { navigation: 'centered', footer: 'minimal', home: 'centered', search: 'standard', listing: 'feature-first', 'property-detail': 'standard', gallery: 'grid', map: 'standard' },
+  'kiralik-merkezi': { navigation: 'utility', footer: 'classic', home: 'tabbed', search: 'map-first', listing: 'standard', 'property-detail': 'information-first', gallery: 'standard', map: 'standard' },
+  'miras-konak': { navigation: 'classic', footer: 'editorial', home: 'editorial', search: 'standard', listing: 'feature-first', 'property-detail': 'immersive', gallery: 'grid', map: 'standard' },
+  'gece-premium': { navigation: 'transparent', footer: 'editorial', home: 'immersive', search: 'standard', listing: 'gallery-wide', 'property-detail': 'immersive', gallery: 'fullscreen', map: 'standard' },
+};
+const NEW_PATTERNS = ['hero/tabbed', 'hero/mosaic', 'hero/poster', 'header/utility', 'footer/band', 'listing/feature-first'];
+const NEW_THEMES = ['deniz', 'plaza', 'tarla', 'miras', 'gece'];
+
+describe('Faz 1: 9 yeni aile (10–18)', () => {
+  test('katalog sırası: ilk 9 aile değişmedi, 9 yeni aile sonuna eklendi', () => {
+    assert.deepEqual(CATALOG.slice(0, 9).map((f) => f.id), ['klasik-guven', 'sinematik-vitrin', 'editoryal-luks', 'kurumsal-portfoy', 'yalin-galeri', 'dogal-yasam', ...NEW]);
+    assert.deepEqual(CATALOG.slice(9).map((f) => f.id), NEW9);
+    assert.equal(CATALOG.length, 18);
+  });
+
+  for (const id of NEW9) {
+    test(`${id}: her yüzey → kayıtlı desen; manifest = çözümleyici; beklenen yapı`, () => {
+      const m = manifest(id);
+      const surfaces = manifestSurfaces(m);
+      const resolved = resolveSurfaces(viewOf(compileManifest(m, base()).design));
+      for (const s of SITE_SURFACES) {
+        assert.ok(findPattern(contract[s].kind, surfaces[s]), `${id}: ${s}/${surfaces[s]}`);
+        assert.equal(resolved[s].id, surfaces[s], `${id}: ${s} önizleme ≠ kiracı`);
+      }
+      for (const [s, want] of Object.entries(EXPECTED9[id])) assert.equal(resolved[s].id, want, `${id}: ${s}`);
+    });
+  }
+
+  test('yeni 6 desenin her biri en az bir yeni ailede kullanılır, işaretini taşır ve sunucu bileşenidir', () => {
+    const used = new Set(NEW9.flatMap((id) => Object.entries(manifestSurfaces(manifest(id))).map(([s, v]) => `${contract[s].kind}/${v}`)));
+    for (const key of NEW_PATTERNS) {
+      assert.ok(used.has(key), `${key} hiçbir yeni ailede yok`);
+      const [kind, pid] = key.split('/');
+      const p = findPattern(kind, pid);
+      assert.ok(p && !p.legacy && !p.interactive, key);
+      assert.equal(p.marker, `karay-pattern:${kind}/${pid}`);
+      const src = read(p.source);
+      assert.ok(src.includes(p.marker), `${p.source}: işaret yok`);
+      assert.ok(!/^'use client';/.test(src), `${p.source}: sunucu deseni olmalı`);
+    }
+  });
+
+  test('ayrışma: (tema, palet) benzersiz; (hero, header, kart düzeni, footer) benzersiz; aynı temada başlık yazı tipi + ana renk farklı', () => {
+    const resolved = CATALOG.map((f) => {
+      const d = compileDesign(f, base());
+      const s = resolveStyle(parseSiteConfig(d));
+      const palette = PALETTES.find((p) => p.id === d.colors.preset);
+      return { id: f.id, theme: d.theme, palette: d.colors.preset, tuple: [s.hero, s.headerLayout, s.cardLayout, s.footerLayout].join('/'), heading: d.typography.heading ?? THEMES[d.theme].fonts.heading, primary: palette.tokens.primary };
+    });
+    assert.equal(new Set(resolved.map((r) => `${r.theme}/${r.palette}`)).size, resolved.length, 'tema + palet çifti yinelendi');
+    assert.equal(new Set(resolved.map((r) => r.tuple)).size, resolved.length, 'hero/header/kart/footer dörtlüsü yinelendi');
+    for (const a of resolved)
+      for (const b of resolved.filter((x) => x.id > a.id && x.theme === a.theme)) assert.ok(a.heading !== b.heading || a.primary !== b.primary, `${a.id} ↔ ${b.id}: aynı temada aynı yazı tipi ve ana renk`);
+  });
+
+  test('bilerek paylaşılan hero (arsa-tarla ↔ map-first: map-search): en az 5/8 yüzey farklı; tema, palet ve tipografi farklı', () => {
+    const sig = (id) => manifestSurfaces(manifest(id));
+    const a = sig('arsa-tarla');
+    const b = sig('map-first');
+    assert.equal(a.home, b.home);
+    const diff = Object.keys(a).filter((s) => a[s] !== b[s]);
+    assert.ok(diff.length >= 5, `yalnızca ${diff.length} yüzey farklı (${diff})`);
+    const fa = findDesignFamily('arsa-tarla');
+    const fb = findDesignFamily('map-first');
+    assert.notEqual(fa.theme, fb.theme);
+    assert.notEqual(fa.palette, fb.palette);
+    assert.notDeepEqual(compileDesign(fa, base()).typography.heading ?? THEMES[fa.theme].fonts.heading, fb.typography.heading);
+  });
+
+  test('yeni temalar yalnızca harf; yeni ailelerin teması/paleti/fontu kayıtlı; ilk 9 aile yeni desen/tema seçmez', () => {
+    for (const t of NEW_THEMES) assert.match(t, /^[a-z]+$/);
+    for (const id of NEW9) assert.ok(NEW_THEMES.includes(findDesignFamily(id).theme) || THEMES[findDesignFamily(id).theme], id);
+    const newTheme = new Set(NEW9.filter((id) => NEW_THEMES.includes(findDesignFamily(id).theme)));
+    assert.equal(newTheme.size, 5 + 0, 'beş yeni temanın her biri bir yeni ailede kullanılmalı');
+    for (const f of CATALOG.slice(0, 9)) {
+      assert.ok(!NEW_THEMES.includes(f.theme), f.id);
+      const used = Object.entries(manifestSurfaces(manifest(f.id))).map(([s, v]) => `${contract[s].kind}/${v}`);
+      for (const key of NEW_PATTERNS) assert.ok(!used.includes(key), `${f.id} yeni deseni seçiyor: ${key}`);
+    }
+  });
+
+  test('her yeni ailenin CSS’i yalnızca kendi yeni desenlerini taşır; ilk 9 ailenin sayfasına yeni desen CSS’i girmez', () => {
+    const css = (id) => {
+      const r = resolveSurfaces(viewOf(compileManifest(manifest(id), base()).design));
+      return patternCss({ surfaces: Object.values(r).filter((p) => !p.legacy).map((p) => `${p.kind}/${p.id}`) });
+    };
+    for (const id of [...NEW, ...CATALOG.slice(0, 6).map((f) => f.id), ...NEW9]) {
+      const mine = css(id);
+      const own = new Set(Object.values(resolveSurfaces(viewOf(compileManifest(manifest(id), base()).design))).map((p) => `${p.kind}/${p.id}`));
+      for (const key of NEW_PATTERNS) assert.equal(mine.includes(SURFACE_PATTERN_CSS[key]), own.has(key), `${id}: ${key}`);
+    }
+  });
+
+  test('mozaik hero yalnızca gerçek kapaklardan beslenir: sözleşmede mosaic alanı var, kiracı verisi dışında kaynak yok', () => {
+    const contracts = read('components/patterns/contracts.ts');
+    assert.match(contracts, /mosaic\?: PropertyCard\[\]/);
+    const src = read('components/patterns/hero/mosaic.tsx');
+    assert.ok(!/unsplash|placeholder|picsum/i.test(src));
   });
 });

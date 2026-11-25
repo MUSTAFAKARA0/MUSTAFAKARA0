@@ -1,11 +1,14 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 import { setDesignFamilyEnabled } from '@/app/actions/site-builder';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/form-controls';
+import { FamilyFilters } from '@/components/site-editor/family-filters';
+import { DEFAULT_STATE, filterFamilies, resultText, segmentCounts, sortFamilies, type CatalogState } from '@/components/site-editor/family-catalog-logic';
+import type { FamilyMeta } from '@/site-factory/catalog-segments';
 
 interface CatalogFamily {
   id: string;
@@ -19,20 +22,39 @@ interface CatalogFamily {
   parts: string[];
   enabled: boolean;
   sites: number;
+  meta: FamilyMeta;
 }
 
 export function FamilyCatalogAdmin({ available, families }: { available: boolean; families: CatalogFamily[] }) {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const [filter, setFilter] = useState<CatalogState>(DEFAULT_STATE);
+  const shown = useMemo(() => sortFamilies(filterFamilies(families, filter), filter.sort), [families, filter]);
   return (
     <div>
       {[...new Set(families.map((f) => f.heading))].map((f) => (
         <link key={f} rel="stylesheet" href={`/fonts/site/${f}/preview.css`} precedence="default" />
       ))}
       {!available && <p className="mb-5 rounded-xl bg-warning-soft p-3 text-[13.5px] text-warning">Açma/kapama için 20261004000001_design_family_access migration&apos;ı veritabanına uygulanmalıdır.</p>}
+      <div className="mb-4">
+        <FamilyFilters
+          state={filter}
+          onChange={setFilter}
+          counts={segmentCounts(families)}
+          total={families.length}
+          resultText={resultText(families.length, shown.length)}
+          sortOptions={[
+            { value: 'recommended', label: 'Katalog sırası' },
+            { value: 'az', label: 'A–Z' },
+            { value: 'sites', label: 'Kullanan site sayısı' },
+          ]}
+          showDark={families.some((f) => f.meta.contrast === 'dark')}
+        />
+      </div>
+      {shown.length === 0 && <p className="rounded-2xl border border-dashed border-border-strong px-5 py-8 text-center text-[13.5px] text-muted-foreground">Bu süzgece uyan tasarım ailesi yok. Süzgeçleri temizleyin.</p>}
       <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {families.map((f) => (
+        {shown.map((f) => (
           <li key={f.id} className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface">
             <div className="flex h-24 items-end justify-between px-5 pb-4" style={{ background: f.swatch[2], color: f.swatch[3], opacity: f.enabled ? 1 : 0.55 }}>
               <span className="text-[2.3rem] leading-none" style={{ fontFamily: `"${f.headingName}", serif` }} aria-hidden>

@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import Image, { type StaticImageData } from 'next/image';
 import { MarqueePause } from '@/components/karay/marquee-pause';
 // Ekran görüntüleri statik import edilir (bkz. app/karay/page.tsx: /karay/ yolu proxy'de korunur, görsel
@@ -12,6 +13,15 @@ import dogalYasam from '@/app/karay/_images/aileler/dogal-yasam.webp';
 import luxury from '@/app/karay/_images/aileler/luxury.webp';
 import architectural from '@/app/karay/_images/aileler/architectural.webp';
 import mapFirst from '@/app/karay/_images/aileler/map-first.webp';
+import denizKiyisi from '@/app/karay/_images/aileler/deniz-kiyisi.webp';
+import projeLansman from '@/app/karay/_images/aileler/proje-lansman.webp';
+import plazaOfis from '@/app/karay/_images/aileler/plaza-ofis.webp';
+import arsaTarla from '@/app/karay/_images/aileler/arsa-tarla.webp';
+import kurumsalZincir from '@/app/karay/_images/aileler/kurumsal-zincir.webp';
+import butikOfis from '@/app/karay/_images/aileler/butik-ofis.webp';
+import kiralikMerkezi from '@/app/karay/_images/aileler/kiralik-merkezi.webp';
+import mirasKonak from '@/app/karay/_images/aileler/miras-konak.webp';
+import gecePremium from '@/app/karay/_images/aileler/gece-premium.webp';
 
 /**
  * Şeritteki aileler. KARAYS sayfası katman kuralı gereği Site Factory kataloğunu içe aktaramaz (eslint
@@ -28,6 +38,15 @@ export const GALLERY_FAMILIES: readonly { id: string; name: string; text: string
   { id: 'luxury', name: 'Luxury', text: 'Tam ekran görsel, altın çerçeve, seçkin portföy.', shot: luxury },
   { id: 'architectural', name: 'Architectural', text: 'Plan çizimi ızgarası, numaralı bölümler, köşe işaretleri.', shot: architectural },
   { id: 'map-first', name: 'Map First', text: 'Harita öncelikli arama, rota çizgileri, bölge odaklı.', shot: mapFirst },
+  { id: 'deniz-kiyisi', name: 'Deniz Kıyısı', text: 'Fotoğraf mozaiği, yumuşak köşeler, sahil tonları.', shot: denizKiyisi },
+  { id: 'proje-lansman', name: 'Proje Lansman', text: 'Koyu afiş düzeni, iri başlık, gerçek sayaçlar.', shot: projeLansman },
+  { id: 'plaza-ofis', name: 'Plaza Ofis', text: 'Sekmeli arama, sayı şeridi, sıkı satır kartları.', shot: plazaOfis },
+  { id: 'arsa-tarla', name: 'Arsa & Tarla', text: 'Eş yükselti dokusu, numaralı dizin, toprak tonları.', shot: arsaTarla },
+  { id: 'kurumsal-zincir', name: 'Kurumsal Zincir', text: 'Üst bilgi şeridi, düz kartlar, çağrı bantlı footer.', shot: kurumsalZincir },
+  { id: 'butik-ofis', name: 'Butik Ofis', text: 'Ortalı düzen, çizgili editoryal kartlar, ilk ilan büyük.', shot: butikOfis },
+  { id: 'kiralik-merkezi', name: 'Kiralık Merkezi', text: 'Kiralık odaklı sekmeli arama, hızlı filtre, sıkı satırlar.', shot: kiralikMerkezi },
+  { id: 'miras-konak', name: 'Miras Konak', text: 'Kemerli görseller, çini esinli desen, serif başlıklar.', shot: mirasKonak },
+  { id: 'gece-premium', name: 'Gece Premium', text: 'Koyu zemin, pirinç ince çizgiler, parıltılı kartlar.', shot: gecePremium },
 ];
 
 /**
@@ -54,7 +73,7 @@ export function DesignGallery() {
     <div className="ky-marquee-wrap">
       <MarqueePause />
       <div className="ky-marquee" role="region" aria-label="Tasarım aileleri örnek ana sayfalar" tabIndex={0}>
-        <ul className="ky-track">
+        <ul className="ky-track" style={{ '--ky-count': items.length } as CSSProperties}>
           {items.map((f, i) => card(f, false, i))}
           {items.map((f, i) => card(f, true, i))}
         </ul>

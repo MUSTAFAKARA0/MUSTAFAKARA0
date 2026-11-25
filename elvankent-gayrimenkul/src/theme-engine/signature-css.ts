@@ -53,6 +53,22 @@ const K = {
   pulse: '@keyframes sig-pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.55}}',
   route: '@keyframes sig-route{from{background-position:0 0}to{background-position:20px 0}}',
   shine: '@keyframes sig-shine{from{background-position:120% 0}to{background-position:-20% 0}}',
+  drift: '@keyframes sig-drift{from{transform:scale(1.04)}to{transform:scale(1.04) translate3d(-1.2%,0,0)}}',
+  contour: '@keyframes sig-contour{from{background-position:0 0}to{background-position:90px 54px}}',
+};
+
+/** Satır içi SVG'ler (data:, ağ isteği yok; CSP img-src data:). Her biri < 700 bayt */
+const SVG = {
+  // Deniz: ince dalga çizgisi (maske olarak kullanılır; renk token'dan gelir)
+  wave: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='12' viewBox='0 0 48 12'%3E%3Cpath d='M0 6Q12 0 24 6T48 6' fill='none' stroke='%23000' stroke-width='1.3'/%3E%3C/svg%3E\")",
+  // Tarla: topografik eş yükselti çizgileri (taban rengi sabit, %9 saydamlık)
+  contour:
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='108' viewBox='0 0 180 108'%3E%3Cg fill='none' stroke='%236b5a34' stroke-opacity='.11' stroke-width='1'%3E%3Cpath d='M-10 30C30 6 60 54 100 30S160 6 190 30'/%3E%3Cpath d='M-10 54C30 30 60 78 100 54S160 30 190 54'/%3E%3Cpath d='M-10 78C30 54 60 102 100 78S160 54 190 78'/%3E%3Cpath d='M-10 102C30 78 60 126 100 102S160 78 190 102'/%3E%3C/g%3E%3C/svg%3E\")",
+  // Miras: sivri kemer (maske; görseli yalnızca kendi karosunda keser, rozetlere dokunmaz)
+  arch: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M0 100V34Q0 14 50 0Q100 14 100 34V100Z'/%3E%3C/svg%3E\")",
+  // Miras: sekiz köşeli yıldız karosu (iki kare, altın %16)
+  star:
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Cg fill='none' stroke='%23c9a45c' stroke-opacity='.16'%3E%3Crect x='13' y='13' width='30' height='30'/%3E%3Crect x='13' y='13' width='30' height='30' transform='rotate(45 28 28)'/%3E%3Ccircle cx='28' cy='28' r='4'/%3E%3C/g%3E%3C/svg%3E\")",
 };
 
 /** Tema seçicisi */
@@ -84,7 +100,7 @@ export const SIGNATURE: Record<ThemeId, SignatureFragment> = {
       `${HOVER}{${t('rezidans')} .property-card .site-media img{transition:transform 1.1s cubic-bezier(.22,1,.36,1)}${t('rezidans')} .property-card:hover .site-media img{transform:scale(1.08)}${t('rezidans')} .property-card .site-media::before{transition:transform 1.1s cubic-bezier(.22,1,.36,1)}${t('rezidans')} .property-card:hover .site-media::before{transform:translateX(130%)}}`,
     motion:
       K.rise + K.kenBurns + K.grow + K.fade + K.unveilUp +
-      `${OK}{${m('rezidans')} ${HERO_IMG}{animation:sig-ken-burns 24s ease-in-out 2 alternate}${m('rezidans')} #hero-baslik{animation:sig-rise 1.2s cubic-bezier(.22,1,.36,1) both}${m('rezidans')} #hero-baslik+p{animation:sig-rise 1.2s .18s cubic-bezier(.22,1,.36,1) both}${m('rezidans')} .eyebrow-line::before{transform-origin:left;animation:sig-grow 1s .25s cubic-bezier(.22,1,.36,1) both}` +
+      `${OK}{${m('rezidans')} ${HERO_IMG}{animation:sig-ken-burns 5s ease-out 1 both}${m('rezidans')} #hero-baslik{animation:sig-rise 1.2s cubic-bezier(.22,1,.36,1) both}${m('rezidans')} #hero-baslik+p{animation:sig-rise 1.2s .18s cubic-bezier(.22,1,.36,1) both}${m('rezidans')} .eyebrow-line::before{transform-origin:left;animation:sig-grow 1s .25s cubic-bezier(.22,1,.36,1) both}` +
       `${VIEW}{${m('rezidans')} section[aria-labelledby='rakamlar'] dl>div{${inView('sig-fade', 'entry 0% entry 160px')}}${m('rezidans')} section[aria-labelledby='rakamlar'] dl>div:nth-child(2){animation-range:entry 30px entry 190px}${m('rezidans')} section[aria-labelledby='rakamlar'] dl>div:nth-child(3){animation-range:entry 60px entry 220px}${m('rezidans')} section[aria-labelledby='rakamlar'] dl>div:nth-child(4){animation-range:entry 90px entry 250px}${m('rezidans')} .property-card .pc-media{${inView('sig-unveil-up', 'entry 0% entry 260px')}}}}` +
       progress('rezidans', 'var(--accent)'),
   },
@@ -176,7 +192,7 @@ export const SIGNATURE: Record<ThemeId, SignatureFragment> = {
       `${HOVER}{${t('atlas')} .property-card .site-media img{transition:transform .8s cubic-bezier(.22,1,.36,1)}${t('atlas')} .property-card:hover .site-media img{transform:scale(1.05)}${t('atlas')} .property-card .lucide-map-pin{transition:transform .3s cubic-bezier(.34,1.56,.64,1)}${t('atlas')} .property-card:hover .lucide-map-pin{transform:translateY(-3px) scale(1.15)}}`,
     motion:
       K.rise + K.route + K.pulse +
-      `${OK}{${m('atlas')} #hero-baslik{animation:sig-rise 1s cubic-bezier(.22,1,.36,1) both}${m('atlas')} .eyebrow-line::before{animation:sig-route 1.1s linear 4}${m('atlas')} ${HERO} .lucide-map-pin{animation:sig-pulse 2.6s ease-in-out 2}}` +
+      `${OK}{${m('atlas')} #hero-baslik{animation:sig-rise 1s cubic-bezier(.22,1,.36,1) both}${m('atlas')} .eyebrow-line::before{animation:sig-route 1.1s linear 4}${m('atlas')} ${HERO} .lucide-map-pin{animation:sig-pulse 2.4s ease-in-out 2}}` +
       progress('atlas', 'repeating-linear-gradient(90deg,var(--accent) 0 10px,transparent 10px 14px)', '3px'),
   },
 
@@ -194,5 +210,88 @@ export const SIGNATURE: Record<ThemeId, SignatureFragment> = {
       `${t('dergi')} main>section:not(:first-child) h2.font-display{border-top:3px double var(--foreground);padding-top:.5rem}` +
       `${HOVER}{${t('dergi')} .property-card .site-media img{transition:transform 1s cubic-bezier(.22,1,.36,1),filter .6s}${t('dergi')} .property-card:hover .site-media img{transform:scale(1.04);filter:contrast(1.05)}}`,
     motion: K.rise + K.unveilUp + `${OK}{${m('dergi')} #hero-baslik{animation:sig-rise 1.1s cubic-bezier(.22,1,.36,1) both}${VIEW}{${m('dergi')} .property-card .site-media{${inView('sig-unveil-up', 'entry 0% entry 280px')}}}}`,
+  },
+
+  // ----------------------------------------------------------------- Deniz: ufuk çizgisi, kumsal-deniz tonu
+  deniz: {
+    static:
+      `${t('deniz')} main>section:not(:first-child){position:relative}` +
+      `${t('deniz')} main>section:not(:first-child)::before{content:'';position:absolute;left:0;right:0;top:0;height:12px;pointer-events:none;background:color-mix(in oklab,var(--primary) 30%,transparent);-webkit-mask:${SVG.wave} 0 0/48px 12px repeat-x;mask:${SVG.wave} 0 0/48px 12px repeat-x;opacity:.55}` +
+      `${t('deniz')} section.bg-glow{background-image:linear-gradient(180deg,color-mix(in oklab,var(--accent) 11%,transparent),color-mix(in oklab,var(--primary) 7%,transparent))}` +
+      `${t('deniz')} .property-card .site-media::before{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:inherit;box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--accent) 60%,white);opacity:0}` +
+      `${t('deniz')} .btn.bg-primary{box-shadow:0 10px 20px -12px color-mix(in oklab,var(--primary) 75%,transparent)}` +
+      `${HOVER}{${t('deniz')} .property-card .site-media::before{transition:opacity .5s ease}${t('deniz')} .property-card:hover .site-media::before{opacity:1}${t('deniz')} .property-card .site-media img{transition:transform 1.1s cubic-bezier(.22,1,.36,1)}${t('deniz')} .property-card:hover .site-media img{transform:scale(1.045)}}`,
+    motion:
+      K.rise + K.drift + K.pop +
+      `${OK}{${m('deniz')} ${HERO_IMG}{animation:sig-drift 4.8s ease-out both}${m('deniz')} #hero-baslik{animation:sig-rise 1.1s cubic-bezier(.22,1,.36,1) both}` +
+      `${VIEW}{${m('deniz')} .property-card{${inView('sig-pop', 'entry 0% entry 220px')}}}}`,
+  },
+
+  // ----------------------------------------------------------------- Plaza: cam ve çelik, ızgara ritmi
+  plaza: {
+    static:
+      `${t('plaza')} main{background-image:linear-gradient(90deg,color-mix(in oklab,var(--foreground) 4%,transparent) 1px,transparent 1px);background-size:12.5% 100%}` +
+      `${t('plaza')} .numeric{font-variant-numeric:tabular-nums}` +
+      `${t('plaza')} main>section:not(:first-child) h2.font-display::before{content:'';display:block;width:2.5rem;height:3px;margin-bottom:.7rem;background:var(--primary)}` +
+      `${t('plaza')} .property-card.card-lift{border-top:2px solid color-mix(in oklab,var(--foreground) 16%,transparent)}` +
+      `${t('plaza')} section[aria-labelledby='rakamlar'] dl>div{border-left:1px solid var(--border);padding-left:1rem}` +
+      `${HOVER}{${t('plaza')} .property-card.card-lift{transition:border-top-color .3s ease,background-color .3s ease}${t('plaza')} .property-card.card-lift:hover{border-top-color:var(--accent)}${t('plaza')} .property-card .site-media img{transition:transform .9s cubic-bezier(.22,1,.36,1)}${t('plaza')} .property-card:hover .site-media img{transform:scale(1.04)}}`,
+    motion:
+      K.rise + K.fade + K.wipe +
+      `${OK}{${m('plaza')} #hero-baslik{animation:sig-rise .9s cubic-bezier(.22,1,.36,1) both}${m('plaza')} ${HERO} .site-media{animation:sig-wipe .9s cubic-bezier(.77,0,.18,1) both}` +
+      `${VIEW}{${m('plaza')} section[aria-labelledby='rakamlar'] dl>div{${inView('sig-fade', 'entry 0% entry 160px')}}${m('plaza')} section[aria-labelledby='rakamlar'] dl>div:nth-child(2){animation-range:entry 30px entry 190px}${m('plaza')} section[aria-labelledby='rakamlar'] dl>div:nth-child(3){animation-range:entry 60px entry 220px}${m('plaza')} section[aria-labelledby='rakamlar'] dl>div:nth-child(4){animation-range:entry 90px entry 250px}}}`,
+  },
+
+  // ----------------------------------------------------------------- Tarla: topografik harita, ölçüm işaretleri
+  tarla: {
+    static:
+      `${t('tarla')} .site-header{background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none}` +
+      `${t('tarla')} section.bg-glow,${t('tarla')} .kp-map-canvas{position:relative}` +
+      `${t('tarla')} section.bg-glow::before,${t('tarla')} .kp-map-canvas::before{content:'';position:absolute;inset:0;pointer-events:none;background:${SVG.contour} 0 0/180px 108px repeat}` +
+      `${t('tarla')} section.bg-glow>*{position:relative}` +
+      `${t('tarla')} main>section:not(:first-child) h2.font-display::after{content:'';display:block;width:4rem;height:2px;margin-top:.7rem;background:repeating-linear-gradient(90deg,var(--foreground) 0 6px,transparent 6px 10px);transform-origin:left}` +
+      // Ölçüm kadrajı: görselin dört kenarının ortasında kısa işaret
+      `${t('tarla')} .property-card .site-media::before{content:'';position:absolute;inset:8px;z-index:2;pointer-events:none;--c:rgb(255 255 255 / .92);background:linear-gradient(var(--c),var(--c)) 50% 0/1.5px 11px,linear-gradient(var(--c),var(--c)) 50% 100%/1.5px 11px,linear-gradient(var(--c),var(--c)) 0 50%/11px 1.5px,linear-gradient(var(--c),var(--c)) 100% 50%/11px 1.5px;background-repeat:no-repeat}` +
+      `${HOVER}{${t('tarla')} .property-card .site-media::before{transition:inset .4s cubic-bezier(.22,1,.36,1)}${t('tarla')} .property-card:hover .site-media::before{inset:14px}${t('tarla')} .property-card .site-media img{transition:transform .9s cubic-bezier(.22,1,.36,1)}${t('tarla')} .property-card:hover .site-media img{transform:scale(1.04)}}`,
+    motion:
+      K.rise + K.contour + K.grow +
+      `${OK}{${m('tarla')} #hero-baslik{animation:sig-rise 1s cubic-bezier(.22,1,.36,1) both}${m('tarla')} section.bg-glow::before,${m('tarla')} .kp-map-canvas::before{animation:sig-contour 4.5s ease-out both}` +
+      `${VIEW}{${m('tarla')} main>section:not(:first-child) h2.font-display::after{${inView('sig-grow', 'entry 0% entry 200px')}}}}`,
+  },
+
+  // ----------------------------------------------------------------- Miras: kemer, çini geometrisi, çift çizgi
+  miras: {
+    static:
+      `${t('miras')} .site-header{background:var(--surface);-webkit-backdrop-filter:none;backdrop-filter:none}` +
+      `${t('miras')} .property-card .site-media img{-webkit-mask:${SVG.arch} 0 0/100% 100% no-repeat;mask:${SVG.arch} 0 0/100% 100% no-repeat}` +
+      `${t('miras')} .site-footer,${t('miras')} section.bg-glow,${t('miras')} ${HERO}{background-image:${SVG.star};background-size:56px 56px}` +
+      `${t('miras')} main>section:not(:first-child) h2.font-display::after{content:'';display:block;width:4rem;height:5px;margin-top:.8rem;border-top:1px solid var(--accent);border-bottom:1px solid var(--accent)}` +
+      `${t('miras')} .eyebrow{font-size:.72rem}` +
+      `${HOVER}{${t('miras')} .property-card .site-media img{transition:transform 1.2s cubic-bezier(.16,1,.3,1)}${t('miras')} .property-card:hover .site-media img{transform:scale(1.05)}}`,
+    motion:
+      K.rise + K.unveilUp +
+      `${OK}{${m('miras')} #hero-baslik{animation:sig-rise 1.3s cubic-bezier(.16,1,.3,1) both}` +
+      `${VIEW}{${m('miras')} .property-card .site-media{${inView('sig-unveil-up', 'entry 0% entry 300px')}}}}`,
+  },
+
+  // ----------------------------------------------------------------- Gece: koyu, pirinç ince çizgi, gölge yerine parıltı
+  gece: {
+    static:
+      `${t('gece')} .card-lift{box-shadow:none;border-color:color-mix(in oklab,var(--accent) 24%,transparent)}` +
+      `${t('gece')} ${HERO}{background-image:radial-gradient(60rem 28rem at 85% 0%,color-mix(in oklab,var(--primary) 18%,transparent),transparent 70%)}` +
+      `${t('gece')} section[aria-labelledby='rakamlar']{background-image:radial-gradient(44rem 14rem at 50% 0%,color-mix(in oklab,var(--accent) 16%,transparent),transparent 72%)}` +
+      `${t('gece')} main>section:first-child{position:relative}${t('gece')} main>section:first-child::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background-image:${GRAIN};opacity:.1;mix-blend-mode:overlay}` +
+      // Koyu perde + metin gölgesi: başlık parlak pencere alanında da AA kontrastını korur (özellikle telefonda)
+      `${t('gece')} .kp-immersive-scrim{background:linear-gradient(90deg,rgb(5 7 10 / .66),rgb(5 7 10 / .3) 62%,rgb(5 7 10 / .12)),linear-gradient(180deg,rgb(5 7 10 / .45) 0%,rgb(5 7 10 / .25) 40%,rgb(5 7 10 / .82) 100%)}` +
+      `${t('gece')} ${HERO} :is(h1,h1+p){text-shadow:0 2px 22px rgb(0 0 0 / .6)}` +
+      `${t('gece')} .site-footer{background-image:radial-gradient(46rem 14rem at 50% 0%,color-mix(in oklab,var(--accent) 16%,transparent),transparent 72%);border-top:1px solid color-mix(in oklab,var(--accent) 32%,transparent)}${t('gece')} .site-footer .kp-ftr-cta{border-color:color-mix(in oklab,var(--accent) 55%,transparent);color:var(--accent)}${t('gece')} .site-footer .kp-ftr-link:hover{color:var(--accent)}` +
+      `${t('gece')} .btn.bg-primary{background-image:linear-gradient(100deg,transparent 40%,rgb(255 255 255 / .28) 50%,transparent 60%);background-size:250% 100%;background-position:120% 0;box-shadow:0 0 24px -8px color-mix(in oklab,var(--primary) 70%,transparent)}` +
+      `${t('gece')} :is(a,button,input,select,textarea,summary,[tabindex]):focus-visible{outline:2px solid var(--accent);outline-offset:2px;box-shadow:0 0 0 6px color-mix(in oklab,var(--accent) 26%,transparent)}` +
+      `${HOVER}{${t('gece')} .card-lift:hover{box-shadow:0 0 0 1px color-mix(in oklab,var(--accent) 55%,transparent),0 0 36px -8px color-mix(in oklab,var(--accent) 45%,transparent)}${t('gece')} .property-card .site-media img{transition:transform 1.2s cubic-bezier(.16,1,.3,1),filter .6s}${t('gece')} .property-card:hover .site-media img{transform:scale(1.05);filter:brightness(1.08)}}`,
+    motion:
+      K.rise + K.fade + K.shine +
+      `${OK}{${m('gece')} #hero-baslik{animation:sig-rise 1.2s cubic-bezier(.16,1,.3,1) both}${m('gece')} ${HERO} .btn.bg-primary{animation:sig-shine 2.4s 1.2s ease-in-out 1 both}` +
+      `${VIEW}{${m('gece')} section[aria-labelledby='rakamlar'] dl>div{${inView('sig-fade', 'entry 0% entry 160px')}}${m('gece')} section[aria-labelledby='rakamlar'] dl>div:nth-child(2){animation-range:entry 30px entry 190px}${m('gece')} section[aria-labelledby='rakamlar'] dl>div:nth-child(3){animation-range:entry 60px entry 220px}${m('gece')} section[aria-labelledby='rakamlar'] dl>div:nth-child(4){animation-range:entry 90px entry 250px}}}` +
+      progress('gece', 'linear-gradient(90deg,transparent,var(--accent))'),
   },
 };

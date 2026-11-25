@@ -13,6 +13,9 @@ import { Checkbox, Field, Input, Select, Textarea } from '@/components/ui/form-c
 import { slugify } from '@/lib/slug';
 import { cn } from '@/lib/utils';
 import { encodePreviewPayload, siteInfoSchema, SOCIAL_KEYS, type SiteInfoInput } from '@/site-factory/site-info';
+import { FamilyFilters } from '@/components/site-editor/family-filters';
+import { DEFAULT_STATE, filterFamilies, resultText, segmentCounts, sortFamilies, type CatalogState } from '@/components/site-editor/family-catalog-logic';
+import { SEGMENTS, type FamilyMeta } from '@/site-factory/catalog-segments';
 
 /** Sunucuda hazırlanan katalog görünümü (yalnızca gösterilecek alanlar) */
 export interface WizardCatalog {
@@ -31,6 +34,10 @@ export interface WizardCatalog {
     parts: string[];
     /** KARAY global olarak kapattı: listede görünür, seçilemez */
     disabled: boolean;
+    /** Segmentler, etiketler, kime uygun (filtre ve kart satırı) */
+    meta: FamilyMeta;
+    /** Koyu paletli aile: sitede koyu görünüm özelliği (dark_mode) ayrıca açık olmalıdır */
+    dark: boolean;
   }[];
   palettes: { id: string; name: string; swatch: string[] }[];
   fonts: { id: string; name: string; kind: 'serif' | 'sans' }[];
@@ -537,6 +544,10 @@ function TypeStep({ types, value, onChange }: { types: WizardCatalog['siteTypes'
 
 function FamilyStep({ families, recommended, value, onChange }: { families: WizardCatalog['families']; recommended: string[]; value: string | null; onChange: (id: string) => void }) {
   const fonts = [...new Set(families.map((f) => f.fonts.heading))];
+  const [filter, setFilter] = useState<CatalogState>(DEFAULT_STATE);
+  const items = useMemo(() => families.map((f) => ({ ...f, recommended: recommended.includes(f.id) })), [families, recommended]);
+  const shown = useMemo(() => sortFamilies(filterFamilies(items, filter), filter.sort), [items, filter]);
+  const segLabel = Object.fromEntries(SEGMENTS.map((x) => [x.id, x.label]));
   return (
     <div>
       {/* Yalnızca ailelerin başlık yazı tipleri, örnek "Aa" için (KARAY yüzeyi; kiracıya gitmez) */}
@@ -546,8 +557,23 @@ function FamilyStep({ families, recommended, value, onChange }: { families: Wiza
       <p className="mb-5 max-w-2xl text-[14px] text-muted-foreground">
         Tasarım ailesi sitenin <strong className="font-semibold text-foreground">görsel dilidir</strong>: renk, tipografi, hero, header, kartlar, footer ve hareket. Oluşturulan site yalnızca seçilen paketi taşır.
       </p>
+      <div className="mb-4">
+        <FamilyFilters
+          state={filter}
+          onChange={setFilter}
+          counts={segmentCounts(items)}
+          total={items.length}
+          resultText={resultText(items.length, shown.length)}
+          sortOptions={[
+            { value: 'recommended', label: 'Önerilen' },
+            { value: 'az', label: 'A–Z' },
+          ]}
+          showDark={items.some((f) => f.meta.contrast === 'dark')}
+        />
+      </div>
+      {shown.length === 0 && <p className="rounded-2xl border border-dashed border-border-strong px-5 py-8 text-center text-[13.5px] text-muted-foreground">Bu süzgece uyan tasarım ailesi yok. Süzgeçleri temizleyin.</p>}
       <div role="radiogroup" aria-label="Tasarım ailesi" className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {families.map((f) => (
+        {shown.map((f) => (
           <ChoiceCard key={f.id} selected={value === f.id} onSelect={() => !f.disabled && onChange(f.id)} label={f.name} className={cn('p-0', f.disabled && 'cursor-not-allowed opacity-55')} disabled={f.disabled}>
             <span className="flex h-28 items-end justify-between overflow-hidden rounded-t-2xl px-5 pb-4" style={{ background: f.swatch[2], color: f.swatch[3] }}>
               <span className="text-[2.6rem] leading-none" style={{ fontFamily: `"${f.fonts.headingName}", serif` }} aria-hidden>
@@ -562,12 +588,21 @@ function FamilyStep({ families, recommended, value, onChange }: { families: Wiza
             <span className="flex flex-1 flex-col p-5">
               <span className="flex flex-wrap items-center gap-2 pr-8">
                 <span className="text-[15.5px] font-semibold text-foreground">{f.name}</span>
-                {f.disabled ? <Badge>Katalogda kapalı</Badge> : recommended.includes(f.id) && <Badge variant="success">Önerilen</Badge>}
+                {f.disabled ? <Badge>Katalogda kapalı</Badge> : f.recommended && <Badge variant="success">Önerilen</Badge>}
+                {f.dark && <Badge>Koyu</Badge>}
+              </span>
+              <span className="mt-1.5 flex flex-wrap gap-1">
+                {f.meta.segments.slice(0, 2).map((x) => (
+                  <span key={x} className="rounded-full bg-primary-soft px-2 py-0.5 text-[11.5px] font-semibold text-primary-ink">
+                    {segLabel[x] ?? x}
+                  </span>
+                ))}
               </span>
               <span className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">{f.description}</span>
               <span className="mt-3 text-[12.5px] text-muted-foreground">
                 {f.fonts.headingName} / {f.fonts.bodyName} · {f.audience}
               </span>
+              {f.dark && <span className="mt-2 text-[12.5px] text-warning">Sitede koyu görünüm özelliği (dark_mode) açık değilse açık yedek renklerle çizilir.</span>}
             </span>
           </ChoiceCard>
         ))}

@@ -108,6 +108,9 @@ describe('YENİ AİLE sözleşmesi: diğer kiracılara runtime etkisi yok', () =
     const extended = [...CATALOG, { ...CATALOG[1], id: 'yeni-aile-test', name: 'Yeni Aile', theme: 'marble', palette: 'minimal-black', style: { hero: 'split', motion: 'expressive' } }];
     const after = extended.slice(0, CATALOG.length).map((f) => JSON.stringify(compileDesign(f, base())));
     assert.deepEqual(after, before);
+    // Faz 1: 10–18. aileler SONA eklenmiştir; ilk 9 ailenin derlenmiş çıktısı fixture ile mühürlüdür (family-golden.test.mjs)
+    assert.equal(CATALOG.length, 18);
+    assert.deepEqual(CATALOG.slice(0, 9).map((f) => JSON.stringify(compileDesign(f, base()))), before.slice(0, 9));
     // Kayıtlı olmayan aile manifestte reddedilir (katalog dışı paket derlenemez)
     assert.throws(() => compileManifest({ siteType: 'real-estate-office', designFamily: 'yeni-aile-test' }, base()), /Geçersiz tasarım ailesi/);
   });

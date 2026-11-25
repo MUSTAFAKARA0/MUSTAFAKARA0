@@ -1,5 +1,6 @@
 import { Pagination } from '@/components/common/pagination';
 import type { ListingResultsPatternProps } from '@/components/patterns/contracts';
+import { FeatureFirstListing } from '@/components/patterns/listing/feature-first';
 import { GalleryWideListing } from '@/components/patterns/listing/gallery-wide';
 import { ListingIsland } from '@/components/patterns/listing/islands';
 import { RuledIndexListing } from '@/components/patterns/listing/ruled-index';
@@ -17,6 +18,8 @@ export function ListingResultsSurface({ view, items, mapPoints, page, pageCount,
   switch (resolvePattern(view, 'listing').id) {
     case 'gallery-wide':
       return <GalleryWideListing items={items} page={page} pageCount={pageCount} hrefFor={hrefFor} priorityCount={priorityCount} />;
+    case 'feature-first':
+      return <FeatureFirstListing items={items} page={page} pageCount={pageCount} hrefFor={hrefFor} priorityCount={priorityCount} />;
     case 'ruled-index':
       return <RuledIndexListing items={items} page={page} pageCount={pageCount} hrefFor={hrefFor} priorityCount={priorityCount} />;
     case 'map-results': {

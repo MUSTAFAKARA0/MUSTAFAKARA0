@@ -196,7 +196,7 @@ test('SC-03: oluşturulan kiracı yalnızca seçilen paketi taşır (katalog, di
     expect(html, s).not.toContain(s);
     expect(js, s).not.toContain(s);
   }
-  for (const t of ['klasik', 'marble', 'atlas', 'prestij', 'kent', 'yalin', 'doga', 'dergi', 'grafit']) expect(html).not.toContain(`data-site-theme='${t}'`);
+  for (const t of ['klasik', 'marble', 'atlas', 'prestij', 'kent', 'yalin', 'doga', 'dergi', 'grafit', 'deniz', 'plaza', 'tarla', 'miras', 'gece']) expect(html).not.toContain(`data-site-theme='${t}'`);
 });
 
 test('SC-04: önizleme rotası yalnızca KARAY yüzeyinde ve süper admin oturumuyla', async ({ page, request }) => {

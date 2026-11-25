@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { encodePreviewPayload as encodePayload } from '@/site-factory/preview-payload';
 import { parseSiteConfig, SECTION_SCHEMAS } from '@/site-config/schema';
 import { compileManifest, siteManifestSchema, type SiteManifest } from '@/site-factory/manifest';
 
@@ -60,11 +61,9 @@ export const previewPayloadSchema = z.object({ manifest: siteManifestSchema, inf
 export type PreviewPayload = { manifest: SiteManifest; info: SiteInfoInput };
 
 /** URL güvenli base64 (tarayıcı ve sunucuda aynı; UTF-8) */
+/** Yükü kodlar (bağımlılıksız modülde; istemci bileşenleri doğrudan oradan içe aktarır). */
 export function encodePreviewPayload(payload: PreviewPayload): string {
-  const bytes = new TextEncoder().encode(JSON.stringify(payload));
-  let bin = '';
-  for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return encodePayload(payload);
 }
 
 export function decodePreviewPayload(raw: string | undefined | null): z.infer<typeof previewPayloadSchema> | null {

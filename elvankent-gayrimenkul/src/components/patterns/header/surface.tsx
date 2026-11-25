@@ -3,6 +3,7 @@ import type { HeaderPatternInput } from '@/components/patterns/header/parts';
 import { SearchBarHeader } from '@/components/patterns/header/search-bar';
 import { StructuredHeader } from '@/components/patterns/header/structured';
 import { TransparentHeader } from '@/components/patterns/header/transparent';
+import { UtilityHeader } from '@/components/patterns/header/utility';
 import { resolvePattern } from '@/components/patterns/resolver';
 
 /**
@@ -18,6 +19,8 @@ export function HeaderSurface(props: HeaderPatternInput) {
       return <StructuredHeader {...props} />;
     case 'search-bar':
       return <SearchBarHeader {...props} />;
+    case 'utility':
+      return <UtilityHeader {...props} />;
     default:
       return <SiteHeader tenant={props.tenant} hasBlog={props.hasBlog} view={props.view} />;
   }

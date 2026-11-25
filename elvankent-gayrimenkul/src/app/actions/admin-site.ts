@@ -11,6 +11,7 @@ import type { BrandInput } from '@/site-editor/brand-input';
 import type { SavedDraft } from '@/site-editor/types';
 import {
   applyFamilyToDraft,
+  readDarkAllowed,
   discardDraft,
   publishDraft,
   rollbackToVersion,
@@ -100,7 +101,7 @@ export async function applyOfficeDesignFamily(familyId: string, expected?: strin
     const ctx = await editor();
     await assertDesignUnlocked(ctx);
     const access = await selectableFamilies(ctx.supabase, ctx.org.id);
-    const draftToken = await applyFamilyToDraft(ctx.supabase, ctx.org.id, familyId, access.families, expected);
+    const draftToken = await applyFamilyToDraft(ctx.supabase, ctx.org.id, familyId, access.families, expected, await readDarkAllowed(ctx.supabase, ctx.org.id));
     revalidatePath(PANEL, 'layout');
     return { draftToken };
   }, 'Tasarım taslağa uygulandı. Önizleyip "Yayınla"ya basın.');

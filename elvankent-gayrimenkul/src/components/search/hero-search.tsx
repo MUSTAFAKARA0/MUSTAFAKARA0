@@ -33,13 +33,14 @@ const selectClass =
  * Ana sayfa arama kutusu: satılık/kiralık, konum, tip, oda ve bütçe.
  * Sonuç sayfası URL ile senkronize olduğundan arama paylaşılabilir.
  * tone: "photo" (varsayılan; fotoğraf/koyu zemin üzerinde) · "surface" (açık zemin; premium
- * hero düzenleri) — yalnızca sekme ve alt satır renkleri değişir.
+ * hero düzenleri) — yalnızca sekme ve alt satır renkleri değişir. initialListingType: açılışta seçili sekme
+ * (varsayılan satılık).
  */
-export function HeroSearch({ options, tone = 'photo' }: { options: SearchOptions; tone?: 'photo' | 'surface' }) {
+export function HeroSearch({ options, tone = 'photo', initialListingType = 'sale' }: { options: SearchOptions; tone?: 'photo' | 'surface'; initialListingType?: ListingType }) {
   const id = useId();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [listingType, setListingType] = useState<ListingType>('sale');
+  const [listingType, setListingType] = useState<ListingType>(initialListingType);
   const [location, setLocation] = useState('');
   const [type, setType] = useState('');
   const [rooms, setRooms] = useState<'' | RoomFilter>('');

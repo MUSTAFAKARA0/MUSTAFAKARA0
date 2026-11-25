@@ -26,7 +26,7 @@ export default async function SetupPage() {
 
   const [site, access] = await Promise.all([getSiteAdmin(ctx, ctx.org.id), selectableFamilies(ctx.supabase, ctx.org.id)]);
   if (!site) notFound();
-  const families = familyOptions(site.published, access.families);
+  const families = familyOptions(site.published, access.families, { darkAllowed: site.overrides.dark_mode === true });
   const allowed = families.map((f) => f.id);
   const address = [site.brand.address_line, site.brand.address_district, site.brand.address_city].filter(Boolean).join(', ');
 
