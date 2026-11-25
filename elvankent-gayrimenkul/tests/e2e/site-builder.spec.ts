@@ -130,7 +130,7 @@ test('TEST-SITE-01: süper admin Web Siteleri listesini ve Site Kontrol Merkezi 
 test('TEST-SITE-02: tema taslağa kaydedilir, canlı site değişmez, önizlemede görünür, yayınlanınca canlıya geçer', async ({ page, context }) => {
   await loginPlatform(page);
   await page.goto(tab('tema'));
-  await expect(page.getByRole('button', { name: /temasını seç$/ })).toHaveCount(10);
+  await expect(page.getByRole('button', { name: /temasını seç$/ })).toHaveCount(15);
   await page.getByRole('button', { name: 'Marble temasını seç' }).click();
   await expect(page.getByRole('button', { name: 'Marble temasını seç' })).toHaveAttribute('aria-pressed', 'true');
   await saveDraft(page);

@@ -112,7 +112,7 @@ export default async function KarayPage() {
         <FactsBand
           items={[
             { value: THEME_LIST.length, label: 'tema', note: 'Gerçek tema motoruyla çizilen önizleme' },
-            { value: GALLERY_FAMILIES.length, label: 'tasarım ailesi', note: 'Düzen, header ve kart yapısı baştan farklı' },
+            { value: GALLERY_FAMILIES.length, label: 'tasarım ailesi', note: 'Hazır düzen, renk ve tipografi birleşimleri' },
             { value: STEPS.length, label: 'adımda yayın', note: 'Tanışmadan canlı siteye' },
             { value: ROLES.length, label: 'yetki rolü', note: ROLES.join(', ') },
           ]}

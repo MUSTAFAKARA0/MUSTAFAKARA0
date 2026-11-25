@@ -63,6 +63,7 @@ export function ThemeForm({ draft, brand, darkAllowed, name }: { draft: SiteConf
   const colorsSave = useSectionSave('colors');
   const themeDirty = theme !== draft.theme;
   const styleDirty = !sameValue(style, draft.style);
+  const themes = THEME_LIST;
   const paletteColors: ColorsConfig = { mode: 'preset', preset: THEMES[theme].palette, scheme: 'light' };
   const colors = usePalette ? paletteColors : draft.colors;
   const themeDefaults = resolveStyle({ theme, style: {} });
@@ -73,7 +74,7 @@ export function ThemeForm({ draft, brand, darkAllowed, name }: { draft: SiteConf
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 id="tema-galerisi" className="text-[15px] font-bold">
-              Tema galerisi <span className="font-medium text-muted-foreground">({THEME_LIST.length} tema)</span>
+              Tema galerisi <span className="font-medium text-muted-foreground">({themes.length} tema)</span>
             </h2>
             <p className="mt-1 text-[13px] text-muted-foreground">Her tema farklı yazı tipi, köşe, kart, header, hero, düğme ve footer karakterine sahiptir. Önizlemeler gerçek tema motoruyla, bu sitenin marka bilgileriyle çizilir.</p>
           </div>
@@ -85,7 +86,7 @@ export function ThemeForm({ draft, brand, darkAllowed, name }: { draft: SiteConf
           />
         </div>
         <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
-          {THEME_LIST.map((t) => {
+          {themes.map((t) => {
             const selected = theme === t.id;
             const current = draft.theme === t.id;
             return (
@@ -105,6 +106,9 @@ export function ThemeForm({ draft, brand, darkAllowed, name }: { draft: SiteConf
                   <p className="mt-2 text-[12px] text-muted-foreground">
                     <span className="font-semibold text-foreground/80">Uygun:</span> {t.audience} · {FONT_CATALOG[t.fonts.heading].name} / {FONT_CATALOG[t.fonts.body].name}
                   </p>
+                  {!darkAllowed && findPalette(t.palette)?.scheme === 'dark' && (
+                    <p className="mt-2 text-[12px] text-warning">Önerilen paleti koyudur; bu sitede koyu görünüm kapalı olduğundan açık yedek renklerle çizilir.</p>
+                  )}
                   <div className="mt-auto flex flex-wrap gap-2 pt-4">
                     <Button type="button" size="sm" variant={selected ? 'soft' : 'primary'} aria-pressed={selected} aria-label={`${t.name} temasını seç`} onClick={() => setTheme(t.id)}>
                       {selected ? (

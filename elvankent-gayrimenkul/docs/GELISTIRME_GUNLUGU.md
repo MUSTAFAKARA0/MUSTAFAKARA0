@@ -25,6 +25,17 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 25.11.2026 (50) · Tasarım kataloğu 9 → 18 aile, 10 → 15 tema; yeni aile seçici (Aşama 1/3)
+
+Sahip isteği: temaları ayrıntılı, daha büyük bir katalog hâline getirmek; ECC ajanlarıyla profesyonel iş. Plan: [upgrade-2 şartnamesi, üç aşama: katalog → ofis siteleri → panel].
+
+- Yeni aileler (sona eklendi; ilk 9 birebir aynı, SHA-256 altın parmak izi testiyle kanıtlı): Deniz Kıyısı, Proje Lansman, Plaza Ofis, Arsa Tarla, Kurumsal Zincir, Butik Ofis, Kiralık Merkezi, Miras Konak, Gece Premium (yalnız koyu mod izni olan ofiste seçilebilir; sunucu tarafında da reddedilir).
+- Yeni temalar deniz, plaza, tarla, miras, gece; 8 yeni palet (AA kontrast testi); yeni desenler: hero tabbed/mosaic/poster, header utility, footer band, listing feature-first.
+- Aile seçici: segment süzgeci (URL'de), arama, sıralama, eşit kartlar, büyük önizleme penceresi (Ana sayfa / İlan listesi / İlan detayı sekmeleri, gerçek önizleme yüzeyleri), tembel önizleme, klavye ve ekran okuyucu düzenlemeleri.
+- WCAG 2.2.2: tüm imza hareketleri gecikme + süre × tekrar ≤ 5 sn (SI-13). Bilinçli altın değişikliği yalnız Sinematik Vitrin (Ken Burns 48 sn → 5 sn tek geçiş) ve Map First (nabız 5,2 → 4,8 sn). karays.com arka plan kayması da 5 sn tek geçiş.
+- Bağımsız denetim: code-reviewer (kritik yok) + gan-evaluator (6,9/10) bulgularının hepsi düzeltildi.
+- Testler: birim 1198/1198; hedefli E2E 88 geçti.
+
 ### 25.11.2026 (49) · karays.com yeniden tasarım: "Canlı Vitrin" (ECC tasarım ajanlarıyla)
 
 Sahip isteği: karays.com düz görünüyor; animasyonlu, ayrıntılı, profesyonel, dikkat çekici bir site; ECC ajanlarıyla.

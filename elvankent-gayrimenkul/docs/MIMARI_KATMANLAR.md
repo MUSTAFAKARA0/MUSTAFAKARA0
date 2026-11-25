@@ -469,3 +469,8 @@ Testler: `tests/unit/surface.test.mjs` (karar tablosu), `tests/e2e/surface-isola
 > **Barındırma varsayımı:** yüzey `Host` başlığından belirlenir. Vercel bunu korur. Kendi sunucunuzda bir ters vekil (nginx vb.) arkasında çalıştırırsanız vekil gerçek `Host`'u iletmelidir; `localhost`/IP olarak iletirse her alan adı "shared" sayılır.
 >
 > **Canlıya alırken:** KARAY konsolu müşteri alan adlarında (ör. `elvankentgayrimenkul.com/platform`) artık açılmaz. Konsola `KARAY_HOSTS` alan adından, `PLATFORM_ROOT_DOMAIN`'den veya `*.vercel.app` adresinden girilir.
+
+
+## Faz 1 notu: katalog arayüzü
+`components/site-editor/family-*` (filtre, kart, diyalog, tembel önizleme) site-editor katmanındadır ve `site-factory/catalog-meta` verisini kullanır
+(site-editor → site-factory yönü izinlidir). Filtre mantığı saf fonksiyonlardır (`family-catalog-logic.ts`).

@@ -113,4 +113,49 @@ describe('Tema imzaları', () => {
       }
     }
   });
+
+  test('SI-10 boyut bütçesi: her temanın kalıcı imzası <= 3,5 KB, hareket imzası <= 2,5 KB; her satır içi SVG < 700 bayt', () => {
+    for (const id of THEME_IDS) {
+      assert.ok((SIGNATURE[id].static ?? '').length <= 3500, `${id}: kalıcı imza ${(SIGNATURE[id].static ?? '').length} bayt`);
+      assert.ok((SIGNATURE[id].motion ?? '').length <= 2500, `${id}: hareket imzası ${(SIGNATURE[id].motion ?? '').length} bayt`);
+      for (const part of [SIGNATURE[id].static ?? '', SIGNATURE[id].motion ?? '']) for (const m of part.matchAll(/url\("data:image\/svg\+xml,([^"]*)"\)/g)) assert.ok(m[1].length < 700, `${id}: SVG ${m[1].length} bayt`);
+    }
+  });
+
+  test('SI-11 tema kimlikleri yalnızca küçük harf (seçici kuralı [a-z]+); 15 tema', () => {
+    for (const id of THEME_IDS) assert.match(id, /^[a-z]+$/, id);
+    assert.equal(THEME_IDS.length, 15);
+    assert.equal(new Set(THEME_IDS).size, 15);
+  });
+
+  test('SI-12 yeni temaların (deniz, plaza, tarla, miras, gece) imzası vardır; hareket kuralları yalnızca hareketi azalt tercihi yokken', () => {
+    for (const id of ['deniz', 'plaza', 'tarla', 'miras', 'gece']) {
+      assert.ok((SIGNATURE[id].static ?? '').length > 300, `${id}: kalıcı imza yok`);
+      assert.ok((SIGNATURE[id].motion ?? '').includes('prefers-reduced-motion:no-preference'), `${id}: hareket imzası yok`);
+      // Her animasyon bitişli (sonsuz değil) ve en fazla 5 sn süreli tek geçiş veya kısa giriş
+      for (const a of (SIGNATURE[id].motion ?? '').matchAll(/animation:sig-[a-z-]+ ([\d.]+)s/g)) assert.ok(Number(a[1]) <= 5, `${id}: animasyon ${a[1]} sn`);
+    }
+  });
+
+  test('SI-13 her animation: kısayolunda gecikme + süre × yineleme <= 5 sn; sonsuz yok (WCAG 2.2.2)', () => {
+    const sec = (t) => (t.endsWith('ms') ? parseFloat(t) / 1000 : parseFloat(t));
+    let checked = 0;
+    for (const id of THEME_IDS) {
+      for (const part of [SIGNATURE[id].static ?? '', SIGNATURE[id].motion ?? '']) {
+        for (const a of part.matchAll(/animation:([^;}]+)/g)) {
+          for (const one of a[1].split(/,(?![^(]*\))/)) {
+            const tokens = one.replace(/cubic-bezier\([^)]*\)/g, 'ease').trim().split(/\s+/);
+            const times = tokens.filter((t) => /^\d*\.?\d+m?s$/.test(t));
+            if (times.length === 0) continue; // kaydırma/görünüm zaman çizelgeli (süre yok)
+            const iter = tokens.find((t) => /^\d+$/.test(t) || t === 'infinite');
+            assert.notEqual(iter, 'infinite', `${id}: ${one}`);
+            const total = sec(times[1] ?? '0s') + sec(times[0]) * (iter ? Number(iter) : 1);
+            assert.ok(total <= 5.001, `${id}: ${one.trim()} toplam ${total} sn`);
+            checked++;
+          }
+        }
+      }
+    }
+    assert.ok(checked > 30, `çok az animasyon denetlendi (${checked})`);
+  });
 });

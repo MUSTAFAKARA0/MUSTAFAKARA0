@@ -8,6 +8,15 @@ import yalinGaleri from '@/site-factory/catalog/yalin-galeri';
 import luxury from '@/site-factory/catalog/luxury';
 import architectural from '@/site-factory/catalog/architectural';
 import mapFirst from '@/site-factory/catalog/map-first';
+import denizKiyisi from '@/site-factory/catalog/deniz-kiyisi';
+import projeLansman from '@/site-factory/catalog/proje-lansman';
+import plazaOfis from '@/site-factory/catalog/plaza-ofis';
+import arsaTarla from '@/site-factory/catalog/arsa-tarla';
+import kurumsalZincir from '@/site-factory/catalog/kurumsal-zincir';
+import butikOfis from '@/site-factory/catalog/butik-ofis';
+import kiralikMerkezi from '@/site-factory/catalog/kiralik-merkezi';
+import mirasKonak from '@/site-factory/catalog/miras-konak';
+import gecePremium from '@/site-factory/catalog/gece-premium';
 
 /**
  * TASARIM KATALOĞU — klasör sözleşmesi.
@@ -35,5 +44,6 @@ function deepFreeze<T>(value: T): T {
   return value;
 }
 
-// İlk 6 aile kilitli (D7 öncesi); D7.3 aileleri yüzey desenleriyle (style.slots) gelir
-export const CATALOG: readonly DesignFamily[] = deepFreeze([klasikGuven, sinematikVitrin, editoryalLuks, kurumsalPortfoy, yalinGaleri, dogalYasam, luxury, architectural, mapFirst]);
+// İlk 6 aile kilitli (D7 öncesi); D7.3 aileleri yüzey desenleriyle (style.slots) gelir.
+// 10–18. aileler (Faz 1 katalog genişlemesi) SONA eklenir: sıra asla değişmez (galeri ve kilit testleri sıraya bağlıdır).
+export const CATALOG: readonly DesignFamily[] = deepFreeze([klasikGuven, sinematikVitrin, editoryalLuks, kurumsalPortfoy, yalinGaleri, dogalYasam, luxury, architectural, mapFirst, denizKiyisi, projeLansman, plazaOfis, arsaTarla, kurumsalZincir, butikOfis, kiralikMerkezi, mirasKonak, gecePremium]);

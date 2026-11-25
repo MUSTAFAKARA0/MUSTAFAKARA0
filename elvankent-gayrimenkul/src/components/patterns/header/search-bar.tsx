@@ -26,7 +26,7 @@ export function SearchBarHeader(props: HeaderPatternInput) {
   return (
     <header data-pattern="karay-pattern:header/search-bar" className={cn('site-header kp-header-search top-0 z-40 border-b border-border bg-surface text-foreground', m.h.sticky ? 'sticky' : 'relative')}>
       <div className="kp-hdr-row container-page">
-        {m.logo('max-w-full shrink-0')}
+        {m.logo('min-w-[6.5rem] max-w-[min(100%,17rem)]')}
         {form('kp-hdr-q', 'kp-hdr-search-desk')}
         <div className="kp-hdr-actions">
           {m.quick({ compact: true })}

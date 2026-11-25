@@ -157,7 +157,7 @@ test('DP-03: ofis yöneticisi yalnızca izinli ve açık aileleri görür; tasla
   expect(await t.evaluate(() => document.querySelector('[data-site-theme]')?.getAttribute('data-site-theme'))).toBe('rezidans');
   const faces = [...new Set([...tenantHtml.matchAll(/@font-face\{font-family:'([^']+)'/g)].map((m) => m[1]))].sort();
   expect(faces).toEqual(['Manrope', 'Manrope Fallback', 'Playfair Display', 'Playfair Display Fallback']);
-  for (const theme of ['klasik', 'marble', 'atlas', 'prestij', 'kent', 'yalin', 'doga', 'dergi', 'grafit']) expect(tenantHtml).not.toContain(`data-site-theme='${theme}'`);
+  for (const theme of ['klasik', 'marble', 'atlas', 'prestij', 'kent', 'yalin', 'doga', 'dergi', 'grafit', 'deniz', 'plaza', 'tarla', 'miras', 'gece']) expect(tenantHtml).not.toContain(`data-site-theme='${theme}'`);
   await t.close();
 });
 

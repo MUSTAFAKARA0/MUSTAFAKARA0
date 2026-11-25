@@ -3,7 +3,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { expect, test, type Browser, type BrowserContext, type Locator, type Page } from '@playwright/test';
 
 /**
- * KARAY şirket sayfası (/karay), KARAY talepleri ve 10 tema — KARAY-01…18; platform giriş logosu (KARAY-19);
+ * KARAY şirket sayfası (/karay), KARAY talepleri ve 15 tema — KARAY-01…18; platform giriş logosu (KARAY-19);
  * KARAYS görsel paketi: paylaşım görseli ve simgeler (KARAY-20), maskotlar ve KARO animasyonu (KARAY-21…22);
  * tanıtım videosu, posteri ve Türkçe altyazısı (KARAY-24); "Canlı Vitrin" yeniden tasarımı: hareket, erişilebilirlik,
  * düzen kararlılığı, taşma ve dürüstlük denetimleri (KARAY-25…32).
@@ -351,17 +351,19 @@ test('KARAY-04: KARAY talebi ile kiracı talebi birbirine karışmaz', async ({ 
   await ctx.close();
 });
 
-test('KARAY-05: 10 tema listelenir (Site Kontrol Merkezi ve KARAY sayfası)', async ({ page }) => {
+const THEME_NAMES = ['Klasik', 'Marble', 'Atlas', 'Prestij', 'Kent', 'Yalın', 'Rezidans', 'Doğa', 'Dergi', 'Grafit', 'Deniz', 'Plaza', 'Tarla', 'Miras', 'Gece'];
+
+test('KARAY-05: 15 tema listelenir (Site Kontrol Merkezi ve KARAY sayfası)', async ({ page }) => {
   await loginPlatform(page);
   await page.goto(tabB('tema'));
   const select = page.getByRole('button', { name: /temasını seç$/ });
-  await expect(select).toHaveCount(10);
-  for (const name of ['Klasik', 'Marble', 'Atlas', 'Prestij', 'Kent', 'Yalın', 'Rezidans', 'Doğa', 'Dergi', 'Grafit']) {
+  await expect(select).toHaveCount(THEME_NAMES.length);
+  for (const name of THEME_NAMES) {
     await expect(page.getByRole('button', { name: `${name} temasını seç` })).toBeVisible();
     await expect(page.getByRole('button', { name: `${name} temasını önizle` })).toBeVisible();
   }
   await page.goto('/karay#temalar');
-  await expect(page.getByRole('radiogroup', { name: 'Tema seçin' }).getByRole('radio')).toHaveCount(10);
+  await expect(page.getByRole('radiogroup', { name: 'Tema seçin' }).getByRole('radio')).toHaveCount(THEME_NAMES.length);
 });
 
 test('KARAY-06: tema önizlemesi gerçek tema motoruyla çizilir; temalar birbirinden farklıdır', async ({ page }) => {
@@ -852,7 +854,7 @@ test('KARAY-31: rakam şeridi dizilerden türer; sayfada uydurma istatistik / yo
   const steps = await page.locator('#nasil-calisir ol > li').count();
   const roles = await page.locator('ul[aria-label="Rol bazlı yetki rolleri"] > li').count();
   expect(facts).toEqual([String(themes), String(families), String(steps), String(roles)]);
-  expect([themes, families, steps, roles]).toEqual([10, 9, 4, 5]);
+  expect([themes, families, steps, roles]).toEqual([15, 18, 4, 5]);
   const text = await page.locator('main').innerText();
   expect(text).not.toMatch(/\b\d{2,}\s*(\+|%)/);
   expect(text).not.toMatch(/referans|yorum|memnuniyet|güvenen|★|müşteri(miz)?\s+sayısı/i);

@@ -1,0 +1,238 @@
+{
+  "families": {
+    "klasik-guven": {
+      "compiled": "4d06a9bc2a160bae47e17a724e0d0649c8d219324597dc52eb3eac7d160dee13",
+      "css": {
+        "none": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "none/full/light": "c04cc6ac80fc815c9fbbaf897d7e214a903a3dda5b61ac20bc974a4099ef81dd",
+        "none/full/dark": "c04cc6ac80fc815c9fbbaf897d7e214a903a3dda5b61ac20bc974a4099ef81dd",
+        "subtle": "e2e4cc002aae7a7b8ebe29e12c06d9bff4c2feb3a2b7b4b7e340bacbd14fe54b",
+        "subtle/full/light": "9f25c3cb2e57f4796f797d1c0ae7fb19da3b84f88785d0926cf0d4e4bba317c2",
+        "subtle/full/dark": "9f25c3cb2e57f4796f797d1c0ae7fb19da3b84f88785d0926cf0d4e4bba317c2",
+        "expressive": "468155cbbccf27ca2ce6bd039692d20c14a46c1f1a946876546c8c32f67a67e9",
+        "expressive/full/light": "f1cb84d23ef48bc4dd2a02f38ffccdceb8189790e0516d07b04d7dfba8c85685",
+        "expressive/full/dark": "f1cb84d23ef48bc4dd2a02f38ffccdceb8189790e0516d07b04d7dfba8c85685"
+      },
+      "attributes": {
+        "none/light": "fdbe0ea3356a5e692b1c4ba68c84aaa2e66902adcbc9a84c7d42651de8b90ead",
+        "none/dark": "fdbe0ea3356a5e692b1c4ba68c84aaa2e66902adcbc9a84c7d42651de8b90ead",
+        "subtle/light": "9750267a99956a4a30498e2970afe858fb33098becbc9cff6c6df1f3d20db3ae",
+        "subtle/dark": "9750267a99956a4a30498e2970afe858fb33098becbc9cff6c6df1f3d20db3ae",
+        "expressive/light": "fcfa6ccc45e02bdf1a1238e0529bc0347ea37046cb41696df9f74cee5d82a257",
+        "expressive/dark": "fcfa6ccc45e02bdf1a1238e0529bc0347ea37046cb41696df9f74cee5d82a257"
+      },
+      "patternCss": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "sinematik-vitrin": {
+      "compiled": "950e7e731eb00a93a5327c2b3308c0a1659e0d13182f7fdf6ce7d121244904ee",
+      "css": {
+        "none": "fb34172ef75012593c997ebbd2cc8c6e647f73871744276371abefbb91654f8e",
+        "none/full/light": "d504b5a7bd835628f917edc94b40f1bb448b9e9ef6b0f6c10331ddc2670092b0",
+        "none/full/dark": "d504b5a7bd835628f917edc94b40f1bb448b9e9ef6b0f6c10331ddc2670092b0",
+        "subtle": "bb32fb82c1f8dcd0950321d191019d7c830ece959916b61738b3939bfccb8f82",
+        "subtle/full/light": "82f1e38d67827354afcbad88ea44725a703a9c3ae941ab759fd264342477b634",
+        "subtle/full/dark": "82f1e38d67827354afcbad88ea44725a703a9c3ae941ab759fd264342477b634",
+        "expressive": "8dd2a87fda214ceeb574d1b61b44eabf8093ce2bc9334ac1fcae7c9b4e4c0d2d",
+        "expressive/full/light": "bc62a30f701c0be493fed74415a544089a3e43f4004876d0a35bc8ac860cddd2",
+        "expressive/full/dark": "bc62a30f701c0be493fed74415a544089a3e43f4004876d0a35bc8ac860cddd2"
+      },
+      "attributes": {
+        "none/light": "0ba0fe1effe8bd9429e06c131912e2076bd266c32d2e71a4459b667aba07eaba",
+        "none/dark": "0ba0fe1effe8bd9429e06c131912e2076bd266c32d2e71a4459b667aba07eaba",
+        "subtle/light": "3160bd5fd2443aa6c76f880ca0a55b1b9aaca6b5431095a11295a474aa9e7a77",
+        "subtle/dark": "3160bd5fd2443aa6c76f880ca0a55b1b9aaca6b5431095a11295a474aa9e7a77",
+        "expressive/light": "013c217e6604518be5358457b8f5d7f7f2a758b5de81dbb368130092568543a0",
+        "expressive/dark": "013c217e6604518be5358457b8f5d7f7f2a758b5de81dbb368130092568543a0"
+      },
+      "patternCss": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "editoryal-luks": {
+      "compiled": "f5dfb2db0d30281ea4e14a381d4153be4f86bdcfb2489b9e60e975daebab0195",
+      "css": {
+        "none": "5b86e21ac8573b77749882a633a33044171f091bbf85ba1b4b324ba1c65a0936",
+        "none/full/light": "d1bec4c304e5e2fd35cc250cd17206e3e5dc42d6e721bfec9c5bfeb0c398a982",
+        "none/full/dark": "d1bec4c304e5e2fd35cc250cd17206e3e5dc42d6e721bfec9c5bfeb0c398a982",
+        "subtle": "15dfdf80d1810b5ef035eec7154a63fa49485367afe2465dfd7fc43fe3f81e07",
+        "subtle/full/light": "38911bf951abb272ed0b4e881b890f1c7ad363d7934790d944b4cdfb7f42d354",
+        "subtle/full/dark": "38911bf951abb272ed0b4e881b890f1c7ad363d7934790d944b4cdfb7f42d354",
+        "expressive": "d7ca46ab62934cec8f43e89a8bd972af9408084e3c91a7029c3a2a40c9af3682",
+        "expressive/full/light": "feb172b2fa6851b57ba1a822493476f8fa9b28a1e8058c2f1b5a0d2457f3d496",
+        "expressive/full/dark": "feb172b2fa6851b57ba1a822493476f8fa9b28a1e8058c2f1b5a0d2457f3d496"
+      },
+      "attributes": {
+        "none/light": "151daf977376d46cbd363e48435b9fa9a11891161a442ae0595658fae4b84100",
+        "none/dark": "151daf977376d46cbd363e48435b9fa9a11891161a442ae0595658fae4b84100",
+        "subtle/light": "169d83f6256108f05ebb41cae2c96ff1d7d776967f72c7435d2bf85d2a8abfa8",
+        "subtle/dark": "169d83f6256108f05ebb41cae2c96ff1d7d776967f72c7435d2bf85d2a8abfa8",
+        "expressive/light": "46acf575dc8d76e136a38f7699559440eb516f6fc21a6e716bc13da7aa24f3a6",
+        "expressive/dark": "46acf575dc8d76e136a38f7699559440eb516f6fc21a6e716bc13da7aa24f3a6"
+      },
+      "patternCss": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "kurumsal-portfoy": {
+      "compiled": "1abe949dc7a5ec78773b9a63cff51ececa29292a2566e8d1a30f5762f481e6a3",
+      "css": {
+        "none": "be9882a141c219bf1df304740825c97910792743db2141961f88148f58e9f1e5",
+        "none/full/light": "10b4fc2db4ef02c5e4efc17f02c43f0b2a001be2dbf472734a473730cebb2fa7",
+        "none/full/dark": "10b4fc2db4ef02c5e4efc17f02c43f0b2a001be2dbf472734a473730cebb2fa7",
+        "subtle": "c323d5a96cbcddab0373837024191cd4e73096dca3c6d89b309fc1ce8235f655",
+        "subtle/full/light": "34d3fc69837faae6382fd39a342108df068ad2b704db80853e82d067e78fa17b",
+        "subtle/full/dark": "34d3fc69837faae6382fd39a342108df068ad2b704db80853e82d067e78fa17b",
+        "expressive": "8659b07af522a5da3735443d5ebd22d10d58ddf7e7e2ac4f4b99e067d3141d5c",
+        "expressive/full/light": "e772351e7f74405a98db5b2e66ee8eba28df52946c35669a75391a0027263139",
+        "expressive/full/dark": "e772351e7f74405a98db5b2e66ee8eba28df52946c35669a75391a0027263139"
+      },
+      "attributes": {
+        "none/light": "740589ca509d8534895d273ed031410839b16fdb51c35ab8b548cc8cefae6c23",
+        "none/dark": "740589ca509d8534895d273ed031410839b16fdb51c35ab8b548cc8cefae6c23",
+        "subtle/light": "ba9da9a6c326f031e8bc124bd2fa3f3b653976229db2d5aa7270a2806526942f",
+        "subtle/dark": "ba9da9a6c326f031e8bc124bd2fa3f3b653976229db2d5aa7270a2806526942f",
+        "expressive/light": "1e0cbed4e08245fc4ba549eb81043b135943ea271ff02bd34d6eac0bf575a598",
+        "expressive/dark": "1e0cbed4e08245fc4ba549eb81043b135943ea271ff02bd34d6eac0bf575a598"
+      },
+      "patternCss": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "yalin-galeri": {
+      "compiled": "874419d0e84f22d4160776994e4c9f5c2cfa996e701e9803aa19086c0a2a30ce",
+      "css": {
+        "none": "d52f1a1ea059e3464263836f1cc8ef5e857cf9fab46c12ebad1ae040d721b592",
+        "none/full/light": "3e313f6f662ec0d50eca262e4c90d9b69272dd89491df90fc901bb320d597707",
+        "none/full/dark": "3e313f6f662ec0d50eca262e4c90d9b69272dd89491df90fc901bb320d597707",
+        "subtle": "b91f8c169f891dd0fda28b2bfe15854723ee5d93a5b07535514d4637f9e9c48c",
+        "subtle/full/light": "bad4c30e0f2427564dbfb8000c3e606d39852a69132788caea6211943389b6d2",
+        "subtle/full/dark": "bad4c30e0f2427564dbfb8000c3e606d39852a69132788caea6211943389b6d2",
+        "expressive": "3d0be1d36239bf8ae41bca3cc853b52835edde7a77352da76dd36462e1603e8b",
+        "expressive/full/light": "f40fe7db02a9774abcb17766353fa282dace36c7b73e6d6f0e15634e8b17404e",
+        "expressive/full/dark": "f40fe7db02a9774abcb17766353fa282dace36c7b73e6d6f0e15634e8b17404e"
+      },
+      "attributes": {
+        "none/light": "4923ba30c288b49c434d455c4e38fd8193742cbfe90b25564915ec813c984459",
+        "none/dark": "4923ba30c288b49c434d455c4e38fd8193742cbfe90b25564915ec813c984459",
+        "subtle/light": "7c08a633451fa660db57e42d3f4cb7f60a244b3a19456dc256276db218c1231c",
+        "subtle/dark": "7c08a633451fa660db57e42d3f4cb7f60a244b3a19456dc256276db218c1231c",
+        "expressive/light": "13aa1832c64c944645c72275ceec46a8ac3e0d89b4a9ac75bd37e13a85035c4f",
+        "expressive/dark": "13aa1832c64c944645c72275ceec46a8ac3e0d89b4a9ac75bd37e13a85035c4f"
+      },
+      "patternCss": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "dogal-yasam": {
+      "compiled": "5cb4eb70a8e55524cd772f369c6f6df1af2d0b3808a6023cec819ed94a3219b8",
+      "css": {
+        "none": "c04490d6e76e3d4926ed6b23f5d71fb358a885b8b084236879ea369afaa18f56",
+        "none/full/light": "3686ac6dd4fc541885a2d3799ab9239fe6ba5c13133df46ebc3159a765597ddd",
+        "none/full/dark": "3686ac6dd4fc541885a2d3799ab9239fe6ba5c13133df46ebc3159a765597ddd",
+        "subtle": "b2ca772c7f34f3ba04d843e126e1f18b0e259c67a875a929365dddf6e6a528e5",
+        "subtle/full/light": "973b01f8ca65d1827921f2dc0ef94ab70317b5f9aecdf370e74ab115a0d61cba",
+        "subtle/full/dark": "973b01f8ca65d1827921f2dc0ef94ab70317b5f9aecdf370e74ab115a0d61cba",
+        "expressive": "ce7264a97c95d084a60f31ebf747a6d032f848a7974d09c397c3c4142a0ec55f",
+        "expressive/full/light": "e436db1d4c8a8cfc7cb0131124bbdbce1eed7ee3b247f403197fb32c1ba0ee35",
+        "expressive/full/dark": "e436db1d4c8a8cfc7cb0131124bbdbce1eed7ee3b247f403197fb32c1ba0ee35"
+      },
+      "attributes": {
+        "none/light": "c73ae338b7b4bdfa8c9196d111653120e3666d218d58115100655b3ed8d133a6",
+        "none/dark": "c73ae338b7b4bdfa8c9196d111653120e3666d218d58115100655b3ed8d133a6",
+        "subtle/light": "b45e81f139089af762a2227cea3d8ae090ed048e992395eea61e0a0b6b657017",
+        "subtle/dark": "b45e81f139089af762a2227cea3d8ae090ed048e992395eea61e0a0b6b657017",
+        "expressive/light": "bc152e2a62c277371014b938d65683fc1c4927de918372380a128085afb040b3",
+        "expressive/dark": "bc152e2a62c277371014b938d65683fc1c4927de918372380a128085afb040b3"
+      },
+      "patternCss": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "luxury": {
+      "compiled": "8b37dc105ca64ce8dd6e6577a200254489f2cd19bdce67a0e9cb216f7c915e74",
+      "css": {
+        "none": "8da68d9cd6f64540beba0dfbbd22325f0d70737bee1983404b9476dd9400b52c",
+        "none/full/light": "df1edd84c36506f545716b1eff5bb3fac7ed326471e29decf7334cf58a91e972",
+        "none/full/dark": "df1edd84c36506f545716b1eff5bb3fac7ed326471e29decf7334cf58a91e972",
+        "subtle": "ff90051bc399370668f48d397695ef1785b885ce2ae3f4ed6a2ef086acf53f29",
+        "subtle/full/light": "4894a87f037f4cf118b197674e5afacb009b1d0b0ff7d2e0eea0fb82170b2f20",
+        "subtle/full/dark": "4894a87f037f4cf118b197674e5afacb009b1d0b0ff7d2e0eea0fb82170b2f20",
+        "expressive": "5bef564019a92e652f5a3c9b1e62a6c583484c581f05f9eae6cce4e1dddc23f0",
+        "expressive/full/light": "ac6f2c646e953a40da1528d6cb35e9ab40533e2f4ed65e5154bbdfd176c900b8",
+        "expressive/full/dark": "ac6f2c646e953a40da1528d6cb35e9ab40533e2f4ed65e5154bbdfd176c900b8"
+      },
+      "attributes": {
+        "none/light": "c3706650449b2049579543006e3fca526d6087ed918dbee1e513fa60af5db2b3",
+        "none/dark": "c3706650449b2049579543006e3fca526d6087ed918dbee1e513fa60af5db2b3",
+        "subtle/light": "56610947100c58bc4b0d25263304916bb90ace50924fa2f07929de112dedd3b3",
+        "subtle/dark": "56610947100c58bc4b0d25263304916bb90ace50924fa2f07929de112dedd3b3",
+        "expressive/light": "720af0e85207ae59adfa2d6d6501cfdc7cd8387f71f0c3c33976d900e09a5120",
+        "expressive/dark": "720af0e85207ae59adfa2d6d6501cfdc7cd8387f71f0c3c33976d900e09a5120"
+      },
+      "patternCss": "35a93bb51e77b12336cf1dcc00a7321823fc9c1a523d990c310b5e455937d79e"
+    },
+    "architectural": {
+      "compiled": "044b9575c02eaf88c7698f6bbff80216ba0bf43c755bfc39bb456be01a7e7abc",
+      "css": {
+        "none": "691a74b9f8d1e1d512a5466b717fb46083ff3909328d979c7bdf8f06509a9785",
+        "none/full/light": "b3f6208ad3f17885d6bb3d58648a41eeb402f17fe7f4ce7e21d075f12c6c4dde",
+        "none/full/dark": "b3f6208ad3f17885d6bb3d58648a41eeb402f17fe7f4ce7e21d075f12c6c4dde",
+        "subtle": "a584efc29dbee93cc8b841baf2bbe5396d4dffa68421629d0071b4c2eb3465a2",
+        "subtle/full/light": "8d989554399b3b29767be7e6b0c10566adc13c4755a87becd2742bda1f968927",
+        "subtle/full/dark": "8d989554399b3b29767be7e6b0c10566adc13c4755a87becd2742bda1f968927",
+        "expressive": "b3386092febf293ca3435f32bf75b5ee9715c33387c8f1dba75fe6990afeb291",
+        "expressive/full/light": "03cb81bb1b426683aa9439052d2131e30b33cb4ec36aa3c07d558fffbcddf575",
+        "expressive/full/dark": "03cb81bb1b426683aa9439052d2131e30b33cb4ec36aa3c07d558fffbcddf575"
+      },
+      "attributes": {
+        "none/light": "d05230791a5c14f313e5df67f32e9ef80c3171223bef3cfbf566692af916c715",
+        "none/dark": "d05230791a5c14f313e5df67f32e9ef80c3171223bef3cfbf566692af916c715",
+        "subtle/light": "b3faf38c46ad82db75b113071d3de81a5e68ddc3aeeda2ca091da28fbc39d244",
+        "subtle/dark": "b3faf38c46ad82db75b113071d3de81a5e68ddc3aeeda2ca091da28fbc39d244",
+        "expressive/light": "2cfe58600cb32a0c2a542af60dcfe502afb7884db3856e30459e500bc4b56313",
+        "expressive/dark": "2cfe58600cb32a0c2a542af60dcfe502afb7884db3856e30459e500bc4b56313"
+      },
+      "patternCss": "aeea78548df157a1bc0219ae9b67e22be3f24f8d93456833e5873b44ca676abe"
+    },
+    "map-first": {
+      "compiled": "9c234df0caf8e6bb71f9881efeb81b823091eec7d6e97a447d12a23c261fc18f",
+      "css": {
+        "none": "1d4947f8b8822844a5138ccb317d91cc31e1186abb697aab19f8c4c20df6f17f",
+        "none/full/light": "85c9a450b5ebcab18aad72157efe934f84de243fee013ec1ec5f54aa51843e56",
+        "none/full/dark": "85c9a450b5ebcab18aad72157efe934f84de243fee013ec1ec5f54aa51843e56",
+        "subtle": "3c5dd92a71e2faba65466209794d2aaee6b442a82779152b32deb3291c6996fa",
+        "subtle/full/light": "63c53465f4955a095fec3686a75ef55031f47f6c88a2d4610bd73b8ee0736010",
+        "subtle/full/dark": "63c53465f4955a095fec3686a75ef55031f47f6c88a2d4610bd73b8ee0736010",
+        "expressive": "1d8e81334480bf3fe7eeb12a0f278065e1151e4ea4b1d984412b7ca5090d3d55",
+        "expressive/full/light": "73f2d78800a35b8cb76e72fe3fb3383ab860a75ac636ef9dcc52fb7c1c2dda11",
+        "expressive/full/dark": "73f2d78800a35b8cb76e72fe3fb3383ab860a75ac636ef9dcc52fb7c1c2dda11"
+      },
+      "attributes": {
+        "none/light": "f310c6992ab245c5ffaae9dccb96962cc6181bd35e9d35397edcbb174dfa5388",
+        "none/dark": "f310c6992ab245c5ffaae9dccb96962cc6181bd35e9d35397edcbb174dfa5388",
+        "subtle/light": "e3be014f86dff18108c0c70e888bcca7caa9f1958efd1f20531c9012ba744a1a",
+        "subtle/dark": "e3be014f86dff18108c0c70e888bcca7caa9f1958efd1f20531c9012ba744a1a",
+        "expressive/light": "cd21021434c6853a161f1aaa1627d0c348979fdd09173e1ecc1c0805e504c613",
+        "expressive/dark": "cd21021434c6853a161f1aaa1627d0c348979fdd09173e1ecc1c0805e504c613"
+      },
+      "patternCss": "777dd23afe9b553eb5dfc1b47efda18a4f887baecb40ef84f8330404f15bcd86"
+    }
+  },
+  "patternCss": {
+    "hero/immersive": "b121b2fc82ab1b81ea0ba5baa3f9aba53a64e3ea33601ae458b432e20916368d",
+    "hero/blueprint": "2951d97f3d70f2c4849419c8816c0fd87fa7b36c357e87538c6a966a05a02c6d",
+    "hero/map-search": "54651287c4043c3b715425588a8af31c1224cd5b7155ed83c5524a28a26deeb0",
+    "search/map-first": "4a2016dd241aa99214d6baefb351ef1c55cf82d4a09894c1411d87c11629ae86",
+    "listing/gallery-wide": "796e80e79c84f3084edf76b6883a6ab3b0675bce197eb79b1a1c20a4100d98d4",
+    "listing/ruled-index": "269ad3cfe3e75a042ab0331a4c325521174c2cc24964ad8a355bc091037dc122",
+    "listing/map-results": "1780d6bfafb5c5b316bc2731f7bf94fafec96ec4e1c003fd74270e231ec9cfae",
+    "property-detail/immersive": "3339176319f5174b7549b3633a15d21ff5673c1d94f2d343b1cd8cfce9f687e9",
+    "property-detail/information-first": "115409024b23a9e89338af6031ff9e2fa26adaea4e294db1d9e4195c4cbd95a6",
+    "property-detail/map-first": "a13766dc4c990ce21a7859f834167d39a705bbbe7073aa952556019328fe3441",
+    "gallery/fullscreen": "191ae375bcb5eedffc08d6950fe886e1c22e7abe4bd81fad8ff65f4f9a08d0c2",
+    "map/map-first": "7a4182d56fa68e5dcd78e0abb8605d4c991fcd8c66c97d7bf194fd97e5c6edca",
+    "gallery/grid": "bc3202c34d60cc7262de7078ff31c237e80c0677da883e1ca7c2b1fa0accdf11",
+    "gallery/carousel": "d9011e68f31ef93a246e8d34a165e19eba7b9a658af48ece6327e03d132669e0",
+    "header/transparent": "4845a470c639f21caa6d992667809589de8f84aec34f18fd73e578bd640146e6",
+    "header/structured": "67a4e7fa5ded7a9cf5c3ec00a0cb7fe7fd1620e105de4e1360bcca6f4c84e74f",
+    "header/search-bar": "c486a7773cc0a9a07391c6c251f13cf37395c75fcf97a630d69cae464c3bcb59",
+    "footer/editorial": "d1b17f014e0dcff522ee5da016f5e4154ae3440a4d281679b23591f577768f39",
+    "footer/structured": "d156ee70fc258ceeb8bd2190c0a1f391e42b0aa27034c7f5f33db46b7c0c4b5d",
+    "footer/discovery": "7b3dc142bc25b2424faa445f27e23fc4bdbfcdb55bcb9b399a5c4ff4ab3e58d2",
+    "(empty)": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "interactionCss": {
+    "scroll-header": "56c7289f18dc1f96cbd56af433a65e2ae896ee23a1e94c65326c7e715ed15e5e",
+    "image-reveal": "b18e1ac5fbfd10cdb3bf55073bacec77b49eba23b47ac3a7b4769de642968617"
+  }
+}

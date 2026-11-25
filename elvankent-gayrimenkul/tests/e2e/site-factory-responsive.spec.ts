@@ -11,7 +11,7 @@ const adminPassword = process.env.E2E_ADMIN_PASSWORD;
 test.skip(!adminEmail || !adminPassword, 'E2E_ADMIN_* tanımlı değil');
 
 const WIDTHS = [320, 360, 390, 430, 1280];
-const FAMILIES = ['klasik-guven', 'sinematik-vitrin', 'editoryal-luks', 'kurumsal-portfoy', 'yalin-galeri', 'dogal-yasam'];
+const FAMILIES = ['klasik-guven', 'sinematik-vitrin', 'editoryal-luks', 'kurumsal-portfoy', 'yalin-galeri', 'dogal-yasam', 'luxury', 'architectural', 'map-first', 'deniz-kiyisi', 'proje-lansman', 'plaza-ofis', 'arsa-tarla', 'kurumsal-zincir', 'butik-ofis', 'kiralik-merkezi', 'miras-konak', 'gece-premium'];
 const info = { siteName: 'Uzun Adlı Örnek Gayrimenkul Danışmanlık', companyName: 'Örnek Gayrimenkul Ltd. Şti.', phone: '+90 555 000 00 00', email: 'ofis@example.test', address: { city: 'Ankara', district: 'Çankaya' } };
 const enc = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
 
@@ -25,8 +25,8 @@ async function loginPlatform(page: Page) {
 
 const overflow = (page: Page) => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 
-test('RS-01: 6 ailenin gerçek site çıktısı 5 genişlikte taşmaz', async ({ page }) => {
-  test.setTimeout(240_000);
+test('RS-01: 18 ailenin gerçek site çıktısı 5 genişlikte taşmaz', async ({ page }) => {
+  test.setTimeout(540_000);
   await loginPlatform(page);
   const problems: string[] = [];
   for (const family of FAMILIES) {

@@ -27,17 +27,17 @@ export function findDesignFamily(id: string): DesignFamily | null {
 }
 
 const PART_LABELS: Record<string, Record<string, string>> = {
-  hero: { overlay: 'Fotoğraf üstü hero', centered: 'Ortalı hero', split: 'Bölünmüş hero', cinematic: 'Sinematik hero', editorial: 'Editoryal hero', showcase: 'Vitrin hero', immersive: 'Kenardan kenara hero', blueprint: 'Izgaralı dizin hero', 'map-search': 'Arama + bölge hero' },
-  headerLayout: { classic: 'Klasik header', centered: 'Ortalı logo', floating: 'Yüzen header', transparent: 'Saydam header', structured: 'Izgaralı header', 'search-bar': 'Arama çubuklu header' },
-  cardLayout: { standard: 'Standart kart', overlay: 'Görsel üstü kart', editorial: 'Editoryal kart', horizontal: 'Yatay kart' },
-  footerLayout: { classic: 'Sütunlu footer', contact: 'İletişim öncelikli footer', minimal: 'Minimal footer', editorial: 'Editoryal footer', structured: 'Izgaralı footer', discovery: 'Keşif footer' },
+  hero: { overlay: 'Fotoğraf üstü hero', centered: 'Ortalı hero', split: 'Bölünmüş hero', cinematic: 'Sinematik hero', editorial: 'Editoryal hero', showcase: 'Vitrin hero', immersive: 'Kenardan kenara hero', blueprint: 'Izgaralı dizin hero', 'map-search': 'Arama + bölge hero', tabbed: 'Sekmeli arama hero', mosaic: 'Mozaik hero', poster: 'Afiş hero' },
+  headerLayout: { classic: 'Klasik header', centered: 'Ortalı logo', floating: 'Yüzen header', transparent: 'Saydam header', structured: 'Izgaralı header', 'search-bar': 'Arama çubuklu header', utility: 'Üst şeritli header' },
+  cardLayout: { standard: 'Standart kart', overlay: 'Görsel üstü kart', editorial: 'Editoryal kart', horizontal: 'Yatay kart', compact: 'Sıkı satır kartı' },
+  footerLayout: { classic: 'Sütunlu footer', contact: 'İletişim öncelikli footer', minimal: 'Minimal footer', editorial: 'Editoryal footer', structured: 'Izgaralı footer', discovery: 'Keşif footer', band: 'Çağrı bantlı footer' },
   motion: { none: 'Hareketsiz', subtle: 'Ölçülü hareket', expressive: 'Belirgin hareket' },
 };
 
 /** D7.3 yüzey desenlerinin kısa adları (style.slots; standart → listelenmez) */
 export const SURFACE_PART_LABELS: Record<string, Record<string, string>> = {
   search: { 'map-first': 'Bölge kısayollu arama' },
-  grid: { 'gallery-wide': 'Geniş görselli seçki', 'ruled-index': 'Numaralı ilan dizini', 'map-results': 'Liste ↔ harita' },
+  grid: { 'gallery-wide': 'Geniş görselli seçki', 'ruled-index': 'Numaralı ilan dizini', 'map-results': 'Liste ↔ harita', 'feature-first': 'Büyük ilk ilanlı seçki' },
   listingDetail: { immersive: 'Editoryal ilan detayı', 'information-first': 'Künye öncelikli detay', 'map-first': 'Konum öncelikli detay' },
   gallery: { grid: 'Numaralı galeri', carousel: 'Kaydırmalı galeri', fullscreen: 'Tam genişlik galeri' },
   mapList: { 'map-first': 'Bölge bağlamlı harita' },

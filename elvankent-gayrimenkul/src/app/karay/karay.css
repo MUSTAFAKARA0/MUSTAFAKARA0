@@ -475,7 +475,7 @@
 
   /* Giriş koreografisi: yazı (chip → h1 → alt metin → düğmeler), ardından yığın katmanları arkadan öne */
   .ky-rise { animation: ky-rise var(--ky-dur-2) var(--ky-ease) var(--ky-d, 0ms) both; }
-  .ky-mesh::before { animation: ky-drift 18s ease-in-out 4 alternate; }
+  .ky-mesh::before { animation: ky-drift 5s ease-out 1 both; }
   .ky-layer { animation: ky-layer-in 1s var(--ky-ease) var(--d, 0ms) backwards; will-change: transform; }
   .ky-l0 { animation-name: ky-glow-in; }
   .ky-status::before { animation: ky-status 4.2s var(--ky-ease) 1.1s backwards; }
@@ -573,7 +573,8 @@ html[data-motion='off'] { scroll-behavior: auto !important; }
      "hareketi azalt" tercihinde parmakla / elle kaydırılan galeridir (WCAG 2.2.2 duraklatma). */
   .ky-marquee { overflow: hidden; scroll-snap-type: none; }
   .ky-track > li.ky-copy { display: block; }
-  .ky-track { animation: ky-scroll 70s linear infinite; }
+  /* Süre aile sayısıyla orantılı: kaydırma hızı (px/sn) aile eklense de aynı kalır (9 aile = 70 sn) */
+  .ky-track { animation: ky-scroll calc(var(--ky-count, 9) * 7.78s) linear infinite; }
   .ky-marquee:hover .ky-track,
   .ky-marquee:focus-within .ky-track { animation-play-state: paused; }
   .ky-marquee-wrap[data-paused] .ky-track { animation-play-state: paused; }

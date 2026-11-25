@@ -64,6 +64,21 @@ const THEME: Record<ThemeId, Fragment> = {
   grafit: {
     plain: `[data-site-theme='grafit'] :is(h1,h2).font-display{letter-spacing:-.025em}[data-site-theme='grafit'] .eyebrow-line::before{width:1.25rem;height:4px;border-radius:2px;background:var(--accent)}`,
   },
+  deniz: {
+    plain: `[data-site-theme='deniz'] :is(h1,h2).font-display{letter-spacing:-.005em}[data-site-theme='deniz'] .eyebrow{letter-spacing:.16em}[data-site-theme='deniz'] .eyebrow-line::before{width:2.25rem;height:2px;background:linear-gradient(90deg,var(--accent),transparent)}`,
+  },
+  plaza: {
+    plain: `[data-site-theme='plaza'] :is(h1,h2,h3).font-display{letter-spacing:-.025em}[data-site-theme='plaza'] .eyebrow{letter-spacing:.12em;font-variant-numeric:tabular-nums}[data-site-theme='plaza'] .eyebrow-line::before{width:1.5rem;height:3px;border-radius:0;background:var(--primary)}[data-site-theme='plaza'] .btn{letter-spacing:.01em}`,
+  },
+  tarla: {
+    plain: `[data-site-theme='tarla'] :is(h1,h2).font-display{letter-spacing:-.01em}[data-site-theme='tarla'] .eyebrow{letter-spacing:.16em}[data-site-theme='tarla'] .eyebrow-line::before{width:.5rem;height:.5rem;border-radius:0;transform:rotate(45deg);background:var(--accent)}`,
+  },
+  miras: {
+    plain: `[data-site-theme='miras'] :is(h1,h2).font-display{letter-spacing:.002em}[data-site-theme='miras'] .eyebrow{letter-spacing:.3em;font-weight:600}[data-site-theme='miras'] .eyebrow-line::before{width:2.5rem;height:1px;background:var(--accent)}[data-site-theme='miras'] .btn{letter-spacing:.05em}`,
+  },
+  gece: {
+    plain: `[data-site-theme='gece'] :is(h1,h2).font-display{letter-spacing:.01em}[data-site-theme='gece'] .eyebrow{letter-spacing:.2em}[data-site-theme='gece'] .eyebrow-line::before{width:2.5rem;height:1px;background:linear-gradient(90deg,var(--accent),transparent)}`,
+  },
 };
 
 // --------------------------------------------------------------------------- Header / düğme / footer / görsel
@@ -115,6 +130,10 @@ const CARD_LAYOUT: Record<ResolvedStyle['cardLayout'], Fragment> = {
   horizontal: {
     plain: `@media (min-width:640px){[data-site-card-layout='horizontal'] .property-card{display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr);gap:.25rem;align-items:stretch}[data-site-card-layout='horizontal'] .property-card .pc-media{aspect-ratio:auto;min-height:13.5rem;height:100%}[data-site-card-layout='horizontal'] .property-card .pc-body{padding:.75rem .75rem .5rem 1rem}[data-site-card-layout='horizontal'] .listing-grid{grid-template-columns:repeat(1,minmax(0,1fr))}}@media (min-width:1024px){[data-site-card-layout='horizontal'] .listing-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}`,
   },
+  // Sıkı satır: solda küçük görsel, ortada başlık + künye, sağda fiyat; her genişlikte tek sütun (telefonda fiyat üstte)
+  compact: {
+    plain: `[data-site-card-layout='compact'] .listing-grid{grid-template-columns:minmax(0,1fr);gap:.75rem}[data-site-card-layout='compact'] .property-card{display:grid;grid-template-columns:7.25rem minmax(0,1fr);align-items:stretch;gap:.25rem .75rem;padding:.5rem;border-radius:var(--radius-xl,.9rem)}[data-site-card-layout='compact'] .property-card .pc-media{aspect-ratio:auto;height:100%;min-height:7.25rem;border-radius:calc(var(--radius-xl,.9rem) - 2px)}[data-site-card-layout='compact'] .property-card :is(.pc-scrim,.pc-count,.pc-type,.pc-highlights){display:none}[data-site-card-layout='compact'] .property-card .pc-body{display:grid;grid-template-columns:minmax(0,1fr);align-content:center;gap:.15rem;padding:.15rem .25rem}[data-site-card-layout='compact'] .property-card .pc-pricebox{order:-1}[data-site-card-layout='compact'] .property-card .pc-price{font-size:1.05rem}[data-site-card-layout='compact'] .property-card .pc-title{margin-top:0;font-size:14.5px}[data-site-card-layout='compact'] .property-card .pc-location{margin-top:0;font-size:13px}[data-site-card-layout='compact'] .property-card .pc-specs{margin-top:.35rem;border-top:0;padding-top:0;gap:.35rem}[data-site-card-layout='compact'] .property-card .pc-specs li{padding:.1rem .5rem;border-radius:999px;background:var(--surface-muted);font-size:12px}[data-site-card-layout='compact'] .property-card .pc-specs li>span[aria-hidden]{display:none}[data-site-card-layout='compact'] .property-card .pc-footer{padding-top:0}[data-site-card-layout='compact'] .property-card:hover{transform:none}@media (min-width:640px){[data-site-card-layout='compact'] .property-card{grid-template-columns:13rem minmax(0,1fr)}[data-site-card-layout='compact'] .property-card .pc-media{min-height:9.5rem}[data-site-card-layout='compact'] .property-card .pc-body{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'title price' 'loc price' 'specs specs' 'foot foot';column-gap:1.25rem;padding:.35rem .5rem}[data-site-card-layout='compact'] .property-card .pc-pricebox{grid-area:price;order:0;justify-self:end;text-align:right;justify-content:flex-end}[data-site-card-layout='compact'] .property-card .pc-price{font-size:1.2rem;white-space:nowrap}[data-site-card-layout='compact'] .property-card .pc-title{grid-area:title}[data-site-card-layout='compact'] .property-card .pc-location{grid-area:loc}[data-site-card-layout='compact'] .property-card .pc-specs{grid-area:specs}[data-site-card-layout='compact'] .property-card .pc-footer{grid-area:foot;justify-content:flex-end}}`,
+  },
 };
 
 // --------------------------------------------------------------------------- Header düzeni
@@ -125,6 +144,7 @@ const HEADER_LAYOUT: Record<ResolvedStyle['headerLayout'], Fragment> = {
   transparent: {},
   structured: {},
   'search-bar': {},
+  utility: {},
   // Yüzen header: üstten ayrık, yarı saydam (yalnızca sabit öğede bulanıklık; kaydırılan içerikte yok)
   floating: {
     plain: `[data-site-header-layout='floating'] .site-header{background:transparent;border-color:transparent;backdrop-filter:none;padding-top:.625rem;pointer-events:none}[data-site-header-layout='floating'] .site-header-bar{pointer-events:auto;border:1px solid color-mix(in oklab,var(--foreground) 10%,transparent);border-radius:1.25rem;background:color-mix(in oklab,var(--surface) 88%,transparent);backdrop-filter:blur(14px);box-shadow:0 18px 40px -28px rgb(15 23 20 / .35);padding-inline:1rem}@media (min-width:1024px){[data-site-header-layout='floating'] .site-header-bar{border-radius:9999px;padding-inline:1.5rem}}`,

@@ -81,7 +81,9 @@ export function LivePreview({
       </Button>
     </div>
   );
-  const photo = 'bg-[linear-gradient(160deg,#c9d3d6,#98a6ab)]';
+  // Örnek görseller: uygulamanın kendi demo çizimleri (önizleme dışında hiçbir yerde gerçek ilan sayılmaz)
+  const photo = "bg-[url('/demo/villa/w640.webp')] bg-cover bg-center";
+  const photo2 = "bg-[url('/demo/living-room/w640.webp')] bg-cover bg-center";
   return (
     // Önizleme, tema CSS'ini ve önizlenen yazı tiplerini kendisi getirir: KARAY platformu ve
     // KARAY sayfasının kökleri bunları yüklemez (yalnızca önizlemenin bulunduğu sayfalar yükler)
@@ -124,7 +126,7 @@ export function LivePreview({
         </div>
         {/* Hero */}
         {style.hero === 'overlay' && (
-          <div className="site-media relative m-3 overflow-hidden rounded-2xl bg-[linear-gradient(135deg,#5b6b72,#2b3438)] px-4 pt-8 pb-4 text-white">
+          <div className="site-media relative m-3 overflow-hidden rounded-2xl bg-[linear-gradient(rgb(0_0_0/.35),rgb(0_0_0/.5)),url('/demo/villa/w960.webp')] bg-cover bg-center px-4 pt-8 pb-4 text-white">
             <p className="text-[9.5px] font-bold tracking-[0.2em] text-white/75 uppercase">{name}</p>
             <h3 className="mt-1.5 font-display text-[1.45rem] leading-[1.1]">Size uygun gayrimenkulü bulun.</h3>
             <div className="mt-4">{search}</div>
@@ -149,7 +151,7 @@ export function LivePreview({
         )}
         {style.hero === 'cinematic' && (
           <div className="relative">
-            <div className="hero-media relative bg-[linear-gradient(160deg,#4b5a61,#1d2427)] px-4 pt-12 pb-12 text-white">
+            <div className="hero-media relative bg-[linear-gradient(rgb(0_0_0/.3),rgb(0_0_0/.5)),url('/demo/villa/w960.webp')] bg-cover bg-center px-4 pt-12 pb-12 text-white">
               <p className="inline-flex rounded-full bg-white/15 px-2 py-0.5 text-[9px] font-semibold tracking-[0.16em] uppercase ring-1 ring-white/25">Ankara · Çankaya</p>
               <h3 className="mt-2 font-display text-[1.85rem] leading-[1]">Size uygun gayrimenkulü bulun.</h3>
             </div>
@@ -180,13 +182,104 @@ export function LivePreview({
             <div className="mt-3">{search}</div>
           </div>
         )}
+        {style.hero === 'immersive' && (
+          <div className="hero-media relative bg-[linear-gradient(rgb(0_0_0/.3),rgb(0_0_0/.55)),url('/demo/villa/w960.webp')] bg-cover bg-center px-4 pt-14 pb-5 text-white">
+            <p className="text-[9px] font-bold tracking-[0.2em] text-white/70 uppercase">{name}</p>
+            <h3 className="mt-2 max-w-[16rem] font-display text-[1.7rem] leading-[1.02]">Size uygun gayrimenkulü bulun.</h3>
+            <div className="mt-4 flex items-center justify-between border-t border-white/25 pt-2.5 text-[10px]">
+              <span className="text-white/75">Portföyü keşfedin</span>
+              <span className="rounded-full bg-white px-2.5 py-1 font-semibold text-[#111]">İlanlar →</span>
+            </div>
+          </div>
+        )}
+        {style.hero === 'blueprint' && (
+          <div className="grid grid-cols-[1.1fr_1fr] gap-3 border-t border-foreground px-4 pt-4 pb-4">
+            <div className="min-w-0">
+              <p className="text-[9px] font-bold tracking-[0.16em] text-muted-foreground uppercase">00 — {name}</p>
+              <h3 className="mt-2 font-display text-[1.25rem] leading-[1.05]">Size uygun gayrimenkulü bulun.</h3>
+              <ol className="mt-3 border-t border-border text-[10.5px]">
+                {['Satılık', 'Kiralık', 'Konut'].map((x, i) => (
+                  <li key={x} className="flex items-center gap-2 border-b border-border py-1">
+                    <span className="numeric text-muted-foreground">0{i + 1}</span> {x}
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <div className={`site-media aspect-[4/5] ${photo}`} />
+          </div>
+        )}
+        {style.hero === 'map-search' && (
+          <div className="m-3 rounded-2xl border border-border bg-[radial-gradient(var(--border-strong)_1px,transparent_1px)] [background-size:16px_16px] px-4 py-4">
+            <p className="text-[9px] font-bold tracking-[0.16em] text-primary-ink uppercase">{name}</p>
+            <h3 className="mt-1.5 font-display text-[1.25rem] leading-[1.08]">Size uygun gayrimenkulü bulun.</h3>
+            <div className="mt-3">{search}</div>
+            <div className="mt-3 grid grid-cols-3 gap-1.5">
+              {[1, 2, 3].map((i) => (
+                <span key={i} className="h-6 rounded-lg border border-border bg-surface" />
+              ))}
+            </div>
+          </div>
+        )}
+        {style.hero === 'tabbed' && (
+          <div>
+            <div className="bg-primary px-4 pt-5 pb-9 text-primary-fg">
+              <h3 className="max-w-[17rem] font-display text-[1.3rem] leading-[1.08]">Size uygun gayrimenkulü bulun.</h3>
+            </div>
+            <div className="relative z-10 mx-3 -mt-6 rounded-xl border border-border bg-surface p-2 shadow-md">
+              <div className="mb-1.5 flex gap-1 text-[9.5px] font-semibold">
+                <span className="rounded-md bg-surface-muted px-2 py-0.5">Satılık</span>
+                <span className="px-2 py-0.5 text-muted-foreground">Kiralık</span>
+              </div>
+              {search}
+            </div>
+            <div className="mx-3 mt-2 grid grid-cols-4 divide-x divide-border rounded-lg border border-border bg-surface">
+              {[1, 2, 3, 4].map((i) => (
+                <span key={i} className="flex flex-col gap-1 px-2 py-1.5">
+                  <span className="h-1.5 w-8 rounded bg-surface-muted" />
+                  <span className="h-2.5 w-6 rounded bg-foreground/25" />
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {style.hero === 'mosaic' && (
+          <div className="px-4 pt-5 pb-3">
+            <div className="grid grid-cols-[1fr_1.35fr] items-center gap-3">
+              <div className="min-w-0">
+                <p className="eyebrow">{name}</p>
+                <h3 className="mt-1.5 font-display text-[1.2rem] leading-[1.08]">Size uygun gayrimenkulü bulun.</h3>
+              </div>
+              <div className="grid h-28 grid-cols-[1.2fr_1fr] grid-rows-2 gap-1.5">
+                <div className={`row-span-2 rounded-[1.1rem_.25rem_1.1rem_1.1rem] ${photo}`} />
+                <div className={`rounded-[1.1rem_1.1rem_.25rem_.25rem] ${photo}`} />
+                <div className={`rounded-[.25rem_.25rem_1.1rem_1.1rem] ${photo}`} />
+              </div>
+            </div>
+            <div className="mt-3">{search}</div>
+          </div>
+        )}
+        {style.hero === 'poster' && (
+          <div className="grid grid-cols-[1.3fr_1fr] gap-3 bg-surface-inverse px-4 pt-6 pb-4 text-inverse-foreground">
+            <div className="min-w-0">
+              <p className="text-[9px] font-bold tracking-[0.16em] text-inverse-foreground/65 uppercase">{name}</p>
+              <h3 className="mt-2 font-display text-[1.5rem] leading-[1.02]">Size uygun gayrimenkulü bulun.</h3>
+              <span className="mt-3 inline-flex rounded-md bg-accent px-2.5 py-1 text-[10px] font-bold text-accent-fg">İlanları inceleyin</span>
+              <div className="mt-3 grid grid-cols-3 gap-2 border-t border-inverse-foreground/25 pt-2">
+                {[1, 2, 3].map((i) => (
+                  <span key={i} className="h-3 rounded bg-inverse-foreground/30" />
+                ))}
+              </div>
+            </div>
+            <div className={`aspect-[4/5] rounded-[.4rem_.4rem_3.5rem_3.5rem] ${photo}`} />
+          </div>
+        )}
         {/* Kartlar */}
         <div className="px-4 pb-4">
           <p className="eyebrow eyebrow-line">Öne çıkanlar</p>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {[1, 2].map((i) => (
               <div key={i} className="property-card card-lift relative flex flex-col overflow-hidden rounded-2xl border border-border bg-surface">
-                <div className={`pc-media site-media aspect-[4/3] ${photo}`} />
+                <div className={`pc-media site-media aspect-[4/3] ${i === 1 ? photo : photo2}`} />
                 <div className="pc-body flex flex-col p-2.5">
                   <p className="pc-price text-[14px] font-bold text-primary-ink">₺{i === 1 ? '4.250.000' : '18.500 / ay'}</p>
                   <p className="pc-title truncate text-[11.5px] font-semibold">{i === 1 ? 'Satılık 3+1 daire' : 'Kiralık 2+1 daire'}</p>

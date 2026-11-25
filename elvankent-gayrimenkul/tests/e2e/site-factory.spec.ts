@@ -39,7 +39,7 @@ const letters = (n: number) => [...randomBytes(n)].map((b) => String.fromCharCod
 const S: { a?: string; b?: string } = {};
 
 /** Site Factory kataloğunun hiçbir parçası (aile adları/açıklamaları) müşteri sitesine gitmemeli */
-const CATALOG_STRINGS = ['Sinematik Vitrin', 'Editoryal Lüks', 'Kurumsal Portföy', 'Yalın Galeri', 'Doğal Yaşam', 'Klasik Güven', 'Kenardan kenara fotoğraf', 'Dergi düzeni: asimetrik hero'];
+const CATALOG_STRINGS = ['Sinematik Vitrin', 'Editoryal Lüks', 'Kurumsal Portföy', 'Yalın Galeri', 'Doğal Yaşam', 'Klasik Güven', 'Kenardan kenara fotoğraf', 'Dergi düzeni: asimetrik hero', 'Deniz Kıyısı', 'Proje Lansman', 'Plaza Ofis', 'Arsa & Tarla', 'Kurumsal Zincir', 'Butik Ofis', 'Kiralık Merkezi', 'Miras Konak', 'Gece Premium'];
 const FAMILIES = ['Klasik Güven', 'Sinematik Vitrin', 'Editoryal Lüks', 'Kurumsal Portföy', 'Yalın Galeri', 'Doğal Yaşam'];
 
 async function makeOrg(key: 'a' | 'b', host: string, withListings: boolean) {

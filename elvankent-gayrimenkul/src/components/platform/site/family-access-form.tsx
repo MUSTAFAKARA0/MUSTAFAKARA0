@@ -20,12 +20,12 @@ export function FamilyAccessForm({ orgId, available, granted, families }: { orgI
   const [, startTransition] = useTransition();
   const dirty = [...selected].sort().join() !== [...granted].sort().join();
   return (
-    <section aria-labelledby="ofis-aileleri" className="rounded-2xl border border-border bg-surface p-5">
+    <section aria-labelledby="ofis-aileleri" className="mt-2 rounded-2xl border border-dashed border-border-strong bg-surface p-5">
       <h2 id="ofis-aileleri" className="flex items-center gap-2 text-[17px] font-semibold">
         <KeyRound className="size-4.5 text-primary-ink" aria-hidden /> Ofisin seçebileceği tasarımlar
       </h2>
       <p className="mt-1 max-w-2xl text-[13.5px] text-muted-foreground">
-        Ofis yöneticisi kendi panelindeki <strong className="font-semibold text-foreground">Site yönetimi › Tasarım</strong> sekmesinde yalnızca burada işaretli aileleri görür ve sitesine uygulayabilir.
+        Yukarıdaki bölümden farklı olarak bu bölüm sitenin taslağını değiştirmez; yalnızca <strong className="font-semibold text-foreground">ofis yöneticisinin</strong> kendi panelindeki <strong className="font-semibold text-foreground">Site yönetimi › Tasarım</strong> sekmesinde hangi aileleri görüp uygulayabileceğini belirler.
       </p>
       {!available ? (
         <p className="mt-4 rounded-xl bg-warning-soft p-3 text-[13.5px] text-warning">Bu özellik için 20261004000001_design_family_access migration&apos;ı veritabanına uygulanmalıdır.</p>

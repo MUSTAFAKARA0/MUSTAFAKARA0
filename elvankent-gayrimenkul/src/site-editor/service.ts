@@ -6,6 +6,8 @@ import type { SessionUser } from '@/platform/auth/session';
 import { BRAND_FIELDS, SECTION_SCHEMAS, brandDraftSchema, seoSchema, parseSiteConfig, type BrandDraft, type BrandField, type BrandValue, type SiteSection } from '@/site-config/schema';
 import { compileDesign } from '@/site-factory/compile';
 import { findDesignFamily } from '@/site-factory/families';
+import { parseFeatureOverrides } from '@/platform/tenant/site-state';
+import { findPalette } from '@/theme-engine/palettes';
 import { brandSchema, firstIssue, type BrandInput } from '@/site-editor/brand-input';
 import type { Json } from '@/types/supabase';
 
@@ -150,11 +152,21 @@ export async function saveSeoDraft(db: Db, orgId: string, input: SeoDraftInput, 
  * veritabanı da (site_save_draft) süper admin olmayan çağıranda aile iznini ayrıca doğrular.
  * Bir bölüm yazılamazsa yazılanlar eski değerlerine döndürülür (yarım aile taslakta kalmaz).
  */
-export async function applyFamilyToDraft(db: Db, orgId: string, familyId: string, allowed?: readonly string[], expected?: DraftToken): Promise<string | null> {
+/** Organizasyonun koyu görünüm özelliği (dark_mode) açık mı (site_configs.feature_overrides) */
+export async function readDarkAllowed(db: Db, orgId: string): Promise<boolean> {
+  assertOrg(orgId);
+  const { data, error } = await db.from('site_configs').select('feature_overrides').eq('organization_id', orgId).maybeSingle();
+  assertNoDbError(error);
+  return parseFeatureOverrides(data?.feature_overrides).dark_mode === true;
+}
+
+export async function applyFamilyToDraft(db: Db, orgId: string, familyId: string, allowed?: readonly string[], expected?: DraftToken, darkAllowed?: boolean): Promise<string | null> {
   assertOrg(orgId);
   const family = typeof familyId === 'string' ? findDesignFamily(familyId) : null;
   if (!family) throw new ActionError('Geçersiz tasarım ailesi.');
   if (allowed && !allowed.includes(family.id)) throw new ActionError('Bu tasarım ailesi siteniz için açık değil.', 'family_not_allowed');
+  // Koyu paletli aile koyu görünüm kapalı sitede açık yedek palete düşerdi: sunucu da reddeder (arayüz zaten gizler)
+  if (darkAllowed === false && findPalette(family.palette)?.scheme === 'dark') throw new ActionError('Bu aile koyu görünüm gerektirir.', 'family_not_allowed');
   const { data: row, error: readError } = await db.from('site_configs').select('draft').eq('organization_id', orgId).maybeSingle();
   assertNoDbError(readError);
   if (!row) throw new ActionError('Site bulunamadı.');

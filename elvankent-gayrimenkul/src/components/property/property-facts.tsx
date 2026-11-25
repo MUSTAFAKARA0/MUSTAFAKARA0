@@ -29,9 +29,9 @@ export function KeyFacts({ p }: { p: PropertyDetail }) {
   ].filter((f): f is { icon: typeof Maximize; label: string; value: string } => Boolean(f?.value));
   if (!facts.length) return null;
   return (
-    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-3 lg:grid-cols-6">
+    <dl className="flex flex-wrap gap-px overflow-hidden rounded-2xl border border-border bg-border">
       {facts.slice(0, 6).map(({ icon: Icon, label, value }) => (
-        <div key={label} className="bg-surface px-4 py-4">
+        <div key={label} className="min-w-0 flex-[1_1_9.5rem] bg-surface px-4 py-4">
           <dt className="flex items-center gap-1.5 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
             <Icon className="size-3.5" aria-hidden /> {label}
           </dt>

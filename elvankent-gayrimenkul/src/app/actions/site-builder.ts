@@ -11,6 +11,7 @@ import { firstIssue, type BrandInput } from '@/site-editor/brand-input';
 import type { SavedDraft } from '@/site-editor/types';
 import {
   applyFamilyToDraft,
+  readDarkAllowed,
   discardDraft,
   publishDraft,
   rollbackToVersion,
@@ -59,7 +60,7 @@ export async function applyDesignFamily(orgId: string, familyId: string, expecte
   return runAction(async () => {
     assertOrg(orgId);
     const session = await requireSuperAdmin();
-    const draftToken = await applyFamilyToDraft(session.supabase, orgId, familyId, undefined, expected);
+    const draftToken = await applyFamilyToDraft(session.supabase, orgId, familyId, undefined, expected, await readDarkAllowed(session.supabase, orgId));
     revalidatePath(`/platform/siteler/${orgId}`, 'layout');
     return { draftToken };
   }, 'Tasarım ailesi taslağa uygulandı. Önizleyip "Değişiklikleri yayınla"ya basın.');

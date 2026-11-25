@@ -88,3 +88,13 @@ Site durumu **Bakım** veya **Yayında değil** iken ziyaretçi kısa bir bilgi 
 - `tests/e2e/site-builder.spec.ts` › TEST-SITE-01…12 (geçici kiracı ve test alan adı; Elvankent'e dokunmaz).
 - `tests/e2e/karay-branding.spec.ts` › TEST-KARAY-01…15 (KARAY ↔ Elvankent ↔ Kiracı B ayrımı, marka taslak/önizleme/yayın/geri alma, CLS, 320/360 px header, mobil menü).
 - `tests/security/rls.test.mjs` › "Web sitesi yapılandırması (site_configs) ve oturum bağlamı".
+
+
+## Tasarım kataloğu (Faz 1: 18 aile, 15 tema)
+
+- 18 tasarım ailesi: ilk 9 aile donmuş veridir (derlenmiş çıktısı `tests/unit/fixtures/family-golden.json` ile mühürlüdür); 10–18. aileler
+  (Deniz Kıyısı, Proje Lansman, Plaza Ofis, Arsa & Tarla, Kurumsal Zincir, Butik Ofis, Kiralık Merkezi, Miras Konak, Gece Premium) sona eklenir.
+- 15 tema (yeni: `deniz`, `plaza`, `tarla`, `miras`, `gece`; kimlikler yalnızca küçük harf) ve 8 yeni palet (`palettes.test.mjs` AA kontrastını doğrular).
+- Segment, etiket ve "kime uygun" bilgisi `src/site-factory/catalog-meta.ts` içindedir (aile dosyalarında değil).
+- Aile seçicisi (Tema sekmesi): segment çipleri, arama, sıralama, koyu tema anahtarı, `?segment=` ile paylaşılabilir adres, büyük önizleme.
+- Koyu paletli aile (Gece Premium) koyu görünüm (`dark_mode`) kapalı ofislerde listelenmez.
