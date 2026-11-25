@@ -25,6 +25,16 @@ Projenin **tek ve sürekli** geliştirme günlüğü. Her çalışma oturumu "Gi
 
 ## Girişler
 
+### 25.11.2026 (49) · karays.com yeniden tasarım: "Canlı Vitrin" (ECC tasarım ajanlarıyla)
+
+Sahip isteği: karays.com düz görünüyor; animasyonlu, ayrıntılı, profesyonel, dikkat çekici bir site; ECC ajanlarıyla.
+
+- Süreç: gan-planner (tasarım şartnamesi) → gan-generator (uygulama, ekran görüntüsüyle yineleme) → gan-evaluator (gerçek tarayıcıda puanlama + Lighthouse), a11y-architect (WCAG 2.2 AA), code-reviewer → tüm bulgular ikinci turda düzeltildi.
+- Sayfa: koyu/açık sahne ritmi, katmanlı cihaz yığını (gerçek ekran görüntüleri), gerçek sayılardan rakam şeridi (tema, aile, adım, rol), asimetrik özellik ızgarası, kaydırmalı "Taslak → Önizleme → Canlı → Önceki sürüm" anlatımı, koyu tema sahnesi (tembel yüklenir), güvenlik kartları, çizilen zaman çizelgesi, dalga geçişleri, kaydırma ilerleme çizgisi.
+- Kurallar: yeni paket yok, dış kaynak yok; tüm hareket "hareketi azalt" kapalıyken; metin hiçbir karede saydamlaşmaz; "Animasyonları durdur" (hero ve alt bilgi) ve şerit duraklatma düğmesi her hareketi durdurur, tercih saklanır; uydurma sayı/yorum yok (testle korunur).
+- Testler: birim 1102/1102 (karay-motion-safety, karay-honesty, karay-layer-boundaries, karay-reveal, karay-rotor + kontrast genişletmesi); E2E KARAY-25…32 (hareket-azalt, duraklatma, metin görünürlüğü, CLS, 320–1440 taşma, dürüstlük, klavye).
+- Lighthouse (yerel, yavaş telefon benzetimi, 3 ölçüm ortancası): hız 89 (önce 84), erişilebilirlik/uygulama/SEO 100, CLS 0, LCP 3,75 sn (önce ~4,0). Kalan LCP payı hidratasyon ve yazı tipi ön yüklemesi; canlıda daha hızlı.
+
 ### 25.11.2026 (48) · Tema imzaları: her tasarım ailesine özgü doku, ışık ve hareket; KARAYS tasarım şeridi
 
 Sahip isteği (24.11 gece): temalarda yalnız renk ve yazı değişiyor; emlakçının dikkatini çekecek özgün tasarımlar, hareketler; KARAYS sayfası da gelişsin; ücretli hiçbir şey yok.

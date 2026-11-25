@@ -5,7 +5,8 @@ import { expect, test, type Browser, type BrowserContext, type Locator, type Pag
 /**
  * KARAY şirket sayfası (/karay), KARAY talepleri ve 10 tema — KARAY-01…18; platform giriş logosu (KARAY-19);
  * KARAYS görsel paketi: paylaşım görseli ve simgeler (KARAY-20), maskotlar ve KARO animasyonu (KARAY-21…22);
- * tanıtım videosu, posteri ve Türkçe altyazısı (KARAY-24).
+ * tanıtım videosu, posteri ve Türkçe altyazısı (KARAY-24); "Canlı Vitrin" yeniden tasarımı: hareket, erişilebilirlik,
+ * düzen kararlılığı, taşma ve dürüstlük denetimleri (KARAY-25…32).
  *
  *   KARAY (platform sahibi) ── /karay (kendi markası, kendi talep tablosu: platform_leads)
  *     ├─ Elvankent (varsayılan kiracı; görünümü DEĞİŞTİRİLMEZ, yalnızca okunur)
@@ -696,4 +697,197 @@ test('KARAY-22: KARO animasyonu bir kez oynar; "hareketi azalt" ve dar ekranda i
     expect(requests, name).toEqual([]);
     await ctx.close();
   }
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// "Canlı Vitrin" yeniden tasarımı (KARAY-25…32): hareketsiz sayfa eksiksiz, hareket kontrollü, metin hiç saydamlaşmaz, kayma yok
+// ---------------------------------------------------------------------------------------------------------------------
+
+test('KARAY-25: "hareketi azalt": animasyon yok, bekleyen giriş yok, sayfa durağan ve eksiksiz', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/karay');
+  await page.waitForTimeout(600);
+  expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  await scrollThrough(page);
+  expect(await page.locator('[data-reveal="pending"]').count()).toBe(0);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.locator('.ky-rotor')).toContainText('web siteniz, ilanlarınız, müşterileriniz, talepleriniz, markanız.');
+  await expect(page.locator('#ozellikler li')).toHaveCount(12);
+  await expect(page.locator('#nasil-calisir ol > li')).toHaveCount(4);
+  await expect(page.locator('#platform ol > li')).toHaveCount(4);
+  for (const t of ['Taslağa kaydedin', 'Önizleyin', 'Yayınlayın', 'Gerekirse geri alın']) await expect(page.locator('#platform ol').getByText(t, { exact: true })).toBeVisible();
+  // Tasarım şeridi: hareket yok, kopya sıra gizli ve şerit yatay kaydırılır
+  expect(await page.locator('.ky-track > li.ky-copy').first().evaluate((el) => getComputedStyle(el).display)).toBe('none');
+  expect(await page.locator('.ky-marquee').evaluate((el) => getComputedStyle(el).overflowX)).toBe('auto');
+});
+
+test('KARAY-26: hareket açıkken hero ilk çizimde görünür, giriş biter, sonsuz hareket yalnızca şerit ve fareyle durur', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/karay', { waitUntil: 'commit' });
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.locator('.ky-l1 img')).toBeVisible();
+  // Zamana bağlı giriş animasyonları biter (durum hapı ~5,4 sn); kaydırmaya bağlı olanlar kaydırılana dek "çalışır" görünür
+  const running = () =>
+    page.evaluate(() =>
+      document
+        .getAnimations()
+        .filter((a) => {
+          const t = (a.effect as KeyframeEffect | null)?.target as Element | null;
+          return a.timeline instanceof DocumentTimeline && a.playState === 'running' && !!t?.closest('.ky-hero') && !t.classList.contains('ky-mesh');
+        })
+        .map((a) => ((a.effect as KeyframeEffect).target as Element).className),
+    );
+  await expect.poll(running, { timeout: 9000 }).toEqual([]);
+  const infinite = await page.evaluate(() =>
+    document
+      .getAnimations()
+      .filter((a) => a.effect?.getComputedTiming().iterations === Infinity)
+      .map((a) => ((a.effect as KeyframeEffect).target as Element).className),
+  );
+  expect(infinite).toEqual(['ky-track']);
+  await page.locator('.ky-marquee').scrollIntoViewIfNeeded();
+  await page.locator('.ky-marquee').hover();
+  await expect
+    .poll(() => page.evaluate(() => document.getAnimations().find((a) => a.effect?.getComputedTiming().iterations === Infinity)?.playState))
+    .toBe('paused');
+});
+
+test('KARAY-27: "Animasyonları durdur" anahtarı tüm hareketi kapatır ve tercih saklanır', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/karay');
+  const toggle = page.getByRole('button', { name: 'Animasyonları durdur' });
+  await toggle.scrollIntoViewIfNeeded();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.karay-site')).toHaveAttribute('data-motion', 'off');
+  await page.waitForTimeout(400);
+  expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  await page.reload();
+  await expect(page.locator('.karay-site')).toHaveAttribute('data-motion', 'off');
+  await expect(page.getByRole('button', { name: 'Animasyonları durdur' })).toHaveAttribute('aria-pressed', 'true');
+  // Geri açılır
+  await page.getByRole('button', { name: 'Animasyonları durdur' }).click();
+  await expect(page.locator('.karay-site')).not.toHaveAttribute('data-motion', 'off');
+});
+
+test('KARAY-28: kaydırma sırasında hiçbir metin (ya da atası) saydamlaşmaz', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/karay');
+  const h = await page.evaluate(() => document.documentElement.scrollHeight);
+  const faded = () =>
+    page.evaluate(() => {
+      const bad: string[] = [];
+      for (const el of Array.from(document.querySelectorAll('main *'))) {
+        const own = Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.textContent ?? '').trim().length > 0);
+        if (!own || el.getClientRects().length === 0) continue;
+        for (let a: Element | null = el; a && a.tagName !== 'BODY'; a = a.parentElement) {
+          if (getComputedStyle(a).opacity !== '1') {
+            bad.push(`${el.tagName}.${el.className} (${a.tagName}.${a.className})`);
+            break;
+          }
+        }
+      }
+      return bad;
+    });
+  for (const f of [0, 0.2, 0.4, 0.6, 0.8]) {
+    await page.evaluate((y) => window.scrollTo(0, y), Math.round(h * f));
+    await page.waitForTimeout(150);
+    expect(await faded(), `kaydırma %${f * 100}`).toEqual([]);
+  }
+});
+
+test('KARAY-29: düzen kayması (CLS) en çok 0,02; masaüstü ve telefon', async ({ browser }) => {
+  for (const viewport of [
+    { width: 1280, height: 800 },
+    { width: 390, height: 844 },
+  ]) {
+    const ctx = await newContext(browser, viewport);
+    await ctx.addInitScript(() => {
+      const w = window as unknown as { __cls: number };
+      w.__cls = 0;
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) if (!e.hadRecentInput) w.__cls += e.value;
+      }).observe({ type: 'layout-shift', buffered: true });
+    });
+    const page = await ctx.newPage();
+    await page.goto(`${baseURL}/karay`);
+    await scrollThrough(page);
+    await page.waitForTimeout(600);
+    const cls = await page.evaluate(() => (window as unknown as { __cls: number }).__cls);
+    expect(cls, `${viewport.width}px`).toBeLessThanOrEqual(0.02);
+    await ctx.close();
+  }
+});
+
+test('KARAY-30: 320-1440 px yatay taşma yok; hero yığını ve yapışkan çerçeve ekran içinde', async ({ browser }) => {
+  test.setTimeout(240_000);
+  for (const width of [320, 360, 390, 768, 1024, 1440]) {
+    const m = await open(browser, '/karay', { width, height: 800 });
+    await m.page.mouse.move(width / 2, 300);
+    await m.page.mouse.move(width / 2 + 120, 360);
+    await scrollThrough(m.page);
+    expect(await overflow(m.page), `${width}px`).toBeLessThanOrEqual(0);
+    await m.page.evaluate(() => window.scrollTo(0, 0));
+    const stack = (await m.page.locator('.ky-stack').boundingBox())!;
+    expect(stack.x, `yığın sol ${width}px`).toBeGreaterThanOrEqual(-1);
+    expect(stack.x + stack.width, `yığın sağ ${width}px`).toBeLessThanOrEqual(width + 1);
+    const fig = m.page.locator('.ky-walk-sticky');
+    await fig.scrollIntoViewIfNeeded();
+    const f = (await fig.boundingBox())!;
+    expect(f.x, `anlatım çerçevesi sol ${width}px`).toBeGreaterThanOrEqual(-1);
+    expect(f.x + f.width, `anlatım çerçevesi sağ ${width}px`).toBeLessThanOrEqual(width + 1);
+    await m.close();
+  }
+});
+
+test('KARAY-31: rakam şeridi dizilerden türer; sayfada uydurma istatistik / yorum yok', async ({ page }) => {
+  await page.goto('/karay');
+  // Tema vitrini tembel yüklenir: bölüm ekrana yaklaşınca gelir
+  await page.locator('#temalar').scrollIntoViewIfNeeded();
+  await expect(page.getByRole('radiogroup', { name: 'Tema seçin' })).toBeVisible();
+  const facts = await page.locator('.ky-fact-real').allTextContents();
+  const themes = await page.getByRole('radiogroup', { name: 'Tema seçin' }).getByRole('radio').count();
+  const families = await page.locator('#tasarimlar .ky-track > li:not(.ky-copy)').count();
+  const steps = await page.locator('#nasil-calisir ol > li').count();
+  const roles = await page.locator('ul[aria-label="Rol bazlı yetki rolleri"] > li').count();
+  expect(facts).toEqual([String(themes), String(families), String(steps), String(roles)]);
+  expect([themes, families, steps, roles]).toEqual([10, 9, 4, 5]);
+  const text = await page.locator('main').innerText();
+  expect(text).not.toMatch(/\b\d{2,}\s*(\+|%)/);
+  expect(text).not.toMatch(/referans|yorum|memnuniyet|güvenen|★|müşteri(miz)?\s+sayısı/i);
+});
+
+test('KARAY-32: klavye: odak halkası görünür, tema grubu ok tuşlarıyla gezilir, SSS Enter ile açılır', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.goto('/karay');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  const ring = await page.evaluate(() => {
+    const el = document.activeElement as HTMLElement;
+    const cs = getComputedStyle(el);
+    return { tag: el.tagName, width: parseFloat(cs.outlineWidth), style: cs.outlineStyle };
+  });
+  expect(ring.tag).toBe('A');
+  expect(ring.style).not.toBe('none');
+  expect(ring.width).toBeGreaterThanOrEqual(2);
+  await page.locator('#temalar').scrollIntoViewIfNeeded();
+  const group = page.getByRole('radiogroup', { name: 'Tema seçin' });
+  await expect(group).toBeVisible();
+  const radios = group.getByRole('radio');
+  await radios.first().scrollIntoViewIfNeeded();
+  await radios.first().click();
+  await expect(radios.first()).toHaveAttribute('aria-checked', 'true');
+  await page.keyboard.press('ArrowRight');
+  await expect(radios.nth(1)).toHaveAttribute('aria-checked', 'true');
+  await expect(radios.nth(1)).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(radios.last()).toHaveAttribute('aria-checked', 'true');
+  expect(await group.locator('[role="radio"][tabindex="0"]').count()).toBe(1);
+  const summary = page.locator('details summary').first();
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('details').first()).toHaveAttribute('open', '');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('details').first()).not.toHaveAttribute('open', '');
 });

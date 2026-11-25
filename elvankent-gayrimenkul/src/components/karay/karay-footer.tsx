@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { MotionToggle } from '@/components/karay/motion-toggle';
 import { PlatformWordmark } from '@/components/brand/platform-wordmark';
 import { CookiePreferencesLink } from '@/components/common/cookie-consent';
 import { KARAY_NAV } from '@/modules/karay/nav';
@@ -16,8 +17,9 @@ export function KarayFooter({ profile }: { profile: KarayProfile }) {
     profile.phone && { label: profile.phone, href: `tel:${profile.phone.replace(/[^+0-9]/g, '')}` },
   ].filter(Boolean) as { label: string; href: string }[];
   return (
-    <footer className="bg-[#0b1b3a] text-white">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr] lg:py-16">
+    <footer className="ky-footer relative bg-[#0b1b3a] text-white">
+      <div aria-hidden className="ky-noise" />
+      <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr] lg:py-16">
         <div className="max-w-sm">
           <PlatformWordmark tone="dark" height={34} />
           <p className="mt-5 text-[14.5px] leading-relaxed text-white/70">
@@ -32,12 +34,12 @@ export function KarayFooter({ profile }: { profile: KarayProfile }) {
                   </a>
                 </li>
               ))}
-              {(profile.address || profile.city) && <li className="text-white/60">{[profile.address, profile.city].filter(Boolean).join(', ')}</li>}
+              {(profile.address || profile.city) && <li className="text-white/70">{[profile.address, profile.city].filter(Boolean).join(', ')}</li>}
             </ul>
           )}
         </div>
         <nav aria-label={`${PLATFORM_BRAND.name} alt menü`}>
-          <h2 className="text-[12px] font-bold tracking-[0.14em] text-white/50 uppercase">Platform</h2>
+          <h2 className="text-[12px] font-bold tracking-[0.14em] text-white/70 uppercase">Platform</h2>
           <ul className="mt-4 space-y-2.5 text-[14.5px]">
             {KARAY_NAV.map((l) => (
               <li key={l.href}>
@@ -47,14 +49,14 @@ export function KarayFooter({ profile }: { profile: KarayProfile }) {
               </li>
             ))}
             <li>
-              <Link href="/admin/giris" className="text-white/80 hover:text-white">
+              <Link href="/admin/giris" prefetch={false} className="text-white/80 hover:text-white">
                 Müşteri girişi
               </Link>
             </li>
           </ul>
         </nav>
         <div>
-          <h2 className="text-[12px] font-bold tracking-[0.14em] text-white/50 uppercase">Yasal</h2>
+          <h2 className="text-[12px] font-bold tracking-[0.14em] text-white/70 uppercase">Yasal</h2>
           <ul className="mt-4 space-y-2.5 text-[14.5px]">
             {KARAY_LEGAL.map((l) => (
               <li key={l.slug}>
@@ -69,12 +71,13 @@ export function KarayFooter({ profile }: { profile: KarayProfile }) {
           </ul>
           {profile.socials.length > 0 && (
             <>
-              <h2 className="mt-8 text-[12px] font-bold tracking-[0.14em] text-white/50 uppercase">Sosyal medya</h2>
+              <h2 className="mt-8 text-[12px] font-bold tracking-[0.14em] text-white/70 uppercase">Sosyal medya</h2>
               <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-[14.5px]">
                 {profile.socials.map((s) => (
                   <li key={s.href}>
                     <a href={s.href} target="_blank" rel="noopener noreferrer" className="text-white/80 hover:text-white">
                       {s.label}
+                      <span className="sr-only"> (yeni sekmede açılır)</span>
                     </a>
                   </li>
                 ))}
@@ -83,12 +86,13 @@ export function KarayFooter({ profile }: { profile: KarayProfile }) {
           )}
         </div>
       </div>
-      <div className="border-t border-white/10">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-[13px] text-white/55 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <div className="relative border-t border-white/10">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-6 text-[13px] text-white/70 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p>
             © {new Date().getFullYear()} {profile.companyName} · Gayrimenkul Teknolojileri
           </p>
           <p>Emlak ofisleri için beyaz etiketli (white-label) SaaS platformu</p>
+          <MotionToggle />
         </div>
       </div>
     </footer>
